@@ -57,7 +57,7 @@ sheets = "^0.2.0"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
 shippo = "^0.1.12"
 signal-hook = "^0.3"
-slack-chat-api = "^0.1.39"
+slack-chat-api = "^0.1.40"
 slog = "2"
 slog-async = "2"
 slog-scope = "4"

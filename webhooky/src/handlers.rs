@@ -797,7 +797,16 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
 
     let slack = company.authenticate_slack(db)?;
 
-    if !payload.trigger_id.is_empty() && !payload.callback_id.is_empty() && payload.callback_id == "track_shipment" {
+    // Handle the view_submission modal.
+    if payload.interactive_slack_payload_type == "view_submission" {
+    }
+
+    // Handle the track shipment shortcut.
+    if payload.interactive_slack_payload_type == "shortcut"
+        && !payload.trigger_id.is_empty()
+        && !payload.callback_id.is_empty()
+        && payload.callback_id == "track_shipment"
+    {
         // Create the modal for tracking a shipment.
         let modal = create_slack_shipment_tracking_modal()?;
 
@@ -816,6 +825,7 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
         return Ok(());
     }
 
+    // Handle the actions for re-running functions.
     for action in payload.actions {
         // Trigger the action if it's a function.
         if action.action_id == "function" {
