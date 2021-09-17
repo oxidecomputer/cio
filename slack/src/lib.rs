@@ -733,16 +733,18 @@ pub enum BlockOption {
 /// Message block text in Slack.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlockText {
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type")]
     pub text_type: MessageType,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub text: String,
 }
 
 /// Action block in Slack.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct ActionBlock {
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type")]
     pub text_type: MessageType,
+    #[serde(default)]
     pub text: MessageBlockText,
 
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1025,6 +1027,8 @@ pub struct Team {
     pub id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub domain: String,
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
@@ -1077,4 +1081,58 @@ pub struct CurrentUser {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct InteractiveSlackPayload {
+    #[serde(rename = "type", default, skip_serializing_if = "String::is_empty")]
+    pub interactive_slack_payload_type: String,
+    #[serde(default)]
+    pub user: User,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub api_app_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub token: String,
+    #[serde(default)]
+    pub container: Container,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger_id: String,
+    #[serde(default)]
+    pub team: Team,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enterprise: Option<serde_json::Value>,
+    #[serde(default)]
+    pub is_enterprise_install: bool,
+    #[serde(default)]
+    pub channel: Channel,
+    #[serde(default)]
+    pub message: MessageBlock,
+    #[serde(default)]
+    pub state: State,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub response_url: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub actions: Vec<ActionBlock>,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct State {
+    #[serde(default)]
+    pub values: serde_json::Value,
+}
+
+#[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
+pub struct Container {
+    #[serde(rename = "type", default, skip_serializing_if = "String::is_empty")]
+    pub container_type: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub message_ts: String,
+    #[serde(default)]
+    pub attachment_id: i64,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub channel_id: String,
+    #[serde(default)]
+    pub is_ephemeral: bool,
+    #[serde(default)]
+    pub is_app_unfurl: bool,
 }
