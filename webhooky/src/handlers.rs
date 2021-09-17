@@ -26,6 +26,8 @@ use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
 use mailchimp_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{
@@ -767,6 +769,14 @@ pub async fn handle_slack_commands(
     Ok(response)
 }
 
+#[derive(Deserialize, Serialize, Default, Clone, Debug, JsonSchema)]
+pub struct ViewResponse {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub response_action: String,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub errors: HashMap<String, String>,
+}
+
 pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
     let s = String::from_utf8(body_param.as_bytes().to_vec())?;
 
@@ -798,7 +808,61 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
     let slack = company.authenticate_slack(db)?;
 
     // Handle the view_submission modal.
-    if payload.interactive_slack_payload_type == "view_submission" {}
+    if payload.interactive_slack_payload_type == "view_submission" {
+        let values = payload.view.state.values;
+        let mut carrier = String::new();
+        let mut tracking_number = String::new();
+
+        // TODO: this is disgusting try to find a better way to do this.
+        if let serde_json::Value::Object(ref map) = values {
+            // Iterate over the values and grab what we need.
+            for (_, v) in map {
+                if let serde_json::Value::Object(obj) = v {
+                    for (name, o) in obj {
+                        if let serde_json::Value::Object(j) = o {
+                            if name == "tracking_number" {
+                                tracking_number = j.get("value").unwrap().to_string();
+                            } else if name == "carrier" {
+                                if let Some(serde_json::Value::Object(s)) = j.get("selected_option") {
+                                    carrier = s.get("value").unwrap().to_string();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut view_response: ViewResponse = Default::default();
+
+        // Carrier cannot be empty.
+        if carrier.is_empty() {
+            view_response.response_action = "errors".to_string();
+            view_response
+                .errors
+                .insert("carrier".to_string(), "Shipping carrier cannot be empty.".to_string());
+        }
+
+        if tracking_number.is_empty() {
+            view_response.response_action = "errors".to_string();
+            view_response.errors.insert(
+                "tracking_number".to_string(),
+                "Tracking number cannot be empty.".to_string(),
+            );
+        }
+
+        if view_response.response_action.is_empty() {
+            // There were no errors so set the response action to clear the modal.
+            view_response.response_action = "clear".to_string();
+        }
+
+        warn!(
+            "values: {:#?}i, carrier: {}, tracking_number: {}",
+            values, carrier, tracking_number
+        );
+
+        return Ok(());
+    }
 
     // Handle the track shipment shortcut.
     if payload.interactive_slack_payload_type == "shortcut"
