@@ -244,7 +244,7 @@ impl Function {
         let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
 
         let mut send_notification = false;
-        if conclusion.to_string() != nf.conclusion {
+        if conclusion.to_string() != nf.conclusion && nf.status == octorust::types::JobStatus::Completed.to_string() {
             send_notification = true;
         }
 
