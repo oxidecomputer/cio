@@ -798,8 +798,7 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
     let slack = company.authenticate_slack(db)?;
 
     // Handle the view_submission modal.
-    if payload.interactive_slack_payload_type == "view_submission" {
-    }
+    if payload.interactive_slack_payload_type == "view_submission" {}
 
     // Handle the track shipment shortcut.
     if payload.interactive_slack_payload_type == "shortcut"
@@ -1826,5 +1825,6 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                 }),
             },
         ],
+        state: Default::default(),
     })
 }
