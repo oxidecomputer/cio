@@ -1418,7 +1418,7 @@ The Shipping Bot",
 
 // Sync the outbound shipments.
 pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Result<()> {
-    if company.airtable_base_id_shipments.is_empty() {
+    if company.airtable_base_id_shipments.is_empty() || company.id != 1 {
         // Return early.
         return Ok(());
     }
