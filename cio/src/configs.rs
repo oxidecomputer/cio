@@ -2420,6 +2420,8 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     let gsuite = company.authenticate_google_admin(db).await?;
     let ggs = company.authenticate_google_groups_settings(db).await?;
 
+    let github = company.authenticate_github()?;
+
     // Get the GSuite groups.
     let gsuite_groups = gsuite
         .groups()
@@ -2440,6 +2442,10 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     for u in db_groups {
         group_map.insert(u.name.to_string(), u);
     }
+
+    // Get all the GitHub teams.
+    let gh_teams = github.teams().list_all(&company.github_org).await?;
+
     // Sync groups.
     for (_, mut group) in groups {
         group.expand(company);
@@ -2449,11 +2455,12 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         // Remove the group from the BTreeMap.
         group_map.remove(&group.name);
     }
+
     // Remove any groups that should no longer be in the database.
     // This is found by the remaining groups that are in the map since we removed
     // the existing repos from the map above.
     for (name, group) in group_map {
-        info!("deleting group {} from the database, gsuite, etc", name);
+        info!("deleting group {} from the database, gsuite, github, etc", name);
 
         // Delete the group from the database and Airtable.
         group.delete(db).await?;
@@ -2464,7 +2471,11 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
             .delete(&format!("{}@{}", name, &company.gsuite_domain))
             .await?;
         info!("deleted group from gsuite: {}", name);
+
+        github.teams().delete_in_org(&company.github_org, &name).await?;
+        info!("deleted group from github: {}", name);
     }
+
     info!("updated configs groups in the database");
 
     // Update the groups in GSuite.
@@ -2522,7 +2533,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         info!("updated group in gsuite: {}", name);
     }
 
-    // Create any remaining groups from the database  that we do not have in GSuite.
+    // Create any remaining groups from the database that we do not have in GSuite.
     for (name, group) in group_map {
         // Create the group.
         let mut g: GSuiteGroup = Default::default();
@@ -2547,6 +2558,76 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         update_google_group_settings(&ggs, &group, company).await?;
 
         info!("created group in gsuite: {}", name);
+    }
+
+    // Update the groups in GitHub.
+    // Get all the groups.
+    let db_groups = Groups::get_from_db(db, company.id)?;
+    // Create a BTreeMap
+    let mut group_map: BTreeMap<String, Group> = Default::default();
+    for u in db_groups {
+        group_map.insert(u.name.to_string(), u);
+    }
+    // Iterate over the groups already in GSuite.
+    for g in gh_teams {
+        let name = g.slug.to_string();
+
+        // Check if we already have this group in our database.
+        let group = if let Some(val) = group_map.get(&name) {
+            val
+        } else {
+            // If the group does not exist in our map we need to delete
+            // group from GitHub.
+            info!("deleting group {} from github", name);
+            github.teams().delete_in_org(&company.github_org, &name).await?;
+            info!("deleted group from github: {}", name);
+            continue;
+        };
+
+        // Update the group with the settings from the database for the group.
+        let mut updated_group: octorust::types::Team = g.clone();
+        updated_group.description = group.description.to_string();
+
+        let parent_team_id = if let Some(parent) = g.parent { parent.id } else { 0 };
+
+        github
+            .teams()
+            .update_in_org(
+                &company.github_org,
+                &name,
+                &octorust::types::TeamsUpdateInOrgRequest {
+                    name: group.name.to_string(),
+                    description: group.description.to_string(),
+                    parent_team_id,
+                    permission: None, // This is depreciated, so just pass none.
+                    privacy: None,
+                },
+            )
+            .await?;
+
+        // Remove the group from the database map and continue.
+        // This allows us to add all the remaining new groups after.
+        group_map.remove(&name);
+
+        info!("updated group in github: {}", name);
+    }
+
+    // Create any remaining groups from the database that we do not have in GitHub.
+    for (name, group) in group_map {
+        // Create the group.
+        let g = octorust::types::TeamsCreateRequest {
+            name: name.to_string(),
+            description: group.description.to_string(),
+            maintainers: Default::default(),
+            privacy: None,
+            permission: None, // This is depreciated, so just pass none.
+            parent_team_id: 0,
+            repo_names: group.repos,
+        };
+
+        github.teams().create(&company.github_org, &g).await?;
+
+        info!("created group in github: {}", name);
     }
 
     // Update groups in airtable.
