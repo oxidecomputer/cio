@@ -779,7 +779,7 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
 
     // We should have a string, which we will then parse into our args.
     // Parse the request body as a Slack InteractivePayload.
-    let payload: InteractivePayload = serde_json::from_str(&s)?;
+    let payload: InteractivePayload = serde_json::from_str(&decoded)?;
 
     sentry::capture_message(
         &format!("slack interactive payload: {:#?}", payload),
