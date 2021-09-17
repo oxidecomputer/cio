@@ -3,3 +3,7 @@
 README.md
 target
 *.png
+*.sh
+LICENSE
+Makefile
+.dockerignore
