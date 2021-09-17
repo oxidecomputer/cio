@@ -4,6 +4,8 @@
 # ------------------------------------------------------------------------------
 FROM debian:sid-slim AS app-base
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y \
 	ca-certificates \
 	libssl1.1 \
@@ -17,6 +19,12 @@ RUN apt-get update && apt-get install -y \
 FROM rust:latest AS cargo-chef
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+	ca-certificates \
+	libusb-1.0-0-dev \
+	--no-install-recommends \
+	&& rm -rf /var/lib/apt/lists/*
 
 RUN rustup default nightly
 
