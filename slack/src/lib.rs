@@ -1245,8 +1245,12 @@ pub struct InteractivePayload {
     pub api_app_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub hash: String,
     #[serde(default)]
     pub container: Container,
+    #[serde(default)]
+    pub view: Modal,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub callback_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1265,6 +1269,8 @@ pub struct InteractivePayload {
     pub state: State,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub response_url: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub response_urls: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub actions: Vec<ActionBlock>,
 }
