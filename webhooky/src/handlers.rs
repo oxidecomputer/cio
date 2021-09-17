@@ -799,12 +799,15 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
         let modal = create_slack_shipment_tracking_modal()?;
 
         // Open the view.
-        slack
+        if let Err(e) = slack
             .open_view(&View {
                 trigger_id: payload.trigger_id.to_string(),
-                view: modal,
+                view: modal.clone(),
             })
-            .await?;
+            .await
+        {
+            bail!("failed to open view `{}`: {}", json!(modal).to_string(), e)
+        }
 
         // Return early.
         return Ok(());

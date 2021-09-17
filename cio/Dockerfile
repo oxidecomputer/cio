@@ -35,11 +35,11 @@ COPY cio/src/dummy.rs ./src/dummy.rs
 
 COPY cio/Cargo.toml ./Cargo.toml
 
-RUN sed -i 's#src/main.rs#dummy.rs#' ./Cargo.toml
+RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
 RUN cargo build --release --bin cio
 
-RUN sed -i 's#dummy.rs#src/main.rs#' ./Cargo.toml
+RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
 COPY cio/* .
 
