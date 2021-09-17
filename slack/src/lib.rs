@@ -548,6 +548,21 @@ pub struct BotCommand {
     pub user_id: String,
 }
 
+/// A modal to send to Slack.
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+pub struct Modal {
+    #[serde(default, rename = "type")]
+    pub type_: ModalType,
+    #[serde(default)]
+    pub title: MessageBlockText,
+    #[serde(default)]
+    pub submit: MessageBlockText,
+    #[serde(default)]
+    pub close: MessageBlockText,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub blocks: Vec<BlockOption>,
+}
+
 /// A formatted message to send to Slack.
 ///
 /// Docs: https://api.slack.com/messaging/composing/layouts
@@ -714,6 +729,8 @@ pub enum MessageBlockType {
     Divider,
     #[serde(rename = "actions")]
     Actions,
+    #[serde(rename = "input")]
+    Input,
 }
 
 impl Default for MessageBlockType {
@@ -722,7 +739,20 @@ impl Default for MessageBlockType {
     }
 }
 
-/// Action block in Slack.
+/// A modal type in Slack.
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+pub enum ModalType {
+    #[serde(rename = "modal")]
+    Modal,
+}
+
+impl Default for ModalType {
+    fn default() -> Self {
+        ModalType::Modal
+    }
+}
+
+/// Block options in Slack.
 #[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum BlockOption {
@@ -737,6 +767,44 @@ pub struct MessageBlockText {
     pub text_type: MessageType,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub text: String,
+}
+
+/// Input block in Slack.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct InputBlock {
+    #[serde(rename = "type")]
+    pub type_: MessageBlockType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<InputBlockElement>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<MessageBlockText>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<MessageBlockText>,
+}
+
+/// Input block element in Slack.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct InputBlockElement {
+    #[serde(rename = "type")]
+    pub type_: InputType,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub action_id: String,
+
+    // These two only apply to static select.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placeholder: Option<MessageBlockText>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub options: Vec<SelectInputOption>,
+}
+
+/// Select input option in Slack.
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct SelectInputOption {
+    #[serde(default)]
+    pub text: MessageBlockText,
+
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub value: String,
 }
 
 /// Action block in Slack.
@@ -769,6 +837,21 @@ pub enum MessageType {
 impl Default for MessageType {
     fn default() -> Self {
         MessageType::Markdown
+    }
+}
+
+/// Input type in Slack.
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+pub enum InputType {
+    #[serde(rename = "static_select")]
+    StaticSelect,
+    #[serde(rename = "plain_text_input")]
+    PlainText,
+}
+
+impl Default for InputType {
+    fn default() -> Self {
+        InputType::PlainText
     }
 }
 
