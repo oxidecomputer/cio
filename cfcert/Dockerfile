@@ -13,49 +13,34 @@ RUN apt-get update && apt-get install -y \
 	&& rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------------------------
-# Cargo Chef Stage
+# Cargo Nightly Stage
 # ------------------------------------------------------------------------------
 
-FROM rust:latest AS cargo-chef
+FROM rust:latest AS cargo-nightly
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y \
-	ca-certificates \
-	libpq5 \
-	libssl1.1 \
-	libusb-1.0-0-dev \
-	--no-install-recommends \
-	&& rm -rf /var/lib/apt/lists/*
-
 RUN rustup default nightly
 
-RUN cargo install cargo-chef --version 0.1.23
-
 WORKDIR /usr/src/cio
-
-# ------------------------------------------------------------------------------
-# Cargo Deps Stage
-# ------------------------------------------------------------------------------
-
-FROM cargo-chef AS cargo-deps
-
-COPY . .
-
-RUN cargo chef prepare --recipe-path recipe.json
 
 # ------------------------------------------------------------------------------
 # Cargo Build Stage
 # ------------------------------------------------------------------------------
 
-FROM cargo-chef AS cargo-build
+FROM cargo-nightly AS cargo-build
 
-COPY --from=cargo-deps /usr/src/cio/recipe.json recipe.json
+COPY cfcert/src/dummy.rs ./src/dummy.rs
 
-# Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook --release --recipe-path recipe.json
+COPY cfcert/Cargo.toml ./Cargo.toml
 
-COPY . .
+RUN sed -i 's#src/main.rs#dummy.rs#' ./Cargo.toml
+
+RUN cargo build --release --bin cfcert
+
+RUN sed -i 's#dummy.rs#src/main.rs#' ./Cargo.toml
+
+COPY cfcert/* .
 
 RUN cargo build --release --bin cfcert
 

@@ -5,6 +5,10 @@ version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 
+[[bin]]
+name = "webhooky"
+path = "src/main.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

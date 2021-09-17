@@ -8,6 +8,10 @@ license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/cio-api"
 
+[[bin]]
+name = "cio-api"
+path = "src/main.rs"
+
 [dependencies]
 acme-lib = "^0.8.0"
 airtable-api = "^0.1.33"
