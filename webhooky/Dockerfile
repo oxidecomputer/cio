@@ -31,6 +31,8 @@ FROM rust:latest AS cargo-chef
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN rustup default nightly
+
 RUN cargo install cargo-chef
 
 WORKDIR /usr/src/webhooky
