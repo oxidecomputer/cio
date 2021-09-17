@@ -49,7 +49,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 # Cargo Build Stage
 # ------------------------------------------------------------------------------
 
-FROM cargo-deps AS cargo-build
+FROM cargo-chef AS cargo-build
 
 COPY --from=cargo-deps /usr/src/webhooky/recipe.json recipe.json
 
