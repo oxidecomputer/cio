@@ -24,8 +24,6 @@ pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
     // Get the devices.
     let devices = tailscale.list_devices().await?;
 
-    info!("devices: {:?}", devices);
-
     // Create the array of links.
     for device in devices {
         if !device.hostname.starts_with("console-git-") {
