@@ -26,6 +26,8 @@ use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
 use mailchimp_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{
@@ -767,22 +769,26 @@ pub async fn handle_slack_commands(
     Ok(response)
 }
 
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct SlackInteractive {
+    pub payload: InteractivePayload,
+}
+
 pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
     let s = String::from_utf8(body_param.as_bytes().to_vec())?;
 
-    sentry::capture_message(
-        &format!("slack interactive: {}", s.trim_start_matches("payload=")),
-        sentry::Level::Info,
-    );
+    sentry::capture_message(&format!("slack interactive: {}", s), sentry::Level::Info);
 
     // We should have a string, which we will then parse into our args.
     // Parse the request body as a Slack InteractivePayload.
-    let payload: InteractivePayload = serde_urlencoded::from_str(s.trim_start_matches("payload="))?;
+    let payload: SlackInteractive = serde_urlencoded::from_str(&s)?;
 
     sentry::capture_message(
         &format!("slack interactive payload: {:#?}", payload),
         sentry::Level::Info,
     );
+
+    let payload = payload.payload;
 
     let ctx = rqctx.context();
     let db = &ctx.db;
