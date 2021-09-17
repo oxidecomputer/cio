@@ -45,6 +45,7 @@ jobs:
     # Build and push image to Google Container Registry
     - name: Build image
       run: |-
+        gcloud config set builds/use_kaniko True
         mv webhooky/Dockerfile .
         cp .dockerignore .gcloudignore
         gcloud builds submit \
