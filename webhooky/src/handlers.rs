@@ -31,7 +31,7 @@ use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{
     BotCommand, FormattedMessage, InputBlock, InputBlockElement, InputType, InteractivePayload, MessageAttachment,
     MessageBlock, MessageBlockText, MessageBlockType, MessageResponse, MessageResponseType, MessageType,
-    SelectInputOption,
+    SelectInputOption, View,
 };
 
 use crate::{
@@ -780,10 +780,24 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
     let payload: InteractivePayload = serde_urlencoded::from_str(s.trim_start_matches("payload="))?;
 
     let ctx = rqctx.context();
+    let db = &ctx.db;
+
+    // Get the company from the Slack team id.
+    let company = Company::get_from_slack_team_id(db, &payload.team.id)?;
+
+    let slack = company.authenticate_slack(db)?;
 
     if !payload.trigger_id.is_empty() && !payload.callback_id.is_empty() && payload.callback_id == "track_shipment" {
         // Create the modal for tracking a shipment.
         let modal = create_slack_shipment_tracking_modal()?;
+
+        // Open the view.
+        slack
+            .open_view(&View {
+                trigger_id: payload.trigger_id.to_string(),
+                view: modal,
+            })
+            .await?;
 
         // Return early.
         return Ok(());
@@ -1708,6 +1722,7 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
             text_type: MessageType::PlainText,
             text: "Track a shipment".to_string(),
         },
+        callback_id: "track_shipment_modal".to_string(),
         submit: MessageBlockText {
             text_type: MessageType::PlainText,
             text: "Track shipment".to_string(),

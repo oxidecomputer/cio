@@ -524,7 +524,7 @@ dependencies = [
  "serde_json",
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.35",
+ "slack-chat-api 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "sodiumoxide",
  "steno",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -603,7 +603,7 @@ dependencies = [
  "serde_json",
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.35",
+ "slack-chat-api 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "sodiumoxide",
  "steno",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4246,9 +4246,7 @@ checksum = "c307a32c1c5c437f38c7fd45d753050587732ba8628319fbdf12a7e289ccc590"
 
 [[package]]
 name = "slack-chat-api"
-version = "0.1.35"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22f9cfec0b05125174d831174340f52e4fb7204f59b8293770bb9397f64d3f81"
+version = "0.1.36"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4263,6 +4261,8 @@ dependencies = [
 [[package]]
 name = "slack-chat-api"
 version = "0.1.36"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fc1c21cc156b2436c264ed89ffd9b8ec3e19e4db10eaa86dc1726ae7980a691"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -5367,7 +5367,7 @@ dependencies = [
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook",
- "slack-chat-api 0.1.35",
+ "slack-chat-api 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog",
  "slog-async",
  "slog-scope",
