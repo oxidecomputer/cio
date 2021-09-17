@@ -609,6 +609,8 @@ pub struct Modal {
     pub close: MessageBlockText,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub blocks: Vec<InputBlock>,
+    #[serde(default)]
+    pub state: State,
 }
 
 /// A formatted message to send to Slack.
