@@ -770,14 +770,17 @@ pub async fn handle_slack_commands(
 }
 
 #[derive(Deserialize, Serialize, Default, Clone, Debug, JsonSchema)]
-pub struct ViewResponse {
+pub struct InteractiveResponse {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub response_action: String,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub errors: HashMap<String, String>,
 }
 
-pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
+pub async fn handle_slack_interactive(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: UntypedBody,
+) -> Result<InteractiveResponse> {
     let s = String::from_utf8(body_param.as_bytes().to_vec())?;
 
     // Decode the URL encoded struct.
@@ -788,7 +791,7 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
     let payload: InteractivePayload = match serde_json::from_str(&decoded) {
         Ok(p) => p,
         Err(err) => {
-            bail!("Error decoding payload `{}`: {}", decoded, err);
+            bail!("decoding payload `{}` failed: {}", decoded, err);
         }
     };
 
@@ -802,6 +805,8 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
     let ctx = rqctx.context();
     let db = &ctx.db;
 
+    let mut interactive_response: InteractiveResponse = Default::default();
+
     // Get the company from the Slack team id.
     let company = Company::get_from_slack_team_id(db, &payload.team.id)?;
 
@@ -812,18 +817,36 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
         let values = payload.view.state.values;
         let mut carrier = String::new();
         let mut tracking_number = String::new();
+        let mut package_name = String::new();
+
+        // These two are optional.
+        let mut notes = String::new();
+        let mut order_number = String::new();
+
+        let mut carrier_block_id = String::new();
+        let mut tracking_number_block_id = String::new();
+        let mut package_name_block_id = String::new();
 
         // TODO: this is disgusting try to find a better way to do this.
         if let serde_json::Value::Object(ref map) = values {
             // Iterate over the values and grab what we need.
-            for (_, v) in map {
+            for (block_id, v) in map {
                 if let serde_json::Value::Object(obj) = v {
                     for (name, o) in obj {
                         if let serde_json::Value::Object(j) = o {
                             if name == "tracking_number" {
+                                tracking_number_block_id = block_id.to_string();
                                 tracking_number = j.get("value").unwrap().to_string();
+                            } else if name == "name" {
+                                package_name_block_id = block_id.to_string();
+                                package_name = j.get("value").unwrap().to_string();
+                            } else if name == "order_number" {
+                                order_number = j.get("value").unwrap().to_string();
+                            } else if name == "notes" {
+                                notes = j.get("value").unwrap().to_string();
                             } else if name == "carrier" {
                                 if let Some(serde_json::Value::Object(s)) = j.get("selected_option") {
+                                    carrier_block_id = block_id.to_string();
                                     carrier = s.get("value").unwrap().to_string();
                                 }
                             }
@@ -833,27 +856,50 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
             }
         }
 
-        let mut view_response: ViewResponse = Default::default();
-
         // Carrier cannot be empty.
         if carrier.is_empty() {
-            view_response.response_action = "errors".to_string();
-            view_response
+            interactive_response.response_action = "errors".to_string();
+            interactive_response
                 .errors
-                .insert("carrier".to_string(), "Shipping carrier cannot be empty.".to_string());
-        }
-
-        if tracking_number.is_empty() {
-            view_response.response_action = "errors".to_string();
-            view_response.errors.insert(
-                "tracking_number".to_string(),
-                "Tracking number cannot be empty.".to_string(),
+                .insert(carrier_block_id, "Shipping carrier cannot be empty.".to_string());
+        } else if tracking_number.is_empty() {
+            interactive_response.response_action = "errors".to_string();
+            interactive_response
+                .errors
+                .insert(tracking_number_block_id, "Tracking number cannot be empty.".to_string());
+        } else if package_name.is_empty() {
+            interactive_response.response_action = "errors".to_string();
+            interactive_response.errors.insert(
+                package_name_block_id,
+                "Description of package cannot be empty.".to_string(),
             );
+        } else {
+            // Okay, neither are empty.
+            // Let's create the inbound shipment.
+            let mut shipment = NewInboundShipment {
+                name: package_name,
+                carrier: carrier.to_string(),
+                tracking_number: tracking_number.to_string(),
+                order_number,
+                notes,
+                cio_company_id: company.id,
+                delivered_time: None,
+                eta: None,
+                tracking_link: Default::default(),
+                tracking_status: Default::default(),
+                messages: Default::default(),
+                oxide_tracking_link: Default::default(),
+                shipped_time: Default::default(),
+            };
+            shipment.expand(db, &company).await?;
+
+            // Upsert it into the database.
+            shipment.upsert(db).await?;
         }
 
-        if view_response.response_action.is_empty() {
+        if interactive_response.response_action.is_empty() {
             // There were no errors so set the response action to clear the modal.
-            view_response.response_action = "clear".to_string();
+            interactive_response.response_action = "clear".to_string();
         }
 
         warn!(
@@ -861,7 +907,7 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
             values, carrier, tracking_number
         );
 
-        return Ok(());
+        return Ok(interactive_response);
     }
 
     // Handle the track shipment shortcut.
@@ -885,7 +931,7 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
         }
 
         // Return early.
-        return Ok(());
+        return Ok(interactive_response);
     }
 
     // Handle the actions for re-running functions.
@@ -899,7 +945,7 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
         }
     }
 
-    Ok(())
+    Ok(interactive_response)
 }
 
 pub async fn handle_airtable_employees_print_home_address_label(
@@ -1832,6 +1878,20 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                 type_: MessageBlockType::Input,
                 text: None,
                 element: Some(InputBlockElement {
+                    type_: InputType::PlainText,
+                    action_id: "name".to_string(),
+                    options: vec![],
+                    placeholder: None,
+                }),
+                label: Some(MessageBlockText {
+                    text_type: MessageType::PlainText,
+                    text: "Short description for package".to_string(),
+                }),
+            },
+            InputBlock {
+                type_: MessageBlockType::Input,
+                text: None,
+                element: Some(InputBlockElement {
                     type_: InputType::StaticSelect,
                     action_id: "carrier".to_string(),
                     placeholder: Some(MessageBlockText {
@@ -1886,6 +1946,34 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
                 label: Some(MessageBlockText {
                     text_type: MessageType::PlainText,
                     text: "Tracking number".to_string(),
+                }),
+            },
+            InputBlock {
+                type_: MessageBlockType::Input,
+                text: None,
+                element: Some(InputBlockElement {
+                    type_: InputType::PlainText,
+                    action_id: "order_number".to_string(),
+                    options: vec![],
+                    placeholder: None,
+                }),
+                label: Some(MessageBlockText {
+                    text_type: MessageType::PlainText,
+                    text: "Order number".to_string(),
+                }),
+            },
+            InputBlock {
+                type_: MessageBlockType::Input,
+                text: None,
+                element: Some(InputBlockElement {
+                    type_: InputType::PlainText,
+                    action_id: "notes".to_string(),
+                    options: vec![],
+                    placeholder: None,
+                }),
+                label: Some(MessageBlockText {
+                    text_type: MessageType::PlainText,
+                    text: "Notes".to_string(),
                 }),
             },
         ],

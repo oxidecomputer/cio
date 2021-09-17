@@ -613,6 +613,14 @@ pub struct Modal {
     pub state: State,
 }
 
+#[derive(Deserialize, Serialize, Default, Clone, Debug, JsonSchema)]
+pub struct InteractiveResponse {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub response_action: String,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub errors: HashMap<String, String>,
+}
+
 /// A formatted message to send to Slack.
 ///
 /// Docs: https://api.slack.com/messaging/composing/layouts
