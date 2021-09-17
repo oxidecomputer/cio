@@ -764,6 +764,25 @@ pub struct MessageBlock {
     pub fields: Vec<MessageBlockText>,
 }
 
+/// A Slack message block.
+///
+/// Docs: https://api.slack.com/messaging/composing/layouts#adding-blocks
+#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
+pub struct Message {
+    #[serde(rename = "type")]
+    pub block_type: MessageBlockType,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub bot_id: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub user: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub team: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<MessageAttachment>,
+}
+
 /// A message block type in Slack.
 #[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
 pub enum MessageBlockType {
@@ -1241,7 +1260,7 @@ pub struct InteractivePayload {
     #[serde(default)]
     pub channel: Channel,
     #[serde(default)]
-    pub message: MessageBlock,
+    pub message: Message,
     #[serde(default)]
     pub state: State,
     #[serde(default, skip_serializing_if = "String::is_empty")]
