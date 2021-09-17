@@ -85,9 +85,9 @@ impl From<NewFunction> for FormattedMessage {
         let dur = Utc::now() - item.created_at;
         let human_date = HumanTime::from(dur);
 
-        let text = format!("Function | `{}`", item.name);
+        let text = format!("`{}`", item.name);
 
-        let mut context = format!("*{}*", item.status);
+        let mut context = format!("Function | *{}*", item.status);
         if !item.conclusion.is_empty() {
             context += &format!(" | *{}*", item.conclusion);
         }
