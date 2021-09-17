@@ -773,18 +773,17 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
     // Parse the request body as a Slack InteractivePayload.
     let payload: InteractivePayload = serde_urlencoded::from_str(s.trim_start_matches("payload="))?;
 
-    tokio::spawn(async move {
-        let ctx = rqctx.context();
-        for action in payload.actions {
-            // Trigger the action if it's a function.
-            if action.action_id == "function" {
-                // Run the command in the background so we don't have to wait for it.
-                if let Err(e) = crate::handlers_cron::handle_reexec_cmd(ctx, &action.value).await {
-                    sentry_anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", e));
-                }
+    let ctx = rqctx.context();
+
+    for action in payload.actions {
+        // Trigger the action if it's a function.
+        if action.action_id == "function" {
+            // Run the command in the background so we don't have to wait for it.
+            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(ctx, &action.value, true).await {
+                sentry_anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", e));
             }
         }
-    });
+    }
 
     Ok(())
 }

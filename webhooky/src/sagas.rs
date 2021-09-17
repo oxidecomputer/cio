@@ -59,6 +59,7 @@ pub async fn do_saga(
     id: &uuid::Uuid,
     template: steno::SagaTemplate<Saga>,
     cmd_name: &str,
+    background: bool,
 ) -> Result<()> {
     let context = Arc::new(Context { db: db.clone() });
     let params = Params {
@@ -78,47 +79,55 @@ pub async fn do_saga(
     // Set it running.
     sec.saga_start(saga_id).await?;
 
-    //
-    // Wait for the saga to finish running.  This could take a while, depending
-    // on what the saga does!  This traverses the DAG of actions, executing each
-    // one.  If one fails, then it's all unwound: any actions that previously
-    // completed will be undone.
-    //
-    // Note that the SEC will run all this regardless of whether you wait for it
-    // here.  This is just a handle for you to know when the saga has finished.
-    //
-    let result = saga_future.await;
+    if !background {
+        //
+        // Wait for the saga to finish running.  This could take a while, depending
+        // on what the saga does!  This traverses the DAG of actions, executing each
+        // one.  If one fails, then it's all unwound: any actions that previously
+        // completed will be undone.
+        //
+        // Note that the SEC will run all this regardless of whether you wait for it
+        // here.  This is just a handle for you to know when the saga has finished.
 
-    // Get the function.
-    let mut f = Function::get_from_db(db, saga_id.to_string()).unwrap();
+        let result = saga_future.await;
 
-    // Print the results.
-    match result.kind {
-        Ok(s) => {
-            // Save the success output to the logs.
-            // For each function.
-            let log = s.lookup_output::<FnOutput>(cmd_name)?;
+        // Get the function.
+        let mut f = Function::get_from_db(db, saga_id.to_string()).unwrap();
 
-            f.logs = log.0.trim().to_string();
-            f.conclusion = octorust::types::Conclusion::Success.to_string();
-            f.completed_at = Some(Utc::now());
+        // Print the results.
+        match result.kind {
+            Ok(s) => {
+                // Save the success output to the logs.
+                // For each function.
+                let log = s.lookup_output::<FnOutput>(cmd_name)?;
+
+                f.logs = log.0.trim().to_string();
+                f.conclusion = octorust::types::Conclusion::Success.to_string();
+                f.completed_at = Some(Utc::now());
+            }
+            Err(e) => {
+                // Save the error to the logs.
+                f.logs = format!("{}\n\n{:?}", f.logs, e).trim().to_string();
+                f.conclusion = octorust::types::Conclusion::Failure.to_string();
+                f.completed_at = Some(Utc::now());
+
+                bail!("action failed: {:#?}", e);
+            }
         }
-        Err(e) => {
-            // Save the error to the logs.
-            f.logs = format!("{}\n\n{:?}", f.logs, e).trim().to_string();
-            f.conclusion = octorust::types::Conclusion::Failure.to_string();
-            f.completed_at = Some(Utc::now());
 
-            bail!("action failed: {:#?}", e);
-        }
+        f.update(db).await?;
     }
-
-    f.update(db).await?;
 
     Ok(())
 }
 
-pub async fn run_cmd(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, cmd_name: &str) -> Result<()> {
+pub async fn run_cmd(
+    db: &Database,
+    sec: &steno::SecClient,
+    id: &uuid::Uuid,
+    cmd_name: &str,
+    background: bool,
+) -> Result<()> {
     let mut builder = steno::SagaTemplateBuilder::new();
     builder.append(
         // name of this action's output (can be used in subsequent actions)
@@ -133,7 +142,7 @@ pub async fn run_cmd(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, cmd
         ),
     );
 
-    do_saga(db, sec, id, builder.build(), cmd_name).await
+    do_saga(db, sec, id, builder.build(), cmd_name, background).await
 }
 async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<FnOutput, steno::ActionError> {
     let db = &action_context.user_data().db;

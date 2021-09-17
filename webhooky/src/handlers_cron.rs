@@ -38,7 +38,7 @@ pub async fn handle_get_function_logs_by_uuid(
     Ok(f.logs)
 }
 
-pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str) -> Result<uuid::Uuid> {
+pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str, background: bool) -> Result<uuid::Uuid> {
     let db = &api_context.db;
 
     // Check if we already have an in-progress run for this job.
@@ -70,7 +70,7 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str) -> Result<
     let id = uuid::Uuid::new_v4();
 
     // Run the saga.
-    crate::sagas::run_cmd(db, &api_context.sec, &id, cmd_name).await?;
+    crate::sagas::run_cmd(db, &api_context.sec, &id, cmd_name, background).await?;
 
     Ok(id)
 }

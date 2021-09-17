@@ -1688,7 +1688,7 @@ async fn trigger_sync_repos_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-repos").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-repos", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1711,7 +1711,7 @@ async fn trigger_sync_rfds_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-rfds").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-rfds", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1734,7 +1734,7 @@ async fn trigger_sync_travel_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1757,7 +1757,7 @@ async fn trigger_sync_functions_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-functions").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-functions", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1780,7 +1780,7 @@ async fn trigger_sync_finance_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-finance").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-finance", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1803,7 +1803,7 @@ async fn trigger_sync_shipments_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shipments").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shipments", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1826,7 +1826,7 @@ async fn trigger_sync_shorturls_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shorturls").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shorturls", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1849,7 +1849,7 @@ async fn trigger_sync_configs_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-configs").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-configs", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1872,7 +1872,7 @@ async fn trigger_sync_recorded_meetings_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-recorded-meetings").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-recorded-meetings", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1895,7 +1895,7 @@ async fn trigger_sync_asset_inventory_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-asset-inventory").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-asset-inventory", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1918,7 +1918,7 @@ async fn trigger_sync_swag_inventory_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-swag-inventory").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-swag-inventory", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1941,7 +1941,7 @@ async fn trigger_sync_interviews_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-interviews").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-interviews", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1964,7 +1964,7 @@ async fn trigger_sync_applications_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-applications").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-applications", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -1987,7 +1987,7 @@ async fn trigger_sync_analytics_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-analytics").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-analytics", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -2010,7 +2010,7 @@ async fn trigger_sync_companies_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-companies").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-companies", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -2033,7 +2033,7 @@ async fn trigger_sync_other_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-other").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-other", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -2056,7 +2056,7 @@ async fn trigger_sync_huddles_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-huddles").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-huddles", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -2079,7 +2079,7 @@ async fn trigger_sync_mailing_lists_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-mailing-lists").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-mailing-lists", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -2102,7 +2102,7 @@ async fn trigger_sync_journal_clubs_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-journal-clubs").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-journal-clubs", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
@@ -2125,7 +2125,7 @@ async fn trigger_sync_api_tokens_create(
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-api-tokens").await {
+    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-api-tokens", false).await {
         Ok(r) => {
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
