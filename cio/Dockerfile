@@ -41,7 +41,7 @@ RUN cargo build --release --bin cio
 
 RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
-COPY cio/* .
+COPY cio/src src
 
 RUN cargo build --release --bin cio
 

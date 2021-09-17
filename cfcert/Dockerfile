@@ -40,7 +40,7 @@ RUN cargo build --release --bin cfcert
 
 RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
-COPY cfcert/* .
+COPY cfcert/src src
 
 RUN cargo build --release --bin cfcert
 

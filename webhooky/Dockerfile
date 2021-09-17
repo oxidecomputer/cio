@@ -53,7 +53,7 @@ RUN cargo build --release --bin webhooky
 
 RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
-COPY webhooky/* .
+COPY webhooky/src src
 
 RUN cargo build --release --bin webhooky
 
