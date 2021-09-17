@@ -142,20 +142,22 @@ impl From<NewFunction> for FormattedMessage {
 
             blocks[0].accessory = Some(button);
 
-            let logs = MessageBlock {
-                block_type: MessageBlockType::Context,
-                elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
-                    text_type: MessageType::PlainText,
-                    // We can only send max 3000 chars.
-                    text: crate::utils::tail(&item.logs, 3000),
-                })],
-                text: Default::default(),
-                accessory: Default::default(),
-                block_id: Default::default(),
-                fields: Default::default(),
-            };
+            if !item.logs.is_empty() {
+                let logs = MessageBlock {
+                    block_type: MessageBlockType::Context,
+                    elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
+                        text_type: MessageType::PlainText,
+                        // We can only send max 3000 chars.
+                        text: crate::utils::tail(&item.logs, 3000),
+                    })],
+                    text: Default::default(),
+                    accessory: Default::default(),
+                    block_id: Default::default(),
+                    fields: Default::default(),
+                };
 
-            blocks.push(logs);
+                blocks.push(logs);
+            }
         }
 
         FormattedMessage {
