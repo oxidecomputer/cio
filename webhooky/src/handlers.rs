@@ -29,8 +29,8 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{
-    BotCommand, FormattedMessage, InteractivePayload, MessageAttachment, MessageBlock, MessageBlockType,
-    MessageResponse, MessageResponseType,
+    BotCommand, FormattedMessage, InteractivePayload, MessageAttachment, MessageBlock, MessageBlockText,
+    MessageBlockType, MessageResponse, MessageResponseType, MessageType,
 };
 
 use crate::{
@@ -1688,4 +1688,24 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     }
 
     Ok(())
+}
+
+fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
+    Ok(slack_chat_api::Modal {
+        type_: slack_chat_api::ModalType::Modal,
+        title: MessageBlockText {
+            text_type: MessageType::PlainText,
+            text: "Track a shipment".to_string(),
+        },
+        submit: MessageBlockText {
+            text_type: MessageType::PlainText,
+            text: "Track shipment".to_string(),
+        },
+        close: MessageBlockText {
+            text_type: MessageType::PlainText,
+            text: "Cancel".to_string(),
+        },
+
+        blocks: vec![],
+    })
 }

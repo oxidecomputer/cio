@@ -524,7 +524,7 @@ dependencies = [
  "serde_json",
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.32",
+ "slack-chat-api 0.1.34",
  "sodiumoxide",
  "steno",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -544,7 +544,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#06c5d57f49980ba35f15ca2e33f0db697325535d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e28199d4c39a57a694d84cfdffaa4f0cf9eed5ae"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -603,7 +603,7 @@ dependencies = [
  "serde_json",
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.32",
+ "slack-chat-api 0.1.34",
  "sodiumoxide",
  "steno",
  "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2298,7 +2298,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?branch=master#06c5d57f49980ba35f15ca2e33f0db697325535d"
+source = "git+https://github.com/oxidecomputer/cio?branch=master#e28199d4c39a57a694d84cfdffaa4f0cf9eed5ae"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -4246,9 +4246,9 @@ checksum = "c307a32c1c5c437f38c7fd45d753050587732ba8628319fbdf12a7e289ccc590"
 
 [[package]]
 name = "slack-chat-api"
-version = "0.1.32"
+version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ee7fdf5cf00cb0b516e9e8b751956fb57f213702e356def2b9abeec3f86e53e"
+checksum = "58e023788f1f50deba1af5049ec786033d1180bc5ab083fe288b646372ca8bea"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4262,7 +4262,7 @@ dependencies = [
 
 [[package]]
 name = "slack-chat-api"
-version = "0.1.34"
+version = "0.1.35"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -5367,7 +5367,7 @@ dependencies = [
  "sheets",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook",
- "slack-chat-api 0.1.32",
+ "slack-chat-api 0.1.34",
  "slog",
  "slog-async",
  "slog-scope",
