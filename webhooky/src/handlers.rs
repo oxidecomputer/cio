@@ -846,6 +846,11 @@ pub async fn handle_slack_interactive(
             }
         }
 
+        warn!(
+            "values: {:#?}i, carrier: {}, tracking_number: {}",
+            values, carrier, tracking_number
+        );
+
         // Carrier cannot be empty.
         if carrier.is_empty() {
             interactive_response.response_action = "errors".to_string();
@@ -891,11 +896,6 @@ pub async fn handle_slack_interactive(
             // There were no errors so set the response action to clear the modal.
             interactive_response.response_action = "clear".to_string();
         }
-
-        warn!(
-            "values: {:#?}i, carrier: {}, tracking_number: {}",
-            values, carrier, tracking_number
-        );
 
         return Ok(interactive_response);
     }
