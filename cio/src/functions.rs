@@ -87,9 +87,9 @@ impl From<NewFunction> for FormattedMessage {
 
         let text = format!("Function | `{}`", item.name);
 
-        let mut context = format!("**{}**", item.status);
+        let mut context = format!("*{}*", item.status);
         if !item.conclusion.is_empty() {
-            context += &format!(" | **{}**", item.conclusion);
+            context += &format!(" | *{}*", item.conclusion);
         }
         context += &format!(" | _created {}_", human_date);
         if let Some(c) = item.completed_at {
