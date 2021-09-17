@@ -29,8 +29,9 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{
-    BotCommand, FormattedMessage, InteractivePayload, MessageAttachment, MessageBlock, MessageBlockText,
-    MessageBlockType, MessageResponse, MessageResponseType, MessageType,
+    BotCommand, FormattedMessage, InputBlock, InputBlockElement, InputType, InteractivePayload, MessageAttachment,
+    MessageBlock, MessageBlockText, MessageBlockType, MessageResponse, MessageResponseType, MessageType,
+    SelectInputOption,
 };
 
 use crate::{
@@ -779,6 +780,14 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
     let payload: InteractivePayload = serde_urlencoded::from_str(s.trim_start_matches("payload="))?;
 
     let ctx = rqctx.context();
+
+    if !payload.trigger_id.is_empty() && !payload.callback_id.is_empty() && payload.callback_id == "track_shipment" {
+        // Create the modal for tracking a shipment.
+        let modal = create_slack_shipment_tracking_modal()?;
+
+        // Return early.
+        return Ok(());
+    }
 
     for action in payload.actions {
         // Trigger the action if it's a function.
@@ -1690,6 +1699,8 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     Ok(())
 }
 
+const SLACK_TRACK_SHIPMENT_MODAL_DESCRIPTION:  &str = "After submitting the carrer and tracking number, your shipment will be tracked in the `Shipments` Airtable and notifications for status updates will post to the #shipments channel.";
+
 fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
     Ok(slack_chat_api::Modal {
         type_: slack_chat_api::ModalType::Modal,
@@ -1706,6 +1717,76 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
             text: "Cancel".to_string(),
         },
 
-        blocks: vec![],
+        blocks: vec![
+            InputBlock {
+                type_: MessageBlockType::Section,
+                text: Some(MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: SLACK_TRACK_SHIPMENT_MODAL_DESCRIPTION.to_string(),
+                }),
+                element: None,
+                label: None,
+            },
+            InputBlock {
+                type_: MessageBlockType::Section,
+                text: None,
+                element: Some(InputBlockElement {
+                    type_: InputType::StaticSelect,
+                    action_id: "carrier".to_string(),
+                    placeholder: Some(MessageBlockText {
+                        text_type: MessageType::PlainText,
+                        text: "Select a shipping carrier".to_string(),
+                    }),
+                    options: vec![
+                        SelectInputOption {
+                            text: MessageBlockText {
+                                text_type: MessageType::PlainText,
+                                text: "DHL".to_string(),
+                            },
+                            value: "DHL".to_string(),
+                        },
+                        SelectInputOption {
+                            text: MessageBlockText {
+                                text_type: MessageType::PlainText,
+                                text: "FedEx".to_string(),
+                            },
+                            value: "FedEx".to_string(),
+                        },
+                        SelectInputOption {
+                            text: MessageBlockText {
+                                text_type: MessageType::PlainText,
+                                text: "UPS".to_string(),
+                            },
+                            value: "UPS".to_string(),
+                        },
+                        SelectInputOption {
+                            text: MessageBlockText {
+                                text_type: MessageType::PlainText,
+                                text: "USPS".to_string(),
+                            },
+                            value: "USPS".to_string(),
+                        },
+                    ],
+                }),
+                label: Some(MessageBlockText {
+                    text_type: MessageType::PlainText,
+                    text: "Carrier".to_string(),
+                }),
+            },
+            InputBlock {
+                type_: MessageBlockType::Section,
+                text: None,
+                element: Some(InputBlockElement {
+                    type_: InputType::PlainText,
+                    action_id: "tracking_number".to_string(),
+                    options: vec![],
+                    placeholder: None,
+                }),
+                label: Some(MessageBlockText {
+                    text_type: MessageType::PlainText,
+                    text: "Tracking number".to_string(),
+                }),
+            },
+        ],
     })
 }

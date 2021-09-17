@@ -264,6 +264,32 @@ impl Slack {
         Ok(r.billable_info)
     }
 
+    /// Open a view.
+    /// FROM: https://api.slack.com/methods/views.open
+    pub async fn open_view(&self, body: &View) -> Result<Modal> {
+        // Build the request.
+        let request = self.request(&self.token, Method::POST, "views.open", body, None)?;
+
+        let resp = self.client.execute(request).await?;
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                bail!("status code: {}, body: {}", s, resp.text().await?);
+            }
+        };
+
+        let r: ViewResponse = resp.json().await?;
+
+        if !r.ok {
+            bail!(
+                "status code: {}, body: {}",
+                StatusCode::OK,
+                serde_json::json!(r).to_string()
+            );
+        }
+        Ok(r.view)
+    }
+
     /// Get channel id from name.
     pub async fn channel_id(&self, name: &str) -> Result<String> {
         let channels = self.list_channels().await?;
@@ -548,11 +574,33 @@ pub struct BotCommand {
     pub user_id: String,
 }
 
-/// A modal to send to Slack.
 #[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+pub struct View {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub trigger_id: String,
+    #[serde(default)]
+    pub view: Modal,
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+pub struct ViewResponse {
+    #[serde(default)]
+    pub ok: bool,
+    #[serde(default)]
+    pub view: Modal,
+    #[serde(default)]
+    pub response_metadata: serde_json::Value,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub error: String,
+}
+
+/// A modal to send to Slack.
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema, Serialize)]
 pub struct Modal {
     #[serde(default, rename = "type")]
     pub type_: ModalType,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub callback_id: String,
     #[serde(default)]
     pub title: MessageBlockText,
     #[serde(default)]
