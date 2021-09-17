@@ -45,7 +45,7 @@ FROM cargo-chef AS cargo-deps
 
 COPY . .
 
-RUN cargo chef prepare --recipe-path recipe.json
+RUN cargo chef prepare --recipe-path recipe.json || true
 
 # ------------------------------------------------------------------------------
 # Cargo Build Stage
@@ -53,10 +53,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM cargo-chef AS cargo-build
 
-COPY --from=cargo-deps /usr/src/webhooky/recipe.json recipe.json
+#COPY --from=cargo-deps /usr/src/webhooky/recipe.json recipe.json
 
 # Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json || true
 
 COPY . .
 

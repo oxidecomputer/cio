@@ -21,7 +21,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN rustup default nightly
 
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --version 0.1.31
+
+RUN cargo chef --version
 
 WORKDIR /usr/src/cio
 
