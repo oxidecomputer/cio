@@ -750,17 +750,17 @@ pub struct ChannelValue {
 /// Docs: https://api.slack.com/messaging/composing/layouts#adding-blocks
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
 pub struct MessageBlock {
-    #[serde(rename = "type")]
+    #[serde(default, rename = "type")]
     pub block_type: MessageBlockType,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<MessageBlockText>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub elements: Vec<BlockOption>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub block_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accessory: Option<MessageBlockAccessory>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub fields: Vec<MessageBlockText>,
 }
 
