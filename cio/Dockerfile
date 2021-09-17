@@ -39,13 +39,13 @@ COPY macros ../macros
 
 RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
-RUN cargo build --release --bin cio
+RUN cargo build --release --bin cio-api
 
 RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
 COPY cio/src src
 
-RUN cargo build --release --bin cio
+RUN cargo build --release --bin cio-api
 
 # ------------------------------------------------------------------------------
 # Final Stage
