@@ -45,7 +45,8 @@ jobs:
     # Build and push image to Google Container Registry
     - name: Build image
       run: |-
-        cd webhooky && gcloud builds submit \
+        mv webhooky/Dockerfile .
+        gcloud builds submit \
           --quiet \
           --timeout 2h \
           --machine-type n1-highcpu-32 \
