@@ -111,7 +111,7 @@ impl From<NewRackLineSubscriber> for FormattedMessage {
         }
         context += &format!("subscribed to rack line {}", time);
 
-        FormattedMessage {
+        let mut message = FormattedMessage {
             channel: Default::default(),
             attachments: Default::default(),
             blocks: vec![
@@ -126,7 +126,6 @@ impl From<NewRackLineSubscriber> for FormattedMessage {
                     block_id: Default::default(),
                     fields: Default::default(),
                 },
-                interest,
                 MessageBlock {
                     block_type: MessageBlockType::Context,
                     elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
@@ -139,7 +138,15 @@ impl From<NewRackLineSubscriber> for FormattedMessage {
                     fields: Default::default(),
                 },
             ],
+        };
+
+        if item.interest.is_empty() {
+            return message;
         }
+
+        message.blocks.insert(1, interest);
+
+        message
     }
 }
 

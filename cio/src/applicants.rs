@@ -1570,7 +1570,11 @@ impl From<NewApplicant> for FormattedMessage {
         let mut status_msg = item.role.to_string();
 
         if !item.interested_in.is_empty() {
-            status_msg += &format!(" | {}", item.interested_in.join(","));
+            // Make sure we don't repeat the same string as the role for no reason.
+            let joined = item.interested_in.join(",");
+            if joined != item.role {
+                status_msg += &format!(" | {}", joined);
+            }
         }
 
         if !item.status.is_empty() {

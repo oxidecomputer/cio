@@ -128,7 +128,12 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
     fn from(item: NewMailingListSubscriber) -> Self {
         let time = item.human_duration();
 
-        let msg = format!("*{}* <mailto:{}|{}>", item.name, item.email, item.email);
+        let mut msg: String = Default::default();
+        if !item.name.is_empty() {
+            msg += &format!("*{}*", item.name);
+        }
+        msg += &format!(" <mailto:{}|{}>", item.email, item.email);
+        msg = msg.trim().to_string();
 
         let mut interest: MessageBlock = Default::default();
         if !item.interest.is_empty() {
@@ -156,7 +161,7 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
         }
         context += &format!("subscribed to mailing list {}", time);
 
-        let mut msg = FormattedMessage {
+        let mut message = FormattedMessage {
             channel: Default::default(),
             attachments: Default::default(),
             blocks: vec![
@@ -197,12 +202,12 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
         };
 
         if item.interest.is_empty() {
-            return msg;
+            return message;
         }
 
-        msg.blocks.insert(1, interest);
+        message.blocks.insert(1, interest);
 
-        msg
+        message
     }
 }
 
