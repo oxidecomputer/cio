@@ -26,8 +26,6 @@ use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
 use mailchimp_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use serde_qs::Config as QSConfig;
 use sheets::traits::SpreadsheetOps;
 use slack_chat_api::{
@@ -775,7 +773,7 @@ pub async fn handle_slack_interactive(rqctx: Arc<RequestContext<Context>>, body_
     sentry::capture_message(&format!("slack interactive: {}", s), sentry::Level::Info);
 
     // Decode the URL encoded struct.
-    let decoded = url_encoding::decode(s.trim_start_matches("payload="))?;
+    let decoded = urlencoding::decode(s.trim_start_matches("payload="))?;
 
     sentry::capture_message(&format!("slack interactive decoded: {}", decoded), sentry::Level::Info);
 
