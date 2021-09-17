@@ -37,7 +37,7 @@ use crate::{
     },
     schema::{applicants, buildings, conference_rooms, groups, links, users},
     shipments::NewOutboundShipment,
-    templates::{generate_terraform_files_for_aws_and_github, generate_terraform_files_for_okta},
+    templates::generate_terraform_files_for_okta,
     utils::{get_file_content_from_repo, get_github_user_public_ssh_keys},
 };
 
@@ -2981,8 +2981,6 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -
     // Sync okta users and group from the database.
     // Do this after we update the users and groups in the database.
     generate_terraform_files_for_okta(&github, db, company).await?;
-    // Generate the terraform files for teams.
-    generate_terraform_files_for_aws_and_github(&github, db, company).await?;
 
     // Sync links.
     sync_links(db, configs.links, configs.huddles, company).await?;
