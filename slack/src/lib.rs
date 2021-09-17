@@ -1084,7 +1084,7 @@ pub struct CurrentUser {
 }
 
 #[derive(Debug, JsonSchema, Clone, Default, Serialize, Deserialize)]
-pub struct InteractiveSlackPayload {
+pub struct InteractivePayload {
     #[serde(rename = "type", default, skip_serializing_if = "String::is_empty")]
     pub interactive_slack_payload_type: String,
     #[serde(default)]
