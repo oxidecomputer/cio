@@ -82,7 +82,7 @@ fn get_color_based_from_status_and_conclusion(status: &str, conclusion: &str) ->
 /// Convert the function into a Slack message.
 impl From<NewFunction> for FormattedMessage {
     fn from(item: NewFunction) -> Self {
-        let dur = Utc::now() - item.created_at;
+        let dur = item.created_at - Utc::now();
         let human_date = HumanTime::from(dur);
 
         let text = format!("`{}`", item.name);
@@ -93,7 +93,7 @@ impl From<NewFunction> for FormattedMessage {
         }
         context += &format!(" | _created {}_", human_date);
         if let Some(c) = item.completed_at {
-            let dur = Utc::now() - c;
+            let dur = c - Utc::now();
             let human_date = HumanTime::from(dur);
 
             context += &format!(" | _completed {}_", human_date);
