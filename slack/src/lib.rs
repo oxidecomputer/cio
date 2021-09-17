@@ -752,7 +752,11 @@ pub struct ChannelValue {
     pub creator: String,
     #[serde(default)]
     pub last_set: i32,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub value: String,
 }
 
@@ -860,6 +864,10 @@ pub struct InputBlock {
     pub label: Option<MessageBlockText>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<MessageBlockText>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub hint: String,
+    #[serde(default)]
+    pub optional: bool,
 }
 
 /// Input block element in Slack.
@@ -883,7 +891,11 @@ pub struct SelectInputOption {
     #[serde(default)]
     pub text: MessageBlockText,
 
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub value: String,
 }
 
@@ -895,7 +907,11 @@ pub struct ActionBlock {
     #[serde(default)]
     pub text: MessageBlockText,
 
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub value: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub action_id: String,
@@ -950,7 +966,11 @@ pub struct MessageBlockAccessory {
     /// These are for a button.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<MessageBlockText>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub value: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub action_id: String,
@@ -998,8 +1018,15 @@ pub struct MessageAttachment {
 /// A message attachment field in Slack.
 #[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
 pub struct MessageAttachmentField {
+    #[serde(default)]
     pub short: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub value: String,
 }
 
@@ -1055,8 +1082,15 @@ pub struct UserProfile {
 
 #[derive(Clone, Debug, Serialize, JsonSchema, Deserialize)]
 pub struct UserProfileFields {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub alt: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub label: String,
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_null_string::deserialize"
+    )]
     pub value: String,
 }
 
@@ -1306,4 +1340,24 @@ pub struct Container {
     pub is_ephemeral: bool,
     #[serde(default)]
     pub is_app_unfurl: bool,
+}
+
+pub mod deserialize_null_string {
+    use serde::{self, Deserialize, Deserializer};
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer).unwrap_or_default();
+
+        Ok(s)
+    }
 }
