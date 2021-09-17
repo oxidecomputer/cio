@@ -9,6 +9,11 @@ use crate::companies::Company;
 /// This function does that.
 pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
     if company.tailscale_api_key.is_empty() {
+        info!(
+            "skipping `cleanup_old_tailscale_devices` for company `{}`",
+            company.name
+        );
+
         // Return early.
         return Ok(());
     }
@@ -18,6 +23,8 @@ pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
 
     // Get the devices.
     let devices = tailscale.list_devices().await?;
+
+    info!("devices: {:?}", devices);
 
     // Create the array of links.
     for device in devices {
@@ -37,6 +44,8 @@ pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
             tailscale.delete_device(&device.id).await?;
         }
     }
+
+    info!("cleaned up old tailscale devices successfully");
 
     Ok(())
 }
