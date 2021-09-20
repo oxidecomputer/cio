@@ -573,7 +573,7 @@ impl SwagInventoryItem {
             // Set our text.
             let mut t = msg.attachments[0].blocks[0].text.as_ref().unwrap().clone();
             t.text = format!(
-                "*{}*\n | stock changed from `{}` to `{}`",
+                "*{}*\nstock changed from `{}` to `{}`",
                 self.name, self.current_stock, new
             );
             msg.attachments[0].blocks[0].text = Some(t);
