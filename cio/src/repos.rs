@@ -87,7 +87,7 @@ impl ToSql<Jsonb, Pg> for GitHubUser {
     airtable_base = "misc",
     airtable_table = "AIRTABLE_GITHUB_REPOS_TABLE",
     match_on = {
-        "full_name" = "String",
+        "github_id" = "String",
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
