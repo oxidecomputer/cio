@@ -201,6 +201,10 @@ async fn main() -> Result<()> {
 }
 
 async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
+    sentry::configure_scope(|scope| {
+        scope.set_tag("command", &format!("{:?}", opts.subcmd));
+    });
+
     match opts.subcmd {
         SubCommand::Server(s) => {
             crate::server::server(s, logger).await?;
