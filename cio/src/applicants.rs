@@ -2,7 +2,7 @@
 use std::{
     collections::{BTreeMap, HashMap},
     env, fs,
-    io::{copy, stderr, stdout, Write},
+    io::{copy, Write},
     process::Command,
     str::FromStr,
 };
@@ -1242,8 +1242,8 @@ The Oxide Team",
             && self.status != crate::applicant_status::Status::Declined.to_string()
         {
             // Read the file contents.
-            self.resume_contents = get_file_contents(drive_client, &self.resume).await;
-            self.materials_contents = get_file_contents(drive_client, &self.materials).await;
+            self.resume_contents = get_file_contents(drive_client, &self.resume).await?;
+            self.materials_contents = get_file_contents(drive_client, &self.materials).await?;
             self.parse_materials();
         }
 
@@ -2740,7 +2740,7 @@ impl ApplicantSheetColumns {
 }
 
 /// Get the contexts of a file in Google Drive by it's URL as a text string.
-pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String {
+pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<String> {
     let id = url
         .replace("https://drive.google.com/open?id=", "")
         .replace("https://drive.google.com/file/d/", "")
@@ -2755,8 +2755,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
             true,  // supports_all_drives
             true,  // supports_team_drives
         )
-        .await
-        .unwrap();
+        .await?;
     let mime_type = drive_file.mime_type;
     let name = drive_file.name;
 
@@ -2767,45 +2766,44 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
     if mime_type == "application/pdf" {
         // Get the PDF contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.pdf", id));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
 
-        result = read_pdf(&name, path.clone());
+        result = read_pdf(&name, path.clone())?;
     } else if mime_type == "text/html" {
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         // Wrap lines at 80 characters.
         result = from_read(&contents[..], 80);
     } else if mime_type == "application/vnd.google-apps.document" {
-        result = drive_client.files().get_contents_by_id(&id).await.unwrap();
+        result = drive_client.files().get_contents_by_id(&id).await?;
     } else if name.ends_with(".7z") {
         // Get the ip contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.7z", id));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
 
         output.push(id);
 
         // Create the output directory.
-        fs::create_dir_all(&output).unwrap();
+        fs::create_dir_all(&output)?;
 
         // Extract the text from the archive.
         let cmd_out = Command::new("7z")
             .args(&["x", &format!("-o{}", output.to_str().unwrap()), path.to_str().unwrap()])
-            .output()
-            .unwrap();
-        info!("pz7ip output: {}", String::from_utf8(cmd_out.stdout).unwrap());
+            .output()?;
+        info!("pz7ip output: {}", String::from_utf8(cmd_out.stdout)?);
 
         // Walk the output directory trying to find our file.
         for entry in WalkDir::new(&output).min_depth(1) {
-            let entry = entry.unwrap();
+            let entry = entry?;
             let path = entry.path();
             if is_materials(path.file_name().unwrap().to_str().unwrap()) {
                 // Concatenate all the tar files into our result.
@@ -2816,32 +2814,32 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                         .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
-                    result += &read_pdf(&name, path.to_path_buf());
+                    result += &read_pdf(&name, path.to_path_buf())?;
                 } else {
-                    result += &fs::read_to_string(&path).unwrap();
+                    result += &fs::read_to_string(&path)?;
                 }
                 result += "\n\n\n";
             }
         }
     } else if name.ends_with(".tgz") || name.ends_with(".tar.gz") {
         // Get the ip contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.tar.gz", id));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
 
-        let tar_gz = fs::File::open(&path).unwrap();
+        let tar_gz = fs::File::open(&path)?;
         let tar = GzDecoder::new(tar_gz);
         let mut archive = Archive::new(tar);
         output.push(id);
         info!("unpacking tar gz: {:?} -> {:?}", path, output);
-        archive.unpack(&output).unwrap();
+        archive.unpack(&output)?;
 
         // Walk the output directory trying to find our file.
         for entry in WalkDir::new(&output).min_depth(1) {
-            let entry = entry.unwrap();
+            let entry = entry?;
             let path = entry.path();
             if is_materials(path.file_name().unwrap().to_str().unwrap()) {
                 // Concatenate all the tar files into our result.
@@ -2852,31 +2850,31 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                         .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
-                    result += &read_pdf(&name, path.to_path_buf());
+                    result += &read_pdf(&name, path.to_path_buf())?;
                 } else {
-                    result += &fs::read_to_string(&path).unwrap();
+                    result += &fs::read_to_string(&path)?;
                 }
                 result += "\n\n\n";
             }
         }
     } else if name.ends_with(".tar") {
         // Get the ip contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.tar", id));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
 
         // Unpack the tarball.
-        let mut tar = Archive::new(fs::File::open(&path).unwrap());
+        let mut tar = Archive::new(fs::File::open(&path)?);
         output.push(id);
         info!("unpacking tarball: {:?} -> {:?}", path, output);
-        tar.unpack(&output).unwrap();
+        tar.unpack(&output)?;
 
         // Walk the output directory trying to find our file.
         for entry in WalkDir::new(&output).min_depth(1) {
-            let entry = entry.unwrap();
+            let entry = entry?;
             let path = entry.path();
             if is_materials(path.file_name().unwrap().to_str().unwrap()) {
                 // Concatenate all the tar files into our result.
@@ -2887,9 +2885,9 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                         .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
-                    result += &read_pdf(&name, path.to_path_buf());
+                    result += &read_pdf(&name, path.to_path_buf())?;
                 } else {
-                    result += &fs::read_to_string(&path).unwrap();
+                    result += &fs::read_to_string(&path)?;
                 }
                 result += "\n\n\n";
             }
@@ -2897,16 +2895,16 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
     } else if name.ends_with(".zip") {
         // This is patrick :)
         // Get the ip contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.zip", id));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
-        file = fs::File::open(&path).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
+        file = fs::File::open(&path)?;
 
         // Unzip the file.
-        let mut archive = zip::ZipArchive::new(file).unwrap();
+        let mut archive = zip::ZipArchive::new(file)?;
         for i in 0..archive.len() {
             match archive.by_index(i) {
                 Ok(mut file) => {
@@ -2921,7 +2919,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
                     if (&*file.name()).ends_with('/') {
                         info!("zip file {} extracted to \"{}\"", i, output.as_path().display());
-                        fs::create_dir_all(&output).unwrap();
+                        fs::create_dir_all(&output)?;
                     } else {
                         info!(
                             "zip file {} extracted to \"{}\" ({} bytes)",
@@ -2932,11 +2930,11 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
 
                         if let Some(p) = output.parent() {
                             if !p.exists() {
-                                fs::create_dir_all(&p).unwrap();
+                                fs::create_dir_all(&p)?;
                             }
                         }
-                        let mut outfile = fs::File::create(&output).unwrap();
-                        copy(&mut file, &mut outfile).unwrap();
+                        let mut outfile = fs::File::create(&output)?;
+                        copy(&mut file, &mut outfile)?;
 
                         let file_name = output.to_str().unwrap();
                         if !output.is_dir() && is_materials(file_name) {
@@ -2950,9 +2948,9 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
                                     .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                             );
                             if output.as_path().extension().unwrap() == "pdf" {
-                                result += &read_pdf(&name, output.clone());
+                                result += &read_pdf(&name, output.clone())?;
                             } else {
-                                result += &fs::read_to_string(&output).unwrap();
+                                result += &fs::read_to_string(&output)?;
                             }
                             result += "\n\n\n";
                         }
@@ -2974,30 +2972,30 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
         );
     } else if name.ends_with(".rtf") {
         // Get the RTF contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.rtf", id));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
 
         result = read_rtf(path.clone());
     } else if name.ends_with(".doc") {
         // Get the RTF contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
 
         path.push(format!("{}.doc", id));
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
 
         result = read_doc(path.clone());
     } else {
-        let contents = drive_client.files().download_by_id(&id).await.unwrap();
+        let contents = drive_client.files().download_by_id(&id).await?;
         path.push(name.to_string());
 
-        let mut file = fs::File::create(&path).unwrap();
-        file.write_all(&contents).unwrap();
+        let mut file = fs::File::create(&path)?;
+        file.write_all(&contents)?;
 
         output.push(format!("{}.txt", id));
 
@@ -3008,20 +3006,20 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> String 
             Ok(_) => (),
             Err(e) => {
                 warn!("pandoc failed: {}", e);
-                return "".to_string();
+                return Ok("".to_string());
             }
         }
-        result = fs::read_to_string(output.clone()).unwrap();
+        result = fs::read_to_string(output.clone())?;
     }
 
     // Delete the temporary file, if it exists.
     for p in vec![path, output] {
         if p.exists() && !p.is_dir() {
-            fs::remove_file(p).unwrap();
+            fs::remove_file(p)?;
         }
     }
 
-    result.trim().to_string()
+    Ok(result.trim().to_string())
 }
 
 fn read_doc(path: std::path::PathBuf) -> String {
@@ -3059,27 +3057,26 @@ fn read_rtf(path: std::path::PathBuf) -> String {
     result
 }
 
-fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
+fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     let mut output = env::temp_dir();
     output.push("tempfile.txt");
 
     // Extract the text from the PDF
     let cmd_output = Command::new("pdftotext")
         .args(&["-enc", "UTF-8", path.to_str().unwrap(), output.to_str().unwrap()])
-        .output()
-        .unwrap();
+        .output()?;
 
     let result = match fs::read_to_string(output.clone()) {
         Ok(r) => r,
         Err(e) => {
             warn!(
-                "running pdf2text failed: {} | name: {}, path: {}",
+                "running pdf2text failed: {} | name: {}, path: {}\nstdout: {}\nstderr: {}",
                 e,
                 name,
-                path.as_path().display()
+                path.as_path().display(),
+                String::from_utf8(cmd_output.stdout)?,
+                String::from_utf8(cmd_output.stderr)?,
             );
-            stdout().write_all(&cmd_output.stdout).unwrap();
-            stderr().write_all(&cmd_output.stderr).unwrap();
 
             "".to_string()
         }
@@ -3092,7 +3089,7 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> String {
         }
     }
 
-    result
+    Ok(result)
 }
 
 pub fn get_tracking_sheets() -> Vec<&'static str> {
@@ -4007,8 +4004,8 @@ impl Applicant {
             && self.status != crate::applicant_status::Status::Declined.to_string()
         {
             // Read the file contents.
-            self.resume_contents = get_file_contents(drive_client, &self.resume).await;
-            self.materials_contents = get_file_contents(drive_client, &self.materials).await;
+            self.resume_contents = get_file_contents(drive_client, &self.resume).await?;
+            self.materials_contents = get_file_contents(drive_client, &self.materials).await?;
             self.parse_materials();
         }
 

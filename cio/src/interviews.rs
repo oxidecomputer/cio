@@ -430,13 +430,18 @@ The Oxide Team
             let mut cover_output = env::temp_dir();
             cover_output.push(format!("{}.pdf", email.to_string()));
             // Convert it to a PDF with pandoc.
-            Command::new("pandoc")
+            let cmd_output = Command::new("pandoc")
                 .args(&[
                     "-o",
                     cover_output.clone().to_str().unwrap(),
                     cover_path.to_str().unwrap(),
                 ])
                 .output()?;
+            info!(
+                "creating coverpage `pandoc` stdout:{}\nstderr:{}",
+                String::from_utf8(cmd_output.stdout)?,
+                String::from_utf8(cmd_output.stderr)?,
+            );
 
             // Add the header to our strings.
             let mut args = vec![cover_output.to_str().unwrap().to_string()];
@@ -463,13 +468,18 @@ The Oxide Team
                 let mut header_output = env::temp_dir();
                 header_output.push(format!("{}-{}.pdf", email.to_string(), username));
                 // Convert it to a PDF with pandoc.
-                Command::new("pandoc")
+                let cmd_output = Command::new("pandoc")
                     .args(&[
                         "-o",
                         header_output.clone().to_str().unwrap(),
                         html_path.to_str().unwrap(),
                     ])
                     .output()?;
+                info!(
+                    "creating header page `pandoc` stdout:{}\nstderr:{}",
+                    String::from_utf8(cmd_output.stdout)?,
+                    String::from_utf8(cmd_output.stderr)?,
+                );
 
                 // Add the header to our string.
                 args.push(header_output.to_str().unwrap().to_string());
