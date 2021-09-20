@@ -34,6 +34,7 @@ use walkdir::WalkDir;
 
 use crate::{
     airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_REVIEWER_LEADERBOARD_TABLE},
+    applicant_reviews::ApplicantReview,
     companies::Company,
     configs::{User, Users},
     core::UpdateAirtableRecord,
@@ -2008,6 +2009,11 @@ impl Applicant {
                 airtable
                     .delete_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
                     .await?;
+
+                // Delete the record if it exists in the Database.
+                let r = ApplicantReview::get_by_id(db, record.fields.id)?;
+                // Delete it.
+                r.delete(db).await?;
             }
 
             // We already zero-ed out the values for the scores, now we return early.

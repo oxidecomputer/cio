@@ -34,7 +34,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
      */
     let config_dropshot = ConfigDropshot {
         bind_address: s.address.parse()?,
-        request_body_max_bytes: 10737418240, // 10 Gigiabytes.
+        request_body_max_bytes: 107374182400, // 100 Gigiabytes.
     };
 
     /*
