@@ -3350,7 +3350,7 @@ pub async fn update_applications_with_scoring_forms(db: &Database, company: &Com
                             scorers_completed.push(user.email);
                         }
                         None => {
-                            warn!("could not find user with email: {}", email);
+                            info!("could not find user with email: {}", email);
                         }
                     }
                 }
@@ -3802,7 +3802,7 @@ pub async fn update_applicant_reviewers_leaderboard(db: &Database, company: &Com
                 reviewer.upsert(db).await?;
             }
             None => {
-                warn!("could not find user with email: {}", email);
+                info!("could not find user with email: {}", email);
             }
         }
     }
