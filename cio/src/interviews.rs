@@ -314,7 +314,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         }
 
         if materials_url.is_empty() {
-            warn!("could not find applicant with email {}", employee.recovery_email);
+            info!("could not find materials for email {}", employee.recovery_email);
             continue;
         }
 
