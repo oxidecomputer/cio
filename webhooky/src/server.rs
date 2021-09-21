@@ -934,6 +934,8 @@ pub struct ApplicationFileUploadData {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub materials: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub portfolio_pdf_name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub role: String,
@@ -943,6 +945,8 @@ pub struct ApplicationFileUploadData {
     pub resume_contents: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub materials_contents: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub portfolio_pdf_contents: String,
 }
 
 /**

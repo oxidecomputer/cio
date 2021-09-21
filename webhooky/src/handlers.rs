@@ -1474,6 +1474,16 @@ pub async fn handle_application_files_upload(
         "materials".to_string(),
         (data.materials.to_string(), data.materials_contents.to_string()),
     );
+    // If we have a portfolio PDF add it to our uploads.
+    if !data.portfolio_pdf_name.is_empty() && !data.portfolio_pdf_contents.is_empty() {
+        files.insert(
+            "portfolio_pdf".to_string(),
+            (
+                data.portfolio_pdf_name.to_string(),
+                data.portfolio_pdf_contents.to_string(),
+            ),
+        );
+    }
 
     // Iterate over our files and create them in google drive.
     // Create or update the file in the google_drive.

@@ -31,6 +31,8 @@ pub struct ApplicationForm {
     pub resume: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub materials: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub portfolio_pdf: String,
     #[serde(default)]
     pub cio_company_id: i32,
 }
@@ -91,7 +93,7 @@ impl From<ApplicationForm> for NewApplicant {
             gitlab: "".to_string(),
             linkedin: form.linkedin.to_string(),
             portfolio: form.portfolio.to_string(),
-            portfolio_pdf: Default::default(),
+            portfolio_pdf: form.portfolio_pdf.to_string(),
             website: form.website.to_string(),
             resume: form.resume.to_string(),
             materials: form.materials.to_string(),
