@@ -91,6 +91,7 @@ impl From<ApplicationForm> for NewApplicant {
             gitlab: "".to_string(),
             linkedin: form.linkedin.to_string(),
             portfolio: form.portfolio.to_string(),
+            portfolio_pdf: Default::default(),
             website: form.website.to_string(),
             resume: form.resume.to_string(),
             materials: form.materials.to_string(),

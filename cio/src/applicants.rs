@@ -105,6 +105,8 @@ pub struct NewApplicant {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub portfolio: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub portfolio_pdf: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub website: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub resume: String,
@@ -329,6 +331,7 @@ impl NewApplicant {
             gitlab,
             linkedin: get_value(values, "LinkedIn profile URL"),
             portfolio: get_value(values, "Portfolio"),
+            portfolio_pdf: Default::default(),
             website: get_value(values, "Website"),
             resume: get_value(values, "Submit your resume (or PDF export of LinkedIn profile)"),
             materials: get_value(values, "Submit your Oxide candidate materials"),
@@ -984,6 +987,7 @@ The Oxide Team",
             gitlab,
             linkedin,
             portfolio,
+            portfolio_pdf: Default::default(),
             website,
             resume,
             materials,

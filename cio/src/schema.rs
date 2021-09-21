@@ -109,6 +109,7 @@ table! {
         gitlab -> Varchar,
         linkedin -> Varchar,
         portfolio -> Varchar,
+        portfolio_pdf -> Varchar,
         website -> Varchar,
         resume -> Varchar,
         materials -> Varchar,
