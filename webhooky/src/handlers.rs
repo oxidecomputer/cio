@@ -1740,10 +1740,9 @@ pub async fn handle_docusign_envelope_update(
             }
         }
         Err(e) => {
-            bail!(
+            warn!(
                 "database could not find applicant with docusign piia envelope id {}: {}",
-                event.envelope_id,
-                e
+                event.envelope_id, e
             );
         }
     }
