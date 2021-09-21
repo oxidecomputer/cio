@@ -1709,6 +1709,9 @@ pub async fn handle_docusign_envelope_update(
                     .update_applicant_from_docusign_offer_envelope(db, &ds, event.clone())
                     .await?;
             }
+
+            // Since we got the ID, then return early here.
+            return Ok(());
         }
         Err(e) => {
             // Likely this happens because we resent an offer or it was voided.
@@ -1717,13 +1720,10 @@ pub async fn handle_docusign_envelope_update(
                 "database could not find applicant with docusign offer envelope id {}: {}",
                 event.envelope_id, e
             );
-
-            return Ok(());
         }
     }
 
-    // We need to get the applicant for the envelope.
-    // Now do PIIA.
+    // Now try to match on PIIA.
     let result = applicants::dsl::applicants
         .filter(applicants::dsl::docusign_piia_envelope_id.eq(event.envelope_id.to_string()))
         .first::<Applicant>(&db.conn());
@@ -1738,10 +1738,13 @@ pub async fn handle_docusign_envelope_update(
                     .update_applicant_from_docusign_piia_envelope(db, &ds, event)
                     .await?;
             }
+
+            // Since we got the ID, then return early here.
+            return Ok(());
         }
         Err(e) => {
             warn!(
-                "database could not find applicant with docusign piia envelope id {}: {}",
+                "database could not find applicant with docusign piia envelope id or offer envelope id `{}`: {}",
                 event.envelope_id, e
             );
         }
