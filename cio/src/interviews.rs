@@ -429,22 +429,22 @@ The Oxide Team
             file.write_all(cover_html.as_bytes())?;
             let mut cover_output = env::temp_dir();
             cover_output.push(format!("{}.pdf", email.to_string()));
+            let cover_page_str = cover_output.clone().to_str().unwrap().to_string();
             // Convert it to a PDF with pandoc.
             let cmd_output = Command::new("pandoc")
-                .args(&[
-                    "-o",
-                    cover_output.clone().to_str().unwrap(),
-                    cover_path.to_str().unwrap(),
-                ])
+                .args(&["-o", &cover_page_str, cover_path.to_str().unwrap()])
                 .output()?;
-            info!(
-                "creating coverpage `pandoc` stdout:{}\nstderr:{}",
-                String::from_utf8(cmd_output.stdout)?,
-                String::from_utf8(cmd_output.stderr)?,
-            );
+            if !cmd_output.stdout.is_empty() || !cmd_output.stderr.is_empty() {
+                info!(
+                    "creating coverpage `pandoc` stdout:{}\nstderr:{}",
+                    String::from_utf8(cmd_output.stdout)?,
+                    String::from_utf8(cmd_output.stderr)?,
+                );
+            }
+            info!("saved coverpage to `{}`", &cover_page_str);
 
             // Add the header to our strings.
-            let mut args = vec![cover_output.to_str().unwrap().to_string()];
+            let mut args = vec![cover_page_str];
 
             // Iterate over the interviewees and add their packet to our list of packets.
             for (i, start_time, end_time) in itrs {
@@ -467,22 +467,22 @@ The Oxide Team
                 )?;
                 let mut header_output = env::temp_dir();
                 header_output.push(format!("{}-{}.pdf", email.to_string(), username));
+                let header_page_str = header_output.clone().to_str().unwrap().to_string();
                 // Convert it to a PDF with pandoc.
                 let cmd_output = Command::new("pandoc")
-                    .args(&[
-                        "-o",
-                        header_output.clone().to_str().unwrap(),
-                        html_path.to_str().unwrap(),
-                    ])
+                    .args(&["-o", &header_page_str, html_path.to_str().unwrap()])
                     .output()?;
-                info!(
-                    "creating header page `pandoc` stdout:{}\nstderr:{}",
-                    String::from_utf8(cmd_output.stdout)?,
-                    String::from_utf8(cmd_output.stderr)?,
-                );
+                if !cmd_output.stdout.is_empty() || !cmd_output.stderr.is_empty() {
+                    info!(
+                        "creating header page `pandoc` stdout:{}\nstderr:{}",
+                        String::from_utf8(cmd_output.stdout)?,
+                        String::from_utf8(cmd_output.stderr)?,
+                    );
+                }
+                info!("saved header page to `{}`", &header_page_str);
 
                 // Add the header to our string.
-                args.push(header_output.to_str().unwrap().to_string());
+                args.push(header_page_str);
 
                 // Get the path to the materials.
                 let mut materials = env::temp_dir();
@@ -656,6 +656,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Result<Vec<u8>> {
 
     for pdf in pdfs {
         // Load the pdf as a file.
+        info!("loading pdf `{}` to merge", pdf);
         let docu = Document::load(&pdf);
         if docu.is_err() {
             // This happens if we have someone interviewing and for some reason
