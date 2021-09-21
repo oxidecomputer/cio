@@ -125,7 +125,7 @@ impl From<NewSoftwareVendor> for FormattedMessage {
                     MessageBlock {
                         block_type: MessageBlockType::Header,
                         text: Some(MessageBlockText {
-                            text_type: MessageType::Markdown,
+                            text_type: MessageType::PlainText,
                             text: item.name.to_string(),
                         }),
                         elements: Default::default(),
