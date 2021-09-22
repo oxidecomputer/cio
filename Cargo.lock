@@ -3575,6 +3575,8 @@ dependencies = [
 [[package]]
 name = "revai"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e72b4f98b31ffabe2878d23375dafd50939d6a566757eb8cad297d670d47c67a"
 dependencies = [
  "anyhow",
  "async-recursion",
