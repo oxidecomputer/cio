@@ -196,7 +196,10 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
 
     // TODO: remove this env variable.
     let members = mailchimp
-        .get_subscribers(&env::var("MAILCHIMP_LIST_ID_RACK_LINE")?)
+        .get_subscribers(
+            &env::var("MAILCHIMP_LIST_ID_RACK_LINE")
+                .map_err(|e| anyhow::anyhow!("getting env var MAILCHIMP_LIST_ID_RACK_LINE failed: {}", e))?,
+        )
         .await?;
 
     // Sync subscribers.
