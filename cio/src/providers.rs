@@ -214,6 +214,44 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
     }
 
     async fn ensure_group(&self, company: &Company, group: &Group) -> Result<()> {
+        // Check if the team exists.
+        match self.teams().get_by_name(&company.github_org, &group.name).await {
+            Ok(team) => {
+                let parent_team_id = if let Some(parent) = team.parent { parent.id } else { 0 };
+
+                self.teams()
+                    .update_in_org(
+                        &company.github_org,
+                        &group.name,
+                        &octorust::types::TeamsUpdateInOrgRequest {
+                            name: group.name.to_string(),
+                            description: group.description.to_string(),
+                            parent_team_id,
+                            permission: None, // This is depreciated, so just pass none.
+                            privacy: Some(octorust::types::Privacy::Closed),
+                        },
+                    )
+                    .await?;
+
+                info!("updated group `{}` in github org `{}`", group.name, company.github_org);
+
+                // Return early here.
+                return Ok(());
+            }
+            Err(e) => {
+                // If the error is Not Found we need to add the team.
+                if !e.to_string().contains("404") {
+                    // Otherwise bail.
+                    bail!(
+                        "checking if team `{}` exists in github org `{}` failed: {}",
+                        group.name,
+                        company.github_org,
+                        e
+                    );
+                }
+            }
+        }
+
         // Create the team.
         let team = octorust::types::TeamsCreateRequest {
             name: group.name.to_string(),
@@ -226,6 +264,8 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         };
 
         self.teams().create(&company.github_org, &team).await?;
+
+        info!("created group `{}` in github org `{}`", group.name, company.github_org);
 
         Ok(())
     }
@@ -357,7 +397,11 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
     }
 
     async fn delete_group(&self, company: &Company, group: &Group) -> Result<()> {
-        self.teams().delete_in_org(&company.github_org, &group.name).await
+        self.teams().delete_in_org(&company.github_org, &group.name).await?;
+
+        info!("deleted group `{}` in github org `{}`", group.name, company.github_org);
+
+        Ok(())
     }
 }
 
