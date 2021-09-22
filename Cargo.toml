@@ -12,7 +12,6 @@ members = [
 	"okta",
 	"printy",
 	"quickbooks",
-	"revai",
 	"shippo",
 	"slack",
 	"tailscale",

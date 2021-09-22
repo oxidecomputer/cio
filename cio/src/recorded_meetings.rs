@@ -8,7 +8,7 @@ use google_drive::traits::{DriveOps, FileOps, PermissionOps};
 use inflector::cases::kebabcase::to_kebab_case;
 use log::{info, warn};
 use macros::db;
-use revai::RevAI;
+use revai::{traits::JobOps, Client as RevAI};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use zoom_api::types::GetAccountCloudRecordingResponseMeetingsFilesFileType;
@@ -463,7 +463,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     // If we don't have a transcript ID, let's post the video to be
                     // transcribed.
                     // Now let's upload it to rev.ai so it can start a job.
-                    let job = revai.create_job(video_contents).await?;
+                    let job = revai.jobs().post(video_contents).await?;
                     // Set the transcript id.
                     db_meeting.transcript_id = job.id.to_string();
                     db_meeting.update(db).await?;
@@ -473,7 +473,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     if db_meeting.transcript.is_empty() {
                         // Now let's try to get the transcript.
                         let transcript = revai
-                            .get_transcript(&db_meeting.transcript_id)
+                            .transcript()
+                            .get(&db_meeting.transcript_id, revai::types::AcceptTranscript::TextPlain)
                             .await
                             .unwrap_or_default();
                         db_meeting.transcript = transcript.trim().to_string();
