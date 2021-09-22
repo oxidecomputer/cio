@@ -1,7 +1,4 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    time,
-};
+use std::{collections::HashMap, time};
 
 use anyhow::{bail, Result};
 use google_groups_settings::Client as GoogleGroupsSettings;
@@ -13,12 +10,13 @@ use gsuite_api::{
     },
     Client as GSuite,
 };
-use log::{info, warn};
+use log::info;
 use serde_json::Value;
 
 use crate::{
     companies::Company,
     configs::{Building, ConferenceRoom, Group, User},
+    providers::ProviderOps,
     utils::generate_password,
 };
 
@@ -268,102 +266,37 @@ pub async fn update_user_aliases(
         }
     }
 
-    info!("updated gsuite user aliases: {}", u.primary_email);
+    info!("updated GSuite user `{}` aliases", u.primary_email);
     Ok(())
 }
 
 /// Update a user's groups in GSuite to match our database.
-pub async fn update_user_google_groups(
-    gsuite: &GSuite,
-    user: &User,
-    google_groups: BTreeMap<String, GSuiteGroup>,
-) -> Result<()> {
+pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, company: &Company) -> Result<()> {
     // Iterate over the groups and add the user as a member to it.
-    for g in &user.groups {
-        // Make sure the group exists.
-        let group: &GSuiteGroup;
-        match google_groups.get(g) {
-            Some(val) => group = val,
-            // Continue through the loop and we will add the user later.
-            None => {
-                warn!("google group {} does not exist so cannot add user {}", g, user.email);
-                continue;
-            }
-        }
-
-        let mut role = "MEMBER";
-        if user.is_group_admin {
-            role = "OWNER";
-        }
-
-        // Check if the user is already a member of the group.
-        let is_member = gsuite.members().has_member(&group.id, &user.email).await?;
-        if is_member.is_member {
-            // They are a member so we can just update their member status.
-            gsuite
-                .members()
-                .update(
-                    &group.id,
-                    &user.email,
-                    &gsuite_api::types::Member {
-                        role: role.to_string(),
-                        email: user.email.to_string(),
-                        delivery_settings: "ALL_MAIL".to_string(),
-                        etag: "".to_string(),
-                        id: "".to_string(),
-                        kind: "".to_string(),
-                        status: "".to_string(),
-                        type_: "".to_string(),
-                    },
-                )
-                .await?;
-
-            // Continue through the other groups.
-            continue;
-        }
-
-        // Add the user to the group.
-        gsuite
-            .members()
-            .insert(
-                &group.id,
-                &gsuite_api::types::Member {
-                    role: role.to_string(),
-                    email: user.email.to_string(),
-                    delivery_settings: "ALL_MAIL".to_string(),
-                    etag: "".to_string(),
-                    id: "".to_string(),
-                    kind: "".to_string(),
-                    status: "".to_string(),
-                    type_: "".to_string(),
-                },
-            )
-            .await?;
-
-        info!("added {} to gsuite group {} as {}", user.email, group.name, role);
+    for group in &user.groups {
+        gsuite.add_user_to_group(company, user, group).await?;
     }
+
+    // Get all the GSuite groups.
+    let gsuite_groups = gsuite.list_provider_groups(company).await?;
 
     // Iterate over all the groups and if the user is a member and should not
     // be, remove them from the group.
-    for (slug, group) in &google_groups {
-        if user.groups.contains(slug) {
+    for group in &gsuite_groups {
+        if user.groups.contains(&group.name) {
+            // They should be in the group, continue.
             continue;
         }
 
-        // Now we have a google group. The user should not be a member of it,
+        // Now we have a github team. The user should not be a member of it,
         // but we need to make sure they are not a member.
-        let is_member = gsuite.members().has_member(&group.id, &user.email).await?;
+        let is_member = gsuite.check_user_is_member_of_group(company, user, &group.name).await?;
 
-        if !is_member.is_member {
-            // They are not a member so we can continue early.
-            continue;
-        }
-
-        // They are a member of the group.
+        // They are a member of the team.
         // We need to remove them.
-        gsuite.members().delete(&group.id, &user.email).await?;
-
-        info!("removed {} from gsuite group {}", user.email, group.name);
+        if is_member {
+            gsuite.remove_user_from_group(company, user, &group.name).await?;
+        }
     }
 
     Ok(())

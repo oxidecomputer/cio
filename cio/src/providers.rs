@@ -132,7 +132,7 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         };
 
         // Check if the user is already a member of the org.
-        match self
+        let user_exists = match self
             .orgs()
             .get_membership_for_user(&company.github_org, &user.github)
             .await
@@ -143,8 +143,10 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
                         "user `{}` is already a member of the github org `{}` with role `{}`",
                         user.github, company.github_org, role
                     );
-                    // We can return early, they have the right perms.
-                    return Ok(String::new());
+
+                    true
+                } else {
+                    false
                 }
             }
             Err(e) => {
@@ -158,24 +160,28 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
                         e
                     );
                 }
+
+                false
             }
+        };
+
+        if !user_exists {
+            // We need to add the user to the org or update their role, do it now.
+            self.orgs()
+                .set_membership_for_user(
+                    &company.github_org,
+                    &user.github,
+                    &octorust::types::OrgsSetMembershipUserRequest {
+                        role: Some(role.clone()),
+                    },
+                )
+                .await?;
+
+            info!(
+                "updated user `{}` as a member of the github org `{}` with role `{}`",
+                user.github, company.github_org, role
+            );
         }
-
-        // We need to add the user to the org or update their role, do it now.
-        self.orgs()
-            .set_membership_for_user(
-                &company.github_org,
-                &user.github,
-                &octorust::types::OrgsSetMembershipUserRequest {
-                    role: Some(role.clone()),
-                },
-            )
-            .await?;
-
-        info!(
-            "updated user `{}` as a member of the github org `{}` with role `{}`",
-            user.github, company.github_org, role
-        );
 
         // Now we need to ensure our user is a member of all the correct groups.
         for group in &user.groups {
@@ -400,6 +406,238 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         self.teams().delete_in_org(&company.github_org, &group.name).await?;
 
         info!("deleted group `{}` in github org `{}`", group.name, company.github_org);
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_api::Client {
+    async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
+        // First get the user from gsuite.
+        match self
+            .users()
+            .get(
+                &user.email,
+                gsuite_api::types::DirectoryUsersListProjection::Full,
+                gsuite_api::types::ViewType::AdminView,
+            )
+            .await
+        {
+            Ok(u) => {
+                // Update the user with the settings from the config for the user.
+                let gsuite_user = crate::gsuite::update_gsuite_user(&u, user, false, company).await;
+
+                self.users().update(&gsuite_user.id, &gsuite_user).await?;
+
+                crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
+
+                // Add the user to their teams and groups.
+                crate::gsuite::update_user_google_groups(self, user, company).await?;
+
+                info!("updated user `{}` in GSuite", user.email);
+
+                // Return the ID.
+                return Ok(gsuite_user.id);
+            }
+            Err(e) => {
+                // If the error is Not Found we need to add them.
+                if !e.to_string().contains("404") {
+                    // Otherwise bail.
+                    bail!("checking if user `{}` exists in GSuite failed: {}", user.email, e);
+                }
+            }
+        }
+
+        // Create the user.
+        let u: gsuite_api::types::User = Default::default();
+
+        // The last argument here tell us to create a password!
+        // Make sure it is set to true.
+        let gsuite_user = crate::gsuite::update_gsuite_user(&u, user, true, company).await;
+
+        let new_gsuite_user = self.users().insert(&gsuite_user).await?;
+
+        // Send an email to the new user.
+        // Do this here in case another step fails.
+        user.send_email_new_gsuite_user(db, &gsuite_user.password).await?;
+
+        crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
+
+        crate::gsuite::update_user_google_groups(self, user, company).await?;
+
+        info!("created user `{}` in GSuite", user.email);
+
+        Ok(new_gsuite_user.id)
+    }
+
+    async fn ensure_group(&self, _company: &Company, _group: &Group) -> Result<()> {
+        Ok(())
+    }
+
+    async fn check_user_is_member_of_group(&self, company: &Company, user: &User, group: &str) -> Result<bool> {
+        let role = if user.is_group_admin {
+            "OWNER".to_string()
+        } else {
+            "MEMBER".to_string()
+        };
+
+        match self
+            .members()
+            .get(&format!("{}@{}", group, company.gsuite_domain), &user.email)
+            .await
+        {
+            Ok(member) => {
+                if member.role == role {
+                    // They have the right permissions.
+                    info!(
+                        "user `{}` is already a member of the GSuite group `{}` with role `{}`",
+                        user.email, group, role
+                    );
+                    return Ok(true);
+                }
+            }
+            Err(e) => {
+                if !e.to_string().contains("404") {
+                    // Otherwise bail.
+                    bail!(
+                        "checking if user `{}` is a member of the GSuite group `{}` failed: {}",
+                        user.email,
+                        group,
+                        e
+                    );
+                }
+            }
+        }
+
+        Ok(false)
+    }
+
+    async fn add_user_to_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
+        let role = if user.is_group_admin {
+            "OWNER".to_string()
+        } else {
+            "MEMBER".to_string()
+        };
+
+        let is_member = self.check_user_is_member_of_group(company, user, group).await?;
+        if is_member {
+            // Update the member of the group.
+            self.members()
+                .update(
+                    &format!("{}@{}", group, company.gsuite_domain),
+                    &user.email,
+                    &gsuite_api::types::Member {
+                        role: role.to_string(),
+                        email: user.email.to_string(),
+                        delivery_settings: "ALL_MAIL".to_string(),
+                        etag: "".to_string(),
+                        id: "".to_string(),
+                        kind: "".to_string(),
+                        status: "".to_string(),
+                        type_: "".to_string(),
+                    },
+                )
+                .await?;
+
+            info!(
+                "updated user `{}` membership to GSuite group `{}` with role `{}`",
+                user.email, group, role
+            );
+        } else {
+            // Create the member of the group.
+            self.members()
+                .insert(
+                    &format!("{}@{}", group, company.gsuite_domain),
+                    &gsuite_api::types::Member {
+                        role: role.to_string(),
+                        email: user.email.to_string(),
+                        delivery_settings: "ALL_MAIL".to_string(),
+                        etag: "".to_string(),
+                        id: "".to_string(),
+                        kind: "".to_string(),
+                        status: "".to_string(),
+                        type_: "".to_string(),
+                    },
+                )
+                .await?;
+
+            info!(
+                "created user `{}` membership to GSuite group `{}` with role `{}`",
+                user.email, group, role
+            );
+        }
+
+        Ok(())
+    }
+
+    async fn remove_user_from_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
+        self.members()
+            .delete(&format!("{}@{}", group, company.gsuite_domain), &user.email)
+            .await?;
+
+        info!("removed user `{}` from GSuite group `{}`", user.email, group);
+        Ok(())
+    }
+
+    async fn list_provider_users(&self, company: &Company) -> Result<Vec<gsuite_api::types::User>> {
+        self.users()
+            .list_all(
+                &company.gsuite_account_id,
+                &company.gsuite_domain,
+                gsuite_api::types::Event::Noop,
+                gsuite_api::types::DirectoryUsersListOrderBy::Email,
+                gsuite_api::types::DirectoryUsersListProjection::Full,
+                "", // query
+                "", // show deleted
+                gsuite_api::types::SortOrder::Ascending,
+                gsuite_api::types::ViewType::AdminView,
+            )
+            .await
+    }
+
+    async fn list_provider_groups(&self, company: &Company) -> Result<Vec<gsuite_api::types::Group>> {
+        self.groups()
+            .list_all(
+                &company.gsuite_account_id,
+                &company.gsuite_domain,
+                gsuite_api::types::DirectoryGroupsListOrderBy::Email,
+                "", // query
+                gsuite_api::types::SortOrder::Ascending,
+                "", // user_key
+            )
+            .await
+    }
+
+    async fn delete_user(&self, _company: &Company, user: &User) -> Result<()> {
+        // First get the user from gsuite.
+        let mut gsuite_user = self
+            .users()
+            .get(
+                &user.email,
+                gsuite_api::types::DirectoryUsersListProjection::Full,
+                gsuite_api::types::ViewType::AdminView,
+            )
+            .await?;
+
+        // Set them to be suspended.
+        gsuite_user.suspended = true;
+        gsuite_user.suspension_reason = "No longer in config file.".to_string();
+
+        // Update the user.
+        self.users().update(&user.email, &gsuite_user).await?;
+
+        info!("suspended user `{}` from gsuite", user.email);
+
+        Ok(())
+    }
+
+    async fn delete_group(&self, company: &Company, group: &Group) -> Result<()> {
+        self.groups()
+            .delete(&format!("{}@{}", &group.name, &company.gsuite_domain))
+            .await?;
+
+        info!("deleted group `{}` from gsuite", group.name);
 
         Ok(())
     }

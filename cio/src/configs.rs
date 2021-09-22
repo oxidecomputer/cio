@@ -33,7 +33,6 @@ use crate::{
     db::Database,
     gsuite::{
         update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource,
-        update_gsuite_user, update_user_aliases, update_user_google_groups,
     },
     providers::ProviderOps,
     schema::{applicants, buildings, conference_rooms, groups, links, users},
@@ -694,7 +693,7 @@ xoxo,
     }
 
     /// Send an email to the GSuite user about their account.
-    async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) -> Result<()> {
+    pub async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) -> Result<()> {
         let company = self.company(db)?;
 
         // Initialize the SendGrid client.
@@ -1857,6 +1856,16 @@ pub async fn sync_users(
             let _id = github.ensure_user(db, company, &new_user).await?;
         }
 
+        if company.okta_domain.is_empty() {
+            // Update the user in GSuite.
+            // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
+            let gsuite_id = gsuite.ensure_user(db, company, &new_user).await?;
+            // Set the GSuite ID for the user.
+            new_user.google_id = gsuite_id.to_string();
+            // Update the user in the database.
+            new_user = new_user.update(db).await?;
+        }
+
         if let Ok(ref ramp) = ramp_auth {
             if !new_user.is_consultant() && !new_user.is_system_account() {
                 // Check if we have a Ramp user for the user.
@@ -2076,9 +2085,8 @@ pub async fn sync_users(
         if company.okta_domain.is_empty() {
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-            // TODO: only deactivate/suspend them so someone can transfer their data.
-            crate::gsuite::suspend_user(&gsuite, &user.email).await?;
-            info!("suspended user in gsuite: {}", username);
+            // Suspend the user from GSuite so we can transfer their data.
+            gsuite.delete_user(company, &user).await?;
 
             // If we have an enterprise airtable account, let's delete the user from
             // our Airtable.
@@ -2117,82 +2125,6 @@ pub async fn sync_users(
     }
 
     info!("updated configs users in the database");
-
-    if company.okta_domain.is_empty() {
-        // Update the users in GSuite.
-        // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-        // Get all the users.
-        let db_users = Users::get_from_db(db, company.id)?;
-        // Create a BTreeMap
-        let mut user_map: BTreeMap<String, User> = Default::default();
-        for u in db_users {
-            user_map.insert(u.username.to_string(), u);
-        }
-        // Iterate over the users already in GSuite.
-        for u in gsuite_users {
-            // Get the shorthand username and match it against our existing users.
-            let username = u
-                .primary_email
-                .trim_end_matches(&format!("@{}", company.gsuite_domain))
-                .to_string();
-
-            // Check if we have that user already in our settings.
-            let user: User;
-            match user_map.get(&username) {
-                Some(val) => user = val.clone(),
-                None => {
-                    // If the user does not exist in our map we need to delete
-                    // them from GSuite.
-                    info!("suspending user {} in gsuite", username);
-                    crate::gsuite::suspend_user(&gsuite, &format!("{}@{}", username, company.gsuite_domain)).await?;
-                    info!("suspended user in gsuite: {}", username);
-
-                    continue;
-                }
-            }
-
-            // Update the user with the settings from the config for the user.
-            let gsuite_user = update_gsuite_user(&u, &user, false, company).await;
-
-            gsuite.users().update(&gsuite_user.id, &gsuite_user).await?;
-
-            update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await?;
-
-            // Add the user to their teams and groups.
-            update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await?;
-
-            // Remove the user from the user map and continue.
-            // This allows us to add all the remaining new user after.
-            user_map.remove(&username);
-
-            info!("updated user in gsuite: {}", username);
-        }
-
-        // Create any remaining users from the database that we do not have in GSuite.
-        for (username, mut user) in user_map {
-            // Create the user.
-            let u: GSuiteUser = Default::default();
-
-            // The last argument here tell us to create a password!
-            // Make sure it is set to true.
-            let gsuite_user = update_gsuite_user(&u, &user, true, company).await;
-
-            let new_gsuite_user = gsuite.users().insert(&gsuite_user).await?;
-            user.google_id = new_gsuite_user.id.to_string();
-            // Update with any other changes we made to the user.
-            user.update(db).await?;
-
-            // Send an email to the new user.
-            // Do this here in case another step fails.
-            user.send_email_new_gsuite_user(db, &gsuite_user.password).await?;
-            info!("created new user in gsuite: {}", username);
-
-            update_user_aliases(&gsuite, &gsuite_user, user.aliases.clone(), company).await?;
-
-            // Add the user to their teams and groups.
-            update_user_google_groups(&gsuite, &user, gsuite_groups.clone()).await?;
-        }
-    }
 
     // Update users in airtable.
     Users::get_from_db(db, company.id)?.update_airtable(db).await?;
@@ -2446,17 +2378,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     let github = company.authenticate_github()?;
 
     // Get the GSuite groups.
-    let gsuite_groups = gsuite
-        .groups()
-        .list_all(
-            &company.gsuite_account_id,
-            &company.gsuite_domain,
-            gsuite_api::types::DirectoryGroupsListOrderBy::Email,
-            "", // query
-            gsuite_api::types::SortOrder::Ascending,
-            "", // user_key
-        )
-        .await?;
+    let gsuite_groups = gsuite.list_provider_groups(company).await?;
 
     // Get all the groups.
     let db_groups = Groups::get_from_db(db, company.id)?;
@@ -2480,20 +2402,14 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // This is found by the remaining groups that are in the map since we removed
     // the existing repos from the map above.
     for (name, group) in group_map {
-        info!("deleting group {} from the database, gsuite, github, etc", name);
+        info!("deleting group `{}` from the database, gsuite, github, etc", name);
 
         // Delete the group from the database and Airtable.
         group.delete(db).await?;
 
-        // Remove the group from GSuite.
-        gsuite
-            .groups()
-            .delete(&format!("{}@{}", name, &company.gsuite_domain))
-            .await?;
-        info!("deleted group from gsuite: {}", name);
+        gsuite.delete_group(company, &group).await?;
 
-        github.teams().delete_in_org(&company.github_org, &name).await?;
-        info!("deleted group from github: {}", name);
+        github.delete_group(company, &group).await?;
     }
 
     info!("updated configs groups in the database");
