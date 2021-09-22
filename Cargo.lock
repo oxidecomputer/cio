@@ -505,7 +505,7 @@ dependencies = [
  "names",
  "nom_pem",
  "octorust",
- "okta 0.2.0",
+ "okta",
  "openssl",
  "phonenumber",
  "pretty_env_logger",
@@ -544,7 +544,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=c781009633ff74a7e3080fde5ec18e2450b4cf3e#c781009633ff74a7e3080fde5ec18e2450b4cf3e"
+source = "git+https://github.com/oxidecomputer/cio?rev=01cdc3f608f862f3f33d60b0bb71b1de9dcc7014#01cdc3f608f862f3f33d60b0bb71b1de9dcc7014"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -579,12 +579,12 @@ dependencies = [
  "image 0.23.14",
  "log 0.4.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=c781009633ff74a7e3080fde5ec18e2450b4cf3e)",
+ "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=01cdc3f608f862f3f33d60b0bb71b1de9dcc7014)",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
  "octorust",
- "okta 0.0.6",
+ "okta",
  "openssl",
  "phonenumber",
  "pretty_env_logger",
@@ -2298,7 +2298,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=c781009633ff74a7e3080fde5ec18e2450b4cf3e#c781009633ff74a7e3080fde5ec18e2450b4cf3e"
+source = "git+https://github.com/oxidecomputer/cio?rev=01cdc3f608f862f3f33d60b0bb71b1de9dcc7014#01cdc3f608f862f3f33d60b0bb71b1de9dcc7014"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -2679,18 +2679,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded 0.7.0",
  "url 2.2.2",
-]
-
-[[package]]
-name = "okta"
-version = "0.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4188f77b0282d024966eeeac777f82ead3dd783d773b8fdbd516d8e8814fd2a0"
-dependencies = [
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -5357,7 +5345,7 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "chrono-tz",
- "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?rev=c781009633ff74a7e3080fde5ec18e2450b4cf3e)",
+ "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?rev=01cdc3f608f862f3f33d60b0bb71b1de9dcc7014)",
  "clap 3.0.0-beta.4",
  "clokwerk",
  "diesel",
