@@ -9,7 +9,6 @@ members = [
 	"google-geocode",
 	"macros",
 	"mailchimp",
-	"okta",
 	"printy",
 	"quickbooks",
 	"shippo",

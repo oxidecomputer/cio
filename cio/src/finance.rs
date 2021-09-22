@@ -254,7 +254,16 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
             org.plan.unwrap().filled_seats as i32
         } else if vendor.name == "Okta" && okta_auth.is_some() {
             let okta = okta_auth.as_ref().unwrap();
-            let users = okta.list_users().await?;
+            let users = okta
+                .user()
+                .list_all(
+                    "", // query
+                    "", // filter
+                    "", // search
+                    "", // sort by
+                    "", // sort order
+                )
+                .await?;
             users.len() as i32
         } else if vendor.name == "Google Workspace" {
             let users = gsuite

@@ -20,7 +20,7 @@ use octorust::{
     auth::{Credentials, InstallationTokenGenerator, JWTCredentials},
     http_cache::FileBasedCache,
 };
-use okta::Okta;
+use okta::Client as Okta;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use reqwest::Client;
@@ -271,7 +271,19 @@ impl Company {
             // Return early.
             return None;
         }
-        Some(Okta::new(&self.okta_api_key, &self.okta_domain))
+        Some(Okta::new(&self.okta_api_key).with_host(self.okta_endpoint()))
+    }
+
+    fn okta_endpoint(&self) -> String {
+        format!(
+            "https://{}.okta.com",
+            self.okta_domain
+                .trim_start_matches("https://")
+                .trim_start_matches("https://")
+                .trim_end_matches('/')
+                .trim_end_matches(".okta.com")
+                .trim_end_matches('/')
+        )
     }
 
     /// Authenticate with Airtable.

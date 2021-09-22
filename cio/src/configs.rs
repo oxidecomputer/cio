@@ -1708,12 +1708,21 @@ pub async fn sync_users(
     }
 
     // Initialize the Okta client.
-    let mut okta_users: HashMap<String, okta::User> = HashMap::new();
+    let mut okta_users: HashMap<String, okta::types::User> = HashMap::new();
     let okta_auth = company.authenticate_okta();
     if let Some(okta) = okta_auth {
-        let gu = okta.list_users().await?;
+        let gu = okta
+            .user()
+            .list_all(
+                "", // query
+                "", // filter
+                "", // search
+                "", // sort by
+                "", // sort order
+            )
+            .await?;
         for g in gu {
-            okta_users.insert(g.profile.email.to_string(), g);
+            okta_users.insert(g.profile.as_ref().unwrap().email.to_string(), g);
         }
     }
 
