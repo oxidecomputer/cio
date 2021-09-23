@@ -1635,6 +1635,9 @@ impl From<NewApplicant> for FormattedMessage {
         if !item.portfolio.is_empty() {
             info_msg += &format!(" | <{}|portfolio>", item.portfolio,);
         }
+        if !item.portfolio_pdf.is_empty() {
+            info_msg += &format!(" | <{}|portfolio pdf>", item.portfolio_pdf,);
+        }
         if !item.website.is_empty() {
             info_msg += &format!(" | <{}|website>", item.website,);
         }
