@@ -463,7 +463,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     // If we don't have a transcript ID, let's post the video to be
                     // transcribed.
                     // Now let's upload it to rev.ai so it can start a job.
-                    let job = revai.jobs().post(video_contents).await?;
+                    let result = revai.jobs().post(video_contents).await;
+                    if let Err(e) = result {
+                        warn!("failed to upload video for `{}` to rev.ai: {}", db_meeting.name, e);
+                        continue;
+                    }
+                    let job = result?;
                     // Set the transcript id.
                     db_meeting.transcript_id = job.id.to_string();
                     db_meeting.update(db).await?;

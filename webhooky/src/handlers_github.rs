@@ -11,7 +11,6 @@ use cio_api::{
     repos::{FromUrl, NewRepo},
     rfds::{is_image, NewRFD, RFD},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
-    templates::generate_terraform_files_for_okta,
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
 };
 use dropshot::{RequestContext, TypedBody};
@@ -816,13 +815,6 @@ pub async fn handle_configs_push(
     if commit.file_changed("configs/users.toml") {
         sync_users(&api_context.db, github, configs.users, company).await?;
         a("[SUCCESS]: users");
-    }
-
-    if commit.file_changed("configs/users.toml") || commit.file_changed("configs/groups.toml") {
-        // Sync okta users and group from the database.
-        // Do this after we update the users and groups in the database.
-        generate_terraform_files_for_okta(github, &api_context.db, company).await?;
-        a("[SUCCESS]: terraform files for okta");
     }
 
     // Check if the buildings.toml file changed.
