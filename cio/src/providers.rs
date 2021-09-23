@@ -968,9 +968,9 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         let results = self
             .group()
             .list_all(
-                &group, // query
-                "",     // search
-                "",     // expand
+                group, // query
+                "",    // search
+                "",    // expand
             )
             .await?;
 
