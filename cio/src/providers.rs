@@ -494,7 +494,7 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
                 crate::gsuite::update_group_aliases(self, &google_group).await?;
 
                 // Update the groups settings.
-                crate::gsuite::update_google_group_settings(db, &group, company).await?;
+                crate::gsuite::update_google_group_settings(db, group, company).await?;
 
                 info!("updated group `{}` in GSuite", group.name);
 
