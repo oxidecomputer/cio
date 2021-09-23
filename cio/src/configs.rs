@@ -637,7 +637,7 @@ impl User {
     }
 
     /// Send an email to the new consultant about their account.
-    async fn send_email_new_consultant(&self, db: &Database) -> Result<()> {
+    pub async fn send_email_new_consultant(&self, db: &Database) -> Result<()> {
         let company = self.company(db)?;
 
         // Initialize the SendGrid client.
@@ -751,7 +751,7 @@ xoxo,
     }
 
     /// Send an email to the new user about their account.
-    async fn send_email_new_user(&self, db: &Database) -> Result<()> {
+    pub async fn send_email_new_user(&self, db: &Database) -> Result<()> {
         let company = self.company(db)?;
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -1547,7 +1547,7 @@ pub async fn sync_users(
     // Initialize the Okta client.
     let mut okta_users: HashMap<String, okta::types::User> = HashMap::new();
     let okta_auth = company.authenticate_okta();
-    if let Some(okta) = okta_auth {
+    if let Some(ref okta) = okta_auth {
         let gu = okta
             .user()
             .list_all(
@@ -1821,29 +1821,16 @@ pub async fn sync_users(
 
         let users_manager = new_user.manager(db);
 
-        if existing.is_none() && !company.okta_domain.is_empty() {
+        if let Some(ref okta) = okta_auth {
             // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
             // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
-            // TODO: ensure the okta user.
-
-            // The user did not already exist in the database.
-            // We should send them an email about setting up their account.
-            info!("sending email to new user: {}", new_user.username);
-            if new_user.is_consultant() {
-                new_user.send_email_new_consultant(db).await?;
-            } else {
-                new_user.send_email_new_user(db).await?;
-            }
-        }
-
-        // Add the user to their GitHub teams and the org.
-        if !new_user.github.is_empty() {
-            // Add them to the org and any teams they need to be added to.
-            // We don't return an id here.
-            let _id = github.ensure_user(db, company, &new_user).await?;
-        }
-
-        if company.okta_domain.is_empty() {
+            // Ensure the okta user.
+            let okta_id = okta.ensure_user(db, company, &new_user).await?;
+            // Set the GSuite ID for the user.
+            new_user.okta_id = okta_id.to_string();
+            // Update the user in the database.
+            new_user = new_user.update(db).await?;
+        } else {
             // Update the user in GSuite.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             let gsuite_id = gsuite.ensure_user(db, company, &new_user).await?;
@@ -1851,6 +1838,13 @@ pub async fn sync_users(
             new_user.google_id = gsuite_id.to_string();
             // Update the user in the database.
             new_user = new_user.update(db).await?;
+        }
+
+        // Add the user to their GitHub teams and the org.
+        if !new_user.github.is_empty() {
+            // Add them to the org and any teams they need to be added to.
+            // We don't return an id here.
+            let _id = github.ensure_user(db, company, &new_user).await?;
         }
 
         if let Ok(ref ramp) = ramp_auth {

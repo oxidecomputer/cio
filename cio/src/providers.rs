@@ -708,6 +708,8 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
 #[async_trait]
 impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
+        let mut user = user.clone();
+
         // Create the profile for the Okta user.
         let profile = okta::types::UserProfile {
             city: user.home_address_city.to_string(),
@@ -724,7 +726,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             last_name: user.last_name.to_string(),
             locale: Default::default(),
             login: user.email.to_string(),
-            manager: user.manager(db).email.to_string(),
+            manager: user.manager(db).email,
             manager_id: Default::default(),
             middle_name: Default::default(),
             mobile_phone: user.recovery_phone.to_string(),
@@ -743,13 +745,27 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             title: Default::default(),
             user_type: Default::default(),
             zip_code: user.home_address_zipcode.to_string(),
+            github_username: user.github.to_string(),
+            matrix_username: user.chat.to_string(),
+            aws_role: user.aws_role.to_string(),
+            start_date: Some(user.start_date),
+            birthday: Some(user.birthday),
+            email_aliases: user.aliases.clone(),
+            work_postal_address: user.work_address_formatted.to_string(),
+            work_street_address: format!("{}\n{}", user.work_address_street_1, user.work_address_street_2)
+                .trim()
+                .to_string(),
+            work_city: user.work_address_city.to_string(),
+            work_state: user.work_address_state.to_string(),
+            work_zip_code: user.work_address_zipcode.to_string(),
+            work_country_code: user.work_address_country_code.to_string(),
         };
 
         // Try to get the user.
         let mut user_id = match self.user().get(&user.email.replace('@', "%40")).await {
             Ok(mut okta_user) => {
                 // Update the Okta user.
-                okta_user.profile = Some(profile);
+                okta_user.profile = Some(profile.clone());
                 self.user()
                     .update(
                         &okta_user.id,
@@ -788,6 +804,52 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
                 .await?;
 
             user_id = okta_user.id;
+
+            // The user did not already exist in Okta.
+            // We should send them an email about setting up their account.
+            info!("sending email to new Okta user `{}`", user.username);
+            if user.is_consultant() {
+                user.send_email_new_consultant(db).await?;
+            } else {
+                user.send_email_new_user(db).await?;
+            }
+        }
+
+        // Set the okta id so we can perform operations on groups more easily.
+        user.okta_id = user_id.to_string();
+
+        // Add the user to their groups.
+        for group in &user.groups {
+            // Check if the user is a member of the group.
+            let is_member = self.check_user_is_member_of_group(company, &user, group).await?;
+
+            if !is_member {
+                // Add the user to the group.
+                self.add_user_to_group(company, &user, group).await?;
+            }
+        }
+
+        // Get all the Okta groups.
+        let okta_groups = self.list_provider_groups(company).await?;
+
+        // Iterate over all the groups and if the user is a member and should not
+        // be, remove them from the group.
+        for group in &okta_groups {
+            let group_name = group.profile.as_ref().unwrap().name.to_string();
+            if user.groups.contains(&group_name) {
+                // They should be in the group, continue.
+                continue;
+            }
+
+            // Now we have an Okta group. The user should not be a member of it,
+            // but we need to make sure they are not a member.
+            let is_member = self.check_user_is_member_of_group(company, &user, &group_name).await?;
+
+            // They are a member of the team.
+            // We need to remove them.
+            if is_member {
+                self.remove_user_from_group(company, &user, &group_name).await?;
+            }
         }
 
         Ok(user_id)
@@ -848,15 +910,82 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         Ok(())
     }
 
-    async fn check_user_is_member_of_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<bool> {
+    async fn check_user_is_member_of_group(&self, _company: &Company, user: &User, group: &str) -> Result<bool> {
+        // Try to find the group with the name.
+        let results = self
+            .group()
+            .list_all(
+                group, // query
+                "",    // search
+                "",    // expand
+            )
+            .await?;
+
+        for result in results {
+            let profile = result.profile.unwrap();
+            if profile.name == group {
+                let members = self.group().list_all_users(&result.id).await?;
+                for member in members {
+                    if member.id == user.okta_id {
+                        info!("user `{}` is already a member of Okta group `{}`", user.email, group);
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+
         Ok(false)
     }
 
-    async fn add_user_to_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
+    async fn add_user_to_group(&self, _company: &Company, user: &User, group: &str) -> Result<()> {
+        // Try to find the group with the name.
+        let results = self
+            .group()
+            .list_all(
+                group, // query
+                "",    // search
+                "",    // expand
+            )
+            .await?;
+
+        for result in results {
+            let profile = result.profile.unwrap();
+            if profile.name == group {
+                // We found the group let's delete it.
+                self.group().add_user(&result.id, &user.okta_id).await?;
+
+                info!("added user `{}` to Okta group `{}`", user.email, group);
+
+                return Ok(());
+            }
+        }
+
         Ok(())
     }
 
-    async fn remove_user_from_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
+    async fn remove_user_from_group(&self, _company: &Company, user: &User, group: &str) -> Result<()> {
+        // Try to find the group with the name.
+        let results = self
+            .group()
+            .list_all(
+                &group, // query
+                "",     // search
+                "",     // expand
+            )
+            .await?;
+
+        for result in results {
+            let profile = result.profile.unwrap();
+            if profile.name == group {
+                // We found the group let's delete it.
+                self.group().remove_user_from(&result.id, &user.okta_id).await?;
+
+                info!("removed user `{}` from Okta group `{}`", user.email, group);
+
+                return Ok(());
+            }
+        }
+
         Ok(())
     }
 

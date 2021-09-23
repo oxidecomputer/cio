@@ -2683,9 +2683,9 @@ dependencies = [
 
 [[package]]
 name = "okta"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "becd9d2162fa9b0d4352d1fff7df9f50187ac56716a5a777145c39210fbb4379"
+checksum = "401dad838fd49ab6cbc4a58dae92bf5ab6e3b171ab73f801b6de4d015845f8dd"
 dependencies = [
  "anyhow",
  "async-recursion",
