@@ -524,15 +524,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 }
             };
 
-            // Download the video.
-            let video_contents = drive_client.files().download_by_id(&video_id).await.unwrap_or_default();
-
-            // Make sure the contents aren't empty.
-            if video_contents.is_empty() {
-                // Continue early.
-                // TODO: continue;
-            }
-
             let mut meeting = NewRecordedMeeting {
                 name: event.summary.trim().to_string(),
                 description: event.description.trim().to_string(),
@@ -574,7 +565,14 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             // Add to our completed events.
             completed_events.push(event.id.to_string());
 
-            if !video_contents.is_empty() {
+            // Only do this if we have the video contents.
+            // Check if we have a transcript id.
+            if db_meeting.transcript_id.is_empty() && db_meeting.transcript.is_empty() {
+                // Download the video.
+                // We are downloading it here only because this will significantly make things
+                // faster.
+                let video_contents = drive_client.files().download_by_id(&video_id).await.unwrap_or_default();
+
                 // Get the size of the file.
                 // Because rev.ai can only do uploads under 2GB.
                 let b = byte_unit::Byte::from_unit(video_contents.len() as f64, byte_unit::ByteUnit::B)?;
@@ -585,40 +583,34 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     b.to_string()
                 );
 
-                // Only do this if we have the video contents.
-                // Check if we have a transcript id.
-                if db_meeting.transcript_id.is_empty() && db_meeting.transcript.is_empty() {
-                    // If we don't have a transcript ID, let's post the video to be
-                    // transcribed.
-                    // Now let's upload it to rev.ai so it can start a job.
-                    let result = revai.jobs().post(video_contents).await;
-                    if let Err(e) = result {
-                        warn!(
-                            "failed to upload video for `{}` with size`{}` to rev.ai: {}",
-                            db_meeting.name,
-                            b.to_string(),
-                            e
-                        );
-                        continue;
-                    }
-                    let job = result?;
-                    // Set the transcript id.
-                    db_meeting.transcript_id = job.id.to_string();
-                    db_meeting.update(db).await?;
-                } else {
-                    // We have a transcript id, let's try and get the transcript if we don't have
-                    // it already.
-                    if db_meeting.transcript.is_empty() {
-                        // Now let's try to get the transcript.
-                        let transcript = revai
-                            .transcript()
-                            .get(&db_meeting.transcript_id, revai::types::AcceptTranscript::TextPlain)
-                            .await
-                            .unwrap_or_default();
-                        db_meeting.transcript = transcript.trim().to_string();
-                        db_meeting.update(db).await?;
-                    }
+                // If we don't have a transcript ID, let's post the video to be
+                // transcribed.
+                // Now let's upload it to rev.ai so it can start a job.
+                let result = revai.jobs().post(video_contents).await;
+                if let Err(e) = result {
+                    warn!(
+                        "failed to upload video for `{}` with size`{}` to rev.ai: {}",
+                        db_meeting.name,
+                        b.to_string(),
+                        e
+                    );
+                    continue;
                 }
+                let job = result?;
+                // Set the transcript id.
+                db_meeting.transcript_id = job.id.to_string();
+                db_meeting.update(db).await?;
+            } else if db_meeting.transcript.is_empty() && !db_meeting.transcript_id.is_empty() {
+                // We have a transcript id, let's try and get the transcript if we don't have
+                // it already.
+                // Now let's try to get the transcript.
+                let transcript = revai
+                    .transcript()
+                    .get(&db_meeting.transcript_id, revai::types::AcceptTranscript::TextPlain)
+                    .await
+                    .unwrap_or_default();
+                db_meeting.transcript = transcript.trim().to_string();
+                db_meeting.update(db).await?;
             }
         }
     }
