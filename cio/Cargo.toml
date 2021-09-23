@@ -63,8 +63,8 @@ names = "^0.11.0"
 nom_pem = "4"
 octorust = { version = "^0.1.16", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
-#okta = "^0.2.1"
-okta = { path = "../../third-party-api-clients/okta/" }
+okta = "^0.2.2"
+#okta = { path = "../../third-party-api-clients/okta/" }
 openssl = "0.10"
 phonenumber = "0.2"
 pretty_env_logger = "0.4"
