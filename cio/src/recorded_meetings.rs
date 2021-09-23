@@ -617,7 +617,13 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 {
                     Ok(t) => t,
                     Err(e) => {
-                        warn!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
+                        if e.to_string().contains("404") {
+                            // Reset the transcript ID to be blank, so that we can re-request
+                            // a transcript.
+                            db_meeting.transcript_id = String::new();
+                        } else {
+                            warn!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
+                        }
                         String::new()
                     }
                 };
