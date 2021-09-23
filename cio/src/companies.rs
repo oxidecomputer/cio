@@ -886,6 +886,9 @@ pub fn get_shipbob_scopes() -> Vec<String> {
         "returns_read".to_string(),
         "returns_write".to_string(),
         "inventory_read".to_string(),
+        "webhooks_read".to_string(),
+        "webhooks_write".to_string(),
+        "locations_read".to_string(),
     ]
 }
 
