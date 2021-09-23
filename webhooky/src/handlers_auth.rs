@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use chrono::Utc;
 use cio_api::{
     api_tokens::{APIToken, NewAPIToken},
-    companies::Company,
+    companies::{Company, Companys},
     schema::api_tokens,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -107,10 +107,17 @@ pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, b
     // Let's get the channel information.
     let channels = g.channels().get_page().await?;
 
+    // Get all our domains so we can match on that if we have multiple installations.
+    let mut domains: Vec<String> = Default::default();
+    let companies = Companys::get_from_db(&api_context.db, 1)?;
+    for c in companies {
+        domains.push(c.domain.to_string());
+    }
+
     let mut domain = "".to_string();
     let mut channel_id = "".to_string();
     for channel in &channels {
-        if channel.application_name == "Automated CIO Bot" {
+        if channel.application_name == "Automated CIO Bot" && domains.contains(&channel.name) {
             channel_id = channel.id.to_string();
             domain = channel.name.to_string();
             break;
