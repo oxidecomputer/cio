@@ -1150,7 +1150,8 @@ async fn listen_auth_shipbob_consent(
 
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
-        url: g.user_consent_url(&cio_api::companies::get_shipbob_scopes()),
+        // We want to get the response as a form.
+        url: g.user_consent_url(&cio_api::companies::get_shipbob_scopes()) + "&response_mode=form_post",
     }))
 }
 
@@ -1161,11 +1162,11 @@ async fn listen_auth_shipbob_consent(
 }]
 async fn listen_auth_shipbob_callback(
     rqctx: Arc<RequestContext<Context>>,
-    query_args: Query<AuthCallback>,
+    body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
-    if let Err(e) = crate::handlers_auth::handle_auth_shipbob_callback(rqctx, query_args).await {
+    if let Err(e) = crate::handlers_auth::handle_auth_shipbob_callback(rqctx, body_param).await {
         // Send the error to sentry.
         return Err(handle_anyhow_err_as_http_err(e));
     }

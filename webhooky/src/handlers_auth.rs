@@ -9,7 +9,7 @@ use cio_api::{
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use docusign::DocuSign;
-use dropshot::{Query, RequestContext};
+use dropshot::{Query, RequestContext, UntypedBody};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use log::warn;
@@ -92,11 +92,10 @@ pub async fn handle_auth_google_callback(
     Ok(())
 }
 
-pub async fn handle_auth_shipbob_callback(
-    rqctx: Arc<RequestContext<Context>>,
-    query_args: Query<AuthCallback>,
-) -> Result<()> {
-    let event = query_args.into_inner();
+pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
+    // Parse the body as bytes.
+    let b = body_param.as_bytes();
+    let event = String::from_utf8(b.to_vec())?;
 
     let api_context = rqctx.context();
 
@@ -105,14 +104,19 @@ pub async fn handle_auth_shipbob_callback(
     // for tokens and we will send all the scopes.
     let mut g = ShipBob::new_from_env("", "", "");
 
-    warn!("shipbob callback: {:?}", event);
+    warn!("shipbob callback str: {}", event);
 
-    let uri = rqctx.request.lock().await.uri().clone();
+    let event: AuthCallback = serde_urlencoded::from_bytes(body_param.as_bytes())?;
 
-    warn!("shipbob callback uri: {:?}", uri);
+    warn!("shipbob callback event {:?}", event);
 
     // Let's get the token from the code.
-    //let t = g.get_access_token(&event.code, &event.state).await?;
+    let t = g.get_access_token(&event.code, &event.state).await?;
+
+    // Let's get the channel information.
+    let channels = g.channels().get_page().await?;
+
+    warn!("shipbob channels {:?}", channels);
 
     /*
         let company = Company::get_from_domain(&api_context.db, &metadata.hd)?;
@@ -142,6 +146,7 @@ pub async fn handle_auth_shipbob_callback(
         // Update it in the database.
         token.upsert(&api_context.db).await?;
     */
+
     Ok(())
 }
 

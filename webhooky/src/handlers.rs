@@ -785,13 +785,6 @@ pub async fn handle_slack_interactive(
         }
     };
 
-    if payload.interactive_slack_payload_type == "view_submission" {
-        sentry::capture_message(
-            &format!("slack interactive payload: {:#?}", payload),
-            sentry::Level::Info,
-        );
-    }
-
     let ctx = rqctx.context();
     let db = &ctx.db;
 
@@ -845,11 +838,6 @@ pub async fn handle_slack_interactive(
                 }
             }
         }
-
-        warn!(
-            "values: {:#?}i, carrier: {}, tracking_number: {}",
-            values, carrier, tracking_number
-        );
 
         // Carrier cannot be empty.
         if carrier.is_empty() {
