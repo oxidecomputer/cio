@@ -270,7 +270,17 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
 
 /// Sync the recorded meetings from Google.
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
-    let mut gcal = company.authenticate_google_calendar(db).await?;
+    let mut gcal = match company.authenticate_google_calendar_with_service_account("").await {
+        Ok(dc) => dc,
+        // If we can't auth as the owner, then let's just just do a normal auth.
+        Err(e) => {
+            info!(
+                "using oauth2 token since getting google calendar token with service account failed: {}",
+                e
+            );
+            company.authenticate_google_calendar(db).await?
+        }
+    };
 
     let revai = RevAI::new_from_env();
 
@@ -279,6 +289,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
         .calendar_list()
         .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
         .await?;
+
+    let mut completed_events: Vec<String> = Default::default();
 
     // Iterate over the calendars.
     for calendar in calendars {
@@ -290,7 +302,17 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
 
         // Refresh our token.
         // This function takes so long it's likely our token expired.
-        gcal = company.authenticate_google_calendar(db).await?;
+        gcal = match company.authenticate_google_calendar_with_service_account("").await {
+            Ok(dc) => dc,
+            // If we can't auth as the owner, then let's just just do a normal auth.
+            Err(e) => {
+                info!(
+                    "using oauth2 token since getting google calendar token with service account failed: {}",
+                    e
+                );
+                company.authenticate_google_calendar(db).await?
+            }
+        };
 
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
@@ -316,6 +338,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             .await?;
 
         for event in events {
+            // Make sure we haven't already done this event.
+            if completed_events.contains(&event.id) {
+                // Continue early.
+                continue;
+            }
+
             // Let's check if there are attachments. We only care if there are attachments.
             if event.attachments.is_empty() {
                 // Continue early.
@@ -328,7 +356,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 if !attendee.resource {
                     attendees.push(attendee.email.to_string());
                 }
-                if attendee.organizer && attendee.email.ends_with(&company.gsuite_domain) {
+                if attendee.organizer && attendee.email.ends_with(&company.gsuite_domain) && owner.is_empty() {
                     // Make sure the person is still a user.
                     if let Some(_user) = User::get_from_db(
                         db,
@@ -354,6 +382,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     chat_log_link = attachment.file_url.to_string();
                 }
             }
+
+            // Get the IDs for the files.
             let chat_log_id = chat_log_link
                 .trim_start_matches("https://drive.google.com/open?id=")
                 .trim_start_matches("https://drive.google.com/file/d/")
@@ -370,11 +400,64 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 continue;
             }
 
+            if owner.is_empty() {
+                // We need a drive client to get information for the file.
+                let drive_client = match company.authenticate_google_drive_with_service_account("").await {
+                    Ok(dc) => dc,
+                    // If we can't auth as the owner, then let's just just do a normal auth.
+                    Err(e) => {
+                        info!(
+                            "using oauth2 token since getting google drive token with service account failed: {}",
+                            e
+                        );
+                        company.authenticate_google_drive(db).await?
+                    }
+                };
+
+                // Let's get the owner of the video so we can auth as them.
+                let file = drive_client
+                    .files()
+                    .get(
+                        &video_id, false, // acknowledge_abuse
+                        "",    // include_permissions_for_view
+                        true,  // supports_all_drives
+                        true,  // supports_team_drives
+                    )
+                    .await?;
+
+                // The file is not owned by me, so we need to make ourselves an owner.
+                for o in file.owners {
+                    // Iterate over the owners and try to find one we can authenticate as.
+                    if let Some(_user) = User::get_from_db(
+                        db,
+                        company.id,
+                        o.email_address
+                            .trim_end_matches(&company.gsuite_domain)
+                            .trim_end_matches('@')
+                            .to_string(),
+                    ) {
+                        owner = o.email_address.to_string();
+                        break;
+                    }
+                }
+            }
+
             // Authenticate as the specific user, if we can.
+            info!(
+                "authenticating google drive with service account as `{}` for `{}`",
+                owner,
+                event.summary.trim().to_string()
+            );
             let drive_client = match company.authenticate_google_drive_with_service_account(&owner).await {
                 Ok(dc) => dc,
                 // If we can't auth as the owner, then let's just just do a normal auth.
-                Err(_) => company.authenticate_google_drive(db).await?,
+                Err(e) => {
+                    info!(
+                        "using oauth2 token since getting google drive token with service account failed: {}",
+                        e
+                    );
+                    company.authenticate_google_drive(db).await?
+                }
             };
 
             // If we have a chat log, we should download it.
@@ -396,7 +479,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 {
                     Ok(_) => (),
                     Err(e) => {
-                        info!("adding permission for event chat log {} failed: {}", chat_log_link, e);
+                        info!(
+                            "adding permission for event `{}` chat log `{}` failed: {}",
+                            event.summary.trim().to_string(),
+                            chat_log_link,
+                            e
+                        );
                     }
                 };
 
@@ -425,17 +513,35 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             {
                 Ok(_) => (),
                 Err(e) => {
-                    info!("adding permission for event video: {} failed: {}", video, e);
+                    info!(
+                        "adding permission for event `{}` video `{}` failed: {}",
+                        event.summary.trim().to_string(),
+                        video,
+                        e
+                    );
                 }
             };
 
             // Download the video.
             let video_contents = drive_client.files().download_by_id(&video_id).await.unwrap_or_default();
 
+            if !video_contents.is_empty() {
+                // Get the size of the file.
+                // Because rev.ai can only do uploads under 2GB.
+                let b = byte_unit::Byte::from_unit(video_contents.len() as f64, byte_unit::ByteUnit::B)?;
+                info!("size: {}", b.to_string());
+                let b = b.get_adjusted_unit(byte_unit::ByteUnit::GB);
+                info!(
+                    "video for meeting `{}` has size `{}`",
+                    event.summary.trim().to_string(),
+                    b.to_string()
+                );
+            }
+
             // Make sure the contents aren't empty.
             if video_contents.is_empty() {
                 // Continue early.
-                //continue;
+                // TODO: continue;
             }
 
             let mut meeting = NewRecordedMeeting {
@@ -476,6 +582,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
 
             // Upsert the meeting in the database.
             let mut db_meeting = meeting.upsert(db).await?;
+            // Add to our completed events.
+            completed_events.push(event.id.to_string());
 
             if !video_contents.is_empty() {
                 // Only do this if we have the video contents.

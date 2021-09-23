@@ -696,6 +696,16 @@ impl Company {
         bail!("no token");
     }
 
+    /// Authenticate Google Calendar with Service Account.
+    /// This allows mocking as another user.
+    /// TODO: figure out why we can't mock with the standard token.
+    pub async fn authenticate_google_calendar_with_service_account(&self, as_user: &str) -> Result<GoogleCalendar> {
+        let token = self.get_google_service_account_token(as_user).await?;
+
+        // Initialize the client.
+        Ok(GoogleCalendar::new_from_env(&token, "").await)
+    }
+
     /// Authenticate Google Drive.
     pub async fn authenticate_google_drive(&self, db: &Database) -> Result<GoogleDrive> {
         // Get the APIToken from the database.
@@ -734,6 +744,13 @@ impl Company {
     /// This allows mocking as another user.
     /// TODO: figure out why we can't mock with the standard token.
     pub async fn authenticate_google_drive_with_service_account(&self, as_user: &str) -> Result<GoogleDrive> {
+        let token = self.get_google_service_account_token(as_user).await?;
+
+        // Initialize the client.
+        Ok(GoogleDrive::new_from_env(&token, "").await)
+    }
+
+    async fn get_google_service_account_token(&self, as_user: &str) -> Result<String> {
         if self.google_service_account.is_empty() {
             bail!("no service account");
         }
@@ -778,8 +795,7 @@ impl Company {
             bail!("empty token returned from authenticator");
         }
 
-        // Initialize the client.
-        Ok(GoogleDrive::new_from_env(&token_string, "").await)
+        Ok(token_string)
     }
 
     /// Authenticate Google Sheets.

@@ -220,7 +220,7 @@ dependencies = [
 name = "barcodey"
 version = "0.1.0"
 dependencies = [
- "cio-api 0.2.0",
+ "cio-api",
  "hidapi",
  "keycode",
  "log 0.4.14",
@@ -324,6 +324,15 @@ name = "byte-tools"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3b5ca7a04898ad4bcd41c90c5285445ff5b791899bb1b0abdd2a2aa791211d7"
+
+[[package]]
+name = "byte-unit"
+version = "4.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "063197e6eb4b775b64160dedde7a0986bb2836cce140e9492e9e96f28e18bcd8"
+dependencies = [
+ "utf8-width",
+]
 
 [[package]]
 name = "bytemuck"
@@ -475,6 +484,7 @@ dependencies = [
  "async-trait",
  "barcoders",
  "base64 0.12.3",
+ "byte-unit",
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
@@ -500,86 +510,7 @@ dependencies = [
  "image 0.23.14",
  "log 0.4.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0",
- "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "names",
- "nom_pem",
- "octorust",
- "okta",
- "openssl",
- "phonenumber",
- "pretty_env_logger",
- "printpdf",
- "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api",
- "rand 0.8.4",
- "regex 1.5.4",
- "reqwest",
- "revai",
- "schemars",
- "sendgrid-api",
- "sentry",
- "sentry-log",
- "serde",
- "serde_json",
- "sheets",
- "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
- "sodiumoxide",
- "steno",
- "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "tar",
- "titlecase",
- "tokio",
- "toml",
- "tripactions",
- "url 2.2.2",
- "uuid",
- "walkdir",
- "yup-oauth2",
- "zip",
- "zoom-api",
-]
-
-[[package]]
-name = "cio-api"
-version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=6e5a35fdbf0625577362223d30e0f8d779e37223#6e5a35fdbf0625577362223d30e0f8d779e37223"
-dependencies = [
- "Inflector",
- "acme-lib",
- "airtable-api 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
- "anyhow",
- "async-recursion",
- "async-trait",
- "barcoders",
- "base64 0.12.3",
- "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "chrono",
- "chrono-humanize",
- "chrono-tz",
- "cloudflare",
- "comrak",
- "csv",
- "deunicode",
- "diesel",
- "diffy",
- "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot 0.5.1",
- "flate2",
- "futures-util",
- "google-calendar",
- "google-drive",
- "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "google-groups-settings",
- "gsuite-api",
- "gusto-api",
- "handlebars",
- "html2text",
- "image 0.23.14",
- "log 0.4.14",
- "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=6e5a35fdbf0625577362223d30e0f8d779e37223)",
+ "macros",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
@@ -2296,19 +2227,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "macros"
-version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=6e5a35fdbf0625577362223d30e0f8d779e37223#6e5a35fdbf0625577362223d30e0f8d779e37223"
-dependencies = [
- "Inflector",
- "proc-macro2 1.0.29",
- "quote 1.0.9",
- "serde",
- "serde_tokenstream",
- "syn 1.0.76",
-]
-
-[[package]]
 name = "mailchimp-api"
 version = "0.1.15"
 dependencies = [
@@ -3098,7 +3016,7 @@ dependencies = [
 name = "printy"
 version = "0.1.0"
 dependencies = [
- "cio-api 0.2.0",
+ "cio-api",
  "dropshot 0.5.1",
  "http",
  "log 0.4.14",
@@ -5219,6 +5137,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4ae116fef2b7fea257ed6440d3cfcff7f190865f170cdad00bb6465bf18ecba"
 
 [[package]]
+name = "utf8-width"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cf7d77f457ef8dfa11e4cd5933c5ddb5dc52a94664071951219a97710f0a32b"
+
+[[package]]
 name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5372,7 +5296,7 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "chrono-tz",
- "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?rev=6e5a35fdbf0625577362223d30e0f8d779e37223)",
+ "cio-api",
  "clap 3.0.0-beta.4",
  "clokwerk",
  "diesel",
