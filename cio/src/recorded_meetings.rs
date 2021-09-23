@@ -562,8 +562,14 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
 
             // Upsert the meeting in the database.
             let mut db_meeting = meeting.upsert(db).await?;
+
             // Add to our completed events.
             completed_events.push(event.id.to_string());
+
+            // If we have a transcript and a transcript id, continue early.
+            if !db_meeting.transcript.is_empty() && !db_meeting.transcript_id.is_empty() {
+                continue;
+            }
 
             // Only do this if we have the video contents.
             // Check if we have a transcript id.
