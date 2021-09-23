@@ -16,7 +16,7 @@ pub trait ProviderOps<U, G> {
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String>;
 
     /// Ensure the group exists and has the correct information.
-    async fn ensure_group(&self, company: &Company, group: &Group) -> Result<()>;
+    async fn ensure_group(&self, db: &Database, company: &Company, group: &Group) -> Result<()>;
 
     async fn check_user_is_member_of_group(&self, company: &Company, user: &User, group: &str) -> Result<bool>;
 
@@ -73,7 +73,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
     }
 
     // Ramp does not have groups so this is a no-op.
-    async fn ensure_group(&self, _company: &Company, _group: &Group) -> Result<()> {
+    async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
 
@@ -219,7 +219,7 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         Ok(String::new())
     }
 
-    async fn ensure_group(&self, company: &Company, group: &Group) -> Result<()> {
+    async fn ensure_group(&self, _db: &Database, company: &Company, group: &Group) -> Result<()> {
         // Check if the team exists.
         match self.teams().get_by_name(&company.github_org, &group.name).await {
             Ok(team) => {
@@ -471,7 +471,69 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         Ok(new_gsuite_user.id)
     }
 
-    async fn ensure_group(&self, _company: &Company, _group: &Group) -> Result<()> {
+    async fn ensure_group(&self, db: &Database, company: &Company, group: &Group) -> Result<()> {
+        match self
+            .groups()
+            .get(&format!("{}@{}", &group.name, &company.gsuite_domain))
+            .await
+        {
+            Ok(mut google_group) => {
+                google_group.description = group.description.to_string();
+
+                // Write the group aliases.
+                let mut aliases: Vec<String> = Default::default();
+                for alias in &group.aliases {
+                    aliases.push(format!("{}@{}", alias, &company.gsuite_domain));
+                }
+                google_group.aliases = aliases;
+
+                self.groups()
+                    .update(&format!("{}@{}", group.name, company.gsuite_domain), &google_group)
+                    .await?;
+
+                crate::gsuite::update_group_aliases(self, &google_group).await?;
+
+                // Update the groups settings.
+                crate::gsuite::update_google_group_settings(db, &group, company).await?;
+
+                info!("updated group `{}` in GSuite", group.name);
+
+                // Return early.
+                return Ok(());
+            }
+            Err(e) => {
+                // If the error is Not Found we need to add them.
+                if !e.to_string().contains("404") {
+                    // Otherwise bail.
+                    bail!("checking if group `{}` exists in GSuite failed: {}", group.name, e);
+                }
+            }
+        }
+
+        // Create the group.
+        let mut g: gsuite_api::types::Group = Default::default();
+
+        // TODO: Make this more DRY since it is repeated above as well.
+        g.name = group.name.to_string();
+        g.email = format!("{}@{}", group.name, company.gsuite_domain);
+        g.description = group.description.to_string();
+
+        // Write the group aliases.
+        let mut aliases: Vec<String> = Default::default();
+        for alias in &group.aliases {
+            aliases.push(format!("{}@{}", alias, &company.gsuite_domain));
+        }
+        g.aliases = aliases;
+
+        let new_group = self.groups().insert(&g).await?;
+
+        crate::gsuite::update_group_aliases(self, &new_group).await?;
+
+        // Update the groups settings.
+        crate::gsuite::update_google_group_settings(db, group, company).await?;
+
+        info!("created group `{}` in GSuite", group.name);
+
         Ok(())
     }
 
@@ -649,11 +711,11 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
 
 #[async_trait]
 impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
-    async fn ensure_user(&self, company: &Company, user: &User) -> Result<()> {
+    async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<()> {
         Ok(())
     }
 
-    async fn ensure_group(&self, company: &Company, group: &Group) -> Result<()> {
+    async fn ensure_group(&self, db: &Database, company: &Company, group: &Group) -> Result<()> {
         Ok(())
     }
 

@@ -1,7 +1,6 @@
 use std::{collections::HashMap, time};
 
 use anyhow::{bail, Result};
-use google_groups_settings::Client as GoogleGroupsSettings;
 use gsuite_api::{
     types::{
         Building as GSuiteBuilding, BuildingAddress, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup,
@@ -16,6 +15,7 @@ use serde_json::Value;
 use crate::{
     companies::Company,
     configs::{Building, ConferenceRoom, Group, User},
+    db::Database,
     providers::ProviderOps,
     utils::generate_password,
 };
@@ -199,29 +199,6 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     gsuite_user
 }
 
-/// Suspend a GSuite user, this is better than deleting them since then we can
-/// transfer their data.
-pub async fn suspend_user(gsuite: &GSuite, email: &str) -> Result<()> {
-    // First get the user.
-    let mut user = gsuite
-        .users()
-        .get(
-            email,
-            gsuite_api::types::DirectoryUsersListProjection::Full,
-            gsuite_api::types::ViewType::AdminView,
-        )
-        .await?;
-
-    // Set them to be suspended.
-    user.suspended = true;
-    user.suspension_reason = "No longer in config file.".to_string();
-
-    // Update the user.
-    gsuite.users().update(email, &user).await?;
-
-    Ok(())
-}
-
 /// Update a user's aliases in GSuite to match our database.
 pub async fn update_user_aliases(
     gsuite: &GSuite,
@@ -341,7 +318,9 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) -> Result<()
 }
 
 /// Update a group's settings in GSuite to match our configuration files.
-pub async fn update_google_group_settings(ggs: &GoogleGroupsSettings, group: &Group, company: &Company) -> Result<()> {
+pub async fn update_google_group_settings(db: &Database, group: &Group, company: &Company) -> Result<()> {
+    let ggs = company.authenticate_google_groups_settings(db).await?;
+
     // Get the current group settings.
     let email = format!("{}@{}", group.name, company.gsuite_domain);
     let mut result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;

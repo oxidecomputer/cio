@@ -31,9 +31,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
-    gsuite::{
-        update_google_group_settings, update_group_aliases, update_gsuite_building, update_gsuite_calendar_resource,
-    },
+    gsuite::{update_gsuite_building, update_gsuite_calendar_resource},
     providers::ProviderOps,
     schema::{applicants, buildings, conference_rooms, groups, links, users},
     shipments::NewOutboundShipment,
@@ -2373,12 +2371,8 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
     let gsuite = company.authenticate_google_admin(db).await?;
-    let ggs = company.authenticate_google_groups_settings(db).await?;
 
     let github = company.authenticate_github()?;
-
-    // Get the GSuite groups.
-    let gsuite_groups = gsuite.list_provider_groups(company).await?;
 
     // Get all the groups.
     let db_groups = Groups::get_from_db(db, company.id)?;
@@ -2414,95 +2408,15 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
 
     info!("updated configs groups in the database");
 
-    // Update the groups in GSuite.
-    // Get all the groups.
-    let db_groups = Groups::get_from_db(db, company.id)?;
-    // Create a BTreeMap
-    let mut group_map: BTreeMap<String, Group> = Default::default();
-    for u in db_groups {
-        group_map.insert(u.name.to_string(), u);
-    }
-    // Iterate over the groups already in GSuite.
-    for g in gsuite_groups {
-        let name = g.name.to_string();
-
-        // Check if we already have this group in our database.
-        let group = if let Some(val) = group_map.get(&name) {
-            val
-        } else {
-            // If the group does not exist in our map we need to delete
-            // group from GSuite.
-            info!("deleting group {} from gsuite", name);
-            gsuite
-                .groups()
-                .delete(&format!("{}@{}", name, &company.gsuite_domain))
-                .await?;
-            info!("deleted group from gsuite: {}", name);
-            continue;
-        };
-
-        // Update the group with the settings from the database for the group.
-        let mut updated_group: GSuiteGroup = g.clone();
-        updated_group.description = group.description.to_string();
-
-        // Write the group aliases.
-        let mut aliases: Vec<String> = Default::default();
-        for alias in &group.aliases {
-            aliases.push(format!("{}@{}", alias, &company.gsuite_domain));
-        }
-        updated_group.aliases = aliases;
-
-        gsuite
-            .groups()
-            .update(&format!("{}@{}", name, company.gsuite_domain), &updated_group)
-            .await?;
-
-        update_group_aliases(&gsuite, &updated_group).await?;
-
-        // Update the groups settings.
-        update_google_group_settings(&ggs, group, company).await?;
-
-        // Remove the group from the database map and continue.
-        // This allows us to add all the remaining new groups after.
-        group_map.remove(&name);
-
-        info!("updated group in gsuite: {}", name);
-    }
-
-    // Create any remaining groups from the database that we do not have in GSuite.
-    for (name, group) in group_map {
-        // Create the group.
-        let mut g: GSuiteGroup = Default::default();
-
-        // TODO: Make this more DRY since it is repeated above as well.
-        g.name = group.name.to_string();
-        g.email = format!("{}@{}", group.name, company.gsuite_domain);
-        g.description = group.description.to_string();
-
-        // Write the group aliases.
-        let mut aliases: Vec<String> = Default::default();
-        for alias in &group.aliases {
-            aliases.push(format!("{}@{}", alias, &company.gsuite_domain));
-        }
-        g.aliases = aliases;
-
-        let new_group: GSuiteGroup = gsuite.groups().insert(&g).await?;
-
-        update_group_aliases(&gsuite, &new_group).await?;
-
-        // Update the groups settings.
-        update_google_group_settings(&ggs, &group, company).await?;
-
-        info!("created group in gsuite: {}", name);
-    }
-
-    // Update the groups in GitHub.
+    // Update the groups in GitHub and GSuite.
     // Get all the groups.
     let db_groups = Groups::get_from_db(db, company.id)?;
     // Iterate over all the groups in our database.
     // TODO: delete any groups that are not in the database.
     for g in db_groups {
-        github.ensure_group(company, &g).await?;
+        github.ensure_group(db, company, &g).await?;
+
+        gsuite.ensure_group(db, company, &g).await?;
     }
 
     // Update groups in airtable.
