@@ -442,12 +442,14 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 }
             }
 
-            // Authenticate as the specific user, if we can.
-            info!(
-                "authenticating google drive with service account as `{}` for `{}`",
-                owner,
-                event.summary.trim().to_string()
-            );
+            if !owner.is_empty() {
+                // Authenticate as the specific user, if we can.
+                info!(
+                    "authenticating google drive with service account as `{}` for `{}`",
+                    owner,
+                    event.summary.trim().to_string()
+                );
+            }
             let drive_client = match company.authenticate_google_drive_with_service_account(&owner).await {
                 Ok(dc) => dc,
                 // If we can't auth as the owner, then let's just just do a normal auth.
@@ -525,19 +527,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             // Download the video.
             let video_contents = drive_client.files().download_by_id(&video_id).await.unwrap_or_default();
 
-            if !video_contents.is_empty() {
-                // Get the size of the file.
-                // Because rev.ai can only do uploads under 2GB.
-                let b = byte_unit::Byte::from_unit(video_contents.len() as f64, byte_unit::ByteUnit::B)?;
-                info!("size: {}", b.to_string());
-                let b = b.get_adjusted_unit(byte_unit::ByteUnit::GB);
-                info!(
-                    "video for meeting `{}` has size `{}`",
-                    event.summary.trim().to_string(),
-                    b.to_string()
-                );
-            }
-
             // Make sure the contents aren't empty.
             if video_contents.is_empty() {
                 // Continue early.
@@ -586,6 +575,16 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             completed_events.push(event.id.to_string());
 
             if !video_contents.is_empty() {
+                // Get the size of the file.
+                // Because rev.ai can only do uploads under 2GB.
+                let b = byte_unit::Byte::from_unit(video_contents.len() as f64, byte_unit::ByteUnit::B)?;
+                let b = b.get_adjusted_unit(byte_unit::ByteUnit::GB);
+                info!(
+                    "video for meeting `{}` has size `{}`",
+                    event.summary.trim().to_string(),
+                    b.to_string()
+                );
+
                 // Only do this if we have the video contents.
                 // Check if we have a transcript id.
                 if db_meeting.transcript_id.is_empty() && db_meeting.transcript.is_empty() {
@@ -594,7 +593,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     // Now let's upload it to rev.ai so it can start a job.
                     let result = revai.jobs().post(video_contents).await;
                     if let Err(e) = result {
-                        warn!("failed to upload video for `{}` to rev.ai: {}", db_meeting.name, e);
+                        warn!(
+                            "failed to upload video for `{}` with size`{}` to rev.ai: {}",
+                            db_meeting.name,
+                            b.to_string(),
+                            e
+                        );
                         continue;
                     }
                     let job = result?;

@@ -1157,7 +1157,7 @@ async fn listen_auth_shipbob_consent(
 
 /** Listen for callbacks to shipbob auth. */
 #[endpoint {
-    method = GET,
+    method = POST,
     path = "/auth/shipbob/callback",
 }]
 async fn listen_auth_shipbob_callback(
