@@ -819,18 +819,18 @@ pub async fn handle_slack_interactive(
                         if let serde_json::Value::Object(j) = o {
                             if name == "tracking_number" {
                                 tracking_number_block_id = block_id.to_string();
-                                tracking_number = j.get("value").unwrap().to_string();
+                                tracking_number = from_json_value_to_string(j);
                             } else if name == "name" {
                                 package_name_block_id = block_id.to_string();
-                                package_name = j.get("value").unwrap().to_string();
+                                package_name = from_json_value_to_string(j);
                             } else if name == "order_number" {
-                                order_number = j.get("value").unwrap().to_string();
+                                order_number = from_json_value_to_string(j);
                             } else if name == "notes" {
-                                notes = j.get("value").unwrap().to_string();
+                                notes = from_json_value_to_string(j);
                             } else if name == "carrier" {
                                 if let Some(serde_json::Value::Object(s)) = j.get("selected_option") {
                                     carrier_block_id = block_id.to_string();
-                                    carrier = s.get("value").unwrap().to_string();
+                                    carrier = from_json_value_to_string(s);
                                 }
                             }
                         }
@@ -874,10 +874,7 @@ pub async fn handle_slack_interactive(
                 oxide_tracking_link: Default::default(),
                 shipped_time: Default::default(),
             };
-            if let Err(e) = shipment.expand(db, &company).await {
-                // TODO: I have no idea why shippo fails here... figure it out.
-                sentry_anyhow::capture_anyhow(&e);
-            };
+            shipment.expand(db, &company).await?;
 
             // Upsert it into the database.
             shipment.upsert(db).await?;
@@ -1990,4 +1987,12 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
         ],
         state: Default::default(),
     })
+}
+
+fn from_json_value_to_string(t: &serde_json::Map<String, serde_json::Value>) -> String {
+    let v = t.get("value").unwrap();
+    match serde_json::from_value::<String>(v.clone()) {
+        Ok(s) => s,
+        Err(_) => String::new(),
+    }
 }
