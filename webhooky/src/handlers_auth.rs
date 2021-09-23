@@ -107,6 +107,10 @@ pub async fn handle_auth_shipbob_callback(
 
     warn!("shipbob callback: {:?}", event);
 
+    let uri = rqctx.request.lock().await.uri().clone();
+
+    warn!("shipbob callback uri: {:?}", uri);
+
     // Let's get the token from the code.
     //let t = g.get_access_token(&event.code, &event.state).await?;
 
