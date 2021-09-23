@@ -291,7 +291,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
         // Refresh our token.
         // This function takes so long it's likely our token expired.
         gcal = company.authenticate_google_calendar(db).await?;
-        let drive_client = company.authenticate_google_drive(db).await?;
 
         // Let's get all the events on this calendar and try and see if they
         // have a meeting recorded.
@@ -323,10 +322,25 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 continue;
             }
 
+            let mut owner = "".to_string();
             let mut attendees: Vec<String> = Default::default();
             for attendee in &event.attendees {
                 if !attendee.resource {
                     attendees.push(attendee.email.to_string());
+                }
+                if attendee.organizer && attendee.email.ends_with(&company.gsuite_domain) {
+                    // Make sure the person is still a user.
+                    if let Some(_user) = User::get_from_db(
+                        db,
+                        company.id,
+                        attendee
+                            .email
+                            .trim_end_matches(&company.gsuite_domain)
+                            .trim_end_matches('@')
+                            .to_string(),
+                    ) {
+                        owner = attendee.email.to_string()
+                    }
                 }
             }
 
@@ -355,6 +369,13 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 // Continue early, we don't care.
                 continue;
             }
+
+            // Authenticate as the specific user, if we can.
+            let drive_client = match company.authenticate_google_drive_with_service_account(&owner).await {
+                Ok(dc) => dc,
+                // If we can't auth as the owner, then let's just just do a normal auth.
+                Err(_) => company.authenticate_google_drive(db).await?,
+            };
 
             // If we have a chat log, we should download it.
             let mut chat_log = "".to_string();

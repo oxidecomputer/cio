@@ -1,4 +1,4 @@
-use std::{convert::TryInto, env};
+use std::{convert::TryInto, env, fs, io::Write};
 
 use airtable_api::Airtable;
 use anyhow::{anyhow, bail, Result};
@@ -728,6 +728,58 @@ impl Company {
         }
 
         bail!("no token");
+    }
+
+    /// Authenticate Google Drive with Service Account.
+    /// This allows mocking as another user.
+    /// TODO: figure out why we can't mock with the standard token.
+    pub async fn authenticate_google_drive_with_service_account(&self, as_user: &str) -> Result<GoogleDrive> {
+        if self.google_service_account.is_empty() {
+            bail!("no service account");
+        }
+
+        // Save the service account to a tmp file.
+        let mut file_path = env::temp_dir();
+        file_path.push(&format!("{}-google_service_account.json", self.name));
+
+        // Create the file and write to it.
+        let mut file = fs::File::create(file_path.clone())?;
+        file.write_all(self.google_service_account.as_bytes())?;
+
+        // Set the GSuite credential file to the temp path.
+        let google_service_account_file = file_path.to_str().unwrap().to_string();
+
+        let subject = if as_user.is_empty() {
+            self.gsuite_subject.to_string()
+        } else {
+            as_user.to_string()
+        };
+
+        let client_secret = yup_oauth2::read_service_account_key(&google_service_account_file).await?;
+        let auth = yup_oauth2::ServiceAccountAuthenticator::builder(client_secret)
+            .subject(subject)
+            .build()
+            .await?;
+
+        let token = auth
+            .token(&[
+                "https://www.googleapis.com/auth/admin.directory.group",
+                "https://www.googleapis.com/auth/admin.directory.resource.calendar",
+                "https://www.googleapis.com/auth/admin.directory.user",
+                "https://www.googleapis.com/auth/calendar",
+                "https://www.googleapis.com/auth/apps.groups.settings",
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ])
+            .await?;
+
+        let token_string = token.as_str().to_string();
+        if token_string.is_empty() {
+            bail!("empty token returned from authenticator");
+        }
+
+        // Initialize the client.
+        Ok(GoogleDrive::new_from_env(&token_string, "").await)
     }
 
     /// Authenticate Google Sheets.
