@@ -17,8 +17,8 @@ checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 chrono-tz = { version = "0.4", features = ["serde"] }
-#cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "66ad9aacfff65fd2d47f3873b47377f227757f90" }
-cio-api = { path = "../cio" }
+cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "6b3fbd97832c045ade0f975ac67a7c33f5bb585c" }
+#cio-api = { path = "../cio" }
 clap = "3.0.0-beta.4"
 clokwerk = "0.4.0-rc1"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
