@@ -544,7 +544,7 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=036ac41fd69992a6a560be544826d72aca183b8a#036ac41fd69992a6a560be544826d72aca183b8a"
+source = "git+https://github.com/oxidecomputer/cio?rev=6e5a35fdbf0625577362223d30e0f8d779e37223#6e5a35fdbf0625577362223d30e0f8d779e37223"
 dependencies = [
  "Inflector",
  "acme-lib",
@@ -579,7 +579,7 @@ dependencies = [
  "image 0.23.14",
  "log 0.4.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=036ac41fd69992a6a560be544826d72aca183b8a)",
+ "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=6e5a35fdbf0625577362223d30e0f8d779e37223)",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
@@ -2298,7 +2298,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=036ac41fd69992a6a560be544826d72aca183b8a#036ac41fd69992a6a560be544826d72aca183b8a"
+source = "git+https://github.com/oxidecomputer/cio?rev=6e5a35fdbf0625577362223d30e0f8d779e37223#6e5a35fdbf0625577362223d30e0f8d779e37223"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.29",
@@ -5372,7 +5372,7 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "chrono-tz",
- "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?rev=036ac41fd69992a6a560be544826d72aca183b8a)",
+ "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?rev=6e5a35fdbf0625577362223d30e0f8d779e37223)",
  "clap 3.0.0-beta.4",
  "clokwerk",
  "diesel",
