@@ -583,30 +583,7 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         };
 
         let is_member = self.check_user_is_member_of_group(company, user, group).await?;
-        if is_member {
-            // Update the member of the group.
-            self.members()
-                .update(
-                    &format!("{}@{}", group, company.gsuite_domain),
-                    &user.email,
-                    &gsuite_api::types::Member {
-                        role: role.to_string(),
-                        email: user.email.to_string(),
-                        delivery_settings: "ALL_MAIL".to_string(),
-                        etag: "".to_string(),
-                        id: "".to_string(),
-                        kind: "".to_string(),
-                        status: "".to_string(),
-                        type_: "".to_string(),
-                    },
-                )
-                .await?;
-
-            info!(
-                "updated user `{}` membership to GSuite group `{}` with role `{}`",
-                user.email, group, role
-            );
-        } else {
+        if !is_member {
             // Create the member of the group.
             self.members()
                 .insert(
@@ -710,6 +687,11 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
         let mut user = user.clone();
 
+        let mut aliases: Vec<String> = Default::default();
+        for alias in &user.aliases {
+            aliases.push(format!("{}@{}", alias, company.gsuite_domain));
+        }
+
         // Create the profile for the Okta user.
         let profile = okta::types::UserProfile {
             city: user.home_address_city.to_string(),
@@ -750,7 +732,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             aws_role: user.aws_role.to_string(),
             start_date: Some(user.start_date),
             birthday: Some(user.birthday),
-            email_aliases: user.aliases.clone(),
+            email_aliases: aliases,
             work_postal_address: user.work_address_formatted.to_string(),
             work_street_address: format!("{}\n{}", user.work_address_street_1, user.work_address_street_2)
                 .trim()
