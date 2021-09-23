@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use chrono::Utc;
 use cio_api::{
     api_tokens::{APIToken, NewAPIToken},
@@ -12,7 +12,6 @@ use docusign::DocuSign;
 use dropshot::{Query, RequestContext, UntypedBody};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
-use log::warn;
 use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
@@ -93,10 +92,6 @@ pub async fn handle_auth_google_callback(
 }
 
 pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
-    // Parse the body as bytes.
-    let b = body_param.as_bytes();
-    let event = String::from_utf8(b.to_vec())?;
-
     let api_context = rqctx.context();
 
     // Initialize the Google client.
@@ -104,11 +99,7 @@ pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, b
     // for tokens and we will send all the scopes.
     let mut g = ShipBob::new_from_env("", "", "");
 
-    warn!("shipbob callback str: {}", event);
-
     let event: AuthCallback = serde_urlencoded::from_bytes(body_param.as_bytes())?;
-
-    warn!("shipbob callback event {:?}", event);
 
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code, &event.state).await?;
@@ -116,36 +107,46 @@ pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, b
     // Let's get the channel information.
     let channels = g.channels().get_page().await?;
 
-    warn!("shipbob channels {:?}", channels);
+    let mut domain = "".to_string();
+    let mut channel_id = "".to_string();
+    for channel in &channels {
+        if channel.application_name == "Automated CIO Bot" {
+            channel_id = channel.id.to_string();
+            domain = channel.name.to_string();
+            break;
+        }
+    }
 
-    /*
-        let company = Company::get_from_domain(&api_context.db, &metadata.hd)?;
+    if domain.is_empty() || channel_id.is_empty() {
+        bail!("could not find matching channel in channels: {:?}", channels);
+    }
 
-        // Save the token to the database.
-        let mut token = NewAPIToken {
-            product: "shipbob".to_string(),
-            token_type: t.token_type.to_string(),
-            access_token: t.access_token.to_string(),
-            expires_in: t.expires_in as i32,
-            refresh_token: t.refresh_token.to_string(),
-            refresh_token_expires_in: t.refresh_token_expires_in as i32,
-            company_id: metadata.hd.to_string(),
-            item_id: "".to_string(),
-            user_email: metadata.email.to_string(),
-            last_updated_at: Utc::now(),
-            expires_date: None,
-            refresh_token_expires_date: None,
-            endpoint: "".to_string(),
-            auth_company_id: company.id,
-            company: Default::default(),
-            // THIS SHOULD ALWAYS BE OXIDE, NO 1.
-            cio_company_id: 1,
-        };
-        token.expand();
+    let company = Company::get_from_domain(&api_context.db, &domain)?;
 
-        // Update it in the database.
-        token.upsert(&api_context.db).await?;
-    */
+    // Save the token to the database.
+    let mut token = NewAPIToken {
+        product: "shipbob".to_string(),
+        token_type: t.token_type.to_string(),
+        access_token: t.access_token.to_string(),
+        expires_in: t.expires_in as i32,
+        refresh_token: t.refresh_token.to_string(),
+        refresh_token_expires_in: t.refresh_token_expires_in as i32,
+        company_id: channel_id.to_string(),
+        item_id: "".to_string(),
+        user_email: "".to_string(),
+        last_updated_at: Utc::now(),
+        expires_date: None,
+        refresh_token_expires_date: None,
+        endpoint: "".to_string(),
+        auth_company_id: company.id,
+        company: Default::default(),
+        // THIS SHOULD ALWAYS BE OXIDE, NO 1.
+        cio_company_id: 1,
+    };
+    token.expand();
+
+    // Update it in the database.
+    token.upsert(&api_context.db).await?;
 
     Ok(())
 }
