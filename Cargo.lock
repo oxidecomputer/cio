@@ -220,7 +220,7 @@ dependencies = [
 name = "barcodey"
 version = "0.1.0"
 dependencies = [
- "cio-api 0.2.0",
+ "cio-api",
  "hidapi",
  "keycode",
  "log 0.4.14",
@@ -500,86 +500,7 @@ dependencies = [
  "image 0.23.14",
  "log 0.4.14",
  "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0",
- "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "names",
- "nom_pem",
- "octorust",
- "okta",
- "openssl",
- "phonenumber",
- "pretty_env_logger",
- "printpdf",
- "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "ramp-api",
- "rand 0.8.4",
- "regex 1.5.4",
- "reqwest",
- "revai",
- "schemars",
- "sendgrid-api",
- "sentry",
- "sentry-log",
- "serde",
- "serde_json",
- "sheets",
- "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
- "sodiumoxide",
- "steno",
- "tailscale-api 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "tar",
- "titlecase",
- "tokio",
- "toml",
- "tripactions",
- "url 2.2.2",
- "uuid",
- "walkdir",
- "yup-oauth2",
- "zip",
- "zoom-api",
-]
-
-[[package]]
-name = "cio-api"
-version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=238a4c996466b58677bc856c5f6e1c1e0de19b4a#238a4c996466b58677bc856c5f6e1c1e0de19b4a"
-dependencies = [
- "Inflector",
- "acme-lib",
- "airtable-api 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
- "anyhow",
- "async-recursion",
- "async-trait",
- "barcoders",
- "base64 0.12.3",
- "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "chrono",
- "chrono-humanize",
- "chrono-tz",
- "cloudflare",
- "comrak",
- "csv",
- "deunicode",
- "diesel",
- "diffy",
- "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot 0.5.1",
- "flate2",
- "futures-util",
- "google-calendar",
- "google-drive",
- "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "google-groups-settings",
- "gsuite-api",
- "gusto-api",
- "handlebars",
- "html2text",
- "image 0.23.14",
- "log 0.4.14",
- "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=238a4c996466b58677bc856c5f6e1c1e0de19b4a)",
+ "macros",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
@@ -2296,19 +2217,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "macros"
-version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=238a4c996466b58677bc856c5f6e1c1e0de19b4a#238a4c996466b58677bc856c5f6e1c1e0de19b4a"
-dependencies = [
- "Inflector",
- "proc-macro2 1.0.29",
- "quote 1.0.9",
- "serde",
- "serde_tokenstream",
- "syn 1.0.76",
-]
-
-[[package]]
 name = "mailchimp-api"
 version = "0.1.15"
 dependencies = [
@@ -2683,9 +2591,7 @@ dependencies = [
 
 [[package]]
 name = "okta"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "401dad838fd49ab6cbc4a58dae92bf5ab6e3b171ab73f801b6de4d015845f8dd"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2695,6 +2601,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -3097,7 +3004,7 @@ dependencies = [
 name = "printy"
 version = "0.1.0"
 dependencies = [
- "cio-api 0.2.0",
+ "cio-api",
  "dropshot 0.5.1",
  "http",
  "log 0.4.14",
@@ -5345,7 +5252,7 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "chrono-tz",
- "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?rev=238a4c996466b58677bc856c5f6e1c1e0de19b4a)",
+ "cio-api",
  "clap 3.0.0-beta.4",
  "clokwerk",
  "diesel",

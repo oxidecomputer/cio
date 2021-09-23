@@ -744,11 +744,11 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         };
 
         // Try to get the user.
-        let mut user_id = match self.user().get(&user.email.replace('@', "%40")).await {
+        let mut user_id = match self.users().get(&user.email.replace('@', "%40")).await {
             Ok(mut okta_user) => {
                 // Update the Okta user.
                 okta_user.profile = Some(profile.clone());
-                self.user()
+                self.users()
                     .update(
                         &okta_user.id,
                         false, // strict
@@ -771,7 +771,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         if user_id.is_empty() {
             // Create the user.
             let okta_user = self
-                .user()
+                .users()
                 .create(
                     true,             // activate
                     false,            // provider
@@ -840,7 +840,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     async fn ensure_group(&self, _db: &Database, _company: &Company, group: &Group) -> Result<()> {
         // Try to find the group with the name.
         let results = self
-            .group()
+            .groups()
             .list_all(
                 &group.name, // query
                 "",          // search
@@ -858,7 +858,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
 
                     result.profile = Some(profile);
 
-                    self.group().update(&result.id, &result).await?;
+                    self.groups().update(&result.id, &result).await?;
 
                     info!("updated group `{}` in Okta", group.name);
                 } else {
@@ -870,7 +870,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         }
 
         // The group did not exist, let's create it.
-        self.group()
+        self.groups()
             .create(&okta::types::Group {
                 embedded: None,
                 links: None,
@@ -895,7 +895,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     async fn check_user_is_member_of_group(&self, _company: &Company, user: &User, group: &str) -> Result<bool> {
         // Try to find the group with the name.
         let results = self
-            .group()
+            .groups()
             .list_all(
                 group, // query
                 "",    // search
@@ -906,7 +906,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         for result in results {
             let profile = result.profile.unwrap();
             if profile.name == group {
-                let members = self.group().list_all_users(&result.id).await?;
+                let members = self.groups().list_all_users(&result.id).await?;
                 for member in members {
                     if member.id == user.okta_id {
                         info!("user `{}` is already a member of Okta group `{}`", user.email, group);
@@ -922,7 +922,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     async fn add_user_to_group(&self, _company: &Company, user: &User, group: &str) -> Result<()> {
         // Try to find the group with the name.
         let results = self
-            .group()
+            .groups()
             .list_all(
                 group, // query
                 "",    // search
@@ -934,7 +934,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             let profile = result.profile.unwrap();
             if profile.name == group {
                 // We found the group let's delete it.
-                self.group().add_user(&result.id, &user.okta_id).await?;
+                self.groups().add_user(&result.id, &user.okta_id).await?;
 
                 info!("added user `{}` to Okta group `{}`", user.email, group);
 
@@ -948,7 +948,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     async fn remove_user_from_group(&self, _company: &Company, user: &User, group: &str) -> Result<()> {
         // Try to find the group with the name.
         let results = self
-            .group()
+            .groups()
             .list_all(
                 group, // query
                 "",    // search
@@ -960,7 +960,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             let profile = result.profile.unwrap();
             if profile.name == group {
                 // We found the group let's delete it.
-                self.group().remove_user_from(&result.id, &user.okta_id).await?;
+                self.groups().remove_user_from(&result.id, &user.okta_id).await?;
 
                 info!("removed user `{}` from Okta group `{}`", user.email, group);
 
@@ -972,7 +972,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     }
 
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<okta::types::User>> {
-        self.user()
+        self.users()
             .list_all(
                 "", // query
                 "", // filter
@@ -984,7 +984,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     }
 
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<okta::types::Group>> {
-        self.group()
+        self.groups()
             .list_all(
                 "", // query
                 "", // search
@@ -1000,7 +1000,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     async fn delete_group(&self, _company: &Company, group: &Group) -> Result<()> {
         // Try to find the group with the name.
         let results = self
-            .group()
+            .groups()
             .list_all(
                 &group.name, // query
                 "",          // search
@@ -1012,7 +1012,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             let profile = result.profile.unwrap();
             if profile.name == group.name {
                 // We found the group let's delete it.
-                self.group().delete(&result.id).await?;
+                self.groups().delete(&result.id).await?;
                 return Ok(());
             }
         }

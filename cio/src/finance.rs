@@ -20,6 +20,7 @@ use crate::{
     configs::{Group, User},
     core::UpdateAirtableRecord,
     db::Database,
+    providers::ProviderOps,
     schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users},
 };
 
@@ -254,32 +255,10 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
             org.plan.unwrap().filled_seats as i32
         } else if vendor.name == "Okta" && okta_auth.is_some() {
             let okta = okta_auth.as_ref().unwrap();
-            let users = okta
-                .user()
-                .list_all(
-                    "", // query
-                    "", // filter
-                    "", // search
-                    "", // sort by
-                    "", // sort order
-                )
-                .await?;
+            let users = okta.list_provider_users(company).await?;
             users.len() as i32
         } else if vendor.name == "Google Workspace" {
-            let users = gsuite
-                .users()
-                .list_all(
-                    &company.gsuite_account_id,                            // customer
-                    &company.gsuite_domain,                                // domain
-                    gsuite_api::types::Event::Noop,                        // event
-                    gsuite_api::types::DirectoryUsersListOrderBy::Email,   // order by
-                    gsuite_api::types::DirectoryUsersListProjection::Full, // projection
-                    "",                                                    // query
-                    "",                                                    // show deleted
-                    gsuite_api::types::SortOrder::Ascending,               // sort order
-                    gsuite_api::types::ViewType::AdminView,                // view type
-                )
-                .await?;
+            let users = gsuite.list_provider_users(company).await?;
             users.len() as i32
         } else if vendor.name == "Slack" && slack_auth.is_ok() {
             let slack = slack_auth.as_ref().unwrap();

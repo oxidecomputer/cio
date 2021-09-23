@@ -1548,16 +1548,7 @@ pub async fn sync_users(
     let mut okta_users: HashMap<String, okta::types::User> = HashMap::new();
     let okta_auth = company.authenticate_okta();
     if let Some(ref okta) = okta_auth {
-        let gu = okta
-            .user()
-            .list_all(
-                "", // query
-                "", // filter
-                "", // search
-                "", // sort by
-                "", // sort order
-            )
-            .await?;
+        let gu = okta.list_provider_users(company).await?;
         for g in gu {
             okta_users.insert(g.profile.as_ref().unwrap().email.to_string(), g);
         }
