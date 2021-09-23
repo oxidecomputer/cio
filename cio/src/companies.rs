@@ -27,6 +27,7 @@ use reqwest::Client;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sheets::Client as GoogleSheets;
+use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
 use tripactions::Client as TripActions;
@@ -292,6 +293,43 @@ impl Company {
     /// Authenticate with Airtable.
     pub fn authenticate_airtable(&self, base_id: &str) -> Airtable {
         Airtable::new(&self.airtable_api_key, base_id, &self.airtable_enterprise_account_id)
+    }
+
+    /// Authenticate with ShipBob.
+    pub async fn authenticate_shipbob(&self, db: &Database) -> Result<ShipBob> {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "shipbob".to_string()) {
+            // Initialize the ShipBob client.
+            let mut shipbob = ShipBob::new_from_env(
+                t.access_token.to_string(),
+                t.refresh_token.to_string(),
+                t.company_id.to_string(),
+            );
+
+            if !t.refresh_token.is_empty() && t.is_expired() {
+                let nt = shipbob.refresh_access_token().await?;
+                if !nt.access_token.is_empty() {
+                    t.access_token = nt.access_token.to_string();
+                }
+                if nt.expires_in > 0 {
+                    t.expires_in = nt.expires_in as i32;
+                }
+                t.last_updated_at = Utc::now();
+                if !nt.refresh_token.is_empty() {
+                    t.refresh_token = nt.refresh_token.to_string();
+                }
+                if nt.refresh_token_expires_in > 0 {
+                    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
+                }
+                t.expand();
+                // Update the token in the database.
+                t.update(db).await?;
+            }
+
+            return Ok(shipbob);
+        }
+
+        bail!("no token");
     }
 
     /// Authenticate with MailChimp.

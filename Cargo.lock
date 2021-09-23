@@ -533,6 +533,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sheets",
+ "shipbob",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
  "sodiumoxide",
