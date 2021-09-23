@@ -2052,6 +2052,11 @@ pub async fn sync_users(
             );
         }
 
+        // Supend the user from okta.
+        if let Some(ref okta) = okta_auth {
+            okta.delete_user(company, &user).await?;
+        }
+
         // TODO: Delete the user from Ramp.
 
         if company.okta_domain.is_empty() {

@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use log::info;
+use log::{info, warn};
 
 use crate::{
     companies::Company,
@@ -538,11 +538,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 
     async fn check_user_is_member_of_group(&self, company: &Company, user: &User, group: &str) -> Result<bool> {
-        if group == "Everyone" {
-            // Return early we can't modify this group.
-            return Ok(true);
-        }
-
         let role = if user.is_group_admin {
             "OWNER".to_string()
         } else {
@@ -581,11 +576,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 
     async fn add_user_to_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
-        if group == "Everyone" {
-            // Return early we can't modify this group.
-            return Ok(());
-        }
-
         let role = if user.is_group_admin {
             "OWNER".to_string()
         } else {
@@ -621,11 +611,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 
     async fn remove_user_from_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
-        if group == "Everyone" {
-            // Return early we can't modify this group.
-            return Ok(());
-        }
-
         self.members()
             .delete(&format!("{}@{}", group, company.gsuite_domain), &user.email)
             .await?;
@@ -687,11 +672,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 
     async fn delete_group(&self, company: &Company, group: &Group) -> Result<()> {
-        if group.name == "Everyone" {
-            // Return early we can't modify this group.
-            return Ok(());
-        }
-
         self.groups()
             .delete(&format!("{}@{}", &group.name, &company.gsuite_domain))
             .await?;
@@ -858,6 +838,11 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     }
 
     async fn ensure_group(&self, _db: &Database, _company: &Company, group: &Group) -> Result<()> {
+        if group.name == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(());
+        }
+
         // Try to find the group with the name.
         let results = self
             .groups()
@@ -913,6 +898,11 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     }
 
     async fn check_user_is_member_of_group(&self, _company: &Company, user: &User, group: &str) -> Result<bool> {
+        if group == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(true);
+        }
+
         // Try to find the group with the name.
         let results = self
             .groups()
@@ -940,6 +930,11 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     }
 
     async fn add_user_to_group(&self, _company: &Company, user: &User, group: &str) -> Result<()> {
+        if group == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(());
+        }
+
         // Try to find the group with the name.
         let results = self
             .groups()
@@ -966,6 +961,11 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
     }
 
     async fn remove_user_from_group(&self, _company: &Company, user: &User, group: &str) -> Result<()> {
+        if group == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(());
+        }
+
         // Try to find the group with the name.
         let results = self
             .groups()
@@ -1013,11 +1013,29 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             .await
     }
 
-    async fn delete_user(&self, _company: &Company, _user: &User) -> Result<()> {
+    async fn delete_user(&self, _company: &Company, user: &User) -> Result<()> {
+        if user.okta_id.is_empty() {
+            // Return early.
+            warn!(
+                "could not suspend user `{}` from okta because they don't have an okta_id",
+                user.email
+            );
+            return Ok(());
+        }
+
+        // Suspend the user.
+        self.users().suspend(&user.okta_id).await?;
+        info!("suspended user `{}` from Okta", user.email);
+
         Ok(())
     }
 
     async fn delete_group(&self, _company: &Company, group: &Group) -> Result<()> {
+        if group.name == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(());
+        }
+
         // Try to find the group with the name.
         let results = self
             .groups()
