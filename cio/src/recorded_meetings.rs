@@ -604,11 +604,17 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 // We have a transcript id, let's try and get the transcript if we don't have
                 // it already.
                 // Now let's try to get the transcript.
-                let transcript = revai
+                let transcript = match revai
                     .transcript()
                     .get(&db_meeting.transcript_id, revai::types::AcceptTranscript::TextPlain)
                     .await
-                    .unwrap_or_default();
+                {
+                    Ok(t) => t,
+                    Err(e) => {
+                        warn!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
+                        String::new()
+                    }
+                };
                 db_meeting.transcript = transcript.trim().to_string();
                 db_meeting.update(db).await?;
             }
