@@ -1150,10 +1150,7 @@ async fn listen_auth_shipbob_consent(
 
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
-        url: g.user_consent_url(
-            //&cio_api::companies::get_shipbob_scopes()
-            &vec![],
-        ),
+        url: g.user_consent_url(&cio_api::companies::get_shipbob_scopes()),
     }))
 }
 
