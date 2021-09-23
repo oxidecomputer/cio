@@ -538,6 +538,11 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 
     async fn check_user_is_member_of_group(&self, company: &Company, user: &User, group: &str) -> Result<bool> {
+        if group == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(true);
+        }
+
         let role = if user.is_group_admin {
             "OWNER".to_string()
         } else {
@@ -576,6 +581,11 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 
     async fn add_user_to_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
+        if group == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(());
+        }
+
         let role = if user.is_group_admin {
             "OWNER".to_string()
         } else {
@@ -611,6 +621,11 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 
     async fn remove_user_from_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
+        if group == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(());
+        }
+
         self.members()
             .delete(&format!("{}@{}", group, company.gsuite_domain), &user.email)
             .await?;
@@ -672,6 +687,11 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 
     async fn delete_group(&self, company: &Company, group: &Group) -> Result<()> {
+        if group.name == "Everyone" {
+            // Return early we can't modify this group.
+            return Ok(());
+        }
+
         self.groups()
             .delete(&format!("{}@{}", &group.name, &company.gsuite_domain))
             .await?;
