@@ -415,7 +415,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 };
 
                 // Let's get the owner of the video so we can auth as them.
-                let file = drive_client
+                match drive_client
                     .files()
                     .get(
                         &video_id, false, // acknowledge_abuse
@@ -423,22 +423,26 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         true,  // supports_all_drives
                         true,  // supports_team_drives
                     )
-                    .await?;
-
-                // The file is not owned by me, so we need to make ourselves an owner.
-                for o in file.owners {
-                    // Iterate over the owners and try to find one we can authenticate as.
-                    if let Some(_user) = User::get_from_db(
-                        db,
-                        company.id,
-                        o.email_address
-                            .trim_end_matches(&company.gsuite_domain)
-                            .trim_end_matches('@')
-                            .to_string(),
-                    ) {
-                        owner = o.email_address.to_string();
-                        break;
+                    .await
+                {
+                    Ok(file) => {
+                        // The file is not owned by me, so we need to make ourselves an owner.
+                        for o in file.owners {
+                            // Iterate over the owners and try to find one we can authenticate as.
+                            if let Some(_user) = User::get_from_db(
+                                db,
+                                company.id,
+                                o.email_address
+                                    .trim_end_matches(&company.gsuite_domain)
+                                    .trim_end_matches('@')
+                                    .to_string(),
+                            ) {
+                                owner = o.email_address.to_string();
+                                break;
+                            }
+                        }
                     }
+                    Err(_) => (),
                 }
             }
 
