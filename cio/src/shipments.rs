@@ -1423,6 +1423,25 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
         return Ok(());
     }
 
+    // Let's see if we can get any shipments from ShipBob.
+    if let Ok(shipbob) = company.authenticate_shipbob(db).await {
+        let orders = shipbob
+            .orders()
+            .get_all(
+                &[],  // ids
+                &[],  // reference_ids
+                None, // start_date
+                None, // end_date
+                shipbob::types::SortOrder::Newest,
+                false, // has_tracking
+                None,  // last_update_start_date
+                None,  // last_update_end_date
+                false, // is_tracking_uploaded
+            )
+            .await?;
+        info!("shipbob orders: {:#?}", orders);
+    }
+
     // Iterate over all the shipments in the database and update them.
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
