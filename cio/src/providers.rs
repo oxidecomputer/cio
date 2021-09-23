@@ -705,45 +705,250 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
     }
 }
 
+#[async_trait]
+impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
+    async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
+        // Create the profile for the Okta user.
+        let profile = okta::types::UserProfile {
+            city: user.home_address_city.to_string(),
+            cost_center: Default::default(),
+            country_code: user.home_address_country_code.to_string(),
+            department: user.department.to_string(),
+            display_name: user.full_name(),
+            division: Default::default(),
+            email: user.email.to_string(),
+            employee_number: Default::default(),
+            first_name: user.first_name.to_string(),
+            honorific_prefix: Default::default(),
+            honorific_suffix: Default::default(),
+            last_name: user.last_name.to_string(),
+            locale: Default::default(),
+            login: user.email.to_string(),
+            manager: user.manager(db).email.to_string(),
+            manager_id: Default::default(),
+            middle_name: Default::default(),
+            mobile_phone: user.recovery_phone.to_string(),
+            nick_name: Default::default(),
+            organization: company.name.to_string(),
+            postal_address: user.home_address_formatted.to_string(),
+            preferred_language: Default::default(),
+            primary_phone: user.recovery_phone.to_string(),
+            profile_url: Default::default(),
+            second_email: user.recovery_email.to_string(),
+            state: user.home_address_state.to_string(),
+            street_address: format!("{}\n{}", user.home_address_street_1, user.home_address_street_2)
+                .trim()
+                .to_string(),
+            timezone: Default::default(),
+            title: Default::default(),
+            user_type: Default::default(),
+            zip_code: user.home_address_zipcode.to_string(),
+        };
+
+        // Try to get the user.
+        let mut user_id = match self.user().get(&user.email.replace('@', "%40")).await {
+            Ok(mut okta_user) => {
+                // Update the Okta user.
+                okta_user.profile = Some(profile);
+                self.user()
+                    .update(
+                        &okta_user.id,
+                        false, // strict
+                        &okta_user,
+                    )
+                    .await?;
+
+                okta_user.id
+            }
+            Err(e) => {
+                if !e.to_string().contains("404") {
+                    // Otherwise bail.
+                    bail!("checking if user `{}` exists in Okta failed: {}", user.email, e);
+                }
+
+                String::new()
+            }
+        };
+
+        if user_id.is_empty() {
+            // Create the user.
+            let okta_user = self
+                .user()
+                .create(
+                    true,             // activate
+                    false,            // provider
+                    "changePassword", // next_login
+                    &okta::types::CreateUserRequest {
+                        credentials: None,
+                        group_ids: Default::default(),
+                        profile: Some(profile),
+                        type_: None,
+                    },
+                )
+                .await?;
+
+            user_id = okta_user.id;
+        }
+
+        Ok(user_id)
+    }
+
+    async fn ensure_group(&self, _db: &Database, _company: &Company, group: &Group) -> Result<()> {
+        // Try to find the group with the name.
+        let results = self
+            .group()
+            .list_all(
+                &group.name, // query
+                "",          // search
+                "",          // expand
+            )
+            .await?;
+
+        for mut result in results {
+            let mut profile = result.profile.unwrap();
+            if profile.name == group.name {
+                // We found the group let's update it if we should.
+                if profile.description != group.description {
+                    // Update the group.
+                    profile.description = group.description.to_string();
+
+                    result.profile = Some(profile);
+
+                    self.group().update(&result.id, &result).await?;
+
+                    info!("updated group `{}` in Okta", group.name);
+                } else {
+                    info!("existing group `{}` in Okta is up to date", group.name);
+                }
+
+                return Ok(());
+            }
+        }
+
+        // The group did not exist, let's create it.
+        self.group()
+            .create(&okta::types::Group {
+                embedded: None,
+                links: None,
+                created: None,
+                id: String::new(),
+                last_membership_updated: None,
+                last_updated: None,
+                object_class: Default::default(),
+                type_: None,
+                profile: Some(okta::types::GroupProfile {
+                    name: group.name.to_string(),
+                    description: group.description.to_string(),
+                }),
+            })
+            .await?;
+
+        info!("created group `{}` in Okta", group.name);
+
+        Ok(())
+    }
+
+    async fn check_user_is_member_of_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    async fn add_user_to_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
+        Ok(())
+    }
+
+    async fn remove_user_from_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
+        Ok(())
+    }
+
+    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<okta::types::User>> {
+        self.user()
+            .list_all(
+                "", // query
+                "", // filter
+                "", // search
+                "", // sort by
+                "", // sort order
+            )
+            .await
+    }
+
+    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<okta::types::Group>> {
+        self.group()
+            .list_all(
+                "", // query
+                "", // search
+                "", // expand
+            )
+            .await
+    }
+
+    async fn delete_user(&self, _company: &Company, _user: &User) -> Result<()> {
+        Ok(())
+    }
+
+    async fn delete_group(&self, _company: &Company, group: &Group) -> Result<()> {
+        // Try to find the group with the name.
+        let results = self
+            .group()
+            .list_all(
+                &group.name, // query
+                "",          // search
+                "",          // expand
+            )
+            .await?;
+
+        for result in results {
+            let profile = result.profile.unwrap();
+            if profile.name == group.name {
+                // We found the group let's delete it.
+                self.group().delete(&result.id).await?;
+                return Ok(());
+            }
+        }
+
+        Ok(())
+    }
+}
+
 /*
  *
  * Keep as empty boiler plate for now.
 
 #[async_trait]
 impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
-    async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<()> {
+    async fn ensure_user(&self, _db: &Database, _company: &Company, _user: &User) -> Result<String> {
+        Ok(String::new())
+    }
+
+    async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
 
-    async fn ensure_group(&self, db: &Database, company: &Company, group: &Group) -> Result<()> {
-        Ok(())
-    }
-
-    async fn check_user_is_member_of_group(&self, company: &Company, user: &User, group: &str) -> Result<bool> {
+    async fn check_user_is_member_of_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<bool> {
         Ok(false)
     }
 
-    async fn add_user_to_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
+    async fn add_user_to_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
         Ok(())
     }
 
-    async fn remove_user_from_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
+    async fn remove_user_from_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
         Ok(())
     }
 
-    async fn list_provider_users(&self, company: &Company) -> Result<Vec<ramp_api::types::User>> {
+    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<ramp_api::types::User>> {
         Ok(vec![])
     }
 
-    async fn list_provider_groups(&self, company: &Company) -> Result<Vec<()>> {
+    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
         Ok(vec![])
     }
 
-    async fn delete_user(&self, company: &Company, user: &User) -> Result<()> {
+    async fn delete_user(&self, _company: &Company, _user: &User) -> Result<()> {
         Ok(())
     }
 
-    async fn delete_group(&self, company: &Company, group: &Group) -> Result<()> {
+    async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
 }

@@ -2,7 +2,6 @@
 use std::{
     collections::{BTreeMap, HashMap},
     str::from_utf8,
-    time,
 };
 
 use anyhow::{bail, Result};
@@ -35,7 +34,6 @@ use crate::{
     providers::ProviderOps,
     schema::{applicants, buildings, conference_rooms, groups, links, users},
     shipments::NewOutboundShipment,
-    templates::generate_terraform_files_for_okta,
     utils::{get_file_content_from_repo, get_github_user_public_ssh_keys},
 };
 
@@ -1826,16 +1824,7 @@ pub async fn sync_users(
         if existing.is_none() && !company.okta_domain.is_empty() {
             // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
             // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
-            // Now we need to update Okta to include the new user.
-            // We do this so that when we send emails from ramp and for the new user,
-            // they should have a Google account by then.
-            // Sync okta users and group from the database.
-            // Do this after we update the users and groups in the database.
-            generate_terraform_files_for_okta(github, db, company).await?;
-            // TODO: this is horrible, but we will sleep here to allow the terraform
-            // job to run.
-            // We also need a better way to ensure the terraform job passed...
-            tokio::time::sleep(time::Duration::from_secs(120)).await;
+            // TODO: ensure the okta user.
 
             // The user did not already exist in the database.
             // We should send them an email about setting up their account.
@@ -2374,6 +2363,8 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
 
     let github = company.authenticate_github()?;
 
+    let okta_auth = company.authenticate_okta();
+
     // Get all the groups.
     let db_groups = Groups::get_from_db(db, company.id)?;
     // Create a BTreeMap
@@ -2396,7 +2387,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // This is found by the remaining groups that are in the map since we removed
     // the existing repos from the map above.
     for (name, group) in group_map {
-        info!("deleting group `{}` from the database, gsuite, github, etc", name);
+        info!("deleting group `{}` from the database, gsuite, github, okta, etc", name);
 
         // Delete the group from the database and Airtable.
         group.delete(db).await?;
@@ -2404,6 +2395,10 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         gsuite.delete_group(company, &group).await?;
 
         github.delete_group(company, &group).await?;
+
+        if let Some(ref okta) = okta_auth {
+            okta.delete_group(company, &group).await?;
+        }
     }
 
     info!("updated configs groups in the database");
@@ -2412,11 +2407,15 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // Get all the groups.
     let db_groups = Groups::get_from_db(db, company.id)?;
     // Iterate over all the groups in our database.
-    // TODO: delete any groups that are not in the database.
+    // TODO: delete any groups that are not in the database for each vendor.
     for g in db_groups {
         github.ensure_group(db, company, &g).await?;
 
         gsuite.ensure_group(db, company, &g).await?;
+
+        if let Some(ref okta) = okta_auth {
+            okta.ensure_group(db, company, &g).await?;
+        }
     }
 
     // Update groups in airtable.
@@ -2587,10 +2586,6 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -
 
     // Sync users.
     sync_users(db, &github, configs.users, company).await?;
-
-    // Sync okta users and group from the database.
-    // Do this after we update the users and groups in the database.
-    generate_terraform_files_for_okta(&github, db, company).await?;
 
     // Sync links.
     sync_links(db, configs.links, configs.huddles, company).await?;
