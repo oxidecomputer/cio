@@ -4180,6 +4180,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6fa3938c99da4914afedd13bf3d79bcb6c277d1b2c398d23257a304d9e1b074"
 
 [[package]]
+name = "shipbob"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87bb3f9b4483c9152db7382a27ecf809e2207a80f701000eedcc08de79efb2a8"
+dependencies = [
+ "anyhow",
+ "async-recursion",
+ "async-trait",
+ "bytes 1.1.0",
+ "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken",
+ "mime 0.3.16",
+ "percent-encoding 2.1.0",
+ "reqwest",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded 0.7.0",
+ "url 2.2.2",
+ "urlencoding 1.3.3",
+ "uuid",
+]
+
+[[package]]
 name = "shippo"
 version = "0.1.29"
 dependencies = [
@@ -5378,6 +5404,7 @@ dependencies = [
  "serde_qs 0.8.4",
  "serde_urlencoded 0.7.0",
  "sheets",
+ "shipbob",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook",
  "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",

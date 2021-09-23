@@ -874,6 +874,21 @@ pub fn get_google_scopes() -> Vec<String> {
     ]
 }
 
+pub fn get_shipbob_scopes() -> Vec<String> {
+    vec![
+        "channels_read".to_string(),
+        "orders_read".to_string(),
+        "orders_write".to_string(),
+        "products_read".to_string(),
+        "products_write".to_string(),
+        "receiving_read".to_string(),
+        "receiving_write".to_string(),
+        "returns_read".to_string(),
+        "returns_write".to_string(),
+        "inventory_read".to_string(),
+    ]
+}
+
 /// The data type for Google user info.
 #[derive(Default, Clone, Debug, JsonSchema, Serialize, Deserialize)]
 pub struct UserInfo {

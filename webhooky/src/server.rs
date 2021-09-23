@@ -17,6 +17,7 @@ use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use shipbob::Client as ShipBob;
 use signal_hook::{
     consts::{SIGINT, SIGTERM},
     iterator::Signals,
@@ -93,6 +94,8 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(listen_auth_plaid_callback).unwrap();
     api.register(listen_auth_ramp_callback).unwrap();
     api.register(listen_auth_ramp_consent).unwrap();
+    api.register(listen_auth_shipbob_callback).unwrap();
+    api.register(listen_auth_shipbob_consent).unwrap();
     api.register(listen_auth_zoom_callback).unwrap();
     api.register(listen_auth_zoom_consent).unwrap();
     api.register(listen_auth_zoom_deauthorization).unwrap();
@@ -1122,6 +1125,50 @@ async fn listen_auth_google_callback(
     sentry::start_session();
 
     if let Err(e) = crate::handlers_auth::handle_auth_google_callback(rqctx, query_args).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/** Get the consent URL for shipbob auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/shipbob/consent",
+}]
+async fn listen_auth_shipbob_consent(
+    _rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
+    sentry::start_session();
+
+    // Initialize the shipbob client.
+    // You can use any of the libs here, they all use the same endpoint
+    // for tokens and we will send all the scopes.
+    let g = ShipBob::new_from_env("", "", "");
+
+    sentry::end_session();
+    Ok(HttpResponseOk(UserConsentURL {
+        url: g.user_consent_url(
+            //&cio_api::companies::get_shipbob_scopes()
+            &vec![],
+        ),
+    }))
+}
+
+/** Listen for callbacks to shipbob auth. */
+#[endpoint {
+    method = GET,
+    path = "/auth/shipbob/callback",
+}]
+async fn listen_auth_shipbob_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+
+    if let Err(e) = crate::handlers_auth::handle_auth_shipbob_callback(rqctx, query_args).await {
         // Send the error to sentry.
         return Err(handle_anyhow_err_as_http_err(e));
     }

@@ -12,9 +12,11 @@ use docusign::DocuSign;
 use dropshot::{Query, RequestContext};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
+use log::warn;
 use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
+use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
@@ -87,6 +89,55 @@ pub async fn handle_auth_google_callback(
     // Update it in the database.
     token.upsert(&api_context.db).await?;
 
+    Ok(())
+}
+
+pub async fn handle_auth_shipbob_callback(
+    rqctx: Arc<RequestContext<Context>>,
+    query_args: Query<AuthCallback>,
+) -> Result<()> {
+    let event = query_args.into_inner();
+
+    let api_context = rqctx.context();
+
+    // Initialize the Google client.
+    // You can use any of the libs here, they all use the same endpoint
+    // for tokens and we will send all the scopes.
+    let mut g = ShipBob::new_from_env("", "", "");
+
+    warn!("shipbob callback: {:?}", event);
+
+    // Let's get the token from the code.
+    //let t = g.get_access_token(&event.code, &event.state).await?;
+
+    /*
+        let company = Company::get_from_domain(&api_context.db, &metadata.hd)?;
+
+        // Save the token to the database.
+        let mut token = NewAPIToken {
+            product: "shipbob".to_string(),
+            token_type: t.token_type.to_string(),
+            access_token: t.access_token.to_string(),
+            expires_in: t.expires_in as i32,
+            refresh_token: t.refresh_token.to_string(),
+            refresh_token_expires_in: t.refresh_token_expires_in as i32,
+            company_id: metadata.hd.to_string(),
+            item_id: "".to_string(),
+            user_email: metadata.email.to_string(),
+            last_updated_at: Utc::now(),
+            expires_date: None,
+            refresh_token_expires_date: None,
+            endpoint: "".to_string(),
+            auth_company_id: company.id,
+            company: Default::default(),
+            // THIS SHOULD ALWAYS BE OXIDE, NO 1.
+            cio_company_id: 1,
+        };
+        token.expand();
+
+        // Update it in the database.
+        token.upsert(&api_context.db).await?;
+    */
     Ok(())
 }
 
