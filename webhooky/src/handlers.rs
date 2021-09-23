@@ -886,7 +886,10 @@ pub async fn handle_slack_interactive(
                 oxide_tracking_link: Default::default(),
                 shipped_time: Default::default(),
             };
-            shipment.expand(db, &company).await?;
+            if let Err(e) = shipment.expand(db, &company).await {
+                // TODO: I have no idea why shippo fails here... figure it out.
+                sentry_anyhow::capture_anyhow(&e);
+            };
 
             // Upsert it into the database.
             shipment.upsert(db).await?;
