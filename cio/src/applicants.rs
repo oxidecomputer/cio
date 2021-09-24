@@ -1759,11 +1759,6 @@ impl Applicant {
     }
 
     pub async fn send_slack_notification_status_changed(&self, db: &Database, company: &Company) -> Result<()> {
-        if self.start_date.is_none() {
-            // Return early, we don't care.
-            return Ok(());
-        }
-
         let mut msg: FormattedMessage = self.clone().into();
         // Set the channel.
         msg.channel = company.slack_channel_applicants.to_string();
@@ -1807,11 +1802,7 @@ impl Applicant {
             block_type: MessageBlockType::Section,
             text: Some(MessageBlockText {
                 text_type: MessageType::Markdown,
-                text: format!(
-                    "start date is now `{}`, {}",
-                    start_date.format("YYYY-MM-DD"),
-                    human_date
-                ),
+                text: format!("start date is now `{}`, {}", start_date.format("%F"), human_date),
             }),
             elements: Default::default(),
             accessory: Default::default(),
