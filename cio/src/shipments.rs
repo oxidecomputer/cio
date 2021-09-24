@@ -508,6 +508,124 @@ impl From<User> for NewOutboundShipment {
     }
 }
 
+impl From<shipbob::types::Order> for NewOutboundShipment {
+    fn from(item: shipbob::types::Order) -> Self {
+        let recipient = item.recipient.unwrap();
+
+        let mut contents = String::new();
+
+        let mut carrier = String::new();
+        let mut tracking_number = String::new();
+        let mut shipped_time = None;
+        let mut status = crate::shipment_status::Status::Queued;
+        let mut tracking_status = String::new();
+        let mut tracking_link = String::new();
+
+        if let Some(s) = item.status {
+            status = s.into();
+        }
+
+        if !item.shipments.is_empty() {
+            let first = item.shipments.first().unwrap();
+            shipped_time = first.created_date;
+
+            if let Some(tracking) = &first.tracking {
+                carrier = clean_carrier_name(&tracking.carrier);
+                tracking_number = tracking.tracking_number.to_string();
+                tracking_link = tracking.tracking_url.to_string();
+            }
+
+            if let Some(s) = &first.status {
+                tracking_status = s.to_string();
+            }
+
+            for p in &first.products {
+                for i in &p.inventory_items {
+                    contents += &format!("\n{} x {}", i.quantity, i.name);
+                }
+            }
+        }
+
+        contents = contents.trim().to_string();
+
+        NewOutboundShipment {
+            provider: "ShipBob".to_string(),
+            provider_id: item.id.to_string(),
+            created_time: item.created_date.unwrap(),
+            name: recipient.name.to_string(),
+            email: recipient.email.to_string(),
+            phone: recipient.phone_number.to_string(),
+            street_1: recipient.address.address_1.to_string(),
+            street_2: recipient.address.address_2.to_string(),
+            city: recipient.address.city.to_string(),
+            state: recipient.address.state.to_string(),
+            zipcode: recipient.address.zip_code.to_string(),
+            country: recipient.address.country,
+
+            contents,
+            carrier,
+            tracking_number,
+            tracking_status,
+            delivered_time: None,
+            shipped_time,
+            tracking_link,
+            status: status.to_string(),
+            cost: Default::default(),
+            eta: None,
+
+            // These will be poulated when we expand the record.
+            address_formatted: Default::default(),
+            latitude: Default::default(),
+            longitude: Default::default(),
+            oxide_tracking_link: Default::default(),
+
+            // These don't apply.
+            pickup_date: None,
+            label_link: Default::default(),
+            messages: Default::default(),
+            notes: Default::default(),
+            geocode_cache: Default::default(),
+            local_pickup: Default::default(),
+            link_to_package_pickup: Default::default(),
+            cio_company_id: Default::default(),
+        }
+    }
+}
+
+impl From<shipbob::types::Status> for crate::shipment_status::Status {
+    fn from(item: shipbob::types::Status) -> Self {
+        match item {
+            shipbob::types::Status::Cancelled => crate::shipment_status::Status::Cancelled,
+            shipbob::types::Status::CleanSweeped => crate::shipment_status::Status::CleanSweeped,
+            shipbob::types::Status::Completed => crate::shipment_status::Status::Delivered,
+            shipbob::types::Status::Exception => crate::shipment_status::Status::Failure,
+            shipbob::types::Status::ImportReview => crate::shipment_status::Status::ImportReview,
+            shipbob::types::Status::LabeledCreated => crate::shipment_status::Status::LabelCreated,
+            shipbob::types::Status::None => crate::shipment_status::Status::None,
+            shipbob::types::Status::OnHold => crate::shipment_status::Status::OnHold,
+            shipbob::types::Status::Pending => crate::shipment_status::Status::Queued,
+            shipbob::types::Status::Processing => crate::shipment_status::Status::Processing,
+            shipbob::types::Status::Noop => crate::shipment_status::Status::Queued,
+            shipbob::types::Status::FallthroughString => crate::shipment_status::Status::Queued,
+        }
+    }
+}
+
+impl From<shipbob::types::OrderStatus> for crate::shipment_status::Status {
+    fn from(item: shipbob::types::OrderStatus) -> Self {
+        match item {
+            shipbob::types::OrderStatus::Cancelled => crate::shipment_status::Status::Cancelled,
+            shipbob::types::OrderStatus::Fulfilled => crate::shipment_status::Status::Delivered,
+            shipbob::types::OrderStatus::Exception => crate::shipment_status::Status::Failure,
+            shipbob::types::OrderStatus::ImportReview => crate::shipment_status::Status::ImportReview,
+            shipbob::types::OrderStatus::PartiallyFulfilled => crate::shipment_status::Status::PartiallyFulfilled,
+            shipbob::types::OrderStatus::Processing => crate::shipment_status::Status::Processing,
+            shipbob::types::OrderStatus::Noop => crate::shipment_status::Status::Queued,
+            shipbob::types::OrderStatus::FallthroughString => crate::shipment_status::Status::Queued,
+        }
+    }
+}
+
 impl NewOutboundShipment {
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
@@ -1133,20 +1251,7 @@ The Shipping Bot",
         Ok(())
     }
 
-    /// Create or get a shipment in shippo that matches this shipment.
-    pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) -> Result<()> {
-        if self.provider != "Shippo" {
-            // Return early it's not a shippo shipment.
-            return Ok(());
-        }
-
-        let company = self.company(db)?;
-
-        // Update the formatted address.
-        self.populate_formatted_address();
-
-        // Create the shippo client.
-        let shippo_client = Shippo::new_from_env();
+    pub async fn set_lat_lng(&mut self, db: &Database) -> Result<()> {
         // Create the geocode client.
         let geocode = Geocode::new_from_env();
 
@@ -1160,6 +1265,101 @@ The Shipping Bot",
             // Update here just in case something goes wrong later.
             self.update(db).await?;
         }
+
+        Ok(())
+    }
+
+    pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
+        // Update the formatted address.
+        self.populate_formatted_address();
+
+        // Update the lat and lng.
+        self.set_lat_lng(db).await?;
+
+        // Update the tracking status.
+        // Create the shippo client.
+        let shippo = Shippo::new_from_env();
+
+        let mut carrier = self.carrier.to_lowercase().to_string();
+        if carrier == "dhl" {
+            carrier = "dhl_express".to_string();
+        }
+
+        // Get the tracking status for the shipment and fill in the details.
+        let ts = shippo.get_tracking_status(&carrier, &self.tracking_number).await?;
+        self.tracking_number = ts.tracking_number.to_string();
+        let mut status = ts.tracking_status.unwrap_or_default();
+        self.eta = ts.eta;
+
+        self.oxide_tracking_link = self.oxide_tracking_link();
+
+        self.messages = status.status_details;
+
+        // Iterate over the tracking history and set the shipped_time.
+        // Get the first date it was maked as in transit and use that as the shipped
+        // time.
+        for h in ts.tracking_history {
+            if h.status == *"TRANSIT" {
+                if let Some(shipped_time) = h.status_date {
+                    let current_shipped_time = if let Some(s) = self.shipped_time { s } else { Utc::now() };
+
+                    if shipped_time < current_shipped_time {
+                        self.shipped_time = Some(shipped_time);
+                    }
+                }
+            } else if h.status == *"DELIVERED" {
+                status.status = "DELIVERED".to_string();
+                if h.status_date.is_some() {
+                    self.delivered_time = h.status_date;
+                }
+            }
+        }
+
+        if status.status == *"DELIVERED" && status.status_date.is_some() {
+            self.delivered_time = status.status_date;
+        }
+
+        if self.delivered_time.is_some() {
+            status.status = "DELIVERED".to_string();
+        }
+
+        // Register a tracking webhook for this shipment.
+        shippo
+            .register_tracking_webhook(&carrier, &self.tracking_number)
+            .await?;
+
+        let send_notification = self.tracking_status != status.status;
+
+        // Set the new status.
+        self.tracking_status = status.status.to_string();
+
+        // Update in the database.
+        self.update(db).await?;
+
+        if send_notification && !self.tracking_status.is_empty() {
+            self.send_slack_notification(db, company).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Create or get a shipment in shippo that matches this shipment.
+    pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) -> Result<()> {
+        if self.provider != "Shippo" {
+            // Return early it's not a shippo shipment.
+            return Ok(());
+        }
+
+        let company = self.company(db)?;
+
+        // Update the formatted address.
+        self.populate_formatted_address();
+
+        // Update the lat and lng.
+        self.set_lat_lng(db).await?;
+
+        // Create the shippo client.
+        let shippo_client = Shippo::new_from_env();
 
         // If we did local_pickup, we can return early here.
         if self.local_pickup {
@@ -1357,7 +1557,7 @@ The Shipping Bot",
                     .await?;
 
                 // Set the additional fields.
-                self.carrier = clean_provider_name(&rate.provider);
+                self.carrier = clean_carrier_name(&rate.provider);
                 self.cost = rate.amount_local.parse()?;
                 self.tracking_number = label.tracking_number.to_string();
                 self.tracking_link = label.tracking_url_provider.to_string();
@@ -1429,7 +1629,20 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
                 false, // is_tracking_uploaded
             )
             .await?;
-        info!("shipbob orders: {:#?}", orders);
+
+        // Iterate over the orders and add them as a shipment.
+        for o in orders {
+            let mut ns: NewOutboundShipment = o.into();
+            // Be sure to set the company id.
+            ns.cio_company_id = company.id;
+
+            // Update the database.
+            let mut s = ns.upsert(db).await?;
+
+            // Expand the shipment.
+            // This will also update the database.
+            s.expand(db, company).await?;
+        }
     }
 
     // Iterate over all the shipments in the database and update them.
@@ -1458,7 +1671,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
     Ok(())
 }
 
-pub fn clean_provider_name(s: &str) -> String {
+pub fn clean_carrier_name(s: &str) -> String {
     let l = s.to_lowercase();
     if l == "ups" {
         "UPS".to_string();
@@ -1532,7 +1745,7 @@ async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Res
         // The rate will give us the carrier and the cost.
         let rate = shippo.get_rate(&label.rate).await?;
         ns.cost = rate.amount_local.parse()?;
-        ns.carrier = clean_provider_name(&rate.provider);
+        ns.carrier = clean_carrier_name(&rate.provider);
 
         // Only add the shipment if it doesn't already exist. Since we update it
         // in the loop above. Otherwise the email notifications get stuck and you get

@@ -11,6 +11,13 @@ pub enum Status {
     WaitingForPickup,
     Returned,
     Failure,
+    Cancelled,
+    ImportReview,
+    CleanSweeped,
+    OnHold,
+    None,
+    Processing,
+    PartiallyFulfilled,
 }
 
 impl Default for Status {
@@ -32,6 +39,13 @@ impl ToString for Status {
             Status::WaitingForPickup => "Waiting for pickup".to_string(),
             Status::Returned => "Returned".to_string(),
             Status::Failure => "Failure".to_string(),
+            Status::Cancelled => "Cancelled".to_string(),
+            Status::ImportReview => "Import review".to_string(),
+            Status::CleanSweeped => "Clean sweeped".to_string(),
+            Status::OnHold => "On hold".to_string(),
+            Status::None => "None".to_string(),
+            Status::Processing => "Processing".to_string(),
+            Status::PartiallyFulfilled => "Partially fulfilled".to_string(),
         }
     }
 }
