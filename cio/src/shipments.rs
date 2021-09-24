@@ -1281,8 +1281,10 @@ The Shipping Bot",
         let shippo = Shippo::new_from_env();
 
         let mut carrier = self.carrier.to_lowercase().to_string();
-        if carrier == "dhl" {
+        if carrier == "dhl" && provider == "Shippo" {
             carrier = "dhl_express".to_string();
+        } else if carrier == "dhl" && provider == "ShipBob" {
+            carrier = "dhl_ecommerce".to_string();
         }
 
         // Get the tracking status for the shipment and fill in the details.
@@ -1674,13 +1676,13 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
 pub fn clean_carrier_name(s: &str) -> String {
     let l = s.to_lowercase();
     if l == "ups" {
-        "UPS".to_string();
+        return "UPS".to_string();
     } else if l == "fedex" {
-        "FedEx".to_string();
+        return "FedEx".to_string();
     } else if l == "usps" {
-        "USPS".to_string();
+        return "USPS".to_string();
     } else if l == "dhl" || l == "dhl_express" || l == "dhlecommerce" || l.starts_with("dhl") {
-        "DHL".to_string();
+        return "DHL".to_string();
     }
 
     s.to_string()
