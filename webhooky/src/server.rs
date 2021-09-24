@@ -113,6 +113,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(listen_mailchimp_rack_line_webhooks).unwrap();
     api.register(listen_products_sold_count_requests).unwrap();
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
+    api.register(listen_easypost_tracking_update_webhooks).unwrap();
     api.register(listen_slack_commands_webhooks).unwrap();
     api.register(listen_slack_interactive_webhooks).unwrap();
     api.register(listen_shipbob_webhooks).unwrap();
@@ -1015,6 +1016,28 @@ async fn listen_store_order_create(
     sentry::start_session();
 
     if let Err(e) = crate::handlers::handle_store_order_create(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for shipment tracking updated from EasyPost.
+ */
+#[endpoint {
+    method = POST,
+    path = "/easypost/tracking/update",
+}]
+async fn listen_easypost_tracking_update_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<serde_json::Value>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    sentry::start_session();
+
+    if let Err(e) = crate::handlers::handle_easypost_tracking_update(rqctx, body_param).await {
         // Send the error to sentry.
         return Err(handle_anyhow_err_as_http_err(e));
     }
