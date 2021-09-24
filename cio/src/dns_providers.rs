@@ -12,38 +12,13 @@ pub trait DNSProviderOps {
     /// Ensure the record exists and has the correct information.
     async fn ensure_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()>;
 
-    async fn delete_record(&self, domain: &str) -> Result<()>;
+    async fn delete_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()>;
 }
 
 #[async_trait]
 impl DNSProviderOps for CloudflareClient {
     async fn ensure_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
-        // We need the root of the domain not a subdomain.
-        let domain_parts: Vec<&str> = domain.split('.').collect();
-        let root_domain = if domain_parts.len() > 1 {
-            // We have a subdomain, get the root part of the domain.
-            format!(
-                "{}.{}",
-                domain_parts[domain_parts.len() - 2],
-                domain_parts[domain_parts.len() - 1]
-            )
-        } else {
-            domain.to_string()
-        };
-
-        // Get the zone ID for the domain.
-        let zones = self
-            .request(&zone::ListZones {
-                params: zone::ListZonesParams {
-                    name: Some(root_domain.to_string()),
-                    ..Default::default()
-                },
-            })
-            .await?
-            .result;
-
-        // Our zone identifier should be the first record's ID.
-        let zone_identifier = &zones[0].id;
+        let zone_identifier = &get_zone_identifier(self, domain).await?;
 
         // Check if we already have a record and we need to update it.
         let dns_records = self
@@ -108,33 +83,8 @@ impl DNSProviderOps for CloudflareClient {
         Ok(())
     }
 
-    async fn delete_record(&self, domain: &str) -> Result<()> {
-        // We need the root of the domain not a subdomain.
-        let domain_parts: Vec<&str> = domain.split('.').collect();
-        let root_domain = if domain_parts.len() > 1 {
-            // We have a subdomain, get the root part of the domain.
-            format!(
-                "{}.{}",
-                domain_parts[domain_parts.len() - 2],
-                domain_parts[domain_parts.len() - 1]
-            )
-        } else {
-            domain.to_string()
-        };
-
-        // Get the zone ID for the domain.
-        let zones = self
-            .request(&zone::ListZones {
-                params: zone::ListZonesParams {
-                    name: Some(root_domain.to_string()),
-                    ..Default::default()
-                },
-            })
-            .await?
-            .result;
-
-        // Our zone identifier should be the first record's ID.
-        let zone_identifier = &zones[0].id;
+    async fn delete_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
+        let zone_identifier = &get_zone_identifier(self, domain).await?;
 
         // Check if we already have a record and we need to update it.
         let dns_records = self
@@ -211,4 +161,33 @@ fn content_equals(a: cloudflare::endpoints::dns::DnsContent, b: cloudflare::endp
     }
 
     false
+}
+
+async fn get_zone_identifier(client: &CloudflareClient, domain: &str) -> Result<String> {
+    // We need the root of the domain not a subdomain.
+    let domain_parts: Vec<&str> = domain.split('.').collect();
+    let root_domain = if domain_parts.len() > 1 {
+        // We have a subdomain, get the root part of the domain.
+        format!(
+            "{}.{}",
+            domain_parts[domain_parts.len() - 2],
+            domain_parts[domain_parts.len() - 1]
+        )
+    } else {
+        domain.to_string()
+    };
+
+    // Get the zone ID for the domain.
+    let zones = client
+        .request(&zone::ListZones {
+            params: zone::ListZonesParams {
+                name: Some(root_domain.to_string()),
+                ..Default::default()
+            },
+        })
+        .await?
+        .result;
+
+    // Our zone identifier should be the first record's ID.
+    Ok(zones[0].id.to_string())
 }
