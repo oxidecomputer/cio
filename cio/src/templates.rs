@@ -32,14 +32,14 @@ struct GitHubTeamMembers {
     pub members: Vec<User>,
 }
 
-/// Generate nginx and terraform files for shorturls.
+/// Generate nginx files for shorturls.
 /// This is used for short URL link generation like:
 ///   - {link}.corp.oxide.computer
 ///   - {repo}.git.oxide.computer
 ///   - {num}.rfd.oxide.computer
 /// This function saves the generated files in the GitHub repository, in the
 /// given path.
-pub async fn generate_nginx_and_terraform_files_for_shorturls(
+pub async fn generate_nginx_files_for_shorturls(
     github: &octorust::Client,
     owner: &str,
     repo: &str,
@@ -91,49 +91,6 @@ pub async fn generate_nginx_and_terraform_files_for_shorturls(
         "", // leaving the branch blank gives us the default branch
         &nginx_paths_file,
         nginx_paths_rendered.as_bytes().to_vec(),
-    )
-    .await?;
-
-    generate_terraform_files_for_shorturls(github, owner, repo, shorturls).await?;
-
-    Ok(())
-}
-
-/// Generate terraform files for shorturls.
-/// This function saves the generated files in the GitHub repository, in the
-/// given path.
-pub async fn generate_terraform_files_for_shorturls(
-    github: &octorust::Client,
-    owner: &str,
-    repo: &str,
-    shorturls: Vec<ShortUrl>,
-) -> Result<()> {
-    if shorturls.is_empty() {
-        return Ok(());
-    }
-
-    // Initialize handlebars.
-    let mut handlebars = Handlebars::new();
-    handlebars.register_helper("terraformize", Box::new(terraform_name_helper));
-
-    // Get the subdomain from the first link.
-    let subdomain = shorturls[0].subdomain.to_string();
-    let domain = shorturls[0].domain.to_string();
-
-    // Generate the terraform file.
-    let terraform_file = format!("/terraform/cloudflare/generated.{}.{}.tf", subdomain, domain);
-    // Add a warning to the top of the file that it should _never_
-    // be edited by hand and generate it.
-    let terraform_rendered =
-        TEMPLATE_WARNING.to_owned() + &handlebars.render_template(TEMPLATE_CLOUDFLARE_TERRAFORM, &shorturls)?;
-
-    create_or_update_file_in_github_repo(
-        github,
-        owner,
-        repo,
-        "", // leaving the branch blank gives us the default branch
-        &terraform_file,
-        terraform_rendered.as_bytes().to_vec(),
     )
     .await?;
 
@@ -248,18 +205,4 @@ server {
 {{/if}}
 {{/each}}
 }
-"#;
-
-/// Template for creating DNS records in our Cloudflare terraform configs.
-pub static TEMPLATE_CLOUDFLARE_TERRAFORM: &str = r#"{{#each this}}
-resource "cloudflare_record" "{{terraformize this.name}}_{{this.subdomain}}_{{terraformize this.domain}}" {
-  zone_id  = var.zone_id-{{terraformize this.domain}}
-  name     = "{{this.name}}.{{this.subdomain}}.{{this.domain}}"
-  value    = {{{this.ip}}}
-  type     = "A"
-  ttl      = 1
-  priority = 0
-  proxied  = false
-}
-{{/each}}
 "#;

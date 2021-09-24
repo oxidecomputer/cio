@@ -384,6 +384,7 @@ table! {
         slack_channel_finance -> Varchar,
         slack_channel_debug -> Varchar,
         google_service_account -> Varchar,
+        nginx_ip -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }

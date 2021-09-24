@@ -136,6 +136,9 @@ pub struct NewCompany {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub google_service_account: String,
 
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub nginx_ip: String,
+
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,

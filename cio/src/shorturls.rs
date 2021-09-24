@@ -1,30 +1,31 @@
 use anyhow::Result;
+use cloudflare::endpoints::dns;
 use serde::Serialize;
 
 use crate::{
     companies::{Company, Companys},
     configs::Links,
     db::Database,
+    dns_providers::DNSProviderOps,
     repos::GithubRepos,
     rfds::RFDs,
-    templates::{generate_nginx_and_terraform_files_for_shorturls, generate_terraform_files_for_shorturls},
+    templates::generate_nginx_files_for_shorturls,
 };
 
 /// Generate the files for the GitHub repository short URLs.
 pub async fn generate_shorturls_for_repos(
     db: &Database,
     github: &octorust::Client,
-    owner: &str,
+    company: &Company,
     repo: &str,
-    cio_company_id: i32,
 ) -> Result<()> {
-    let company = Company::get_by_id(db, cio_company_id)?;
+    let owner = &company.github_org;
     let subdomain = "git";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the github repos from the database.
-    let repos = GithubRepos::get_from_db(db, cio_company_id)?;
+    let repos = GithubRepos::get_from_db(db, company.id)?;
 
     // Create the array of links.
     for repo in repos {
@@ -48,7 +49,9 @@ pub async fn generate_shorturls_for_repos(
     }
 
     // Generate the files for the links.
-    generate_nginx_and_terraform_files_for_shorturls(github, owner, repo, links.clone()).await?;
+    generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
+
+    create_dns_records_for_links(company, links).await?;
 
     Ok(())
 }
@@ -57,17 +60,16 @@ pub async fn generate_shorturls_for_repos(
 pub async fn generate_shorturls_for_rfds(
     db: &Database,
     github: &octorust::Client,
-    owner: &str,
+    company: &Company,
     repo: &str,
-    cio_company_id: i32,
 ) -> Result<()> {
-    let company = Company::get_by_id(db, cio_company_id)?;
+    let owner = &company.github_org;
     let subdomain = "rfd";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the rfds from the database.
-    let rfds = RFDs::get_from_db(db, cio_company_id)?;
+    let rfds = RFDs::get_from_db(db, company.id)?;
     for rfd in rfds {
         let mut link = ShortUrl {
             name: rfd.number.to_string(),
@@ -93,7 +95,9 @@ pub async fn generate_shorturls_for_rfds(
     }
 
     // Generate the files for the links.
-    generate_nginx_and_terraform_files_for_shorturls(github, owner, repo, links.clone()).await?;
+    generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
+
+    create_dns_records_for_links(company, links).await?;
 
     Ok(())
 }
@@ -102,17 +106,16 @@ pub async fn generate_shorturls_for_rfds(
 pub async fn generate_shorturls_for_configs_links(
     db: &Database,
     github: &octorust::Client,
-    owner: &str,
+    company: &Company,
     repo: &str,
-    cio_company_id: i32,
 ) -> Result<()> {
-    let company = Company::get_by_id(db, cio_company_id)?;
+    let owner = &company.github_org;
     let subdomain = "corp";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the config.
-    let configs_links = Links::get_from_db(db, cio_company_id)?;
+    let configs_links = Links::get_from_db(db, company.id)?;
 
     // Create the array of links.
     for link in configs_links {
@@ -141,18 +144,15 @@ pub async fn generate_shorturls_for_configs_links(
     }
 
     // Generate the files for the links.
-    generate_nginx_and_terraform_files_for_shorturls(github, owner, repo, links).await?;
+    generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
+
+    create_dns_records_for_links(company, links).await?;
 
     Ok(())
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
-pub async fn generate_dns_for_tailscale_devices(
-    github: &octorust::Client,
-    owner: &str,
-    repo: &str,
-    company: &Company,
-) -> Result<()> {
+pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()> {
     let subdomain = "internal";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -212,8 +212,7 @@ pub async fn generate_dns_for_tailscale_devices(
         }
     }
 
-    // Generate the files for the links.
-    generate_terraform_files_for_shorturls(github, owner, repo, links).await?;
+    create_dns_records_for_links(company, links).await?;
 
     Ok(())
 }
@@ -227,15 +226,17 @@ pub async fn refresh_shorturls() -> Result<()> {
     // Iterate over the companies and update.
     for company in companies {
         let github = company.authenticate_github()?;
-        generate_shorturls_for_repos(&db, &github, &company.github_org, "configs", company.id).await?;
-        generate_shorturls_for_rfds(&db, &github, &company.github_org, "configs", company.id).await?;
-        generate_shorturls_for_configs_links(&db, &github, &company.github_org, "configs", company.id).await?;
+        generate_shorturls_for_repos(&db, &github, &company, "configs").await?;
+        generate_shorturls_for_rfds(&db, &github, &company, "configs").await?;
+        generate_shorturls_for_configs_links(&db, &github, &company, "configs").await?;
 
         // Only do this if we can auth with Tailscale.
         if !company.tailscale_api_key.is_empty() {
-            generate_dns_for_tailscale_devices(&github, &company.github_org, "configs", &company).await?;
+            generate_dns_for_tailscale_devices(&company).await?;
         }
     }
+
+    // TODO: cleanup any DNS records that no longer need to exist.
 
     Ok(())
 }
@@ -256,4 +257,19 @@ pub struct ShortUrl {
     pub domain: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub discussion: String,
+}
+
+async fn create_dns_records_for_links(company: &Company, shorturls: Vec<ShortUrl>) -> Result<()> {
+    let cf = company.authenticate_cloudflare()?;
+    for s in shorturls {
+        cf.ensure_record(
+            &format!("{}.{}.{}", s.name, s.subdomain, s.domain),
+            dns::DnsContent::A {
+                content: company.nginx_ip.parse()?,
+            },
+        )
+        .await?;
+    }
+
+    Ok(())
 }
