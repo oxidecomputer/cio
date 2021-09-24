@@ -115,6 +115,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(listen_slack_commands_webhooks).unwrap();
     api.register(listen_slack_interactive_webhooks).unwrap();
+    api.register(listen_shipbob_webhooks).unwrap();
     api.register(listen_store_order_create).unwrap();
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
@@ -1666,6 +1667,26 @@ async fn listen_slack_interactive_webhooks(
     sentry::start_session();
 
     if let Err(e) = crate::handlers::handle_slack_interactive(rqctx, body_param).await {
+        // Send the error to sentry.
+        return Err(handle_anyhow_err_as_http_err(e));
+    }
+
+    sentry::end_session();
+    Ok(HttpResponseOk("ok".to_string()))
+}
+
+/** Listen for shipbob webhooks. */
+#[endpoint {
+    method = POST,
+    path = "/shipbob",
+}]
+async fn listen_shipbob_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<serde_json::Value>,
+) -> Result<HttpResponseOk<String>, HttpError> {
+    sentry::start_session();
+
+    if let Err(e) = crate::handlers::handle_shipbob(rqctx, body_param).await {
         // Send the error to sentry.
         return Err(handle_anyhow_err_as_http_err(e));
     }

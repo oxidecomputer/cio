@@ -1835,6 +1835,31 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     Ok(())
 }
 
+pub async fn handle_shipbob(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<serde_json::Value>,
+) -> Result<()> {
+    // We need to get the webhook type from the header.
+    let headers = rqctx.request.lock().await.headers().clone();
+
+    let shipbob_topic = headers.get("shipbob-topic").unwrap().to_str()?;
+    let shipbob_subscription_id = headers.get("shipbob-subscription-id").unwrap().to_str()?;
+
+    let event = body_param.into_inner();
+
+    sentry::capture_message(
+        &format!(
+            "shipbob headers: topic `{}` subscription id `{}`: `{}`",
+            shipbob_topic,
+            shipbob_subscription_id,
+            event.to_string()
+        ),
+        sentry::Level::Info,
+    );
+
+    Ok(())
+}
+
 const SLACK_TRACK_SHIPMENT_MODAL_DESCRIPTION:  &str = "After submitting the carrer and tracking number, your shipment will be tracked in the `Shipments` Airtable and notifications for status updates will post to the #shipments channel.";
 
 fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {

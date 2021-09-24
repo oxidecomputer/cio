@@ -231,6 +231,18 @@ impl Company {
             .first::<Company>(&db.conn())?)
     }
 
+    pub fn get_from_shipbob_channel_id(db: &Database, channel_id: &str) -> Result<Self> {
+        let token = api_tokens::dsl::api_tokens
+            .filter(
+                api_tokens::dsl::company_id
+                    .eq(channel_id.to_string())
+                    .and(api_tokens::dsl::product.eq("shipbob".to_string())),
+            )
+            .first::<APIToken>(&db.conn())?;
+
+        Company::get_by_id(db, token.auth_company_id)
+    }
+
     pub fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Result<Self> {
         Ok(companys::dsl::companys
             .filter(companys::dsl::mailchimp_list_id.eq(list_id.to_string()))
