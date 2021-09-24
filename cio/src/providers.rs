@@ -36,8 +36,45 @@ pub trait ProviderOps<U, G> {
 #[async_trait]
 impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
+        if user.is_consultant() || user.is_system_account() {
+            // Return early, they won't need a Ramp account.
+            return Ok(String::new());
+        }
+
         // TODO: this is wasteful find another way to do this.
         let departments = self.departments().get_all().await?;
+
+        if !user.ramp_id.is_empty() {
+            // Get the existing ramp user.
+            let ramp_user = self.users().get_user(&user.ramp_id).await?;
+
+            // Update the user with their department and manager if
+            // it has changed.
+
+            // Set the department.
+            // TODO: this loop is wasteful.
+            let mut department_id = "".to_string();
+            for dept in departments {
+                if dept.name == user.department {
+                    department_id = dept.id;
+                    break;
+                }
+            }
+
+            let updated_user = ramp_api::types::PatchUsersRequest {
+                department_id: department_id.to_string(),
+                direct_manager_id: user.manager(db).ramp_id,
+                role: Some(ramp_user.role.clone()),
+                location_id: ramp_user.location_id.to_string(),
+            };
+
+            self.users().patch(&user.ramp_id, &updated_user).await?;
+
+            info!("updated ramp user `{}`", user.email);
+
+            // Return early.
+            return Ok(user.ramp_id.to_string());
+        }
 
         // Invite the new ramp user.
         let mut ramp_user = ramp_api::types::PostUsersDeferredRequest {
@@ -66,6 +103,8 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
 
         // Add the manager.
         let r = self.users().post_deferred(&ramp_user).await?;
+
+        info!("created new ramp user `{}`", user.email);
 
         // TODO(should we?): Create them a card.
 
@@ -1055,6 +1094,56 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             }
         }
 
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
+    async fn ensure_user(&self, _db: &Database, _company: &Company, user: &User) -> Result<String> {
+        if user.is_consultant() || user.is_system_account() {
+            // Return early, they won't need a Ramp account.
+            return Ok(String::new());
+        }
+
+        Ok(String::new())
+    }
+
+    async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
+        Ok(())
+    }
+
+    async fn check_user_is_member_of_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    async fn add_user_to_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
+        Ok(())
+    }
+
+    async fn remove_user_from_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
+        Ok(())
+    }
+
+    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<zoom_api::types::UsersResponse>> {
+        self.users()
+            .get_all(
+                zoom_api::types::UsersStatus::Active,
+                "", // role id
+                zoom_api::types::UsersIncludeFields::HostKey,
+            )
+            .await
+    }
+
+    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
+        Ok(vec![])
+    }
+
+    async fn delete_user(&self, _company: &Company, _user: &User) -> Result<()> {
+        Ok(())
+    }
+
+    async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
 }

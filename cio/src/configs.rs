@@ -1559,13 +1559,7 @@ pub async fn sync_users(
     let mut ramp_departments: HashMap<String, ramp_api::types::Department> = HashMap::new();
     let ramp_auth = company.authenticate_ramp(db).await;
     if let Ok(ref ramp) = ramp_auth {
-        let ru = ramp
-            .users()
-            .get_all(
-                "", // department id
-                "", // location id
-            )
-            .await?;
+        let ru = ramp.list_provider_users(company).await?;
         for r in ru {
             ramp_users.insert(r.email.to_string(), r);
         }
@@ -1580,14 +1574,7 @@ pub async fn sync_users(
     let mut zoom_users_pending: HashMap<String, zoom_api::types::UsersResponse> = HashMap::new();
     let zoom_auth = company.authenticate_zoom(db).await;
     if let Ok(ref zoom) = zoom_auth {
-        let active_users = zoom
-            .users()
-            .get_all(
-                zoom_api::types::UsersStatus::Active,
-                "", // role id
-                zoom_api::types::UsersIncludeFields::HostKey,
-            )
-            .await?;
+        let active_users = zoom.list_provider_users(company).await?;
         for r in active_users {
             zoom_users.insert(r.email.to_string(), r);
         }
@@ -1607,20 +1594,7 @@ pub async fn sync_users(
     }
 
     // Get the existing GSuite users.
-    let gsuite_users = gsuite
-        .users()
-        .list_all(
-            &company.gsuite_account_id,
-            &company.gsuite_domain,
-            gsuite_api::types::Event::Noop,
-            gsuite_api::types::DirectoryUsersListOrderBy::Email,
-            gsuite_api::types::DirectoryUsersListProjection::Full,
-            "", // query
-            "", // show deleted
-            gsuite_api::types::SortOrder::Ascending,
-            gsuite_api::types::ViewType::AdminView,
-        )
-        .await?;
+    let gsuite_users = gsuite.list_provider_users(company).await?;
     let mut gsuite_users_map: BTreeMap<String, GSuiteUser> = BTreeMap::new();
     for g in gsuite_users.clone() {
         // Add the group to our map.
@@ -1629,17 +1603,7 @@ pub async fn sync_users(
 
     // Get the GSuite groups.
     let mut gsuite_groups: BTreeMap<String, GSuiteGroup> = BTreeMap::new();
-    let groups = gsuite
-        .groups()
-        .list_all(
-            &company.gsuite_account_id,
-            &company.gsuite_domain,
-            gsuite_api::types::DirectoryGroupsListOrderBy::Email,
-            "", // query
-            gsuite_api::types::SortOrder::Ascending,
-            "", // user_key
-        )
-        .await?;
+    let groups = gsuite.list_provider_groups(company).await?;
     for g in groups {
         // Add the group to our map.
         gsuite_groups.insert(g.name.to_string(), g);
@@ -1752,6 +1716,11 @@ pub async fn sync_users(
             user.okta_id = okta_user.id.to_string();
         }
 
+        // Check if we have a Ramp user for the user.
+        if let Some(ramp_user) = ramp_users.get(&user.email) {
+            user.ramp_id = ramp_user.id.to_string();
+        }
+
         // See if we have a zoom user for the user.
         if let Some(zoom_user) = zoom_users.get(&user.email) {
             user.zoom_id = zoom_user.id.to_string();
@@ -1810,8 +1779,6 @@ pub async fn sync_users(
 
         let mut new_user = user.upsert(db).await?;
 
-        let users_manager = new_user.manager(db);
-
         if let Some(ref okta) = okta_auth {
             // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
             // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
@@ -1839,59 +1806,11 @@ pub async fn sync_users(
         }
 
         if let Ok(ref ramp) = ramp_auth {
-            if !new_user.is_consultant() && !new_user.is_system_account() {
-                // Check if we have a Ramp user for the user.
-                match ramp_users.get(&new_user.email) {
-                    // We have the user, we don't need to do anything.
-                    Some(ramp_user) => {
-                        new_user.ramp_id = ramp_user.id.to_string();
-
-                        // Update the user with their department and manager if
-                        // it has changed.
-                        let mut department_id = "".to_string();
-                        if let Some(department) = ramp_departments.get(&new_user.department) {
-                            department_id = department.id.to_string();
-                        }
-
-                        if department_id != ramp_user.department_id || users_manager.ramp_id != ramp_user.manager_id {
-                            let updated_user = ramp_api::types::PatchUsersRequest {
-                                department_id: department_id.to_string(),
-                                direct_manager_id: users_manager.ramp_id.to_string(),
-                                role: Some(ramp_user.role.clone()),
-                                location_id: ramp_user.location_id.to_string(),
-                            };
-
-                            ramp.users().patch(&ramp_user.id, &updated_user).await?;
-                        }
-                    }
-                    None => {
-                        info!("inviting new ramp user {}", new_user.username);
-                        // Invite the new ramp user.
-                        let mut ramp_user = ramp_api::types::PostUsersDeferredRequest {
-                            email: new_user.email.to_string(),
-                            first_name: new_user.first_name.to_string(),
-                            last_name: new_user.last_name.to_string(),
-                            phone: new_user.recovery_phone.to_string(),
-                            role: ramp_api::types::Role::BusinessUser,
-                            // Add the manager.
-                            direct_manager_id: users_manager.ramp_id.to_string(),
-                            department_id: String::new(),
-                            location_id: String::new(),
-                        };
-
-                        // Add the department.
-                        if let Some(department) = ramp_departments.get(&new_user.department) {
-                            ramp_user.department_id = department.id.to_string();
-                        }
-
-                        // Add the manager.
-                        let r = ramp.users().post_deferred(&ramp_user).await?;
-                        new_user.ramp_id = r.id.to_string();
-
-                        // TODO: Create them a card.
-                    }
-                }
-            }
+            let ramp_id = ramp.ensure_user(db, company, &new_user).await?;
+            // Set the Ramp ID for the user.
+            new_user.ramp_id = ramp_id.to_string();
+            // Update the user in the database.
+            new_user = new_user.update(db).await?;
         }
 
         // Create a zoom account for the user, if we have zoom credentials and
