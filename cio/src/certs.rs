@@ -256,7 +256,8 @@ impl NewCertificate {
                             content: dns::DnsContent::TXT {
                                 content: challenge.dns_proof(),
                             },
-                            ttl: None,
+                            // This is the min.
+                            ttl: Some(120),
                             proxied: None,
                             priority: None,
                         },
@@ -276,7 +277,8 @@ impl NewCertificate {
                             content: dns::DnsContent::TXT {
                                 content: challenge.dns_proof(),
                             },
-                            ttl: None,
+                            // This is the min.
+                            ttl: Some(120),
                             proxied: None,
                         },
                     })

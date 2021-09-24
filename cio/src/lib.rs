@@ -18,6 +18,7 @@ pub mod configs;
 pub mod core;
 pub mod customers;
 pub mod db;
+pub mod dns_providers;
 pub mod finance;
 pub mod functions;
 pub mod github_commits;
