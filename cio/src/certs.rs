@@ -12,10 +12,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use chrono_humanize::HumanTime;
-use cloudflare::{
-    endpoints::{dns, zone},
-    framework::async_api::ApiClient,
-};
+use cloudflare::endpoints::dns;
 use log::info;
 use macros::db;
 use openssl::x509::X509;
@@ -30,6 +27,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
+    dns_providers::DNSProviderOps,
     schema::certificates,
     utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };
@@ -209,84 +207,14 @@ impl NewCertificate {
             // Create a TXT record for _acme-challenge.{domain} with the value of
             // the proof.
             // Use the Cloudflare API for this.
-
-            // We need the root of the domain not a subdomain.
-            let domain_parts: Vec<&str> = self.domain.split('.').collect();
-            let root_domain = format!(
-                "{}.{}",
-                domain_parts[domain_parts.len() - 2],
-                domain_parts[domain_parts.len() - 1]
-            );
-
-            // Get the zone ID for the domain.
-            let zones = api_client
-                .request(&zone::ListZones {
-                    params: zone::ListZonesParams {
-                        name: Some(root_domain.to_string()),
-                        ..Default::default()
-                    },
-                })
-                .await?
-                .result;
-
-            // Our zone identifier should be the first record's ID.
-            let zone_identifier = &zones[0].id;
             let record_name = format!("_acme-challenge.{}", &self.domain.replace("*.", ""));
 
-            // Check if we already have a TXT record and we need to update it.
-            let dns_records = api_client
-                .request(&dns::ListDnsRecords {
-                    zone_identifier,
-                    params: dns::ListDnsRecordsParams {
-                        name: Some(record_name.to_string()),
-                        ..Default::default()
-                    },
-                })
-                .await?
-                .result;
+            let content = dns::DnsContent::TXT {
+                content: challenge.dns_proof(),
+            };
 
-            // If we have a dns record already, update it. If not, create it.
-            if dns_records.is_empty() {
-                // Create the DNS record.
-                let dns_record = api_client
-                    .request(&dns::CreateDnsRecord {
-                        zone_identifier,
-                        params: dns::CreateDnsRecordParams {
-                            name: &record_name,
-                            content: dns::DnsContent::TXT {
-                                content: challenge.dns_proof(),
-                            },
-                            // This is the min.
-                            ttl: Some(120),
-                            proxied: None,
-                            priority: None,
-                        },
-                    })
-                    .await?
-                    .result;
-
-                info!("created dns record: {:?}", dns_record);
-            } else {
-                // Update the DNS record.
-                let dns_record = api_client
-                    .request(&dns::UpdateDnsRecord {
-                        zone_identifier,
-                        identifier: &dns_records[0].id,
-                        params: dns::UpdateDnsRecordParams {
-                            name: &record_name,
-                            content: dns::DnsContent::TXT {
-                                content: challenge.dns_proof(),
-                            },
-                            // This is the min.
-                            ttl: Some(120),
-                            proxied: None,
-                        },
-                    })
-                    .await?
-                    .result;
-
-                info!("updated dns record: {:?}", dns_record);
-            }
+            // Ensure our DNS record exists.
+            api_client.ensure_record(&record_name, content).await?;
 
             // TODO: make this less awful than a sleep.
             info!("validating the proof...");
