@@ -1281,10 +1281,8 @@ The Shipping Bot",
         let shippo = Shippo::new_from_env();
 
         let mut carrier = self.carrier.to_lowercase().to_string();
-        if carrier == "dhl" && self.provider == "Shippo" {
+        if carrier == "dhl" {
             carrier = "dhl_express".to_string();
-        } else if carrier == "dhl" && self.provider == "ShipBob" {
-            carrier = "dhl_ecommerce".to_string();
         }
 
         // Get the tracking status for the shipment and fill in the details.
