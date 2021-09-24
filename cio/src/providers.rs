@@ -28,7 +28,7 @@ pub trait ProviderOps<U, G> {
 
     async fn list_provider_groups(&self, company: &Company) -> Result<Vec<G>>;
 
-    async fn delete_user(&self, company: &Company, user: &User) -> Result<()>;
+    async fn delete_user(&self, db: &Database, company: &Company, user: &User) -> Result<()>;
 
     async fn delete_group(&self, company: &Company, group: &Group) -> Result<()>;
 }
@@ -36,8 +36,8 @@ pub trait ProviderOps<U, G> {
 #[async_trait]
 impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
-        if user.is_consultant() || user.is_system_account() {
-            // Return early, they won't need a Ramp account.
+        // Only do this if the user is full time.
+        if !user.is_full_time() {
             return Ok(String::new());
         }
 
@@ -145,7 +145,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
         Ok(vec![])
     }
 
-    async fn delete_user(&self, _company: &Company, _user: &User) -> Result<()> {
+    async fn delete_user(&self, _db: &Database, _company: &Company, _user: &User) -> Result<()> {
         // TODO: Suspend the user from Ramp.
         Ok(())
     }
@@ -422,7 +422,7 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         self.teams().list_all(&company.github_org).await
     }
 
-    async fn delete_user(&self, company: &Company, user: &User) -> Result<()> {
+    async fn delete_user(&self, _db: &Database, company: &Company, user: &User) -> Result<()> {
         if user.github.is_empty() {
             // Return early.
             return Ok(());
@@ -687,7 +687,7 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
             .await
     }
 
-    async fn delete_user(&self, _company: &Company, user: &User) -> Result<()> {
+    async fn delete_user(&self, _db: &Database, _company: &Company, user: &User) -> Result<()> {
         // First get the user from gsuite.
         let mut gsuite_user = self
             .users()
@@ -1052,7 +1052,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             .await
     }
 
-    async fn delete_user(&self, _company: &Company, user: &User) -> Result<()> {
+    async fn delete_user(&self, _db: &Database, _company: &Company, user: &User) -> Result<()> {
         if user.okta_id.is_empty() {
             // Return early.
             warn!(
@@ -1101,8 +1101,8 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
 #[async_trait]
 impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
-        if user.is_consultant() || user.is_system_account() {
-            // Return early, they won't need a Ramp account.
+        // Only do this if the user is full time.
+        if !user.is_full_time() {
             return Ok(String::new());
         }
 
@@ -1250,7 +1250,25 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
         Ok(vec![])
     }
 
-    async fn delete_user(&self, _company: &Company, _user: &User) -> Result<()> {
+    async fn delete_user(&self, db: &Database, _company: &Company, user: &User) -> Result<()> {
+        if user.zoom_id.is_empty() {
+            // Return early.
+            return Ok(());
+        }
+
+        self.users()
+            .user_delete(
+                &user.zoom_id, // ID of the user to delete.
+                zoom_api::types::UserDeleteAction::Delete,
+                &user.manager(db).email, // Email of the user's manager to transfer items to
+                true,                    // Tranfer meetings
+                true,                    // Transfer webinars
+                true,                    // Transfer recordings
+            )
+            .await?;
+
+        info!("deleted zoom user `{}`", user.email);
+
         Ok(())
     }
 
@@ -1259,6 +1277,118 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
     }
 }
 
+#[async_trait]
+impl ProviderOps<(), ()> for airtable_api::Airtable {
+    async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
+        if company.airtable_enterprise_account_id.is_empty() {
+            // We don't have an enterprise account, we can't perform this function.
+            return Ok(String::new());
+        }
+
+        // Only do this if the user is full time.
+        if !user.is_full_time() {
+            return Ok(String::new());
+        }
+
+        match self.get_enterprise_user(&user.email).await {
+            Ok(airtable_user) => {
+                // If we don't have the airtable user added to our workspace,
+                // we need to add them.
+                let mut has_access_to_workspace = false;
+                let mut has_access_to_workspace_read_only = false;
+                for collabs in airtable_user.collaborations.workspace_collaborations {
+                    if collabs.workspace_id == company.airtable_workspace_id {
+                        // We already have given the user the permissions.
+                        has_access_to_workspace = true;
+                    } else if collabs.workspace_id == company.airtable_workspace_read_only_id {
+                        // We already have given the user the permissions, to the read
+                        // only workspace.
+                        has_access_to_workspace_read_only = true;
+                    }
+                }
+
+                // Add the user, if we found out they did not already have permissions
+                // to the workspace.
+                if !has_access_to_workspace {
+                    info!(
+                        "giving `{}` access to airtable workspace `{}`",
+                        user.email, company.airtable_workspace_id
+                    );
+                    self.add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create")
+                        .await?;
+                }
+                if !has_access_to_workspace_read_only {
+                    info!(
+                        "giving `{}` comment access to airtable workspace read only `{}`",
+                        user.email, company.airtable_workspace_read_only_id
+                    );
+                    self.add_collaborator_to_workspace(
+                        &company.airtable_workspace_read_only_id,
+                        &user.airtable_id,
+                        // Giving comment access to the workspace means
+                        // that they can create personal views.
+                        // https://support.airtable.com/hc/en-us/articles/202887099-Permissions-overview
+                        "comment",
+                    )
+                    .await?;
+                }
+
+                return Ok(airtable_user.id);
+            }
+            Err(e) => {
+                if user.is_full_time() {
+                    warn!("getting airtable enterprise user for `{}` failed: {}", user.email, e);
+                }
+            }
+        }
+
+        Ok(String::new())
+    }
+
+    async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
+        Ok(())
+    }
+
+    async fn check_user_is_member_of_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    async fn add_user_to_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
+        Ok(())
+    }
+
+    async fn remove_user_from_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
+        Ok(())
+    }
+
+    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<()>> {
+        Ok(vec![])
+    }
+
+    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
+        Ok(vec![])
+    }
+
+    async fn delete_user(&self, _db: &Database, company: &Company, user: &User) -> Result<()> {
+        if company.airtable_enterprise_account_id.is_empty() {
+            // We don't have an enterprise account, we can't perform this function.
+            return Ok(());
+        }
+
+        // If we have an enterprise airtable account, let's delete the user from
+        // our Airtable.
+        // We don't need a base id here since we are only using the enterprise api features.
+        self.delete_internal_user_by_email(&user.email).await?;
+
+        info!("deleted Airtable user `{}`", user.email);
+
+        Ok(())
+    }
+
+    async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {
+        Ok(())
+    }
+}
 /*
  *
  * Keep as empty boiler plate for now.
@@ -1293,7 +1423,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
         Ok(vec![])
     }
 
-    async fn delete_user(&self, _company: &Company, _user: &User) -> Result<()> {
+    async fn delete_user(&self, _db: &Database, _company: &Company, _user: &User) -> Result<()> {
         Ok(())
     }
 

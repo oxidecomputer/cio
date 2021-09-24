@@ -1532,6 +1532,9 @@ pub async fn sync_users(
     let gsuite = company.authenticate_google_admin(db).await?;
     let gcal = company.authenticate_google_calendar(db).await?;
 
+    // We don't need a base id here since we are only using the enterprise api features.
+    let airtable_auth = company.authenticate_airtable("");
+
     // Initialize the Gusto client.
     let mut gusto_users: HashMap<String, gusto_api::types::Employee> = HashMap::new();
     let mut gusto_users_by_id: HashMap<String, gusto_api::types::Employee> = HashMap::new();
@@ -1647,65 +1650,6 @@ pub async fn sync_users(
             user.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
         }
 
-        // Get the Airtable information for the user.
-        if !company.airtable_enterprise_account_id.is_empty() {
-            // We don't need a base id here since we are only using the enterprise api features.
-            let airtable_auth = company.authenticate_airtable("");
-            match airtable_auth.get_enterprise_user(&user.email).await {
-                Ok(airtable_user) => {
-                    user.airtable_id = airtable_user.id.to_string();
-
-                    // If we don't have the airtable user added to our workspace,
-                    // we need to add them.
-                    let mut has_access_to_workspace = false;
-                    let mut has_access_to_workspace_read_only = false;
-                    for collabs in airtable_user.collaborations.workspace_collaborations {
-                        if collabs.workspace_id == company.airtable_workspace_id {
-                            // We already have given the user the permissions.
-                            has_access_to_workspace = true;
-                        } else if collabs.workspace_id == company.airtable_workspace_read_only_id {
-                            // We already have given the user the permissions, to the read
-                            // only workspace.
-                            has_access_to_workspace_read_only = true;
-                        }
-                    }
-
-                    // Add the user, if we found out they did not already have permissions
-                    // to the workspace.
-                    if !has_access_to_workspace && user.is_full_time() {
-                        info!(
-                            "giving {} access to airtable workspace {}",
-                            user.email, company.airtable_workspace_id
-                        );
-                        airtable_auth
-                            .add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create")
-                            .await?;
-                    }
-                    if !has_access_to_workspace_read_only && user.is_full_time() {
-                        info!(
-                            "giving {} comment access to airtable workspace read only {}",
-                            user.email, company.airtable_workspace_read_only_id
-                        );
-                        airtable_auth
-                            .add_collaborator_to_workspace(
-                                &company.airtable_workspace_read_only_id,
-                                &user.airtable_id,
-                                // Giving comment access to the workspace means
-                                // that they can create personal views.
-                                // https://support.airtable.com/hc/en-us/articles/202887099-Permissions-overview
-                                "comment",
-                            )
-                            .await?;
-                    }
-                }
-                Err(e) => {
-                    if user.is_full_time() {
-                        warn!("getting airtable enterprise user for {} failed: {}", user.email, e);
-                    }
-                }
-            }
-        }
-
         // See if we have a gsuite user for the user.
         if let Some(gsuite_user) = gsuite_users_map.get(&user.email) {
             user.google_id = gsuite_user.id.to_string();
@@ -1796,6 +1740,18 @@ pub async fn sync_users(
             new_user.google_id = gsuite_id.to_string();
             // Update the user in the database.
             new_user = new_user.update(db).await?;
+
+            // Create a zoom account for the user, if we have zoom credentials and
+            // we cannot find the zoom user.
+            // Otherwise update the zoom user.
+            // We only do this if not managed by Okta.
+            if let Ok(ref zoom) = zoom_auth {
+                let zoom_id = zoom.ensure_user(db, company, &new_user).await?;
+                // Set the Zoom ID for the user.
+                new_user.zoom_id = zoom_id.to_string();
+                // Update the user in the database.
+                new_user = new_user.update(db).await?;
+            }
         }
 
         // Add the user to their GitHub teams and the org.
@@ -1813,16 +1769,11 @@ pub async fn sync_users(
             new_user = new_user.update(db).await?;
         }
 
-        // Create a zoom account for the user, if we have zoom credentials and
-        // we cannot find the zoom user.
-        // Otherwise update the zoom user.
-        if let Ok(ref zoom) = zoom_auth {
-            let zoom_id = zoom.ensure_user(db, company, &new_user).await?;
-            // Set the Zoom ID for the user.
-            new_user.zoom_id = zoom_id.to_string();
-            // Update the user in the database.
-            new_user = new_user.update(db).await?;
-        }
+        // Get the Airtable information for the user.
+        let airtable_id = airtable_auth.ensure_user(db, company, &new_user).await?;
+        new_user.airtable_id = airtable_id.to_string();
+        // Update the user in the database.
+        new_user = new_user.update(db).await?;
 
         // Update with any other changes we made to the user.
         new_user.update(db).await?;
@@ -1835,7 +1786,7 @@ pub async fn sync_users(
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, user) in user_map {
-        info!("deleting user {} from the database", username);
+        info!("deleting user `{}` from the database and other services", username);
 
         if !user.google_anniversary_event_id.is_empty() {
             // First delete the recurring event for their anniversary.
@@ -1855,7 +1806,7 @@ pub async fn sync_users(
 
         // Supend the user from okta.
         if let Some(ref okta) = okta_auth {
-            okta.delete_user(company, &user).await?;
+            okta.delete_user(db, company, &user).await?;
         }
 
         // TODO: Delete the user from Ramp.
@@ -1864,38 +1815,20 @@ pub async fn sync_users(
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             // Suspend the user from GSuite so we can transfer their data.
-            gsuite.delete_user(company, &user).await?;
+            gsuite.delete_user(db, company, &user).await?;
 
-            // If we have an enterprise airtable account, let's delete the user from
-            // our Airtable.
-            if !company.airtable_enterprise_account_id.is_empty() {
-                // We don't need a base id here since we are only using the enterprise api features.
-                let airtable_auth = company.authenticate_airtable("");
-                airtable_auth.delete_internal_user_by_email(&user.email).await?;
-                info!("deleted user from airtable: {}", username);
-            }
+            // Delete the user from Airtable.
+            airtable_auth.delete_user(db, company, &user).await?;
 
             // TODO: Delete the user from Slack.
 
             // Delete the user from Zoom.
             if let Ok(ref zoom) = zoom_auth {
-                if !user.zoom_id.is_empty() {
-                    zoom.users()
-                        .user_delete(
-                            &user.zoom_id, // ID of the user to delete.
-                            zoom_api::types::UserDeleteAction::Delete,
-                            &user.manager(db).email, // Email of the user's manager to transfer items to
-                            true,                    // Tranfer meetings
-                            true,                    // Transfer webinars
-                            true,                    // Transfer recordings
-                        )
-                        .await?;
-                    info!("deleted user from zoom: {}", username);
-                }
+                zoom.delete_user(db, company, &user).await?;
             }
 
             // Remove the user from the github org.
-            github.delete_user(company, &user).await?;
+            github.delete_user(db, company, &user).await?;
         }
 
         // Delete the user from the database and Airtable.
