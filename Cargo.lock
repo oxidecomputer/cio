@@ -3579,9 +3579,9 @@ dependencies = [
 
 [[package]]
 name = "revai"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b73b812a1625d5e4e39f4cd639dd4e8196e91f8d5527bd815620bd69fe4e75fd"
+checksum = "926c9fd609701278eebd4d356ede3e97b0cb63a5d1fd4e479ad6bd56b5cdcdfc"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -3591,6 +3591,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",

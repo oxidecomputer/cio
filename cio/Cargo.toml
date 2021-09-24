@@ -77,7 +77,7 @@ ramp-api = "^0.2.2"
 rand = { version = "^0.8.3", features = ["alloc"] }
 regex = "1"
 reqwest = { version = "0.11", features = ["json"] }
-revai = { version = "^0.2.1" }
+revai = { version = "^0.2.2" }
 #revai = { path = "../../third-party-api-clients/rev.ai" }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sendgrid-api = "^0.2.0"

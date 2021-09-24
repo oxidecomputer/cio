@@ -8,7 +8,11 @@ use google_drive::traits::{DriveOps, FileOps, PermissionOps};
 use inflector::cases::kebabcase::to_kebab_case;
 use log::{info, warn};
 use macros::db;
-use revai::{traits::JobOps, Client as RevAI};
+use revai::{
+    traits::JobOps,
+    types::{SubmitJobMediaUrlOptions, SubmitJobMediaUrlOptionsAllOf},
+    Client as RevAI,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use zoom_api::types::GetAccountCloudRecordingResponseMeetingsFilesFileType;
@@ -593,20 +597,96 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 // If we don't have a transcript ID, let's post the video to be
                 // transcribed.
                 // Now let's upload it to rev.ai so it can start a job.
-                let result = revai.jobs().post(video_contents).await;
-                if let Err(e) = result {
-                    warn!(
-                        "failed to upload video for `{}` with size`{}` to rev.ai: {}",
-                        db_meeting.name,
-                        b.to_string(),
-                        e
-                    );
-                    continue;
+                match revai.jobs().post(video_contents).await {
+                    Ok(job) => {
+                        // Set the transcript id.
+                        db_meeting.transcript_id = job.id.to_string();
+                        db_meeting.update(db).await?;
+                    }
+                    Err(e) => {
+                        if e.to_string().contains("413") {
+                            // The video is too large, lets add permissions for an hour and do it
+                            // another way.
+                            match drive_client
+                                .permissions()
+                                .create(
+                                    &video_id,
+                                    "",    // email_message
+                                    false, // move_to_new_owners_root
+                                    false, // send_notification_email
+                                    true,  // supports_all_drives
+                                    true,  // supports_team_drives
+                                    false, // transfer_ownership
+                                    false, // use_domain_admin_access
+                                    &google_drive::types::Permission {
+                                        allow_file_discovery: None,
+                                        deleted: None,
+                                        display_name: "".to_string(),
+                                        domain: "".to_string(),
+                                        email_address: "".to_string(),
+                                        // Add an hour for the duration.
+                                        expiration_time: Some(
+                                            Utc::now().checked_add_signed(Duration::hours(1)).unwrap(),
+                                        ),
+                                        id: "".to_string(),
+                                        kind: "".to_string(),
+                                        permission_details: vec![],
+                                        photo_link: "".to_string(),
+                                        // Writer means they can download.
+                                        role: "writer".to_string(),
+                                        team_drive_permission_details: vec![],
+                                        type_: "anyone".to_string(),
+                                        view: "".to_string(),
+                                    },
+                                )
+                                .await
+                            {
+                                Ok(_) => {
+                                    let r = revai
+                                        .jobs()
+                                        .submit_transcription(&SubmitJobMediaUrlOptionsAllOf {
+                                            submit_job_media_url_options: SubmitJobMediaUrlOptions {
+                                                media_url: format!("https://drive.google.com/uc?id={}", video_id),
+                                            },
+                                            submit_job_options_all_of: Default::default(),
+                                        })
+                                        .await;
+                                    if let Err(err) = r {
+                                        warn!(
+                                            "submitting video `{}` with size `{}` to revai with link failed: {}",
+                                            db_meeting.name,
+                                            b.to_string(),
+                                            err
+                                        );
+                                        continue;
+                                    }
+
+                                    let job = r?.job;
+                                    // Set the transcript id.
+                                    db_meeting.transcript_id = job.id.to_string();
+                                    db_meeting.update(db).await?;
+                                    continue;
+                                }
+                                Err(err) => {
+                                    warn!(
+                                        "could not change perms for video `{}` with size `{}`: {}",
+                                        db_meeting.name,
+                                        b.to_string(),
+                                        err
+                                    );
+                                }
+                            }
+                        } else {
+                            warn!(
+                                "failed to upload video for `{}` with size `{}` to rev.ai: {}",
+                                db_meeting.name,
+                                b.to_string(),
+                                e
+                            );
+                            continue;
+                        }
+                    }
                 }
-                let job = result?;
-                // Set the transcript id.
-                db_meeting.transcript_id = job.id.to_string();
-                db_meeting.update(db).await?;
             } else if db_meeting.transcript.is_empty() && !db_meeting.transcript_id.is_empty() {
                 // We have a transcript id, let's try and get the transcript if we don't have
                 // it already.
