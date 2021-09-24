@@ -1281,9 +1281,9 @@ The Shipping Bot",
         let shippo = Shippo::new_from_env();
 
         let mut carrier = self.carrier.to_lowercase().to_string();
-        if carrier == "dhl" && provider == "Shippo" {
+        if carrier == "dhl" && self.provider == "Shippo" {
             carrier = "dhl_express".to_string();
-        } else if carrier == "dhl" && provider == "ShipBob" {
+        } else if carrier == "dhl" && self.provider == "ShipBob" {
             carrier = "dhl_ecommerce".to_string();
         }
 
