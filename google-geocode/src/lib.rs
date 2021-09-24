@@ -238,13 +238,13 @@ impl Display for FormattedAddress {
 }
 
 #[derive(Debug, Default, Deserialize)]
-struct ReplyResult {
+pub struct ReplyResult {
     #[serde(default)]
-    error_message: String,
+    pub error_message: String,
     #[serde(default)]
-    results: Vec<Reply>,
+    pub results: Vec<Reply>,
     #[serde(default)]
-    status: String,
+    pub status: String,
 }
 
 /// A reply from the Google geocoding API
