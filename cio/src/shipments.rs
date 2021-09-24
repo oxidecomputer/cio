@@ -520,6 +520,7 @@ impl From<shipbob::types::Order> for NewOutboundShipment {
         let mut status = crate::shipment_status::Status::Queued;
         let mut tracking_status = String::new();
         let mut tracking_link = String::new();
+        let mut cost = Default::default();
 
         if let Some(s) = item.status {
             status = s.into();
@@ -528,6 +529,7 @@ impl From<shipbob::types::Order> for NewOutboundShipment {
         if !item.shipments.is_empty() {
             let first = item.shipments.first().unwrap();
             shipped_time = first.created_date;
+            cost = first.invoice_amount as f32;
 
             if let Some(tracking) = &first.tracking {
                 carrier = clean_carrier_name(&tracking.carrier);
@@ -570,7 +572,7 @@ impl From<shipbob::types::Order> for NewOutboundShipment {
             shipped_time,
             tracking_link,
             status: status.to_string(),
-            cost: Default::default(),
+            cost,
             eta: None,
 
             // These will be poulated when we expand the record.
