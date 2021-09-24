@@ -12,6 +12,7 @@ pub trait DNSProviderOps {
     /// Ensure the record exists and has the correct information.
     async fn ensure_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()>;
 
+    /// Delete the record if it exists.
     async fn delete_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()>;
 }
 
@@ -54,25 +55,28 @@ impl DNSProviderOps for CloudflareClient {
 
             return Ok(());
         }
-        let first = dns_records.first().unwrap();
 
-        if first.name == domain && content_equals(first.content.clone(), content.clone()) {
-            info!("dns record for domain `{}` already exists: {:?}", domain, content);
+        for record in dns_records {
+            if record.name == domain && content_equals(record.content.clone(), content.clone()) {
+                info!("dns record for domain `{}` already exists: {:?}", domain, content);
 
-            return Ok(());
+                return Ok(());
+            }
         }
 
-        // Update the DNS record.
+        // Create the DNS record.
+        // TODO: we should match on the types from above and update it if necessary
+        // but hopefully this way does not fail.
         let _dns_record = self
-            .request(&dns::UpdateDnsRecord {
+            .request(&dns::CreateDnsRecord {
                 zone_identifier,
-                identifier: &first.id,
-                params: dns::UpdateDnsRecordParams {
+                params: dns::CreateDnsRecordParams {
                     name: domain,
                     content: content.clone(),
                     // This is the min.
                     ttl: Some(120),
                     proxied: None,
+                    priority: None,
                 },
             })
             .await?
@@ -104,9 +108,14 @@ impl DNSProviderOps for CloudflareClient {
             return Ok(());
         }
 
-        // TODO: check anything else about the record...
-        // Delete the record.
-        info!("deleted dns record for domain `{}`", domain);
+        for record in dns_records {
+            if record.name == domain && content_equals(record.content.clone(), content.clone()) {
+                // TODO: Delete the record.
+                info!("deleted dns record for domain `{}`", domain);
+
+                return Ok(());
+            }
+        }
 
         Ok(())
     }
