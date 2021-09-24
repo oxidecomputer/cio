@@ -1679,7 +1679,7 @@ pub fn clean_carrier_name(s: &str) -> String {
         "FedEx".to_string();
     } else if l == "usps" {
         "USPS".to_string();
-    } else if l == "dhl" || l == "dhl_express" || l == "dhlecommerce" {
+    } else if l == "dhl" || l == "dhl_express" || l == "dhlecommerce" || l.starts_with("dhl") {
         "DHL".to_string();
     }
 
