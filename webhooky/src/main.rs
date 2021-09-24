@@ -385,6 +385,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
+                // Ensure we have the webhooks set up for shipbob, if applicable.
+                //company.ensure_shipbob_webhooks(&db).await?;
+
                 cio_api::shipments::refresh_inbound_shipments(&db, &company).await?;
                 cio_api::shipments::refresh_outbound_shipments(&db, &company).await?;
             }

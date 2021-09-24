@@ -1399,7 +1399,7 @@ The Shipping Bot",
 
 // Sync the outbound shipments.
 pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Result<()> {
-    if company.airtable_base_id_shipments.is_empty() || company.id != 1 {
+    if company.airtable_base_id_shipments.is_empty() {
         // Return early.
         return Ok(());
     }
@@ -1440,81 +1440,83 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
         s.update(db).await?;
     }
 
-    // Create the shippo client.
-    let shippo = Shippo::new_from_env();
+    if company.id == 1 {
+        // Create the shippo client.
+        let shippo = Shippo::new_from_env();
 
-    // Get each of the shippo orders and create or update it in our set.
-    // These are typically one off labels made from the UI.
-    let orders = shippo.list_orders().await?;
-    for order in orders {
-        let mut ns = NewOutboundShipment {
-            created_time: order.placed_at,
-            name: order.to_address.name.to_string(),
-            email: order.to_address.email.to_string(),
-            phone: order.to_address.phone.to_string(),
-            street_1: order.to_address.street1.to_string(),
-            street_2: order.to_address.street2.to_string(),
-            city: order.to_address.city.to_string(),
-            state: order.to_address.state.to_string(),
-            zipcode: order.to_address.zip.to_string(),
-            country: order.to_address.country.to_string(),
-            address_formatted: Default::default(),
-            latitude: Default::default(),
-            longitude: Default::default(),
-            contents: "Manual internal shipment: could be swag or tools, etc".to_string(),
-            carrier: Default::default(),
-            pickup_date: None,
-            delivered_time: None,
-            shipped_time: None,
-            shippo_id: order.transactions.get(0).unwrap().object_id.to_string(),
-            status: crate::shipment_status::Status::Queued.to_string(),
-            tracking_link: Default::default(),
-            oxide_tracking_link: Default::default(),
-            tracking_number: Default::default(),
-            tracking_status: Default::default(),
-            cost: Default::default(),
-            label_link: Default::default(),
-            eta: None,
-            messages: Default::default(),
-            notes: Default::default(),
-            geocode_cache: Default::default(),
-            local_pickup: Default::default(),
-            link_to_package_pickup: Default::default(),
-            cio_company_id: company.id,
-        };
+        // Get each of the shippo orders and create or update it in our set.
+        // These are typically one off labels made from the UI.
+        let orders = shippo.list_orders().await?;
+        for order in orders {
+            let mut ns = NewOutboundShipment {
+                created_time: order.placed_at,
+                name: order.to_address.name.to_string(),
+                email: order.to_address.email.to_string(),
+                phone: order.to_address.phone.to_string(),
+                street_1: order.to_address.street1.to_string(),
+                street_2: order.to_address.street2.to_string(),
+                city: order.to_address.city.to_string(),
+                state: order.to_address.state.to_string(),
+                zipcode: order.to_address.zip.to_string(),
+                country: order.to_address.country.to_string(),
+                address_formatted: Default::default(),
+                latitude: Default::default(),
+                longitude: Default::default(),
+                contents: "Manual internal shipment: could be swag or tools, etc".to_string(),
+                carrier: Default::default(),
+                pickup_date: None,
+                delivered_time: None,
+                shipped_time: None,
+                shippo_id: order.transactions.get(0).unwrap().object_id.to_string(),
+                status: crate::shipment_status::Status::Queued.to_string(),
+                tracking_link: Default::default(),
+                oxide_tracking_link: Default::default(),
+                tracking_number: Default::default(),
+                tracking_status: Default::default(),
+                cost: Default::default(),
+                label_link: Default::default(),
+                eta: None,
+                messages: Default::default(),
+                notes: Default::default(),
+                geocode_cache: Default::default(),
+                local_pickup: Default::default(),
+                link_to_package_pickup: Default::default(),
+                cio_company_id: company.id,
+            };
 
-        // We need to get the carrier and tracking number so we don't create
-        // duplicates every single time.
-        let label = shippo.get_shipping_label(&ns.shippo_id).await?;
-        ns.tracking_number = label.tracking_number.to_string();
+            // We need to get the carrier and tracking number so we don't create
+            // duplicates every single time.
+            let label = shippo.get_shipping_label(&ns.shippo_id).await?;
+            ns.tracking_number = label.tracking_number.to_string();
 
-        // The rate will give us the carrier and the cost.
-        let rate = shippo.get_rate(&label.rate).await?;
-        ns.cost = rate.amount_local.parse()?;
-        ns.carrier = clean_provider_name(&rate.provider);
+            // The rate will give us the carrier and the cost.
+            let rate = shippo.get_rate(&label.rate).await?;
+            ns.cost = rate.amount_local.parse()?;
+            ns.carrier = clean_provider_name(&rate.provider);
 
-        // Only add the shipment if it doesn't already exist. Since we update it
-        // in the loop above. Otherwise the email notifications get stuck and you get
-        // innundated with notifications your package is on the way. Since it
-        // thinks the status is always changing.
-        let existing = OutboundShipment::get_from_db(db, ns.carrier.to_string(), ns.tracking_number.to_string());
-        if existing.is_some() {
-            // We already have this shipment. Continue through our loop.
-            continue;
+            // Only add the shipment if it doesn't already exist. Since we update it
+            // in the loop above. Otherwise the email notifications get stuck and you get
+            // innundated with notifications your package is on the way. Since it
+            // thinks the status is always changing.
+            let existing = OutboundShipment::get_from_db(db, ns.carrier.to_string(), ns.tracking_number.to_string());
+            if existing.is_some() {
+                // We already have this shipment. Continue through our loop.
+                continue;
+            }
+
+            // Upsert the record in the database.
+            let mut s = ns.upsert_in_db(db)?;
+
+            // The shipment is actually new, lets send the notification for the status
+            // as queued then.
+            s.set_status(db, crate::shipment_status::Status::Queued, company)
+                .await?;
+
+            // Update the shipment from shippo.
+            s.create_or_get_shippo_shipment(db).await?;
+            // Update airtable and the database again.
+            s.update(db).await?;
         }
-
-        // Upsert the record in the database.
-        let mut s = ns.upsert_in_db(db)?;
-
-        // The shipment is actually new, lets send the notification for the status
-        // as queued then.
-        s.set_status(db, crate::shipment_status::Status::Queued, company)
-            .await?;
-
-        // Update the shipment from shippo.
-        s.create_or_get_shippo_shipment(db).await?;
-        // Update airtable and the database again.
-        s.update(db).await?;
     }
 
     OutboundShipments::get_from_db(db, company.id)?

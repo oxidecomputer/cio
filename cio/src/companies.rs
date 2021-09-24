@@ -14,6 +14,7 @@ use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
+use log::info;
 use macros::db;
 use mailchimp_api::MailChimp;
 use octorust::{
@@ -345,6 +346,69 @@ impl Company {
         }
 
         bail!("no token");
+    }
+
+    /// Ensure the company has ShipBob webhooks setup.
+    pub async fn ensure_shipbob_webhooks(&self, db: &Database) -> Result<()> {
+        let shipbob_auth = self.authenticate_shipbob(db).await;
+        if let Err(e) = shipbob_auth {
+            if e.to_string().contains("no token") {
+                // Return early, they don't use ShipBob.
+                return Ok(());
+            }
+
+            // Otherwise bail!
+            bail!(e);
+        }
+
+        let shipbob = shipbob_auth?;
+        let shipbob_webhooks_url =
+            env::var("SHIPBOB_WEBHOOKS_URL").map_err(|e| anyhow!("expected SHIPBOB_WEBHOOKS_URL to be set: {}", e))?;
+        let subscription_url = url::Url::parse(&shipbob_webhooks_url)?;
+
+        let topics = vec![
+            shipbob::types::WebhooksTopics::OrderShipped,
+            shipbob::types::WebhooksTopics::ShipmentDelivered,
+            shipbob::types::WebhooksTopics::ShipmentException,
+            shipbob::types::WebhooksTopics::ShipmentOnhold,
+        ];
+
+        for topic in topics {
+            // Check if the webhook already exists.
+            let mut exists = false;
+            let webhooks = shipbob.webhooks().get_all(topic.clone()).await?;
+            for webhook in webhooks {
+                // Check if we already have the webhooks.
+                if webhook.subscription_url == Some(subscription_url.clone()) {
+                    exists = true;
+                    info!(
+                        "shipbob webhook for topic `{}` to url `{}` already exists",
+                        topic, subscription_url
+                    );
+                    break;
+                }
+            }
+
+            if exists {
+                continue;
+            }
+
+            // Create it if not.
+            shipbob
+                .webhooks()
+                .post(&shipbob::types::WebhooksCreateWebhookSubscriptionModel {
+                    subscription_url: Some(subscription_url.clone()),
+                    topic: topic.clone(),
+                })
+                .await?;
+
+            info!(
+                "created shipbob webhook for topic `{}` to url `{}`",
+                topic, subscription_url
+            );
+        }
+
+        Ok(())
     }
 
     /// Authenticate with MailChimp.
