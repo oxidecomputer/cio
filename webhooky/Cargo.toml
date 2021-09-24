@@ -17,7 +17,7 @@ checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
 chrono-tz = { version = "0.4", features = ["serde"] }
-cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "408039fdaa8ec1609f58d341e778a29f6524b57b" }
+cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "eb7007b3d903c2f54312c0bd8d43167fc50ecf81" }
 #cio-api = { path = "../cio" }
 clap = "3.0.0-beta.4"
 clokwerk = "0.4.0-rc1"
