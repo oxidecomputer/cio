@@ -100,7 +100,7 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
     }
 }
 
-/// Convert the applicant into a Slack message.
+/// Convert the vendor into a Slack message.
 impl From<NewSoftwareVendor> for FormattedMessage {
     fn from(item: NewSoftwareVendor) -> Self {
         FormattedMessage {

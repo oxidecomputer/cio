@@ -4,6 +4,7 @@ use std::str::from_utf8;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
+use chrono_humanize::HumanTime;
 use google_drive::traits::{DriveOps, FileOps, PermissionOps};
 use inflector::cases::kebabcase::to_kebab_case;
 use log::{info, warn};
@@ -15,6 +16,9 @@ use revai::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use slack_chat_api::{
+    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
+};
 use zoom_api::types::GetAccountCloudRecordingResponseMeetingsFilesFileType;
 
 use crate::{
@@ -84,6 +88,117 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
         self.transcript = truncate(&self.transcript, 100000);
 
         Ok(())
+    }
+}
+
+/// Convert the recorded meeting into a Slack message.
+impl From<NewRecordedMeeting> for FormattedMessage {
+    fn from(item: NewRecordedMeeting) -> Self {
+        let mut context = format!("<{}|Recorded Meeting>", item.event_link);
+
+        if !item.video.is_empty() {
+            context += &format!(" | <{}|video>", item.video);
+        }
+        if !item.chat_log_link.is_empty() {
+            context += &format!(" | <{}|chat log>", item.chat_log_link);
+        }
+
+        let dur_started = item.start_time - Utc::now();
+        let started = HumanTime::from(dur_started);
+        let dur_ended = item.end_time - Utc::now();
+        let ended = HumanTime::from(dur_ended);
+
+        context += &format!(" | _started {}_ | _ended {}_", started, ended);
+
+        let mut blocks = vec![MessageBlock {
+            block_type: MessageBlockType::Header,
+            text: Some(MessageBlockText {
+                text_type: MessageType::PlainText,
+                text: item.name.to_string(),
+            }),
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        }];
+
+        if !item.description.is_empty() {
+            blocks.push(MessageBlock {
+                block_type: MessageBlockType::Section,
+                text: Some(MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: item.description,
+                }),
+                elements: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            });
+        }
+
+        blocks.push(MessageBlock {
+            block_type: MessageBlockType::Context,
+            elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: context,
+            })],
+            text: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        });
+
+        FormattedMessage {
+            channel: Default::default(),
+            blocks: Default::default(),
+            attachments: vec![MessageAttachment {
+                color: Default::default(),
+                author_icon: Default::default(),
+                author_link: Default::default(),
+                author_name: Default::default(),
+                fallback: Default::default(),
+                fields: Default::default(),
+                footer: Default::default(),
+                footer_icon: Default::default(),
+                image_url: Default::default(),
+                pretext: Default::default(),
+                text: Default::default(),
+                thumb_url: Default::default(),
+                title: Default::default(),
+                title_link: Default::default(),
+                ts: Default::default(),
+                blocks,
+            }],
+        }
+    }
+}
+
+impl From<RecordedMeeting> for FormattedMessage {
+    fn from(item: RecordedMeeting) -> Self {
+        let new: NewRecordedMeeting = item.into();
+        new.into()
+    }
+}
+
+impl NewRecordedMeeting {
+    // Send a slack notification to the channels in the object.
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let mut msg: FormattedMessage = self.clone().into();
+
+        // Set the channel.
+        msg.channel = company.slack_channel_debug.to_string();
+
+        // Post the message.
+        company.post_to_slack_channel(db, &msg).await?;
+
+        Ok(())
+    }
+}
+
+impl RecordedMeeting {
+    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
+        let n: NewRecordedMeeting = self.into();
+        n.send_slack_notification(db, company).await
     }
 }
 
@@ -266,7 +381,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
             event_link: video_html_link,
             cio_company_id: company.id,
         };
-        m.upsert(db).await?;
+        let new = m.upsert(db).await?;
+        new.send_slack_notification(db, company).await?;
     }
 
     Ok(())
@@ -563,6 +679,9 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
                     }
                 }
+            } else {
+                // We have a new meeting, let's send the notification.
+                meeting.send_slack_notification(db, company).await?;
             }
 
             // Upsert the meeting in the database.
