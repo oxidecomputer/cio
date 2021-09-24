@@ -1100,13 +1100,124 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
 
 #[async_trait]
 impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
-    async fn ensure_user(&self, _db: &Database, _company: &Company, user: &User) -> Result<String> {
+    async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
         if user.is_consultant() || user.is_system_account() {
             // Return early, they won't need a Ramp account.
             return Ok(String::new());
         }
 
-        Ok(String::new())
+        if !user.zoom_id.is_empty() {
+            // We have a zoom user.
+
+            // Fixup the vanity URL to be their username.
+            // We only do this here, since we can't do it until the
+            // user has activated their account.
+            // Get the user to check their vanity URL as it's not
+            // given to us when we list users.
+            let zu = self
+                .users()
+                .user(
+                    &user.zoom_id,
+                    zoom_api::types::LoginType::Noop, // We don't know their login type...
+                    false,
+                )
+                .await?;
+
+            // Check if the vanity URL is already either the username
+            // or the github handle.
+            if zu.user_response.vanity_url.is_empty()
+                || (!zu.user_response.vanity_url.contains(&format!("/{}?", user.username))
+                    && !zu.user_response.vanity_url.contains(&format!("/{}?", user.github))
+                    && !zu.user_response.vanity_url.contains(&format!(
+                        "/{}.{}?",
+                        user.first_name.to_lowercase(),
+                        user.last_name.to_lowercase()
+                    )))
+            {
+                // Update the vanity URL for the user.
+                // First try their username.
+                // This should succeed _if_ we have a custom domain.
+                match user
+                    .update_zoom_vanity_name(db, self, &user.zoom_id, &zu, &user.username)
+                    .await
+                {
+                    Ok(_) => (),
+                    Err(e) => {
+                        // Try their github username.
+                        info!(
+                            "updating zoom vanity_url failed for username `{}`, will try with github handle `{}`: {}",
+                            user.username, user.github, e
+                        );
+
+                        if !user.github.is_empty() {
+                            match user
+                                .update_zoom_vanity_name(db, self, &user.zoom_id, &zu, &user.github)
+                                .await
+                            {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    // Try their {first_name}.{last_name}.
+                                    info!(
+                                        "updating zoom vanity_url failed for github handle `{}`, will try with `{}.{}`: {}",
+                                        user.github, user.first_name, user.last_name, e
+                                    );
+                                    // Ignore the error if it does not work.
+                                    if let Err(e) = user
+                                        .update_zoom_vanity_name(
+                                            db,
+                                            self,
+                                            &user.zoom_id,
+                                            &zu,
+                                            &format!(
+                                                "{}.{}",
+                                                user.first_name.to_lowercase(),
+                                                user.last_name.to_lowercase()
+                                            ),
+                                        )
+                                        .await
+                                    {
+                                        info!(
+                                            "updating zoom vanity_url failed for `{}.{}`: {}",
+                                            user.first_name, user.last_name, e
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            info!("updated zoom user `{}`", user.email);
+
+            // Return early.
+            return Ok(user.zoom_id.to_string());
+        }
+
+        // Only create the user if we don't already have a pending user.
+        // We can know this if the zoom_id is empty.
+        let zoom_user = self
+            .users()
+            .user_create(&zoom_api::types::UserCreateRequest {
+                // User will get an email sent from Zoom.
+                // There is a confirmation link in this email.
+                // The user will then need to use the link to activate their Zoom account.
+                // The user can then set or change their password.
+                action: zoom_api::types::UserCreateRequestAction::Create,
+                user_info: Some(zoom_api::types::UserInfo {
+                    email: user.email.to_string(),
+                    first_name: user.first_name.to_string(),
+                    last_name: user.last_name.to_string(),
+                    password: "".to_string(), // Leave blank.
+                    // Create a licensed user.
+                    type_: 2,
+                }),
+            })
+            .await?;
+
+        info!("created zoom user `{}`", user.email);
+
+        Ok(zoom_user.id)
     }
 
     async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
