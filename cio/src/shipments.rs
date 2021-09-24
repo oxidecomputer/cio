@@ -250,7 +250,7 @@ fn get_color_based_on_tracking_status(s: &str) -> String {
 impl From<NewInboundShipment> for FormattedMessage {
     fn from(item: NewInboundShipment) -> Self {
         let mut status_msg = format!(
-            "*{}* | <{}|{}>",
+            "Inbound shipment | *{}* | <{}|{}>",
             item.tracking_status,
             item.oxide_tracking_link,
             item.oxide_tracking_link.trim_start_matches("https://"),
@@ -277,6 +277,43 @@ impl From<NewInboundShipment> for FormattedMessage {
             notes = item.notes.to_string();
         }
 
+        let mut blocks = vec![MessageBlock {
+            block_type: MessageBlockType::Header,
+            text: Some(MessageBlockText {
+                text_type: MessageType::PlainText,
+                text: item.name,
+            }),
+            elements: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        }];
+
+        if !notes.is_empty() {
+            blocks.push(MessageBlock {
+                block_type: MessageBlockType::Section,
+                text: Some(MessageBlockText {
+                    text_type: MessageType::Markdown,
+                    text: notes,
+                }),
+                elements: Default::default(),
+                accessory: Default::default(),
+                block_id: Default::default(),
+                fields: Default::default(),
+            });
+        }
+        blocks.push(MessageBlock {
+            block_type: MessageBlockType::Context,
+            elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
+                text_type: MessageType::Markdown,
+                text: status_msg,
+            })],
+            text: Default::default(),
+            accessory: Default::default(),
+            block_id: Default::default(),
+            fields: Default::default(),
+        });
+
         FormattedMessage {
             channel: Default::default(),
             blocks: Default::default(),
@@ -296,52 +333,7 @@ impl From<NewInboundShipment> for FormattedMessage {
                 title: Default::default(),
                 title_link: Default::default(),
                 ts: Default::default(),
-                blocks: vec![
-                    MessageBlock {
-                        block_type: MessageBlockType::Header,
-                        text: Some(MessageBlockText {
-                            text_type: MessageType::PlainText,
-                            text: item.name,
-                        }),
-                        elements: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Section,
-                        text: Some(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: notes,
-                        }),
-                        elements: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: status_msg,
-                        })],
-                        text: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: "*INBOUND SHIPMENT*".to_string(),
-                        })],
-                        text: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                ],
+                blocks,
             }],
         }
     }
@@ -529,7 +521,7 @@ impl NewOutboundShipment {
 impl From<NewOutboundShipment> for FormattedMessage {
     fn from(item: NewOutboundShipment) -> Self {
         let mut status_msg = format!(
-            "*{}* | _{}_ | <{}|{}>",
+            "Outbound shipment | *{}* | _{}_ | <{}|{}>",
             item.tracking_status,
             item.status,
             item.oxide_tracking_link,
@@ -600,17 +592,6 @@ impl From<NewOutboundShipment> for FormattedMessage {
                         elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
                             text_type: MessageType::Markdown,
                             text: status_msg,
-                        })],
-                        text: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: "*OUTBOUND SHIPMENT*".to_string(),
                         })],
                         text: Default::default(),
                         accessory: Default::default(),
