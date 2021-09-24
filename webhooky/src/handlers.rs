@@ -1135,7 +1135,7 @@ pub async fn handle_airtable_shipments_outbound_create(
     if shipment.notes.contains("Oxide store")
         || shipment.notes.contains("Google sheet")
         || shipment.notes.contains("Internal")
-        || !shipment.shippo_id.is_empty()
+        || !shipment.provider_id.is_empty()
     {
         return Ok(());
     }
