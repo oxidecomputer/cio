@@ -19,6 +19,7 @@ pub trait DNSProviderOps {
 #[async_trait]
 impl DNSProviderOps for CloudflareClient {
     async fn ensure_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
+        let domain = &domain.to_lowercase();
         let zone_identifier = &get_zone_identifier(self, domain).await?;
 
         // Check if we already have a record and we need to update it.
@@ -57,7 +58,7 @@ impl DNSProviderOps for CloudflareClient {
         }
 
         for record in &dns_records {
-            if record.name == domain && content_equals(record.content.clone(), content.clone()) {
+            if record.name == *domain && content_equals(record.content.clone(), content.clone()) {
                 info!("dns record for domain `{}` already exists: {:?}", domain, content);
 
                 return Ok(());
@@ -123,6 +124,7 @@ impl DNSProviderOps for CloudflareClient {
     }
 
     async fn delete_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
+        let domain = &domain.to_lowercase();
         let zone_identifier = &get_zone_identifier(self, domain).await?;
 
         // Check if we already have a record and we need to update it.
@@ -144,7 +146,7 @@ impl DNSProviderOps for CloudflareClient {
         }
 
         for record in dns_records {
-            if record.name == domain && content_equals(record.content.clone(), content.clone()) {
+            if record.name == *domain && content_equals(record.content.clone(), content.clone()) {
                 // TODO: Delete the record.
                 info!("deleted dns record for domain `{}`", domain);
 
