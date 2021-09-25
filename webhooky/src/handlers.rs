@@ -1560,17 +1560,13 @@ pub async fn handle_store_order_create(
 
 pub async fn handle_easypost_tracking_update(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<serde_json::Value>,
+    body_param: TypedBody<crate::server::EasyPostTrackingUpdateEvent>,
 ) -> Result<()> {
-    let api_context = rqctx.context();
+    //let api_context = rqctx.context();
 
     let event = body_param.into_inner();
 
-    sentry::capture_message(&format!("easypost webhook: {}", event.to_string()), sentry::Level::Info);
-    /*let body: EasyPostTrackingUpdateEvent = match serde_json::from_str(&event.to_string()) {
-        Ok(b) => b,
-        Err(e) => bail!("decoding event body for easypost `{}` failed: {}", event.to_string(), e),
-    };*/
+    sentry::capture_message(&format!("easypost webhook: {:#?}", event), sentry::Level::Info);
 
     Ok(())
 }

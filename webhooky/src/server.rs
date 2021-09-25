@@ -1,7 +1,7 @@
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::{bail, Result};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
@@ -1033,7 +1033,7 @@ async fn listen_store_order_create(
 }]
 async fn listen_easypost_tracking_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<serde_json::Value>,
+    body_param: TypedBody<EasyPostTrackingUpdateEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
 
@@ -1044,6 +1044,48 @@ async fn listen_easypost_tracking_update_webhooks(
 
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/// An EasyPost tracking update event.
+/// FROM: https://www.easypost.com/docs/api#events
+#[derive(Debug, Clone, JsonSchema, Deserialize, Serialize)]
+pub struct EasyPostTrackingUpdateEvent {
+    /// "Event".
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub object: String,
+    /// Unique identifier, begins with "evt_".
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub id: String,
+    /// "test" or "production"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub mode: String,
+    /// Result type and event name, see the "Possible Event Types" section for more information.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
+    /// Previous values of relevant result attributes.
+    #[serde(default)]
+    pub previous_attributes: serde_json::Value,
+    /// The object associated with the Event. See the "object" attribute on the result to determine
+    /// its specific type. This field will not be returned when retrieving events directly from the
+    /// API.
+    #[serde(default)]
+    pub result: serde_json::Value,
+    /// The current status of the event. Possible values are "completed", "failed", "in_queue",
+    /// "retrying", or "pending" (deprecated).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub status: String,
+    /// Webhook URLs that have not yet been successfully notified as of the time this webhook event
+    /// was sent. The URL receiving the Event will still be listed in pending_urls, as will any
+    /// other URLs that receive the Event at the same time.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pending_urls: Vec<String>,
+    /// Webhook URLs that have already been successfully notified as of the time this webhook was
+    /// sent.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub completed_urls: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 /**
