@@ -508,6 +508,20 @@ pub async fn handle_rfd_push(
                 NewRFD::new_from_github(company, github, owner, &repo, branch, &file, commit.timestamp.unwrap())
                     .await?;
 
+            // If the branch does not equal exactly the number string,
+            // exit early since we have an update to an existing RFD not an explicit
+            // RFD itself. This usually happens when the branch name can parse as a
+            // number like `0001-some-change`, we want to skip those changes as
+            // they are not named explicitly `0001`.
+            if branch != new_rfd.number_string {
+                a(&format!(
+                    "Skipping updates to RFD in database since branch name `{}` \
+                    does not equal RFD number `{}` explicitly.",
+                    branch, new_rfd.number_string
+                ));
+                return Ok(message);
+            }
+
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
             // We will need this later to check if the RFD's state changed.
