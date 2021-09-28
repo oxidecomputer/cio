@@ -1062,14 +1062,14 @@ pub struct EasyPostTrackingUpdateEvent {
     /// Result type and event name, see the "Possible Event Types" section for more information.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
-    /// Previous values of relevant result attributes.
+    /* /// Previous values of relevant result attributes.
     #[serde(default)]
     pub previous_attributes: serde_json::Value,
     /// The object associated with the Event. See the "object" attribute on the result to determine
     /// its specific type. This field will not be returned when retrieving events directly from the
     /// API.
     #[serde(default)]
-    pub result: serde_json::Value,
+    pub result: serde_json::Value,*/
     /// The current status of the event. Possible values are "completed", "failed", "in_queue",
     /// "retrying", or "pending" (deprecated).
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1083,7 +1083,8 @@ pub struct EasyPostTrackingUpdateEvent {
     /// sent.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub completed_urls: Vec<String>,
-    pub created_at: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<DateTime<Utc>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<DateTime<Utc>>,
 }
