@@ -61,9 +61,16 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
                 }
             }
 
+            let manager = user.manager(db);
+            let manager_ramp_id = if manager.id == user.id {
+                "".to_string()
+            } else {
+                manager.ramp_id.to_string()
+            };
+
             let updated_user = ramp_api::types::PatchUsersRequest {
                 department_id: department_id.to_string(),
-                direct_manager_id: user.manager(db).ramp_id,
+                direct_manager_id: manager_ramp_id,
                 role: Some(ramp_user.role.clone()),
                 location_id: ramp_user.location_id.to_string(),
             };

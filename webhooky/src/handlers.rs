@@ -1559,7 +1559,7 @@ pub async fn handle_store_order_create(
 }
 
 pub async fn handle_easypost_tracking_update(
-    rqctx: Arc<RequestContext<Context>>,
+    _rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<crate::server::EasyPostTrackingUpdateEvent>,
 ) -> Result<()> {
     //let api_context = rqctx.context();
