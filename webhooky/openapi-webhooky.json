@@ -922,6 +922,54 @@
         }
       }
     },
+    "/auth/shipbob/callback": {
+      "post": {
+        "description": "Listen for callbacks to shipbob auth.",
+        "operationId": "listen_auth_shipbob_callback",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/shipbob/consent": {
+      "get": {
+        "description": "Get the consent URL for shipbob auth.",
+        "operationId": "listen_auth_shipbob_consent",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserConsentURL"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/slack/callback": {
       "get": {
         "description": "Listen for callbacks to Slack auth.",
@@ -1115,6 +1163,35 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Envelope"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/easypost/tracking/update": {
+      "post": {
+        "description": "Listen for shipment tracking updated from EasyPost.",
+        "operationId": "listen_easypost_tracking_update_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EasyPostTrackingUpdateEvent"
               }
             }
           },
@@ -1669,6 +1746,26 @@
         }
       }
     },
+    "/run/sync-functions": {
+      "post": {
+        "description": "Listen for triggering a function run of sync functions.",
+        "operationId": "trigger_sync_functions_create",
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Uuid",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/run/sync-huddles": {
       "post": {
         "description": "Listen for triggering a function run of sync huddles.",
@@ -1909,6 +2006,33 @@
         }
       }
     },
+    "/shipbob": {
+      "post": {
+        "description": "Listen for shipbob webhooks.",
+        "operationId": "listen_shipbob_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/shippo/tracking/update": {
       "post": {
         "description": "Listen for shipment tracking updated from Shippo.",
@@ -1957,6 +2081,36 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/slack/interactive": {
+      "post": {
+        "description": "Listen for Slack interactive webhooks.",
+        "operationId": "listen_slack_interactive_webhooks",
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "String",
+                  "type": "string"
+                }
               }
             }
           }
@@ -2025,6 +2179,12 @@
           "materials_contents": {
             "type": "string"
           },
+          "portfolio_pdf_contents": {
+            "type": "string"
+          },
+          "portfolio_pdf_name": {
+            "type": "string"
+          },
           "resume": {
             "type": "string"
           },
@@ -2074,6 +2234,9 @@
             "type": "string"
           },
           "portfolio": {
+            "type": "string"
+          },
+          "portfolio_pdf": {
             "type": "string"
           },
           "resume": {
@@ -2130,6 +2293,54 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "EasyPostTrackingUpdateEvent": {
+        "description": "An EasyPost tracking update event. FROM: https://www.easypost.com/docs/api#events",
+        "type": "object",
+        "properties": {
+          "completed_urls": {
+            "description": "Webhook URLs that have already been successfully notified as of the time this webhook was sent.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "description": "Result type and event name, see the \"Possible Event Types\" section for more information.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Unique identifier, begins with \"evt_\".",
+            "type": "string"
+          },
+          "mode": {
+            "description": "\"test\" or \"production\"",
+            "type": "string"
+          },
+          "object": {
+            "description": "\"Event\".",
+            "type": "string"
+          },
+          "pending_urls": {
+            "description": "Webhook URLs that have not yet been successfully notified as of the time this webhook event was sent. The URL receiving the Event will still be listed in pending_urls, as will any other URLs that receive the Event at the same time.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "description": "The current status of the event. Possible values are \"completed\", \"failed\", \"in_queue\", \"retrying\", or \"pending\" (deprecated).",
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
