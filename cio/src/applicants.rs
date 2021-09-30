@@ -4002,8 +4002,23 @@ impl Applicant {
             && self.status != crate::applicant_status::Status::Declined.to_string()
         {
             // Read the file contents.
-            self.resume_contents = get_file_contents(drive_client, &self.resume).await?;
-            self.materials_contents = get_file_contents(drive_client, &self.materials).await?;
+            match get_file_contents(drive_client, &self.resume).await {
+                Ok(r) => self.resume_contents = r,
+                Err(e) => {
+                    warn!("getting resume contents for applicant `{}` failed: {}", self.email, e);
+                }
+            }
+
+            match get_file_contents(drive_client, &self.materials).await {
+                Ok(r) => self.materials_contents = r,
+                Err(e) => {
+                    warn!(
+                        "getting materials contents for applicant `{}` failed: {}",
+                        self.email, e
+                    );
+                }
+            }
+
             self.parse_materials();
         }
 
@@ -4996,7 +5011,10 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         applicant.keep_fields_from_airtable(db).await;
 
         // Expand the application.
-        applicant.expand(db, &drive_client).await?;
+        if let Err(e) = applicant.expand(db, &drive_client).await {
+            warn!("expanding applicant `{}` failed: {}", applicant.email, e);
+            continue;
+        }
 
         // Update the applicant's status based on other criteria.
         applicant.update_status(db, company).await?;
