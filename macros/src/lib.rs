@@ -413,12 +413,15 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
     impl #new_struct_name_plural {
         /// Get the current records for this type from the database.
         pub fn get_from_db(db: &crate::db::Database, cio_company_id: i32) -> anyhow::Result<Self> {
-            Ok(#new_struct_name_plural(
+            match
                 crate::schema::#db_schema::dsl::#db_schema
                     .filter(crate::schema::#db_schema::dsl::cio_company_id.eq(cio_company_id))
                     .order_by(crate::schema::#db_schema::dsl::id.desc())
-                    .load::<#new_struct_name>(&db.conn())?
-            ))
+                    .load::<#new_struct_name>(&db.conn())
+            {
+                Ok(r) => Ok(#new_struct_name_plural(r)),
+                Err(e) => Err(anyhow::anyhow!("getting `{:?}` from the database for cio_company_id `{}` failed: {}", #new_struct_name_plural(vec![]), cio_company_id, e)),
+            }
         }
 
         /// Get the current records for this type from Airtable.
@@ -449,26 +452,26 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // Get the latest of this record from the database.
                 // This make this less racy if we have a bunch and things got
                 // out of sync.
-                vec_record = #new_struct_name::get_by_id(db, vec_record.id).unwrap();
+                if let Ok(mut vec_record) = #new_struct_name::get_by_id(db, vec_record.id) {
+                    // See if we have it in our Airtable records.
+                    match records.get(&vec_record.id) {
+                        Some(r) => {
+                            let mut record = r.clone();
 
-                // See if we have it in our Airtable records.
-                match records.get(&vec_record.id) {
-                    Some(r) => {
-                        let mut record = r.clone();
+                            // Update the record in Airtable.
+                            vec_record.update_in_airtable(db, &mut record).await?;
 
-                        // Update the record in Airtable.
-                        vec_record.update_in_airtable(db, &mut record).await?;
+                            // Remove it from the map.
+                            records.remove(&vec_record.id);
+                        }
+                        None => {
+                            // We do not have the record in Airtable, Let's create it.
+                            // Create the record in Airtable.
+                            vec_record.create_in_airtable(db).await?;
 
-                        // Remove it from the map.
-                        records.remove(&vec_record.id);
-                    }
-                    None => {
-                        // We do not have the record in Airtable, Let's create it.
-                        // Create the record in Airtable.
-                        vec_record.create_in_airtable(db).await?;
-
-                        // Remove it from the map.
-                        records.remove(&vec_record.id);
+                            // Remove it from the map.
+                            records.remove(&vec_record.id);
+                        }
                     }
                 }
             }
