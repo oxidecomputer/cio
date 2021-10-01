@@ -215,7 +215,10 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         /// Get the company object for a record.
         pub fn company(&self, db: &crate::db::Database) -> anyhow::Result<crate::companies::Company> {
-            crate::companies::Company::get_by_id(db, self.cio_company_id)
+            match crate::companies::Company::get_by_id(db, self.cio_company_id) {
+                Ok(c) => Ok(c),
+                Err(e) => Err(anyhow::anyhow!("getting company for record `{:?}` failed: {}", self, e))
+            }
         }
 
         /// Get the row in our airtable workspace.
