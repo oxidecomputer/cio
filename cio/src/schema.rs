@@ -801,6 +801,16 @@ table! {
 }
 
 table! {
+    rfd_sections (id) {
+        id -> Int4,
+        name -> Varchar,
+        anchor -> Varchar,
+        content -> Text,
+        rfds_id -> Int4,
+    }
+}
+
+table! {
     software_vendors (id) {
         id -> Int4,
         name -> Varchar,
