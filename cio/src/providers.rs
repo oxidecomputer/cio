@@ -819,9 +819,9 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             let okta_user = self
                 .users()
                 .create(
-                    true,             // activate
-                    false,            // provider
-                    "changePassword", // next_login
+                    true,  // activate
+                    false, // provider
+                    "",    // next_login
                     &okta::types::CreateUserRequest {
                         credentials: None,
                         group_ids: Default::default(),
