@@ -145,7 +145,10 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         /// Get the company object for a record.
         pub fn company(&self, db: &crate::db::Database) -> anyhow::Result<crate::companies::Company> {
-            crate::companies::Company::get_by_id(db, self.cio_company_id)
+            match crate::companies::Company::get_by_id(db, self.cio_company_id) {
+                Ok(c) => Ok(c),
+                Err(e) => Err(anyhow::anyhow!("getting company for record `{:?}` failed: {}", self, e))
+            }
         }
     }
 
@@ -385,7 +388,15 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         pub async fn delete_from_airtable(&self, db: &crate::db::Database) -> anyhow::Result<()> {
             if !self.airtable_record_id.is_empty() {
                 // Delete the record from airtable.
-                self.airtable(db)?.delete_record(&#new_struct_name::airtable_table(), &self.airtable_record_id).await?;
+                if let Err(e) = self.airtable(db)?.delete_record(&#new_struct_name::airtable_table(), &self.airtable_record_id).await {
+                    // Ignore if we got a NOT_FOUND error since then the record does not exist.
+                    if e.to_string().contains("NOT_FOUND") {
+                        return Ok(());
+                    }
+
+                    // Otherwise return the actual error.
+                    anyhow::bail!("deleting record: `{:?}` from Airtable failed: {}", self, e);
+                }
             }
 
             Ok(())
