@@ -1133,8 +1133,14 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
             // Check if the vanity URL is already either the username
             // or the github handle.
             if zu.user_response.vanity_url.is_empty()
-                || (!zu.user_response.vanity_url.contains(&format!("/{}?", user.username))
-                    && !zu.user_response.vanity_url.contains(&format!("/{}?", user.github))
+                || (!zu
+                    .user_response
+                    .vanity_url
+                    .contains(&format!("/{}?", user.username.to_lowercase()))
+                    && !zu
+                        .user_response
+                        .vanity_url
+                        .contains(&format!("/{}?", user.github.to_lowercase()))
                     && !zu.user_response.vanity_url.contains(&format!(
                         "/{}.{}?",
                         user.first_name.to_lowercase(),
@@ -1145,7 +1151,7 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
                 // First try their username.
                 // This should succeed _if_ we have a custom domain.
                 match user
-                    .update_zoom_vanity_name(db, self, &user.zoom_id, &zu, &user.username)
+                    .update_zoom_vanity_name(db, self, &user.zoom_id, &zu, &user.username.to_lowercase())
                     .await
                 {
                     Ok(_) => (),
@@ -1153,12 +1159,14 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
                         // Try their github username.
                         info!(
                             "updating zoom vanity_url failed for username `{}`, will try with github handle `{}`: {}",
-                            user.username, user.github, e
+                            user.username.to_lowercase(),
+                            user.github,
+                            e
                         );
 
                         if !user.github.is_empty() {
                             match user
-                                .update_zoom_vanity_name(db, self, &user.zoom_id, &zu, &user.github)
+                                .update_zoom_vanity_name(db, self, &user.zoom_id, &zu, &user.github.to_lowercase())
                                 .await
                             {
                                 Ok(_) => (),
@@ -1166,7 +1174,7 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
                                     // Try their {first_name}.{last_name}.
                                     info!(
                                         "updating zoom vanity_url failed for github handle `{}`, will try with `{}.{}`: {}",
-                                        user.github, user.first_name, user.last_name, e
+                                        user.github.to_lowercase(), user.first_name, user.last_name, e
                                     );
                                     // Ignore the error if it does not work.
                                     if let Err(e) = user
