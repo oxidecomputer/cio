@@ -797,6 +797,7 @@ table! {
         pdf_link_google_drive -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
+        rfd_sections -> Array<Int4>,
     }
 }
 
