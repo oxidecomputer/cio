@@ -771,6 +771,19 @@ table! {
         location -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
+        transcript_id -> Varchar,
+        chat_log_link -> Varchar,
+        cio_company_id -> Int4,
+    }
+}
+
+table! {
+    rfd_sections (id) {
+        id -> Int4,
+        anchor -> Text,
+        content -> Text,
+        name -> Text,
+        rfds_id -> Int4,
     }
 }
 
@@ -919,6 +932,8 @@ table! {
     }
 }
 
+joinable!(rfd_sections -> rfds (rfds_id));
+
 allow_tables_to_appear_in_same_query!(
     accounts_payables,
     api_tokens,
@@ -950,6 +965,7 @@ allow_tables_to_appear_in_same_query!(
     page_views,
     rack_line_subscribers,
     recorded_meetings,
+    rfd_sections,
     rfds,
     software_vendors,
     swag_inventory_items,
