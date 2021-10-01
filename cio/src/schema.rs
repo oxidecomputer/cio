@@ -797,17 +797,6 @@ table! {
         pdf_link_google_drive -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
-        rfd_sections_id -> Array<Int4>,
-    }
-}
-
-table! {
-    rfd_sections (id) {
-        id -> Int4,
-        name -> Varchar,
-        anchor -> Varchar,
-        content -> Text,
-        rfds_id -> Int4,
     }
 }
 
