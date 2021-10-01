@@ -631,7 +631,8 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         let is_member = self.check_user_is_member_of_group(company, user, group).await?;
         if !is_member {
             // Create the member of the group.
-            self.members()
+            if let Err(e) = self
+                .members()
                 .insert(
                     &format!("{}@{}", group, company.gsuite_domain),
                     &gsuite_api::types::Member {
@@ -645,7 +646,20 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
                         type_: "".to_string(),
                     },
                 )
-                .await?;
+                .await
+            {
+                if e.to_string().contains("Member already exists") {
+                    // We can ignore this error.
+                } else {
+                    bail!(
+                        "adding user `{}` to group `{}` with role `{}` failed: {}",
+                        user.email,
+                        group,
+                        role,
+                        e
+                    );
+                }
+            }
 
             info!(
                 "created user `{}` membership to GSuite group `{}` with role `{}`",
