@@ -771,9 +771,6 @@ table! {
         location -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
-        transcript_id -> Varchar,
-        chat_log_link -> Varchar,
-        cio_company_id -> Int4,
     }
 }
 
