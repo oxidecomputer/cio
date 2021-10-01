@@ -173,25 +173,25 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
          * Setup our cron jobs, with our timezone.
          */
         let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
-        scheduler.every(1.day()).at("2:00 am").run(|| async {
+        scheduler.every(1.day()).run(|| async {
             do_job("localhost:8080", "sync-analytics").await;
         });
-        scheduler.every(1.day()).at("11:00 pm").run(|| async {
+        scheduler.every(23.hours()).run(|| async {
             do_job("localhost:8080", "sync-api-tokens").await;
         });
-        scheduler.every(1.day()).at("11:30 pm").run(|| async {
+        scheduler.every(6.hours()).run(|| async {
             do_job("localhost:8080", "sync-applications").await;
         });
-        scheduler.every(1.day()).at("10:00 pm").run(|| async {
+        scheduler.every(2.hours()).run(|| async {
             do_job("localhost:8080", "sync-asset-inventory").await;
         });
-        scheduler.every(1.day()).at("10:30 pm").run(|| async {
+        scheduler.every(12.hours()).run(|| async {
             do_job("localhost:8080", "sync-companies").await;
         });
-        scheduler.every(1.day()).at("10:45 pm").run(|| async {
+        scheduler.every(4.hours()).run(|| async {
             do_job("localhost:8080", "sync-configs").await;
         });
-        scheduler.every(1.day()).at("1:30 am").run(|| async {
+        scheduler.every(6.hours()).run(|| async {
             do_job("localhost:8080", "sync-finance").await;
         });
         scheduler.every(2.hours()).run(|| async {
@@ -203,22 +203,22 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         scheduler.every(4.hours()).run(|| async {
             do_job("localhost:8080", "sync-interviews").await;
         });
-        scheduler.every(1.day()).at("2:30 am").run(|| async {
+        scheduler.every(12.hours()).run(|| async {
             do_job("localhost:8080", "sync-journal-clubs").await;
         });
-        scheduler.every(1.day()).at("9:00 pm").run(|| async {
+        scheduler.every(20.hours()).run(|| async {
             do_job("localhost:8080", "sync-mailing-lists").await;
         });
-        scheduler.every(1.day()).at("2:30 am").run(|| async {
+        scheduler.every(18.hours()).run(|| async {
             do_job("localhost:8080", "sync-other").await;
         });
         scheduler.every(2.hours()).run(|| async {
             do_job("localhost:8080", "sync-recorded-meetings").await;
         });
-        scheduler.every(1.day()).at("9:15 pm").run(|| async {
+        scheduler.every(16.hours()).run(|| async {
             do_job("localhost:8080", "sync-repos").await;
         });
-        scheduler.every(1.day()).at("7:45 pm").run(|| async {
+        scheduler.every(14.hours()).run(|| async {
             do_job("localhost:8080", "sync-rfds").await;
         });
         scheduler.every(2.hours()).run(|| async {
@@ -227,7 +227,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         scheduler.every(3.hours()).run(|| async {
             do_job("localhost:8080", "sync-shorturls").await;
         });
-        scheduler.every(1.day()).at("10:30 pm").run(|| async {
+        scheduler.every(9.hours()).run(|| async {
             do_job("localhost:8080", "sync-swag-inventory").await;
         });
         scheduler.every(5.hours()).run(|| async {
