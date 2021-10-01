@@ -1360,7 +1360,7 @@ impl ProviderOps<(), ()> for airtable_api::Airtable {
                         "giving `{}` access to airtable workspace `{}`",
                         user.email, company.airtable_workspace_id
                     );
-                    self.add_collaborator_to_workspace(&company.airtable_workspace_id, &user.airtable_id, "create")
+                    self.add_collaborator_to_workspace(&company.airtable_workspace_id, &airtable_user.id, "create")
                         .await?;
                 }
                 if !has_access_to_workspace_read_only {
@@ -1370,7 +1370,7 @@ impl ProviderOps<(), ()> for airtable_api::Airtable {
                     );
                     self.add_collaborator_to_workspace(
                         &company.airtable_workspace_read_only_id,
-                        &user.airtable_id,
+                        &airtable_user.id,
                         // Giving comment access to the workspace means
                         // that they can create personal views.
                         // https://support.airtable.com/hc/en-us/articles/202887099-Permissions-overview
