@@ -650,6 +650,23 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
             {
                 if e.to_string().contains("Member already exists") {
                     // We can ignore this error.
+                    // Update their role instead.
+                    self.members()
+                        .update(
+                            &format!("{}@{}", group, company.gsuite_domain),
+                            &user.email,
+                            &gsuite_api::types::Member {
+                                role: role.to_string(),
+                                email: user.email.to_string(),
+                                delivery_settings: "ALL_MAIL".to_string(),
+                                etag: "".to_string(),
+                                id: "".to_string(),
+                                kind: "".to_string(),
+                                status: "".to_string(),
+                                type_: "".to_string(),
+                            },
+                        )
+                        .await?;
                 } else {
                     bail!(
                         "adding user `{}` to group `{}` with role `{}` failed: {}",
