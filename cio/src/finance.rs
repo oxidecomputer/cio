@@ -166,6 +166,11 @@ impl NewSoftwareVendor {
         new: i32,
         new_cost_per_user: f32,
     ) -> Result<()> {
+        if self.cost_per_user_per_month == 0.0 {
+            // Return early we don't care.
+            return Ok(());
+        }
+
         let send_notification = self.users != new || (self.cost_per_user_per_month - new_cost_per_user).abs() > 0.05;
 
         if send_notification {
