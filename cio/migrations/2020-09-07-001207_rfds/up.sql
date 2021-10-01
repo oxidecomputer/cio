@@ -18,5 +18,6 @@ CREATE TABLE rfds (
     relevant_components TEXT [] NOT NULL,
     pdf_link_github VARCHAR NOT NULL,
     pdf_link_google_drive VARCHAR NOT NULL,
+    rfd_sections_id INTEGER [] NOT NULL,
     airtable_record_id VARCHAR NOT NULL
 )
