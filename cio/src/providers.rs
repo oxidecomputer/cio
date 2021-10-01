@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use log::{info, warn};
@@ -46,14 +48,14 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
 
         if !user.ramp_id.is_empty() {
             // Get the existing ramp user.
-            let ramp_user = self.users().get_user(&user.ramp_id).await?;
+            let ramp_user = self.users().get(&user.ramp_id).await?;
 
             // Update the user with their department and manager if
             // it has changed.
 
             // Set the department.
             // TODO: this loop is wasteful.
-            let mut department_id = "".to_string();
+            let mut department_id = None;
             for dept in departments {
                 if dept.name == user.department {
                     department_id = dept.id;
@@ -63,16 +65,21 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
 
             let manager = user.manager(db);
             let manager_ramp_id = if manager.id == user.id {
-                "".to_string()
+                None
             } else {
-                manager.ramp_id.to_string()
+                Some(uuid::Uuid::from_str(&manager.ramp_id)?)
             };
 
+            let mut location_id = None;
+            if !ramp_user.location_id.is_empty() {
+                location_id = Some(uuid::Uuid::from_str(&ramp_user.location_id)?);
+            }
+
             let updated_user = ramp_api::types::PatchUsersRequest {
-                department_id: department_id.to_string(),
+                department_id,
                 direct_manager_id: manager_ramp_id,
                 role: Some(ramp_user.role.clone()),
-                location_id: ramp_user.location_id.to_string(),
+                location_id,
             };
 
             self.users().patch(&user.ramp_id, &updated_user).await?;
@@ -91,9 +98,9 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
             phone: user.recovery_phone.to_string(),
             role: ramp_api::types::Role::BusinessUser,
             // Add the manager.
-            direct_manager_id: user.manager(db).ramp_id,
-            department_id: String::new(),
-            location_id: String::new(),
+            direct_manager_id: Some(uuid::Uuid::from_str(&user.manager(db).ramp_id)?),
+            department_id: None,
+            location_id: None,
         };
 
         // Set the department.
@@ -115,7 +122,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
 
         // TODO(should we?): Create them a card.
 
-        Ok(r.id)
+        Ok(r.id.to_string())
     }
 
     // Ramp does not have groups so this is a no-op.
@@ -141,8 +148,8 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<ramp_api::types::User>> {
         self.users()
             .get_all(
-                "", // department id
-                "", // location id
+                None, // department id
+                None, // location id
             )
             .await
     }

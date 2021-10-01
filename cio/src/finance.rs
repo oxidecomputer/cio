@@ -21,6 +21,7 @@ use crate::{
     core::UpdateAirtableRecord,
     db::Database,
     providers::ProviderOps,
+    repos::FromUrl,
     schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users},
 };
 
@@ -399,13 +400,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
     let ramp = r?;
 
     // List all our users.
-    let users = ramp
-        .users()
-        .get_all(
-            "", // department id
-            "", // location id
-        )
-        .await?;
+    let users = ramp.list_provider_users(company).await?;
     let mut ramp_users: HashMap<String, String> = Default::default();
     for user in users {
         ramp_users.insert(format!("{}{}", user.first_name, user.last_name), user.email.to_string());
@@ -413,9 +408,9 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
 
     let transactions = ramp
         .transactions()
-        .get_all_transactions(
-            "",    // department id
-            "",    // location id
+        .get_all(
+            None,  // department id
+            None,  // location id
             None,  // from date
             None,  // to date
             "",    // merchant id
@@ -434,7 +429,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
         let mut attachments = Vec::new();
         // Get the reciept for the transaction, if they exist.
         for receipt_id in transaction.receipts {
-            let receipt = ramp.receipts().get_receipt(&receipt_id).await?;
+            let receipt = ramp.receipts().get(&receipt_id.to_string()).await?;
             attachments.push(receipt.receipt_url.to_string());
         }
 
@@ -459,7 +454,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
         }
 
         let nt = NewCreditCardTransaction {
-            transaction_id: transaction.id,
+            transaction_id: transaction.id.to_string(),
             card_vendor: "Ramp".to_string(),
             employee_email: email.to_string(),
             amount: transaction.amount as f32,
@@ -501,13 +496,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
     let ramp = r?;
 
     // List all our users.
-    let users = ramp
-        .users()
-        .get_all(
-            "", // department id
-            "", // location id
-        )
-        .await?;
+    let users = ramp.list_provider_users(company).await?;
     let mut ramp_users: HashMap<String, String> = Default::default();
     for user in users {
         ramp_users.insert(user.id.to_string(), user.email.to_string());
@@ -518,12 +507,12 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         let mut attachments = Vec::new();
         // Get the reciepts for the reimbursement, if they exist.
         for receipt_id in reimbursement.receipts {
-            let receipt = ramp.receipts().get_receipt(&receipt_id).await?;
+            let receipt = ramp.receipts().get(&receipt_id.to_string()).await?;
             attachments.push(receipt.receipt_url.to_string());
         }
 
         // Get the user's email for the reimbursement.
-        let email = ramp_users.get(&reimbursement.user_id).unwrap();
+        let email = ramp_users.get(&reimbursement.user_id.unwrap().to_string()).unwrap();
 
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&reimbursement.merchant);
@@ -538,7 +527,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         }
 
         let nt = NewExpensedItem {
-            transaction_id: reimbursement.id,
+            transaction_id: reimbursement.id.unwrap().to_string(),
             expenses_vendor: "Ramp".to_string(),
             employee_email: email.to_string(),
             amount: reimbursement.amount as f32,
