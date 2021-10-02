@@ -56,7 +56,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
             let mut department_id = "".to_string();
             for dept in departments {
                 if dept.name == user.department {
-                    department_id = dept.id.to_string();
+                    department_id = dept.id;
                     break;
                 }
             }
@@ -120,7 +120,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
 
         // TODO(should we?): Create them a card.
 
-        Ok(r.id.to_string())
+        Ok(r.id)
     }
 
     // Ramp does not have groups so this is a no-op.
