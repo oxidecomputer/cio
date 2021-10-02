@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use log::{info, warn};
@@ -70,9 +68,9 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
                 manager.ramp_id.to_string()
             };
 
-            let mut location_id = "";
+            let mut location_id = "".to_string();
             if !ramp_user.location_id.is_empty() {
-                location_id = ramp_user.location_id;
+                location_id = ramp_user.location_id.to_string();
             }
 
             let updated_user = ramp_api::types::PatchUsersRequest {
