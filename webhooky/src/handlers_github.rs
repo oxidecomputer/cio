@@ -504,7 +504,7 @@ pub async fn handle_rfd_push(
             // in our database.
             info!("`push` event -> file {} was modified on branch {}", file, branch,);
             // Parse the RFD.
-            let new_rfd =
+            let mut new_rfd =
                 NewRFD::new_from_github(company, github, owner, &repo, branch, &file, commit.timestamp.unwrap())
                     .await?;
 
@@ -531,6 +531,8 @@ pub async fn handle_rfd_push(
             if let Some(o) = old_rfd {
                 old_rfd_state = o.state.to_string();
                 old_rfd_pdf = o.get_pdf_filename();
+                // Set the rfd_sections_id so we don't overwrite it.
+                new_rfd.rfd_sections_id = o.rfd_sections_id;
             }
 
             // Update the RFD in the database.

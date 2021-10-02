@@ -975,7 +975,13 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     let rfds = get_rfds_from_repo(&github, company).await?;
 
     // Sync rfds.
-    for (_, rfd) in rfds {
+    for (_, mut rfd) in rfds {
+        // Check if we already have an existing RFD.
+        if let Some(existing) = RFD::get_from_db(db, rfd.number) {
+            // Set the rfd_sections_id so we don't overwrite it.
+            rfd.rfd_sections_id = existing.rfd_sections_id;
+        }
+
         let mut new_rfd = rfd.upsert(db).await?;
 
         // Expand the fields in the RFD.
