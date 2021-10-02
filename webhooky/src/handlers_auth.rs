@@ -349,8 +349,8 @@ pub async fn handle_auth_ramp_callback(
     let ru = g
         .users()
         .get_all(
-            None, // department id
-            None, // location id
+            "", // department id
+            "", // location id
         )
         .await?;
 
