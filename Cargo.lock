@@ -3274,9 +3274,9 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f996ffff5a47b96156a4c4c8e400a1fec46180f5fd86864aeda582fec8e700ec"
+checksum = "86239491dbc35355d32f9240db8710433fb62ed205b28c99d30cd79e3695c4e9"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -4985,9 +4985,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.20"
+version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46125608c26121c81b0c6d693eab5a420e416da7e43c426d2e8f7df8da8a3acf"
+checksum = "1f4ed65637b8390770814083d20756f87bfa2c21bf2f110babdc5438351746e4"
 dependencies = [
  "lazy_static",
 ]

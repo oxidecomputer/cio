@@ -55,24 +55,24 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
 
             // Set the department.
             // TODO: this loop is wasteful.
-            let mut department_id = None;
+            let mut department_id = "".to_string();
             for dept in departments {
                 if dept.name == user.department {
-                    department_id = dept.id;
+                    department_id = dept.id.to_string();
                     break;
                 }
             }
 
             let manager = user.manager(db);
             let manager_ramp_id = if manager.id == user.id {
-                None
+                "".to_string()
             } else {
-                Some(uuid::Uuid::from_str(&manager.ramp_id)?)
+                manager.ramp_id.to_string()
             };
 
-            let mut location_id = None;
+            let mut location_id = "";
             if !ramp_user.location_id.is_empty() {
-                location_id = Some(uuid::Uuid::from_str(&ramp_user.location_id)?);
+                location_id = ramp_user.location_id;
             }
 
             let updated_user = ramp_api::types::PatchUsersRequest {
@@ -98,9 +98,9 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
             phone: user.recovery_phone.to_string(),
             role: ramp_api::types::Role::BusinessUser,
             // Add the manager.
-            direct_manager_id: Some(uuid::Uuid::from_str(&user.manager(db).ramp_id)?),
-            department_id: None,
-            location_id: None,
+            direct_manager_id: user.manager(db).ramp_id,
+            department_id: "".to_string(),
+            location_id: "".to_string(),
         };
 
         // Set the department.
@@ -148,8 +148,8 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<ramp_api::types::User>> {
         self.users()
             .get_all(
-                None, // department id
-                None, // location id
+                "", // department id
+                "", // location id
             )
             .await
     }

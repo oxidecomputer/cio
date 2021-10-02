@@ -409,8 +409,8 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
     let transactions = ramp
         .transactions()
         .get_all(
-            None,  // department id
-            None,  // location id
+            "",    // department id
+            "",    // location id
             None,  // from date
             None,  // to date
             "",    // merchant id
@@ -512,7 +512,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         }
 
         // Get the user's email for the reimbursement.
-        let email = ramp_users.get(&reimbursement.user_id.unwrap().to_string()).unwrap();
+        let email = ramp_users.get(&reimbursement.user_id).unwrap();
 
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&reimbursement.merchant);
@@ -527,7 +527,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         }
 
         let nt = NewExpensedItem {
-            transaction_id: reimbursement.id.unwrap().to_string(),
+            transaction_id: reimbursement.id.to_string(),
             expenses_vendor: "Ramp".to_string(),
             employee_email: email.to_string(),
             amount: reimbursement.amount as f32,
