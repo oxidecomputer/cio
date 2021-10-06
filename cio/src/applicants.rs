@@ -4864,7 +4864,7 @@ Sincerely,
 
         // Mostly the start date will populate from docusign, but just in case they
         // are someone who worked remotely, we might have to manually set it.
-        // TODO: ensure this is always true in the future.
+        // If docusign is incorrect, make sure Airtable always has the source of truth.
         self.start_date = existing.start_date;
     }
 
