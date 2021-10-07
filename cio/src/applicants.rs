@@ -4684,7 +4684,8 @@ Sincerely,
         for fd in form_data {
             // TODO: we could somehow use the manager data here or above. The manager data is in
             // the docusign data.
-            if fd.name == "Start Date" {
+            // Only set the start date if we haven't set it already.
+            if fd.name == "Start Date" && self.start_date.is_none() {
                 let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y")?;
 
                 send_notification_start_date = self.start_date.is_none() || self.start_date.unwrap() != start_date;
