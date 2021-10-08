@@ -214,7 +214,13 @@ impl NewRFD {
     pub fn get_discussion(content: &str) -> Result<String> {
         let re = Regex::new(r"(?m)(discussion:.*$)")?;
         match re.find(content) {
-            Some(v) => return Ok(v.as_str().replace("discussion:", "").trim().to_string()),
+            Some(v) => {
+                let d = v.as_str().replace("discussion:", "").trim().to_string();
+                if !d.starts_with("http:") {
+                    return Ok(Default::default());
+                }
+                Ok(d)
+            }
             None => Ok(Default::default()),
         }
     }
