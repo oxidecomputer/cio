@@ -216,7 +216,7 @@ impl NewRFD {
         match re.find(content) {
             Some(v) => {
                 let d = v.as_str().replace("discussion:", "").trim().to_string();
-                if !d.starts_with("http:") {
+                if !d.starts_with("http") {
                     return Ok(Default::default());
                 }
                 Ok(d)
