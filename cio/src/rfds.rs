@@ -190,7 +190,14 @@ impl NewRFD {
             None => {
                 // There is no "RFD" in our title. This is the case for RFD 31.
                 re = Regex::new(r"(?m)(^= .*$)")?;
-                let results = re.find(content).unwrap();
+                let c = re.find(content);
+                if c.is_none() {
+                    // If we couldn't find anything assume we have no title.
+                    // This was related to this error in Sentry:
+                    // https://sentry.io/organizations/oxide-computer-company/issues/2701636092/?project=-1
+                    return Ok(String::new());
+                }
+                let results = c.unwrap();
 
                 Ok(results
                     .as_str()
