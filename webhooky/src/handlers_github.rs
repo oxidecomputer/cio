@@ -522,6 +522,21 @@ pub async fn handle_rfd_push(
                 return Ok(message);
             }
 
+            // Ensure the branch exists.
+            // Basically what might happen is the following:
+            // - User changes status to published.
+            // - There is a merge right after.
+            // - The branch no longer exists, but we try to get the branch here.
+            if let Err(e) = github.repos().get_branch(owner, &repo, branch).await {
+                // If we get an error here, we need to return early.
+                a(&format!(
+                    "Skipping updates to RFD in database since branch name `{}` \
+                    does not exist anymore. Likely this branch was already merged. Error getting branch: `{}`",
+                    branch, e
+                ));
+                return Ok(message);
+            }
+
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
             // We will need this later to check if the RFD's state changed.
