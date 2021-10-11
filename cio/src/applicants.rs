@@ -597,6 +597,7 @@ The Oxide Team",
                 "https://linkedin.com/{}",
                 linkedin
                     .trim_start_matches("https://linkedin.com/")
+                    .trim_start_matches("https://uk.linkedin.com/")
                     .trim_start_matches("https://www.linkedin.com/")
                     .trim_start_matches("http://linkedin.com/")
                     .trim_start_matches("http://www.linkedin.com/")
@@ -3865,6 +3866,7 @@ impl Applicant {
             "https://linkedin.com/{}",
             self.linkedin
                 .trim_start_matches("https://linkedin.com/")
+                .trim_start_matches("https://uk.linkedin.com/")
                 .trim_start_matches("https://www.linkedin.com/")
                 .trim_start_matches("http://linkedin.com/")
                 .trim_start_matches("http://www.linkedin.com/")
