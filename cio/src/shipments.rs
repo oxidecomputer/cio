@@ -1675,7 +1675,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
 
 pub fn clean_carrier_name(s: &str) -> String {
     let l = s.to_lowercase();
-    if l == "ups" {
+    if l == "ups" || l.starts_with("ups") {
         return "UPS".to_string();
     } else if l == "fedex" {
         return "FedEx".to_string();
