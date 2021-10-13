@@ -648,6 +648,15 @@ impl RFD {
         Ok(())
     }
 
+    /// Trigger updating the search index for the RFD.
+    pub async fn update_search_index(&self) -> Result<()> {
+        let client = reqwest::Client::new();
+        let req = client.put(&format!("https://rfd.shared.oxide.computer/api/search/{}", self.number));
+        req.send().await?;
+
+        Ok(())
+    }
+
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
     pub async fn expand(&mut self, github: &octorust::Client, company: &Company) -> Result<()> {
@@ -1011,6 +1020,9 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
         // Update the RFD again.
         // We do this so the expand functions are only one place.
         new_rfd.update(db).await?;
+
+        // Now that the database is updated, update the search index.
+        new_rfd.update_search_index().await?;
     }
 
     // Update rfds in airtable.
