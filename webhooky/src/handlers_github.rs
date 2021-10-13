@@ -564,6 +564,10 @@ pub async fn handle_rfd_push(
                 new_rfd.number_string
             ));
 
+            // Now that the database is updated, update the search index.
+            rfd.update_search_index().await?;
+            a("[SUCCESS]: triggered update of the search index");
+
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
             generate_shorturls_for_rfds(db, github, company, "configs").await?;
