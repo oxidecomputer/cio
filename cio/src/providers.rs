@@ -74,15 +74,15 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
             }
 
             let role = if ramp_user.role == ramp_api::types::Role::BusinessOwner {
-                ramp_api::types::Role::BusinessAdmin
+                None
             } else {
-                ramp_user.role.clone()
+                Some(ramp_user.role.clone())
             };
 
             let updated_user = ramp_api::types::PatchUsersRequest {
                 department_id,
                 direct_manager_id: manager_ramp_id,
-                role: Some(role),
+                role,
                 location_id,
             };
 
