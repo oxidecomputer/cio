@@ -278,28 +278,38 @@ impl NewCertificate {
         let owner = &company.github_org;
         let repo = "configs";
 
-        let (cert, _) = get_file_content_from_repo(
+        match get_file_content_from_repo(
             github,
             owner,
             repo,
             "", // if empty it uses the default branch
             &self.get_github_path("fullchain.pem"),
         )
-        .await?;
-        if !cert.is_empty() {
-            self.certificate = from_utf8(&cert)?.to_string();
+        .await
+        {
+            Ok((cert, _)) => {
+                if !cert.is_empty() {
+                    self.certificate = from_utf8(&cert)?.to_string();
+                }
+            }
+            Err(_) => (),
         }
 
-        let (p, _) = get_file_content_from_repo(
+        match get_file_content_from_repo(
             github,
             owner,
             repo,
             "", // if empty it uses the default branch
             &self.get_github_path("privkey.pem"),
         )
-        .await?;
-        if !p.is_empty() {
-            self.private_key = from_utf8(&p)?.to_string();
+        .await
+        {
+            Ok((p, _)) => {
+                if !p.is_empty() {
+                    self.private_key = from_utf8(&p)?.to_string();
+                }
+            }
+            Err(_) => (),
         }
 
         let exp_date = self.expiration_date();
