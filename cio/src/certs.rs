@@ -278,7 +278,7 @@ impl NewCertificate {
         let owner = &company.github_org;
         let repo = "configs";
 
-        match get_file_content_from_repo(
+        if let Ok((cert, _)) = get_file_content_from_repo(
             github,
             owner,
             repo,
@@ -287,15 +287,12 @@ impl NewCertificate {
         )
         .await
         {
-            Ok((cert, _)) => {
-                if !cert.is_empty() {
-                    self.certificate = from_utf8(&cert)?.to_string();
-                }
+            if !cert.is_empty() {
+                self.certificate = from_utf8(&cert)?.to_string();
             }
-            Err(_) => (),
         }
 
-        match get_file_content_from_repo(
+        if let Ok((p, _)) = get_file_content_from_repo(
             github,
             owner,
             repo,
@@ -304,12 +301,9 @@ impl NewCertificate {
         )
         .await
         {
-            Ok((p, _)) => {
-                if !p.is_empty() {
-                    self.private_key = from_utf8(&p)?.to_string();
-                }
+            if !p.is_empty() {
+                self.private_key = from_utf8(&p)?.to_string();
             }
-            Err(_) => (),
         }
 
         let exp_date = self.expiration_date();
