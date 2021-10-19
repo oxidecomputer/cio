@@ -41,6 +41,11 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
             return Ok(String::new());
         }
 
+        // Only do this if we have a phone number for the user.
+        if user.recovery_phone.is_empty() {
+            return Ok(String::new());
+        }
+
         // TODO: this is wasteful find another way to do this.
         let departments = self.departments().get_all().await?;
 
