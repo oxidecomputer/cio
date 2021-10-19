@@ -3181,12 +3181,12 @@ pub async fn refresh_db_applicants(db: &Database, company: &Company) -> Result<(
             .await?;
         let values = sheet_values.values;
 
-        if values.is_empty() {
-            panic!(
-                "unable to retrieve any data values from Google sheet {} {}",
-                sheet_id, sheet_name
-            );
-        }
+        assert!(
+            !values.is_empty(),
+            "unable to retrieve any data values from Google sheet {} {}",
+            sheet_id,
+            sheet_name
+        );
 
         // Parse the sheet columns.
         let columns = ApplicantSheetColumns::parse(&values);

@@ -16,15 +16,14 @@ use std::env;
 
 use anyhow::{bail, Result};
 use cio_api::{companies::Companys, db::Database};
-use clap::{AppSettings, Clap};
+use clap::Parser;
 use sentry::IntoDsn;
 use slog::Drain;
 
 /// This doc string acts as a help message when the user runs '--help'
 /// as do all doc strings on fields.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 #[clap(version = clap::crate_version!(), author = clap::crate_authors!("\n"))]
-#[clap(setting = AppSettings::ColoredHelp)]
 struct Opts {
     /// Print debug info
     #[clap(short, long)]
@@ -34,7 +33,7 @@ struct Opts {
     subcmd: SubCommand,
 }
 
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 enum SubCommand {
     Server(Server),
 
@@ -63,7 +62,7 @@ enum SubCommand {
 }
 
 /// A subcommand for running the server.
-#[derive(Clap, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct Server {
     /// IP address and port that the server should listen
     #[clap(short, long, default_value = "0.0.0.0:8080")]
@@ -79,83 +78,83 @@ pub struct Server {
 }
 
 /// A subcommand for running the background job of syncing analytics.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncAnalytics {}
 
 /// A subcommand for running the background job of syncing API tokens.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncAPITokens {}
 
 /// A subcommand for running the background job of syncing applications.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncApplications {}
 
 /// A subcommand for running the background job of syncing asset inventory.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncAssetInventory {}
 
 /// A subcommand for running the background job of syncing companies.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncCompanies {}
 
 /// A subcommand for running the background job of syncing configs.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncConfigs {}
 
 /// A subcommand for running the background job of syncing finance data.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncFinance {}
 
 /// A subcommand for running the background job of syncing functions.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncFunctions {}
 
 /// A subcommand for running the background job of syncing interviews.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncInterviews {}
 
 /// A subcommand for running the background job of syncing huddles.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncHuddles {}
 
 /// A subcommand for running the background job of syncing journal clubs.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncJournalClubs {}
 
 /// A subcommand for running the background job of syncing mailing lists.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncMailingLists {}
 
 /// A subcommand for running the background job of syncing other things.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncOther {}
 
 /// A subcommand for running the background job of syncing recorded_meetings.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncRecordedMeetings {}
 
 /// A subcommand for running the background job of syncing repos.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncRepos {}
 
 /// A subcommand for running the background job of syncing RFDs.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncRFDs {}
 
 /// A subcommand for running the background job of syncing shipments.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncShipments {}
 
 /// A subcommand for running the background job of syncing shorturls.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncShorturls {}
 
 /// A subcommand for running the background job of syncing swag inventory.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncSwagInventory {}
 
 /// A subcommand for running the background job of syncing travel data.
-#[derive(Clap, Debug, Clone)]
+#[derive(Parser, Debug, Clone)]
 pub struct SyncTravel {}
 
 #[tokio::main]
