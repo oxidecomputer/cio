@@ -53,7 +53,7 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str, background
         // If the server stopped and restarted, we might have a lingering job
         // that we want to ignore and instead start a new one.
         // Check if the duration it was started is longer than a few hours ago.
-        let hours = -6;
+        let hours = -2;
         let duration_from_now = f.created_at.signed_duration_since(Utc::now());
         if (duration_from_now.num_hours()) > hours {
             info!(
