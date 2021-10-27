@@ -1124,11 +1124,7 @@ The Oxide Team",
 
             // Mark the column as true not false.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
-            let rng = format!(
-                "{}{}",
-                colmn.nth(sent_email_received_column_index).unwrap().to_string(),
-                row_index
-            );
+            let rng = format!("{}{}", colmn.nth(sent_email_received_column_index).unwrap(), row_index);
 
             sheets_client
                 .spreadsheets()
@@ -1154,11 +1150,7 @@ The Oxide Team",
         if !self.sent_email_follow_up {
             // Get the right cell to eventually change in the google sheet.
             let mut colmn = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars();
-            let rng = format!(
-                "{}{}",
-                colmn.nth(sent_email_follow_up_index).unwrap().to_string(),
-                row_index
-            );
+            let rng = format!("{}{}", colmn.nth(sent_email_follow_up_index).unwrap(), row_index);
 
             let status = crate::applicant_status::Status::from_str(&self.status).unwrap_or_default();
             if status == crate::applicant_status::Status::Declined
@@ -2334,7 +2326,7 @@ aws_role = 'arn:aws:iam::128433874814:role/GSuiteSSO,arn:aws:iam::128433874814:s
 department = ''
 manager = ''
 ```"#,
-            self.start_date.unwrap().format("%A, %B %-d, %C%y").to_string(),
+            self.start_date.unwrap().format("%A, %B %-d, %C%y"),
             self.email,
             self.github,
             self.phone,

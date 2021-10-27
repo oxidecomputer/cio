@@ -424,11 +424,11 @@ The Oxide Team
 
             // Generate a cover for the packet.
             let mut cover_path = env::temp_dir();
-            cover_path.push(format!("{}.html", email.to_string()));
+            cover_path.push(format!("{}.html", email));
             let mut file = fs::File::create(&cover_path)?;
             file.write_all(cover_html.as_bytes())?;
             let mut cover_output = env::temp_dir();
-            cover_output.push(format!("{}.pdf", email.to_string()));
+            cover_output.push(format!("{}.pdf", email));
             let cover_page_str = cover_output.clone().to_str().unwrap().to_string();
             // Convert it to a PDF with pandoc.
             let cmd_output = Command::new("pandoc")
@@ -452,7 +452,7 @@ The Oxide Team
 
                 // Generate a header for the interviewee.
                 let mut html_path = env::temp_dir();
-                html_path.push(format!("{}-{}.html", email.to_string(), username));
+                html_path.push(format!("{}-{}.html", email, username));
                 let mut file = fs::File::create(&html_path)?;
                 // TODO: add the date and time and the real name here.
                 file.write_all(
@@ -466,7 +466,7 @@ The Oxide Team
                     .as_bytes(),
                 )?;
                 let mut header_output = env::temp_dir();
-                header_output.push(format!("{}-{}.pdf", email.to_string(), username));
+                header_output.push(format!("{}-{}.pdf", email, username));
                 let header_page_str = header_output.clone().to_str().unwrap().to_string();
                 // Convert it to a PDF with pandoc.
                 let cmd_output = Command::new("pandoc")

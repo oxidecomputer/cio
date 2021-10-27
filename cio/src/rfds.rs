@@ -29,7 +29,7 @@ use crate::{
     core::{GitHubPullRequest, UpdateAirtableRecord},
     db::Database,
     repos::FromUrl,
-    schema::{rfds as r_f_ds, rfds},
+    schema::rfds as r_f_ds,
     utils::{
         create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string, get_file_content_from_repo,
         truncate, write_file,

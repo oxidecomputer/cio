@@ -174,7 +174,6 @@ pub async fn handle_google_sheets_edit(
             .chars()
             .nth(event.event.range.column_start.try_into()?)
             .unwrap()
-            .to_string()
     );
     let column_header = sheets
         .spreadsheets()
@@ -257,11 +256,7 @@ pub async fn handle_google_sheets_edit(
         let value_column = event.event.range.column_start + 1;
         cell_name = format!(
             "{}{}",
-            column_letters
-                .chars()
-                .nth(value_column.try_into()?)
-                .unwrap()
-                .to_string(),
+            column_letters.chars().nth(value_column.try_into()?).unwrap(),
             event.event.range.row_start
         );
         let value_in_tension_2 = sheets
@@ -276,11 +271,7 @@ pub async fn handle_google_sheets_edit(
         let value_column = event.event.range.column_start - 1;
         cell_name = format!(
             "{}{}",
-            column_letters
-                .chars()
-                .nth(value_column.try_into()?)
-                .unwrap()
-                .to_string(),
+            column_letters.chars().nth(value_column.try_into()?).unwrap(),
             event.event.range.row_start
         );
         let value_in_tension_1 = sheets
@@ -1863,9 +1854,7 @@ pub async fn handle_shipbob(
     sentry::capture_message(
         &format!(
             "shipbob headers: topic `{}` subscription id `{}`: `{}`",
-            shipbob_topic,
-            shipbob_subscription_id,
-            event.to_string()
+            shipbob_topic, shipbob_subscription_id, event
         ),
         sentry::Level::Info,
     );

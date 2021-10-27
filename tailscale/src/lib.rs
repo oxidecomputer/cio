@@ -159,8 +159,7 @@ impl fmt::Display for APIError {
         write!(
             f,
             "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
+            self.status_code, self.body
         )
     }
 }
@@ -170,8 +169,7 @@ impl fmt::Debug for APIError {
         write!(
             f,
             "APIError: status code -> {}, body -> {}",
-            self.status_code.to_string(),
-            self.body
+            self.status_code, self.body
         )
     }
 }

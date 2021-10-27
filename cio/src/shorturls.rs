@@ -31,11 +31,7 @@ pub async fn generate_shorturls_for_repos(
     for repo in repos {
         let link = ShortUrl {
             name: repo.name.to_string(),
-            description: format!(
-                "The GitHub repository at {}/{}",
-                repo.owner.to_string(),
-                repo.name.to_string()
-            ),
+            description: format!("The GitHub repository at {}/{}", repo.owner, repo.name),
             link: repo.html_url.to_string(),
             ip: "var.maverick_ip".to_string(),
             subdomain: subdomain.to_string(),

@@ -2376,7 +2376,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
         new_event.summary = format!("{} {}'s Anniversary", user.first_name, user.last_name);
         new_event.description = format!(
             "On {}, {} {} joined the company!",
-            user.start_date.format("%A, %B %-d, %C%y").to_string(),
+            user.start_date.format("%A, %B %-d, %C%y"),
             user.first_name,
             user.last_name
         );
