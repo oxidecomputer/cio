@@ -2240,9 +2240,9 @@ pub async fn sync_certificates(
 
         let mut send_notification = false;
 
-        // If the cert is going to expire in less than 7 days, renew it.
+        // If the cert is going to expire in less than 12 days, renew it.
         // Otherwise, return early.
-        if certificate.valid_days_left > 7 {
+        if certificate.valid_days_left > 12 {
             info!(
                 "cert {} is valid for {} more days, skipping",
                 certificate.domain, certificate.valid_days_left
