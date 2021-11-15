@@ -131,6 +131,11 @@ pub async fn generate_shorturls_for_configs_links(
 
         // Add any aliases.
         for alias in link.aliases {
+            // Skip it if they repeated the name as an alias.
+            if alias == link.name {
+                continue;
+            }
+
             // Set the name.
             l.name = alias;
 
