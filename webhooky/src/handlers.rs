@@ -88,7 +88,16 @@ pub async fn handle_rfd_update_by_number(
     let mut rfd = result.unwrap();
 
     // Update the RFD.
-    rfd.expand(&github, &oxide).await?;
+    if let Err(e) = rfd.expand(&github, &oxide).await {
+        if (e.to_string()).contains("No commit found for the ref") {
+            // Likely it was merged into master, let's try that.
+            // And likely something messed up, so let's try again.
+            // And no worries if it's not merged into master it will just fail again.
+            // And won't save it back to the database.
+            rfd.state = "published".to_string();
+            rfd.expand(&github, &oxide).await?;
+        }
+    }
     info!("updated  RFD {}", rfd.number_string);
 
     rfd.convert_and_upload_pdf(db, &github, &oxide).await?;
