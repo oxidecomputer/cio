@@ -239,20 +239,8 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 // Refresh DocuSign for the applicants.
                 cio_api::applicants::refresh_docusign_for_applicants(&db, &company).await?;
 
-                cio_api::applicants::refresh_background_checks(&db, &company).await?;
-
-                // TODO: when we remove google sheets, we no longer need these.
-                //
-                // Do the old applicants from Google sheets.
-                cio_api::applicants::refresh_db_applicants(&db, &company).await?;
-
-                // These come from the sheet at:
-                // https://docs.google.com/spreadsheets/d/1BOeZTdSNixkJsVHwf3Z0LMVlaXsc_0J8Fsy9BkCa7XM/edit#gid=2017435653
-                cio_api::applicants::update_applications_with_scoring_forms(&db, &company).await?;
-
                 // This must be after cio_api::applicants::update_applications_with_scoring_forms, so that if someone
                 // has done the application then we remove them from the scorers.
-                cio_api::applicants::update_applications_with_scoring_results(&db, &company).await?;
                 cio_api::applicants::update_applicant_reviewers_leaderboard(&db, &company).await?;
             }
         }
