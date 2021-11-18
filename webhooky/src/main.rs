@@ -238,10 +238,6 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
 
                 // Refresh DocuSign for the applicants.
                 cio_api::applicants::refresh_docusign_for_applicants(&db, &company).await?;
-
-                // This must be after cio_api::applicants::update_applications_with_scoring_forms, so that if someone
-                // has done the application then we remove them from the scorers.
-                cio_api::applicants::update_applicant_reviewers_leaderboard(&db, &company).await?;
             }
         }
         SubCommand::SyncAssetInventory(_) => {
