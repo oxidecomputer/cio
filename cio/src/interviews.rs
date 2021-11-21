@@ -234,10 +234,17 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                 interview.email = attendee.email.to_string();
             }
 
-            if let Ok(a) = applicants::dsl::applicants
+            if let Ok(mut a) = applicants::dsl::applicants
                 .filter(applicants::dsl::email.eq(interview.email.to_string()))
                 .first::<Applicant>(&db.conn())
             {
+                // Set the applicant to interviewing.
+                if a.status != crate::applicant_status::Status::Interviewing.to_string() {
+                    // This is done in applicants refresh as well, but let's do it here as well just in
+                    // case.
+                    a.status = crate::applicant_status::Status::Interviewing.to_string();
+                    a.update(db).await?;
+                }
                 interview.applicant = vec![a.airtable_record_id];
                 interview.name = a.name.to_string();
             }
