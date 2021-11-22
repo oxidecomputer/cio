@@ -239,7 +239,10 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                 .first::<Applicant>(&db.conn())
             {
                 // Set the applicant to interviewing.
-                if a.status != crate::applicant_status::Status::Interviewing.to_string() {
+                if a.status != crate::applicant_status::Status::Interviewing.to_string()
+                    && (a.status == crate::applicant_status::Status::NextSteps.to_string()
+                        || a.status == crate::applicant_status::Status::NeedsToBeTriaged.to_string())
+                {
                     // This is done in applicants refresh as well, but let's do it here as well just in
                     // case.
                     a.status = crate::applicant_status::Status::Interviewing.to_string();
