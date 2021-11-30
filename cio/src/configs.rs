@@ -1819,9 +1819,13 @@ pub async fn sync_users(
         // Remove the user from the github org.
         github.delete_user(db, company, &user).await?;
 
-        // TODO: Delete the user from Ramp.
+        // TODO: Deactivate the user from Ramp.
+        // We only want to lock the cards from more purchases. Removing GSuite/Okta
+        // will disallow them from logging in. And we want their purchase history so
+        // we don't want to delete them.
 
         // TODO: Delete the user from Slack.
+        // Removing SSO (GSuite/Okta) will disallow them from logging in.
 
         // Delete the user from Zoom.
         if let Ok(ref zoom) = zoom_auth {
