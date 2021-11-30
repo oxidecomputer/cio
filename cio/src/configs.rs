@@ -1809,27 +1809,29 @@ pub async fn sync_users(
             okta.delete_user(db, company, &user).await?;
         }
 
-        // TODO: Delete the user from Ramp.
-
         if company.okta_domain.is_empty() {
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             // Suspend the user from GSuite so we can transfer their data.
             gsuite.delete_user(db, company, &user).await?;
-
-            // Delete the user from Airtable.
-            airtable_auth.delete_user(db, company, &user).await?;
-
-            // TODO: Delete the user from Slack.
-
-            // Delete the user from Zoom.
-            if let Ok(ref zoom) = zoom_auth {
-                zoom.delete_user(db, company, &user).await?;
-            }
-
-            // Remove the user from the github org.
-            github.delete_user(db, company, &user).await?;
         }
+
+        // Remove the user from the github org.
+        github.delete_user(db, company, &user).await?;
+
+        // TODO: Delete the user from Ramp.
+
+        // TODO: Delete the user from Slack.
+
+        // Delete the user from Zoom.
+        if let Ok(ref zoom) = zoom_auth {
+            zoom.delete_user(db, company, &user).await?;
+        }
+
+        // Delete the user from Airtable.
+        // Okta should take care of this if we are using Okta.
+        // But let's do it anyway.
+        airtable_auth.delete_user(db, company, &user).await?;
 
         // Delete the user from the database and Airtable.
         user.delete(db).await?;
