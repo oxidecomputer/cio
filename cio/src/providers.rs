@@ -1110,15 +1110,15 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         if user.okta_id.is_empty() {
             // Return early.
             warn!(
-                "could not suspend user `{}` from okta because they don't have an okta_id",
+                "could not deactivate user `{}` from okta because they don't have an okta_id",
                 user.email
             );
             return Ok(());
         }
 
-        // Suspend the user.
-        self.users().suspend(&user.okta_id).await?;
-        info!("suspended user `{}` from Okta", user.email);
+        // Deactivate the user.
+        self.users().deactivate(&user.okta_id, true).await?;
+        info!("deactivate user `{}` from Okta", user.email);
 
         Ok(())
     }
