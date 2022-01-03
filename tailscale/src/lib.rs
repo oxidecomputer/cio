@@ -129,7 +129,7 @@ impl Tailscale {
         Ok(r.devices)
     }
 
-    /// List devices.
+    /// Delete device.
     pub async fn delete_device(&self, device_id: &str) -> Result<(), APIError> {
         let request = self.request(Method::DELETE, &format!("device/{}", device_id), (), None);
 
