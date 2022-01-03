@@ -483,7 +483,7 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "barcoders",
- "base64 0.12.3",
+ "base64 0.13.0",
  "byte-unit",
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
