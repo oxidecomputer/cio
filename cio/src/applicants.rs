@@ -1244,7 +1244,7 @@ your candidate materials, we loved reading them. Although engineers at the
 early stages of their career are unlikely to be a fit for us right now, we
 are growing, and encourage you to consider re-applying in the future.
 
- We would absolutely love to work with you in the future and cannot wait for
+We would absolutely love to work with you in the future and cannot wait for
 that stage of the company!
 
 All the best,
@@ -1306,14 +1306,17 @@ The Oxide Team",
                 &format!(
                     "Dear {},
 
-We are so humbled by your application to join Oxide Computer Company. At this
-stage of the company we are hyper-focused on certain areas of the stack and
-when we need specific domain space experience such as yours, please engage
-with us. Our roles will be updated as we need them.
+We are so humbled by your application to join Oxide Computer Company.  We
+are grateful you took the time to apply and put so much thought into the
+candidate materials; we loved reading them.
 
-We are grateful you took the time to apply and put so much thought into the
-candidate materials, we loved reading them. We would absolutely love to work
-with you in the future and cannot wait for that stage of the company!
+That said, we have many more applicants than we can accommodate at this
+stage of the company, and we are afraid that we cannot move forward with you
+at this time.  We don't anticipate being a small company forever, however,
+and we envision an Oxide that is one day big enough to be an excellent
+potential fit for you.  We encourage you to stay tuned and stay close, with
+our thanks once again for the time and thought you put into your application
+to Oxide!
 
 All the best,
 The Oxide Team",
