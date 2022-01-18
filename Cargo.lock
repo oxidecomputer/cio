@@ -509,7 +509,7 @@ dependencies = [
  "html2text",
  "image 0.23.14",
  "log 0.4.14",
- "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
+ "lopdf 0.27.0",
  "macros 0.1.0",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
@@ -590,7 +590,7 @@ dependencies = [
  "html2text",
  "image 0.23.14",
  "log 0.4.14",
- "lopdf 0.26.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
+ "lopdf 0.27.0",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=a2b41da800408057bf6f4e8c6ac107b4a8a148b2)",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
@@ -2260,14 +2260,15 @@ dependencies = [
 
 [[package]]
 name = "lopdf"
-version = "0.26.0"
-source = "git+https://github.com/J-F-Liu/lopdf?branch=master#fec4729625312da00243b58db2169168fe4ed65d"
+version = "0.27.0"
+source = "git+https://github.com/J-F-Liu/lopdf?branch=master#745cb69924cead5e9a083f300079225f78b5fcba"
 dependencies = [
  "chrono",
  "dtoa",
  "encoding",
  "flate2",
  "itoa",
+ "lazy_static",
  "linked-hash-map",
  "log 0.4.14",
  "pom",
@@ -3105,7 +3106,7 @@ checksum = "1a2472a184bcb128d0e3db65b59ebd11d010259a5e14fd9d048cba8f2c9302d4"
 dependencies = [
  "image 0.23.14",
  "js-sys",
- "lopdf 0.26.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lopdf 0.26.0",
  "rusttype",
  "time 0.2.27",
 ]
