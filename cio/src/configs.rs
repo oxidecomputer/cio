@@ -1335,6 +1335,8 @@ pub struct HuddleConfig {
     pub link_to_airtable_workspace: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub calendar_event_fuzzy_search: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub link_to_notes: String,
     #[serde(default)]
     pub time_to_cancel: i32,
     #[serde(default, skip_serializing_if = "String::is_empty")]
