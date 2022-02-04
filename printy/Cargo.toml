@@ -10,7 +10,7 @@ edition = "2018"
 [dependencies]
 cio-api = { path = "../cio" }
 dropshot = "^0.5.0"
-http = "0.2.0"
+http = "0.2.6"
 log = { version = "0.4", features = ["serde"] }
 reqwest = "^0.11"
 pretty_env_logger = "0.4"
