@@ -86,8 +86,6 @@ pub async fn handle_rfd_update_by_number(
     }
     let mut rfd = result.unwrap();
 
-    println!("got rfd: {:#?}", rfd);
-
     // Update the RFD.
     if let Err(e) = rfd.expand(&github, &oxide).await {
         if (e.to_string()).contains("No commit found for the ref") {
