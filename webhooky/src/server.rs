@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
-use anyhow::{bail, Result};
+use anyhow::{bail,anyhow, Result};
 use chrono::{DateTime, Utc};
 use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
 use clokwerk::{AsyncScheduler, TimeUnits};
@@ -36,6 +36,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     let config_dropshot = ConfigDropshot {
         bind_address: s.address.parse()?,
         request_body_max_bytes: 107374182400, // 100 Gigiabytes.
+        tls: None,
     };
 
     /*
@@ -249,7 +250,9 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     /*
      * Set up the server.
      */
-    let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)?.start();
+    let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
+        .map_err(|error| anyhow!("failed to create server: {}", error))?
+        .start();
 
     // For Cloud run & ctrl+c, shutdown gracefully.
     // "The main process inside the container will receive SIGTERM, and after a grace period,

@@ -27,6 +27,7 @@ async fn main() -> Result<(), String> {
     let config_dropshot = ConfigDropshot {
         bind_address: service_address.parse().unwrap(),
         request_body_max_bytes: 100000000,
+        tls: None,
     };
 
     /*
@@ -79,8 +80,7 @@ async fn main() -> Result<(), String> {
      * Set up the server.
      */
     let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
-        .map_err(|error| format!("failed to start server: {}", error))
-        .unwrap()
+        .map_err(|error| format!("failed to start server: {}", error))?
         .start();
     server.await
 }
