@@ -86,6 +86,8 @@ pub async fn handle_rfd_update_by_number(
     }
     let mut rfd = result.unwrap();
 
+    println!("got rfd: {:#?}", rfd);
+
     // Update the RFD.
     if let Err(e) = rfd.expand(&github, &oxide).await {
         if (e.to_string()).contains("No commit found for the ref") {
@@ -95,6 +97,8 @@ pub async fn handle_rfd_update_by_number(
             // And won't save it back to the database.
             rfd.state = "published".to_string();
             rfd.expand(&github, &oxide).await?;
+        } else {
+            bail!("failed to expand RFD: {}", e);
         }
     }
     info!("updated  RFD {}", rfd.number_string);
