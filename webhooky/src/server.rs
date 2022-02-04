@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
-use anyhow::{bail,anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Utc};
 use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
 use clokwerk::{AsyncScheduler, TimeUnits};
