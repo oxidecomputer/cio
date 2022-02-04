@@ -6,7 +6,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use checkr::Checkr;
  * use serde::{Deserialize, Serialize};
  *

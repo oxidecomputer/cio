@@ -6,7 +6,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use quickbooks::QuickBooks;
  * use serde::{Deserialize, Serialize};
  *

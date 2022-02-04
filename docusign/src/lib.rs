@@ -6,7 +6,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use docusign::DocuSign;
  * use serde::{Deserialize, Serialize};
  *

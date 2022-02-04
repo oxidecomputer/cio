@@ -6,7 +6,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use google_geocode::Geocode;
  * use serde::{Deserialize, Serialize};
  *

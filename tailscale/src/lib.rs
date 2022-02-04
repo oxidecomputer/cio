@@ -6,7 +6,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use serde::{Deserialize, Serialize};
  * use tailscale_api::Tailscale;
  *
