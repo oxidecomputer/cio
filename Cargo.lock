@@ -520,7 +520,7 @@ dependencies = [
  "html2text",
  "image 0.23.14",
  "log 0.4.14",
- "lopdf 0.27.0",
+ "lopdf 0.27.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
  "macros 0.1.0",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
@@ -530,7 +530,7 @@ dependencies = [
  "openssl",
  "phonenumber",
  "pretty_env_logger",
- "printpdf",
+ "printpdf 0.5.0",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api",
  "rand 0.8.4",
@@ -601,7 +601,7 @@ dependencies = [
  "html2text",
  "image 0.23.14",
  "log 0.4.14",
- "lopdf 0.27.0",
+ "lopdf 0.27.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
  "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=a2b41da800408057bf6f4e8c6ac107b4a8a148b2)",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
@@ -611,7 +611,7 @@ dependencies = [
  "openssl",
  "phonenumber",
  "pretty_env_logger",
- "printpdf",
+ "printpdf 0.3.4",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api",
  "rand 0.8.4",
@@ -2287,6 +2287,24 @@ dependencies = [
 [[package]]
 name = "lopdf"
 version = "0.27.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8146695b97752d9c66da0092c6364f8f3ca683f5ea34341db21e5550c3b8c4f4"
+dependencies = [
+ "dtoa",
+ "encoding",
+ "flate2",
+ "itoa",
+ "lazy_static",
+ "linked-hash-map",
+ "log 0.4.14",
+ "pom",
+ "time 0.2.27",
+ "weezl",
+]
+
+[[package]]
+name = "lopdf"
+version = "0.27.0"
 source = "git+https://github.com/J-F-Liu/lopdf?branch=master#745cb69924cead5e9a083f300079225f78b5fcba"
 dependencies = [
  "chrono",
@@ -2852,6 +2870,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "owned_ttf_parser"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60ac8dda2e5cc09bf6480e3b3feff9783db251710c922ae9369a429c51efdeb0"
+dependencies = [
+ "ttf-parser",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3134,6 +3161,19 @@ dependencies = [
  "js-sys",
  "lopdf 0.26.0",
  "rusttype",
+ "time 0.2.27",
+]
+
+[[package]]
+name = "printpdf"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0980df987fbe1a966101e137ca7ce6e2b46cea2527232e0c3e87537e97ee989d"
+dependencies = [
+ "image 0.23.14",
+ "js-sys",
+ "lopdf 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "owned_ttf_parser",
  "time 0.2.27",
 ]
 
@@ -5066,6 +5106,12 @@ name = "try-lock"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
+
+[[package]]
+name = "ttf-parser"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ae2f58a822f08abdaf668897e96a5656fe72f5a9ce66422423e8849384872e6"
 
 [[package]]
 name = "twoway"
