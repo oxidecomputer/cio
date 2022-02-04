@@ -69,7 +69,7 @@ okta = "^0.2.2"
 openssl = "0.10"
 phonenumber = "0.2"
 pretty_env_logger = "0.4"
-printpdf = { version = "^0.3.2" }
+printpdf = { version = "^0.5.0" }
 quickbooks = "^0.1.12"
 #quickbooks = { path = "../quickbooks" }
 ramp-api = "^0.2.2"
