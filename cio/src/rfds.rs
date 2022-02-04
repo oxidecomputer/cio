@@ -338,14 +338,13 @@ impl RFD {
         branch: &str,
         is_markdown: bool,
     ) -> Result<String> {
-        let html: String;
-        if is_markdown {
+        let html: String = if is_markdown {
             // Parse the markdown.
-            html = parse_markdown(&self.content);
+            parse_markdown(&self.content)
         } else {
             // Parse the acsiidoc.
-            html = self.parse_asciidoc(github, owner, repo, branch).await?;
-        }
+            self.parse_asciidoc(github, owner, repo, branch).await?
+        };
 
         clean_rfd_html_links(&html, &self.number_string)
     }

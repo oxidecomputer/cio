@@ -1910,9 +1910,8 @@ pub async fn sync_buildings(
         let id = b.building_id.to_string();
 
         // Check if we have that building already in our database.
-        let building: Building;
-        match building_map.get(&id) {
-            Some(val) => building = val.clone(),
+        let building: Building = match building_map.get(&id) {
+            Some(val) => val.clone(),
             None => {
                 // If the building does not exist in our map we need to delete
                 // them from GSuite.
@@ -1925,7 +1924,7 @@ pub async fn sync_buildings(
                 info!("deleted building from gsuite: {}", id);
                 continue;
             }
-        }
+        };
 
         // Update the building with the settings from the database for the building.
         let new_b = update_gsuite_building(&b, &building, &id);
@@ -2029,9 +2028,8 @@ pub async fn sync_conference_rooms(
         let id = r.resource_name.to_string();
 
         // Check if we have that resource already in our database.
-        let resource: ConferenceRoom;
-        match conference_room_map.get(&id) {
-            Some(val) => resource = val.clone(),
+        let resource: ConferenceRoom = match conference_room_map.get(&id) {
+            Some(val) => val.clone(),
             None => {
                 // If the conference room does not exist in our map we need to delete
                 // it from GSuite.
@@ -2044,7 +2042,7 @@ pub async fn sync_conference_rooms(
                 info!("deleted conference room from gsuite: {}", id);
                 continue;
             }
-        }
+        };
 
         // Update the resource with the settings from the database for the resource.
         let new_r = update_gsuite_calendar_resource(&r, &resource, &r.resource_id);
