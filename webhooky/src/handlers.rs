@@ -227,7 +227,7 @@ pub async fn handle_slack_commands(
             }
         }
         SlackCommand::Meet => {
-            let mut name = text.replace(" ", "-");
+            let mut name = text.replace(' ', "-");
             if name.is_empty() {
                 // Generate a new random string.
                 name = thread_rng()

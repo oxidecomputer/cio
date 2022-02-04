@@ -450,7 +450,7 @@ impl UserConfig {
             }
             self.work_address_formatted = building.address_formatted.to_string();
 
-            let city_group = building.city.to_lowercase().replace(" ", "-");
+            let city_group = building.city.to_lowercase().replace(' ', "-");
 
             // Ensure we have added the group for that city.
             if !self.groups.contains(&city_group) {

@@ -21,7 +21,7 @@ fn terraform_name_helper(
     if first_char.is_digit(10) {
         out.write(&("_".to_owned() + &param.replace('.', "")))?;
     } else {
-        out.write(&param.replace(".", ""))?;
+        out.write(&param.replace('.', ""))?;
     }
     Ok(())
 }

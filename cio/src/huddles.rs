@@ -440,7 +440,7 @@ pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
             let notes = format!(
                 "# {} Huddle on {}\n\n**Meeting Recording:** {}\n\n## Notes\n\n{}\n\n## Action \
                  Items\n\n{}",
-                name.replace("-", " ").to_uppercase(),
+                name.replace('-', " ").to_uppercase(),
                 record.fields.date.format(date_format),
                 record.fields.recording,
                 record.fields.notes,

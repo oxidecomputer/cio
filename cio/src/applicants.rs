@@ -1554,7 +1554,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
                         info!("zip file {} comment: {}", i, comment);
                     }
 
-                    if (&*file.name()).ends_with('/') {
+                    if (*file.name()).ends_with('/') {
                         info!("zip file {} extracted to \"{}\"", i, output.as_path().display());
                         fs::create_dir_all(&output)?;
                     } else {
@@ -1629,7 +1629,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
         result = read_doc(path.clone());
     } else {
         let contents = drive_client.files().download_by_id(&id).await?;
-        path.push(name.to_string());
+        path.push(&name);
 
         let mut file = fs::File::create(&path)?;
         file.write_all(&contents)?;
@@ -2329,11 +2329,11 @@ Sincerely,
         // Cleanup and parse the phone number and country code.
         let mut phone = self
             .phone
-            .replace(" ", "")
-            .replace("-", "")
-            .replace("+", "")
-            .replace("(", "")
-            .replace(")", "");
+            .replace(' ', "")
+            .replace('-', "")
+            .replace('+', "")
+            .replace('(', "")
+            .replace(')', "");
 
         let location = self.location.to_string();
         let mut country = phonenumber::country::US;
@@ -2408,7 +2408,7 @@ Sincerely,
         let country_code = metadata.id().to_string().to_lowercase();
 
         // Get the last ten character of the string.
-        if let Ok(phone_number) = phonenumber::parse(Some(country), phone.to_string()) {
+        if let Ok(phone_number) = phonenumber::parse(Some(country), &phone) {
             if !phone_number.is_valid() {
                 info!("phone number is invalid: {}", phone);
             }

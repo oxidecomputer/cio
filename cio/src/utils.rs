@@ -22,7 +22,7 @@ pub fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
     fs::create_dir_all(file.parent().unwrap())?;
 
     // Write to the file.
-    let mut f = fs::File::create(file.to_path_buf())?;
+    let mut f = fs::File::create(file)?;
     f.write_all(contents)?;
 
     info!("wrote file: {}", file.to_str().unwrap());
@@ -326,7 +326,7 @@ pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
 }
 
 pub fn decode_base64(c: &str) -> Vec<u8> {
-    let v = c.replace("\n", "");
+    let v = c.replace('\n', "");
     let decoded = base64::decode(&v).unwrap();
     decoded.trim().to_vec()
 }

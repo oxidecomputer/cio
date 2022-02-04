@@ -217,7 +217,7 @@ impl NewSwagInventoryItem {
             .replace('(', "")
             .replace(')', "")
             .replace('-', "")
-            .replace("'", "")
+            .replace('\'', "")
             .replace("UNISEX", "U")
             .replace("WOMENS", "W")
             .replace("MENS", "M")

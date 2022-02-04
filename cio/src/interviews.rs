@@ -601,7 +601,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
                 }
             }
 
-            if (&*file.name()).ends_with('/') {
+            if (*file.name()).ends_with('/') {
                 info!("zip file {} extracted to \"{}\"", i, output.as_path().display());
                 fs::create_dir_all(&output)?;
             } else {
@@ -639,7 +639,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
     // Anything else let's use pandoc to convert it to a pdf.
     info!("converting `{}` to a PDF", name);
     let contents = drive_client.files().download_by_id(&id).await?;
-    path.push(name.to_string());
+    path.push(&name);
 
     let mut file = fs::File::create(&path)?;
     file.write_all(&contents)?;
