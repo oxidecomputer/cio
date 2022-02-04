@@ -2299,7 +2299,7 @@ dependencies = [
  "dtoa",
  "encoding",
  "flate2",
- "itoa",
+ "itoa 0.4.8",
  "lazy_static",
  "linked-hash-map",
  "log 0.4.14",
@@ -4731,9 +4731,9 @@ checksum = "f764005d11ee5f36500a149ace24e00e3da98b0158b3e2d53a7495660d3f4d60"
 
 [[package]]
 name = "tar"
-version = "0.4.37"
+version = "0.4.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6f5515d3add52e0bbdcad7b83c388bb36ba7b754dda3b5f5bc2d38640cdba5c"
+checksum = "4b55807c0344e1e6c04d7c965f5289c39a8d94ae23ed5c0b57aabac549f871c6"
 dependencies = [
  "filetime",
  "libc",
