@@ -32,7 +32,7 @@ google-drive = "^0.2.0"
 #google-drive = { path = "../../third-party-api-clients/google/drive" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
-http = "0.2.0"
+http = "0.2.6"
 hyper = { version = "0.10" }
 log = { version = "0.4", features = ["serde"] }
 mailchimp-api = "^0.1.11"
