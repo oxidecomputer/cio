@@ -52,7 +52,7 @@ gsuite-api = "^0.2.0"
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "3.5.3"
-html2text = "0.1"
+html2text = "0.2"
 image = "^0.23.14"
 Inflector = "^0.11.4"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }

@@ -523,7 +523,7 @@ dependencies = [
  "gsuite-api",
  "gusto-api",
  "handlebars",
- "html2text",
+ "html2text 0.2.1",
  "image 0.23.14",
  "log 0.4.14",
  "lopdf 0.27.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
@@ -604,7 +604,7 @@ dependencies = [
  "gsuite-api",
  "gusto-api",
  "handlebars",
- "html2text",
+ "html2text 0.1.14",
  "image 0.23.14",
  "log 0.4.14",
  "lopdf 0.27.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
@@ -1868,6 +1868,17 @@ name = "html2text"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a110e9d7889adc8928e73cc1cf5407665ceb5b8fda5c334cae2df076adfd2ed1"
+dependencies = [
+ "html5ever",
+ "markup5ever_rcdom",
+ "unicode-width",
+]
+
+[[package]]
+name = "html2text"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a26379dcb715e237b96102a12b505c553e2bffa74bae2e54658748d298660ef1"
 dependencies = [
  "html5ever",
  "markup5ever_rcdom",
