@@ -534,7 +534,7 @@ dependencies = [
  "octorust",
  "okta",
  "openssl",
- "phonenumber",
+ "phonenumber 0.3.1+8.12.9",
  "pretty_env_logger",
  "printpdf 0.5.0",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -615,7 +615,7 @@ dependencies = [
  "octorust",
  "okta",
  "openssl",
- "phonenumber",
+ "phonenumber 0.2.4+8.11.3",
  "pretty_env_logger",
  "printpdf 0.3.4",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2141,6 +2141,15 @@ dependencies = [
 
 [[package]]
 name = "itertools"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
@@ -3104,11 +3113,31 @@ dependencies = [
  "itertools 0.8.2",
  "lazy_static",
  "nom 5.1.2",
- "quick-xml",
+ "quick-xml 0.17.2",
  "regex 1.5.4",
  "regex-cache",
  "serde",
  "serde_derive",
+]
+
+[[package]]
+name = "phonenumber"
+version = "0.3.1+8.12.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1261a014e5f5e048bf2c6f1a72fa5e4c223009dc5f296a385b95fe19b464608f"
+dependencies = [
+ "bincode",
+ "either",
+ "fnv",
+ "itertools 0.9.0",
+ "lazy_static",
+ "nom 5.1.2",
+ "quick-xml 0.18.1",
+ "regex 1.5.4",
+ "regex-cache",
+ "serde",
+ "serde_derive",
+ "thiserror",
 ]
 
 [[package]]
@@ -3316,6 +3345,15 @@ name = "quick-xml"
 version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe1e430bdcf30c9fdc25053b9c459bb1a4672af4617b6c783d7d91dc17c6bbb0"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cc440ee4802a86e357165021e3e255a9143724da31db1e2ea540214c96a0f82"
 dependencies = [
  "memchr",
 ]

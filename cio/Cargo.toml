@@ -67,7 +67,7 @@ octorust = { version = "^0.1.16", features = ["httpcache"] }
 okta = "^0.2.2"
 #okta = { path = "../../third-party-api-clients/okta/" }
 openssl = "0.10"
-phonenumber = "0.2"
+phonenumber = "0.3"
 pretty_env_logger = "0.4"
 printpdf = { version = "^0.5.0", features = ["embedded_images"] }
 quickbooks = "^0.1.12"
