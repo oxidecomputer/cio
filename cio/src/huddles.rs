@@ -94,6 +94,12 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> 
                     discussion_topics = format!("Discussion topics:\n{}", discussion_topics);
                 }
 
+                let notes = if !huddle.link_to_notes.is_empty() {
+                    format!("Notes Doc: {}\n", huddle.link_to_notes)
+                } else {
+                    String::new()
+                };
+
                 // Update the event description.
                 let description = format!(
                     r#"This is the event for {} huddles.
@@ -102,12 +108,14 @@ You can submit topics at: https://{}-huddle-form.corp.{}
 
 The Airtable workspace lives at: https://{}-huddle.corp.{}
 
+{}
 {}"#,
                     slug.replace('-', " "),
                     slug,
                     company.domain,
                     slug,
                     company.domain,
+                    notes,
                     discussion_topics
                 );
 
