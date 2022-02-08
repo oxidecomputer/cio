@@ -114,7 +114,7 @@ impl NewAssetItem {
             .replace('(', "")
             .replace(')', "")
             .replace('-', "")
-            .replace("'", "")
+            .replace('\'', "")
             .trim()
             .to_string();
 

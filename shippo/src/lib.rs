@@ -5,7 +5,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use serde::{Deserialize, Serialize};
  * use shippo::Shippo;
  *

@@ -5,7 +5,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use airtable_api::{Airtable, Record};
  * use serde::{Deserialize, Serialize};
  *

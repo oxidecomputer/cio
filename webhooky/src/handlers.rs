@@ -95,6 +95,8 @@ pub async fn handle_rfd_update_by_number(
             // And won't save it back to the database.
             rfd.state = "published".to_string();
             rfd.expand(&github, &oxide).await?;
+        } else {
+            bail!("failed to expand RFD: {}", e);
         }
     }
     info!("updated  RFD {}", rfd.number_string);
@@ -227,7 +229,7 @@ pub async fn handle_slack_commands(
             }
         }
         SlackCommand::Meet => {
-            let mut name = text.replace(" ", "-");
+            let mut name = text.replace(' ', "-");
             if name.is_empty() {
                 // Generate a new random string.
                 name = thread_rng()

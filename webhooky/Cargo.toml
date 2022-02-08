@@ -19,7 +19,7 @@ chrono-humanize = "0.0.11"
 chrono-tz = { version = "0.4", features = ["serde"] }
 cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "a2b41da800408057bf6f4e8c6ac107b4a8a148b2" }
 #cio-api = { path = "../cio" }
-clap = "3.0.0-beta.5"
+clap = { version = "^3.0.14", features = ["cargo", "derive", "env", "unicode"] }
 clokwerk = "0.4.0-rc1"
 diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
 docusign = "^0.1.0"
@@ -32,7 +32,7 @@ google-drive = "^0.2.0"
 #google-drive = { path = "../../third-party-api-clients/google/drive" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
-http = "0.2.0"
+http = "0.2.6"
 hyper = { version = "0.10" }
 log = { version = "0.4", features = ["serde"] }
 mailchimp-api = "^0.1.11"

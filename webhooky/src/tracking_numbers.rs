@@ -40,17 +40,17 @@ pub fn parse_tracking_information(s: &str) -> (String, String) {
 fn parse_ups(s: &str) -> String {
     let mut re = Regex::new(r"(?:1Z)[0-9A-Z]{16}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     re = Regex::new(r"(?:T)+[0-9A-Z]{10}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     re = Regex::new(r"[0-9]{26}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     "".to_string()
@@ -59,27 +59,27 @@ fn parse_ups(s: &str) -> String {
 fn parse_usps(s: &str) -> String {
     let mut re = Regex::new(r"(?:94|93|92|94|95)[0-9]{20}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     re = Regex::new(r"(?:94|93|92|94|95)[0-9]{22}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     re = Regex::new(r"(?:70|14|23|03)[0-9]{14}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     re = Regex::new(r"(?:M0|82)[0-9]{8}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     re = Regex::new(r"(?:[A-Z]{2})[0-9]{9}(?:[A-Z]{2})").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     "".to_string()
@@ -88,7 +88,7 @@ fn parse_usps(s: &str) -> String {
 fn parse_dhl(s: &str) -> String {
     let re = Regex::new(r"[0-9]{10}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).to_string();
+        return cap[0].to_string();
     }
 
     "".to_string()
@@ -97,22 +97,22 @@ fn parse_dhl(s: &str) -> String {
 fn parse_fedex(s: &str) -> String {
     let mut re = Regex::new(r"tracknumbers=[0-9]{20}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).trim_start_matches("tracknumbers=").to_string();
+        return cap[0].trim_start_matches("tracknumbers=").to_string();
     }
 
     re = Regex::new(r"tracknumbers=[0-9]{15}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).trim_start_matches("tracknumbers=").to_string();
+        return cap[0].trim_start_matches("tracknumbers=").to_string();
     }
 
     re = Regex::new(r"tracknumbers=[0-9]{12}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).trim_start_matches("tracknumbers=").to_string();
+        return cap[0].trim_start_matches("tracknumbers=").to_string();
     }
 
     re = Regex::new(r"tracknumbers=[0-9]{22}").unwrap();
     for cap in re.captures_iter(s) {
-        return (&cap[0]).trim_start_matches("tracknumbers=").to_string();
+        return cap[0].trim_start_matches("tracknumbers=").to_string();
     }
 
     "".to_string()

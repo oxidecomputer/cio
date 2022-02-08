@@ -5,7 +5,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use mailchimp_api::MailChimp;
  * use serde::{Deserialize, Serialize};
  *

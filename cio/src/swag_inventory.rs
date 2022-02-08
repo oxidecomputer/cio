@@ -13,7 +13,7 @@ use google_drive::{
 };
 use log::{info, warn};
 use macros::db;
-use printpdf::{types::plugins::graphics::two_dimensional::image::Image as PdfImage, Mm, PdfDocument, Pt};
+use printpdf::{Image as PdfImage, Mm, PdfDocument, Pt};
 use reqwest::StatusCode;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -217,7 +217,7 @@ impl NewSwagInventoryItem {
             .replace('(', "")
             .replace(')', "")
             .replace('-', "")
-            .replace("'", "")
+            .replace('\'', "")
             .replace("UNISEX", "U")
             .replace("WOMENS", "W")
             .replace("MENS", "M")
@@ -415,12 +415,14 @@ pub fn generate_pdf_barcode_label(
     // rotations and translations are always in relation to the lower left corner
     logo_image.add_to_layer(
         current_layer.clone(),
-        Some(pdf_margin),
-        Some(pdf_height - pdf_margin - logo_height_mm),
-        None,
-        Some(width_scale),
-        Some(width_scale),
-        Some(DPI),
+        printpdf::ImageTransform {
+            translate_x: Some(pdf_margin),
+            translate_y: Some(pdf_height - pdf_margin - logo_height_mm),
+            rotate: None,
+            scale_x: Some(width_scale),
+            scale_y: Some(width_scale),
+            dpi: Some(DPI),
+        },
     );
 
     let line_height = 12.0;
@@ -460,12 +462,14 @@ pub fn generate_pdf_barcode_label(
     // rotations and translations are always in relation to the lower left corner
     barcode_image.add_to_layer(
         current_layer,
-        Some(pdf_margin),
-        Some((barcode_height_mm - (translate_y / 2.0)) * -1.0),
-        None,
-        Some(width_scale),
-        Some(width_scale),
-        Some(DPI),
+        printpdf::ImageTransform {
+            translate_x: Some(pdf_margin),
+            translate_y: Some((barcode_height_mm - (translate_y / 2.0)) * -1.0),
+            rotate: None,
+            scale_x: Some(width_scale),
+            scale_y: Some(width_scale),
+            dpi: Some(DPI),
+        },
     );
 
     // Save the PDF

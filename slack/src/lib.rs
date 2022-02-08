@@ -5,7 +5,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use serde::{Deserialize, Serialize};
  * use slack_chat_api::Slack;
  *

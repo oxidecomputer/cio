@@ -6,7 +6,7 @@
  *
  * Example:
  *
- * ```
+ * ```ignore
  * use docusign::DocuSign;
  * use serde::{Deserialize, Serialize};
  *
@@ -134,7 +134,7 @@ impl DocuSign {
         return format!(
             "{}?response_type=code&scope={}&client_id={}&redirect_uri={}&state={}",
             endpoint,
-            scope.replace(" ", "%20"),
+            scope.replace(' ', "%20"),
             self.client_id,
             self.redirect_uri,
             state,
