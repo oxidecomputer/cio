@@ -109,15 +109,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94a45b455c14666b85fc40a019e8ab9eb75e3a124e05494f5397122bc9eb06e0"
 
 [[package]]
-name = "approx"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0e60b75072ecd4168020818c0107f2857bb6c4e64252d8d3983f6263b40a5c3"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "arc-swap"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -507,7 +498,7 @@ dependencies = [
  "chrono-humanize",
  "chrono-tz",
  "cloudflare",
- "comrak 0.12.1",
+ "comrak",
  "csv",
  "deunicode",
  "diesel",
@@ -523,7 +514,7 @@ dependencies = [
  "gsuite-api",
  "gusto-api",
  "handlebars",
- "html2text 0.2.1",
+ "html2text",
  "image 0.23.14",
  "log 0.4.14",
  "lopdf 0.27.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
@@ -534,9 +525,9 @@ dependencies = [
  "octorust",
  "okta",
  "openssl",
- "phonenumber 0.3.1+8.12.9",
+ "phonenumber",
  "pretty_env_logger",
- "printpdf 0.5.0",
+ "printpdf",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api",
  "rand 0.8.4",
@@ -572,29 +563,29 @@ dependencies = [
 [[package]]
 name = "cio-api"
 version = "0.2.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=a2b41da800408057bf6f4e8c6ac107b4a8a148b2#a2b41da800408057bf6f4e8c6ac107b4a8a148b2"
+source = "git+https://github.com/oxidecomputer/cio?rev=acc1c2365d81ef8be38b61db75fee5886b7fe6a6#acc1c2365d81ef8be38b61db75fee5886b7fe6a6"
 dependencies = [
  "Inflector",
  "acme-lib",
  "airtable-api 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion 1.0.0",
  "async-trait",
  "barcoders",
- "base64 0.12.3",
+ "base64 0.13.0",
  "byte-unit",
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
  "chrono-tz",
  "cloudflare",
- "comrak 0.8.2",
+ "comrak",
  "csv",
  "deunicode",
  "diesel",
  "diffy",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot 0.5.1",
+ "dropshot 0.6.1-dev",
  "flate2",
  "futures-util",
  "google-calendar",
@@ -604,20 +595,20 @@ dependencies = [
  "gsuite-api",
  "gusto-api",
  "handlebars",
- "html2text 0.1.14",
+ "html2text",
  "image 0.23.14",
  "log 0.4.14",
  "lopdf 0.27.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
- "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=a2b41da800408057bf6f4e8c6ac107b4a8a148b2)",
+ "macros 0.1.0 (git+https://github.com/oxidecomputer/cio?rev=acc1c2365d81ef8be38b61db75fee5886b7fe6a6)",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "names",
  "nom_pem",
  "octorust",
  "okta",
  "openssl",
- "phonenumber 0.2.4+8.11.3",
+ "phonenumber",
  "pretty_env_logger",
- "printpdf 0.3.4",
+ "printpdf",
  "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ramp-api",
  "rand 0.8.4",
@@ -645,7 +636,7 @@ dependencies = [
  "url 2.2.2",
  "uuid",
  "walkdir",
- "yup-oauth2 5.1.0",
+ "yup-oauth2 6.2.0",
  "zip",
  "zoom-api",
 ]
@@ -735,25 +726,6 @@ name = "color_quant"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
-
-[[package]]
-name = "comrak"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d325e4f2ffff52ca77d995bb675494d5364aa332499d5f7c7fbb28c25e671f6"
-dependencies = [
- "clap 2.34.0",
- "entities",
- "lazy_static",
- "pest",
- "pest_derive",
- "regex 1.5.4",
- "shell-words",
- "twoway",
- "typed-arena",
- "unicode_categories",
- "xdg",
-]
 
 [[package]]
 name = "comrak"
@@ -1372,28 +1344,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "failure"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
-dependencies = [
- "backtrace",
- "failure_derive",
-]
-
-[[package]]
-name = "failure_derive"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
-dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
- "synstructure",
-]
-
-[[package]]
 name = "fake-simd"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1885,17 +1835,6 @@ dependencies = [
 
 [[package]]
 name = "html2text"
-version = "0.1.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a110e9d7889adc8928e73cc1cf5407665ceb5b8fda5c334cae2df076adfd2ed1"
-dependencies = [
- "html5ever",
- "markup5ever_rcdom",
- "unicode-width",
-]
-
-[[package]]
-name = "html2text"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26379dcb715e237b96102a12b505c553e2bffa74bae2e54658748d298660ef1"
@@ -2152,15 +2091,6 @@ checksum = "68f2d64f2edebec4ce84ad108148e67e1064789bee435edc5b60ad398714a3a9"
 
 [[package]]
 name = "itertools"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f56a2d0bc861f9165be4eb3442afd3c236d8a98afd426f65d92324ae1091a484"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
@@ -2365,22 +2295,6 @@ dependencies = [
 
 [[package]]
 name = "lopdf"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b49a0272112719d0037ab63d4bb67f73ba659e1e90bc38f235f163a457ac16f3"
-dependencies = [
- "dtoa",
- "encoding",
- "flate2",
- "itoa 0.4.8",
- "linked-hash-map",
- "log 0.4.14",
- "lzw",
- "time 0.2.27",
-]
-
-[[package]]
-name = "lopdf"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8146695b97752d9c66da0092c6364f8f3ca683f5ea34341db21e5550c3b8c4f4"
@@ -2451,7 +2365,7 @@ dependencies = [
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/cio?rev=a2b41da800408057bf6f4e8c6ac107b4a8a148b2#a2b41da800408057bf6f4e8c6ac107b4a8a148b2"
+source = "git+https://github.com/oxidecomputer/cio?rev=acc1c2365d81ef8be38b61db75fee5886b7fe6a6#acc1c2365d81ef8be38b61db75fee5886b7fe6a6"
 dependencies = [
  "Inflector",
  "proc-macro2 1.0.36",
@@ -2967,15 +2881,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ordered-float"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3305af35278dd29f46fcdd139e0b1fbfae2153f0e5928b39b035542dd31e37b7"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "os_pipe"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3168,26 +3073,6 @@ dependencies = [
 
 [[package]]
 name = "phonenumber"
-version = "0.2.4+8.11.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "207b3a8b4b30da166f6d8175ad39b86aa84d190965be4533af3d5541754de358"
-dependencies = [
- "bincode",
- "either",
- "failure",
- "fnv",
- "itertools 0.8.2",
- "lazy_static",
- "nom 5.1.2",
- "quick-xml 0.17.2",
- "regex 1.5.4",
- "regex-cache",
- "serde",
- "serde_derive",
-]
-
-[[package]]
-name = "phonenumber"
 version = "0.3.1+8.12.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1261a014e5f5e048bf2c6f1a72fa5e4c223009dc5f296a385b95fe19b464608f"
@@ -3198,7 +3083,7 @@ dependencies = [
  "itertools 0.9.0",
  "lazy_static",
  "nom 5.1.2",
- "quick-xml 0.18.1",
+ "quick-xml",
  "regex 1.5.4",
  "regex-cache",
  "serde",
@@ -3297,19 +3182,6 @@ checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
 dependencies = [
  "env_logger",
  "log 0.4.14",
-]
-
-[[package]]
-name = "printpdf"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a2472a184bcb128d0e3db65b59ebd11d010259a5e14fd9d048cba8f2c9302d4"
-dependencies = [
- "image 0.23.14",
- "js-sys",
- "lopdf 0.26.0",
- "rusttype",
- "time 0.2.27",
 ]
 
 [[package]]
@@ -3419,15 +3291,6 @@ name = "quick-error"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
-
-[[package]]
-name = "quick-xml"
-version = "0.17.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe1e430bdcf30c9fdc25053b9c459bb1a4672af4617b6c783d7d91dc17c6bbb0"
-dependencies = [
- "memchr",
-]
 
 [[package]]
 name = "quick-xml"
@@ -3930,17 +3793,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ee86d63972a7c661d1536fefe8c3c8407321c3df668891286de28abcd087360"
 dependencies = [
  "base64 0.13.0",
-]
-
-[[package]]
-name = "rusttype"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f61411055101f7b60ecf1041d87fb74205fb20b0c7a723f07ef39174cf6b4c0"
-dependencies = [
- "approx",
- "ordered-float",
- "stb_truetype",
 ]
 
 [[package]]
@@ -4735,15 +4587,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "stb_truetype"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f77b6b07e862c66a9f3e62a07588fee67cd90a9135a2b942409f195507b4fb51"
-dependencies = [
- "byteorder",
-]
 
 [[package]]
 name = "stdweb"
@@ -5768,7 +5611,7 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "chrono-tz",
- "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?rev=a2b41da800408057bf6f4e8c6ac107b4a8a148b2)",
+ "cio-api 0.2.0 (git+https://github.com/oxidecomputer/cio?rev=acc1c2365d81ef8be38b61db75fee5886b7fe6a6)",
  "clap 3.0.14",
  "clokwerk",
  "diesel",
