@@ -1287,6 +1287,10 @@ The Shipping Bot",
             carrier = "dhl_express".to_string();
         }
 
+        if carrier == "" || self.tracking_number == "" {
+            return Ok(());
+        }
+
         // Get the tracking status for the shipment and fill in the details.
         let ts = shippo.get_tracking_status(&carrier, &self.tracking_number).await?;
         self.tracking_number = ts.tracking_number.to_string();
