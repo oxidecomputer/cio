@@ -1287,7 +1287,7 @@ The Shipping Bot",
             carrier = "dhl_express".to_string();
         }
 
-        if carrier == "" || self.tracking_number == "" {
+        if carrier.is_empty() || self.tracking_number.is_empty() {
             return Ok(());
         }
 
