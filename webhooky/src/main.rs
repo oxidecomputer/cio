@@ -37,6 +37,7 @@ struct Opts {
 enum SubCommand {
     Server(Server),
 
+    SendRFDChangelog(SendRFDChangelog),
     SyncAnalytics(SyncAnalytics),
     #[clap(name = "sync-api-tokens")]
     SyncAPITokens(SyncAPITokens),
@@ -76,6 +77,10 @@ pub struct Server {
     #[clap(long)]
     do_cron: bool,
 }
+
+/// A subcommand for sending the RFD changelog.
+#[derive(Parser, Clone, Debug)]
+pub struct SendRFDChangelog {}
 
 /// A subcommand for running the background job of syncing analytics.
 #[derive(Parser, Debug, Clone)]
@@ -207,6 +212,15 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
     match opts.subcmd {
         SubCommand::Server(s) => {
             crate::server::server(s, logger).await?;
+        }
+        SubCommand::SendRFDChangelog(_) => {
+            let db = Database::new();
+            let companies = Companys::get_from_db(&db, 1)?;
+
+            // Iterate over the companies and send.
+            for company in companies {
+                cio_api::rfds::send_rfd_changelog(&db, &company).await?;
+            }
         }
         SubCommand::SyncAnalytics(_) => {
             let db = Database::new();

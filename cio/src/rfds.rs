@@ -423,7 +423,7 @@ impl RFD {
         }
 
         // Get the commits from the last seven days to the file.
-        let commits = github
+        let commits = match github
             .repos()
             .list_all_commits(
                 owner,
@@ -434,7 +434,14 @@ impl RFD {
                 Some(since),
                 None,
             )
-            .await?;
+            .await
+        {
+            Ok(v) => v,
+            Err(_) => {
+                // Ignore the error and create an empty list.
+                vec![]
+            }
+        };
 
         for commit in commits {
             let message: Vec<&str> = commit.commit.message.lines().collect();
