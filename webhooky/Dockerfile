@@ -45,17 +45,7 @@ WORKDIR /usr/src/cio
 
 FROM cargo-nightly AS cargo-build
 
-COPY webhooky/src/dummy.rs ./src/dummy.rs
-
-COPY webhooky/Cargo.toml ./Cargo.toml
-
-RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
-
-RUN cargo build --release --bin webhooky
-
-RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
-
-COPY webhooky/src src
+COPY . .
 
 RUN cargo build --release --bin webhooky
 
