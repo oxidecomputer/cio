@@ -1,5 +1,5 @@
 use std::{
-    env, fmt,
+    env,
     io::{BufRead, BufReader},
     sync::Arc,
     time::{Duration, Instant},
@@ -39,13 +39,6 @@ impl steno::SagaType for Saga {
 async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> {
     // This is a noop, we don't have to undo anything.
     Ok(())
-}
-
-pub struct RunningFunction {
-    db: Database,
-    saga_id: steno::SagaId,
-    cmd_name: String,
-    saga_future: steno::Saga,
 }
 
 /// Create a new saga with the given parameters and then execute it.

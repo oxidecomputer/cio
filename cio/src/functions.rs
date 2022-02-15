@@ -210,7 +210,7 @@ impl NewFunction {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct FnOutput(String);
+pub struct FnOutput(pub String);
 
 impl fmt::Display for FnOutput {
     // This trait requires `fmt` with this exact signature.
@@ -343,7 +343,7 @@ impl Function {
     /// Update a job from SagaNodeEvent.
     pub async fn from_saga_node_event(db: &Database, event: &steno::SagaNodeEvent) -> Result<Self> {
         // Get the saga from it's id.
-        let nf = Function::get_from_db(db, event.saga_id.to_string()).unwrap();
+        let mut nf = Function::get_from_db(db, event.saga_id.to_string()).unwrap();
 
         match &event.event_type {
             steno::SagaNodeEventType::Started => {}
