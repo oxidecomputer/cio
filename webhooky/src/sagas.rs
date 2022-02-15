@@ -146,16 +146,25 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     let cmd_name = &action_context.saga_params().cmd_name;
     let saga_id = &action_context.saga_params().saga_id;
 
-    // Execute the function within the scope of the logger.
-    // Print the error and return an ActionError.
-    match reexec(db, cmd_name, saga_id).await {
-        Ok(s) => Ok(FnOutput(s)),
-        Err(err) => {
-            // Return an action error but include the logs.
-            // Format the anyhow error with a stack trace.
-            Err(steno::ActionError::action_failed(format!("ERROR:\n\n{:?}", err)))
-        }
-    }
+    // Scope a new logger for this command.
+    let result = slog_scope::scope(
+        &slog_scope::logger().new(slog::slog_o!("cmd" => cmd_name.to_string(), "saga_id" => saga_id.to_string())),
+        || async {
+            // Execute the function within the scope of the logger.
+            // Print the error and return an ActionError.
+            match reexec(db, cmd_name, saga_id).await {
+                Ok(s) => Ok(FnOutput(s)),
+                Err(err) => {
+                    // Return an action error but include the logs.
+                    // Format the anyhow error with a stack trace.
+                    Err(steno::ActionError::action_failed(format!("ERROR:\n\n{:?}", err)))
+                }
+            }
+        },
+    )
+    .await;
+
+    result
 }
 
 // We re-exec our current binary so we can get the best log output.
@@ -172,16 +181,13 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
 
     let mut start = Instant::now();
 
-    // Scope a new logger for this command.
-    let logger = slog_scope::logger().new(slog::slog_o!("cmd" => cmd.to_string(), "saga_id" => saga_id.to_string()));
-
     for line in out.lines() {
         match line {
             Ok(l) => {
                 output.push_str(&l);
                 output.push('\n');
 
-                slog::info!(logger, "{}", l);
+                slog::info!(slog_scope::logger(), "{}", l);
 
                 // Only save the logs when we have time, just do it async and don't
                 // wait on it, else we will be waiting forever.
