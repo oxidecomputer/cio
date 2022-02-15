@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::Deref;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -348,18 +349,21 @@ impl Function {
         match &event.event_type {
             steno::SagaNodeEventType::Started => {}
             steno::SagaNodeEventType::Succeeded(s) => {
-                println!("got succeeded event: {} {}", event.saga_id, nf.name);
-                // Save the success output to the logs.
-                // For each function.
-                println!("SAGA SUCCESS: {:?}", s);
-                //let log = s.lookup_output::<FnOutput>(nf.name)?;
+                // We only care if the conclusion is not null. That means we actually have logs.
+                let value: serde_json::Value = s.deref().clone();
+                if value != serde_json::Value::Null {
+                    let string: String = serde_json::from_value(value).unwrap_or_default();
+                    println!("SAGA SUCCESS: `{}`", string);
 
-                //nf.logs = log.0.trim().to_string();
-                nf.conclusion = octorust::types::Conclusion::Success.to_string();
-                nf.completed_at = Some(Utc::now());
+                    // Save the success output to the logs.
+                    // For each function.
+                    nf.conclusion = octorust::types::Conclusion::Success.to_string();
+                    // Get the logs.
+                    nf.logs = string.trim().to_string();
+                    nf.completed_at = Some(Utc::now());
+                }
             }
             steno::SagaNodeEventType::Failed(err) => {
-                println!("got failed event: {} {}", event.saga_id, nf.name);
                 // Save the error to the logs.
                 nf.logs = format!("{}\n\n{:?}", nf.logs, err).trim().to_string();
                 nf.conclusion = octorust::types::Conclusion::Failure.to_string();
