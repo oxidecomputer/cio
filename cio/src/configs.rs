@@ -420,10 +420,11 @@ impl UserConfig {
             // Create the geocode client.
             let geocode = Geocode::new_from_env();
             // Get the latitude and longitude.
-            let result = geocode.get(&self.home_address_formatted).await?;
-            let location = result.geometry.location;
-            self.home_address_latitude = location.lat as f32;
-            self.home_address_longitude = location.lng as f32;
+            if let Ok(result) = geocode.get(&self.home_address_formatted).await {
+                let location = result.geometry.location;
+                self.home_address_latitude = location.lat as f32;
+                self.home_address_longitude = location.lng as f32;
+            }
         }
 
         Ok(())
