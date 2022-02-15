@@ -331,14 +331,28 @@ impl Function {
 
         match &event.event_type {
             steno::SagaNodeEventType::Started => {}
-            steno::SagaNodeEventType::Succeeded(_s) => {}
-            steno::SagaNodeEventType::Failed(_err) => {}
+            steno::SagaNodeEventType::Succeeded(s) => {
+                println!("got succeeded event: {} {}", event.saga_id, nf.name);
+                // Save the success output to the logs.
+                // For each function.
+                let log = s.lookup_output::<FnOutput>(nf.name)?;
+
+                nf.logs = log.0.trim().to_string();
+                nf.conclusion = octorust::types::Conclusion::Success.to_string();
+                nf.completed_at = Some(Utc::now());
+            }
+            steno::SagaNodeEventType::Failed(err) => {
+                println!("got failed event: {} {}", event.saga_id, nf.name);
+                // Save the error to the logs.
+                nf.logs = format!("{}\n\n{:?}", nf.logs, e).trim().to_string();
+                nf.conclusion = octorust::types::Conclusion::Failure.to_string();
+                nf.completed_at = Some(Utc::now());
+            }
             steno::SagaNodeEventType::UndoStarted => (),
             steno::SagaNodeEventType::UndoFinished => (),
         }
 
-        //nf.update(db).await
-        Ok(nf)
+        nf.update(db).await?
     }
 }
 

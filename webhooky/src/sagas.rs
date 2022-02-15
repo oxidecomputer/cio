@@ -52,6 +52,13 @@ async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> 
     Ok(())
 }
 
+pub struct RunningFunction {
+    db: Database,
+    saga_id: steno::SagaId,
+    cmd_name: String,
+    saga_future: steno::Saga,
+}
+
 /// Create a new saga with the given parameters and then execute it.
 pub async fn do_saga(
     db: &Database,
@@ -88,39 +95,47 @@ pub async fn do_saga(
         //
         // Note that the SEC will run all this regardless of whether you wait for it
         // here.  This is just a handle for you to know when the saga has finished.
-
         let result = saga_future.await;
-
-        // Get the function.
-        let mut f = Function::get_from_db(db, saga_id.to_string()).unwrap();
-
-        // Print the results.
-        match result.kind {
-            Ok(s) => {
-                // Save the success output to the logs.
-                // For each function.
-                let log = s.lookup_output::<FnOutput>(cmd_name)?;
-
-                f.logs = log.0.trim().to_string();
-                f.conclusion = octorust::types::Conclusion::Success.to_string();
-                f.completed_at = Some(Utc::now());
-            }
-            Err(e) => {
-                // Save the error to the logs.
-                f.logs = format!("{}\n\n{:?}", f.logs, e).trim().to_string();
-                f.conclusion = octorust::types::Conclusion::Failure.to_string();
-                f.completed_at = Some(Utc::now());
-
-                bail!("action failed: {:#?}", e);
-            }
-        }
-
-        f.update(db).await?;
+        on_saga_complete(db, &saga_id, &result, cmd_name).await?;
     }
 
     Ok(())
 }
 
+pub async fn on_saga_complete(
+    db: &Database,
+    saga_id: &steno::SagaId,
+    result: &steno::SagaResult,
+    cmd_name: &str,
+) -> Result<()> {
+    // Get the function.
+    let mut f = Function::get_from_db(db, saga_id.to_string()).unwrap();
+
+    // Print the results.
+    match result.kind.clone() {
+        Ok(s) => {
+            // Save the success output to the logs.
+            // For each function.
+            let log = s.lookup_output::<FnOutput>(cmd_name)?;
+
+            f.logs = log.0.trim().to_string();
+            f.conclusion = octorust::types::Conclusion::Success.to_string();
+            f.completed_at = Some(Utc::now());
+        }
+        Err(e) => {
+            // Save the error to the logs.
+            f.logs = format!("{}\n\n{:?}", f.logs, e).trim().to_string();
+            f.conclusion = octorust::types::Conclusion::Failure.to_string();
+            f.completed_at = Some(Utc::now());
+
+            bail!("action failed: {:#?}", e);
+        }
+    }
+
+    f.update(db).await?;
+
+    return Ok(());
+}
 pub async fn run_cmd(
     db: &Database,
     sec: &steno::SecClient,
