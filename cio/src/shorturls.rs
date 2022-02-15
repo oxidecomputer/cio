@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use cloudflare::endpoints::dns;
 use serde::Serialize;
 
@@ -267,13 +267,28 @@ pub struct ShortUrl {
 async fn create_dns_records_for_links(company: &Company, shorturls: Vec<ShortUrl>) -> Result<()> {
     let cf = company.authenticate_cloudflare()?;
     for s in shorturls {
-        cf.ensure_record(
-            &format!("{}.{}.{}", s.name, s.subdomain, s.domain),
-            dns::DnsContent::A {
-                content: company.nginx_ip.parse()?,
-            },
-        )
-        .await?;
+        // Make sure the name does not start with a dot ".".
+        let mut name = if s.name.starts_with('.') {
+            s.name.trim_start_matches('.').to_string()
+        } else {
+            s.name.to_string()
+        };
+
+        name = format!("{}.{}.{}", name, s.subdomain, company.domain);
+        match cf
+            .ensure_record(
+                &name,
+                dns::DnsContent::A {
+                    content: company.nginx_ip.parse()?,
+                },
+            )
+            .await
+        {
+            Ok(_) => (),
+            Err(e) => {
+                bail!("Error creating DNS record for `{}`: {}", name, e);
+            }
+        };
     }
 
     Ok(())
