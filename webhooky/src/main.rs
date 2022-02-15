@@ -1,3 +1,4 @@
+#![feature(async_closure)]
 mod event_types;
 mod github_types;
 mod handlers;

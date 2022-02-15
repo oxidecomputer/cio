@@ -149,7 +149,7 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     // Scope a new logger for this command.
     let result = slog_scope::scope(
         &slog_scope::logger().new(slog::slog_o!("cmd" => cmd_name.to_string(), "saga_id" => saga_id.to_string())),
-        || async {
+        async move || {
             // Execute the function within the scope of the logger.
             // Print the error and return an ActionError.
             match reexec(db, cmd_name, saga_id).await {
