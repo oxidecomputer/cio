@@ -6,6 +6,7 @@ on:
     - master
     paths:
       - 'webhooky/**'
+      - 'cio/**'
       - '.github/workflows/cloud-run.yml'
   workflow_dispatch:
     inputs:
