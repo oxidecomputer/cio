@@ -1,3 +1,5 @@
+use std::fmt;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -207,6 +209,20 @@ impl NewFunction {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FnOutput(String);
+
+impl fmt::Display for FnOutput {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        write!(f, "{}", self.0)
+    }
+}
+
 impl Function {
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewFunction = self.into();
@@ -335,16 +351,17 @@ impl Function {
                 println!("got succeeded event: {} {}", event.saga_id, nf.name);
                 // Save the success output to the logs.
                 // For each function.
-                let log = s.lookup_output::<FnOutput>(nf.name)?;
+                println!("SAGA SUCCESS: {:?}", s);
+                //let log = s.lookup_output::<FnOutput>(nf.name)?;
 
-                nf.logs = log.0.trim().to_string();
+                //nf.logs = log.0.trim().to_string();
                 nf.conclusion = octorust::types::Conclusion::Success.to_string();
                 nf.completed_at = Some(Utc::now());
             }
             steno::SagaNodeEventType::Failed(err) => {
                 println!("got failed event: {} {}", event.saga_id, nf.name);
                 // Save the error to the logs.
-                nf.logs = format!("{}\n\n{:?}", nf.logs, e).trim().to_string();
+                nf.logs = format!("{}\n\n{:?}", nf.logs, err).trim().to_string();
                 nf.conclusion = octorust::types::Conclusion::Failure.to_string();
                 nf.completed_at = Some(Utc::now());
             }
@@ -352,7 +369,13 @@ impl Function {
             steno::SagaNodeEventType::UndoFinished => (),
         }
 
-        nf.update(db).await?
+        match nf.update(db).await {
+            Ok(new) => Ok(new),
+            Err(e) => {
+                println!("error updating saga: {}", e);
+                Err(e)
+            }
+        }
     }
 }
 

@@ -7,7 +7,10 @@ use std::{
 
 use anyhow::{bail, Result};
 use chrono::Utc;
-use cio_api::{db::Database, functions::Function};
+use cio_api::{
+    db::Database,
+    functions::{FnOutput, Function},
+};
 use serde::{Deserialize, Serialize};
 
 /// Define our saga for syncing repos.
@@ -31,20 +34,6 @@ impl steno::SagaType for Saga {
 
     // Type for the application-specific context (see above)
     type ExecContextType = Arc<Context>;
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FnOutput(String);
-
-impl fmt::Display for FnOutput {
-    // This trait requires `fmt` with this exact signature.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Write strictly the first element into the supplied output
-        // stream: `f`. Returns `fmt::Result` which indicates whether the
-        // operation succeeded or failed. Note that `write!` uses syntax which
-        // is very similar to `println!`.
-        write!(f, "{}", self.0)
-    }
 }
 
 async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> {
