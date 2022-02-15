@@ -116,7 +116,7 @@ pub async fn on_saga_complete(
 
     f.update(db).await?;
 
-    return Ok(());
+    Ok(())
 }
 pub async fn run_cmd(
     db: &Database,
