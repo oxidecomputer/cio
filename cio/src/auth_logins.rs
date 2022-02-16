@@ -26,7 +26,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "auth_users")]
+#[diesel(table_name = auth_users)]
 pub struct NewAuthUser {
     pub user_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -114,7 +114,7 @@ impl PartialEq for AuthUser {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
-#[diesel(table_name = "auth_user_logins")]
+#[diesel(table_name = auth_user_logins)]
 pub struct NewAuthUserLogin {
     pub date: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "String::is_empty", rename = "type")]

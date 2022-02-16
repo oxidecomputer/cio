@@ -44,7 +44,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "certificates")]
+#[diesel(table_name = certificates)]
 pub struct NewCertificate {
     pub domain: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]

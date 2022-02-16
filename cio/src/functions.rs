@@ -27,7 +27,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "functions")]
+#[diesel(table_name = functions)]
 pub struct NewFunction {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,

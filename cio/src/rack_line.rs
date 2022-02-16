@@ -25,7 +25,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "rack_line_subscribers")]
+#[diesel(table_name = rack_line_subscribers)]
 pub struct NewRackLineSubscriber {
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]

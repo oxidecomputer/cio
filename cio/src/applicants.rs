@@ -74,7 +74,7 @@ pub static DOCUSIGN_PIIA_SUBJECT: &str = "Sign your Oxide Computer Company Emplo
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "applicants")]
+#[diesel(table_name = applicants)]
 pub struct NewApplicant {
     pub name: String,
     pub role: String,
@@ -1775,7 +1775,7 @@ fn is_materials(file_name: &str) -> bool {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "applicant_reviewers"]
+#[diesel(table_name = applicant_reviewers)]
 pub struct NewApplicantReviewer {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,

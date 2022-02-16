@@ -75,7 +75,7 @@ pub struct Config {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "users")]
+#[diesel(table_name = users)]
 pub struct UserConfig {
     #[serde(alias = "first_name")]
     pub first_name: String,
@@ -990,7 +990,7 @@ impl UpdateAirtableRecord<User> for User {
     },
 }]
 #[derive(Debug, Default, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "groups")]
+#[diesel(table_name = groups)]
 pub struct GroupConfig {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1161,7 +1161,7 @@ impl UpdateAirtableRecord<Group> for Group {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "buildings")]
+#[diesel(table_name = buildings)]
 pub struct BuildingConfig {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1234,7 +1234,7 @@ impl UpdateAirtableRecord<Building> for Building {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "conference_rooms")]
+#[diesel(table_name = conference_rooms)]
 pub struct ResourceConfig {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1290,7 +1290,7 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "links")]
+#[diesel(table_name = links)]
 pub struct LinkConfig {
     /// name will not be used in config files.
     #[serde(default, skip_serializing_if = "String::is_empty")]

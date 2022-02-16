@@ -43,7 +43,7 @@ const DPI: f64 = 300.0;
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "swag_items")]
+#[diesel(table_name = swag_items)]
 pub struct NewSwagItem {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -125,7 +125,7 @@ pub async fn refresh_swag_items(db: &Database, company: &Company) -> Result<()> 
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "swag_inventory_items")]
+#[diesel(table_name = swag_inventory_items)]
 pub struct NewSwagInventoryItem {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -654,7 +654,7 @@ pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> R
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "barcode_scans")]
+#[diesel(table_name = barcode_scans)]
 pub struct NewBarcodeScan {
     pub time: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "String::is_empty")]

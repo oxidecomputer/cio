@@ -146,7 +146,6 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     let cmd_name = &action_context.saga_params().cmd_name;
     let saga_id = &action_context.saga_params().saga_id;
 
-    // Scope a new logger for this command.
     let result = slog_scope::scope(
         &slog_scope::logger().new(slog::slog_o!("cmd" => cmd_name.to_string(), "saga_id" => saga_id.to_string())),
         async move || {
@@ -181,13 +180,16 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
 
     let mut start = Instant::now();
 
+    // Scope a new logger for this command.
+    let logger = slog_scope::logger().new(slog::slog_o!("cmd" => cmd.to_string(), "saga_id" => saga_id.to_string()));
+
     for line in out.lines() {
         match line {
             Ok(l) => {
                 output.push_str(&l);
                 output.push('\n');
 
-                slog::info!(slog_scope::logger(), "{}", l);
+                slog::info!(logger, "{}", l);
 
                 // Only save the logs when we have time, just do it async and don't
                 // wait on it, else we will be waiting forever.

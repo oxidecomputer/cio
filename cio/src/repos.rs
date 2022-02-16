@@ -22,7 +22,7 @@ use crate::{
 
 /// The data type for a GitHub user.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, FromSqlRow, AsExpression, Serialize, Deserialize)]
-#[sql_type = "Jsonb"]
+#[diesel(sql_type = Jsonb)]
 pub struct GitHubUser {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub login: String,
@@ -76,7 +76,7 @@ impl FromSql<Jsonb, Pg> for GitHubUser {
 }
 
 impl ToSql<Jsonb, Pg> for GitHubUser {
-    fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
         let value = serde_json::to_value(self)?;
         <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&value, out)
     }
@@ -92,7 +92,7 @@ impl ToSql<Jsonb, Pg> for GitHubUser {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "github_repos")]
+#[diesel(table_name = github_repos)]
 pub struct NewRepo {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub github_id: String,

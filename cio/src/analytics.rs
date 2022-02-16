@@ -26,7 +26,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = "page_views")]
+#[diesel(table_name = page_views)]
 pub struct NewPageView {
     pub time: DateTime<Utc>,
     pub domain: String,
