@@ -1,3 +1,4 @@
+use std::pin::Pin;
 use std::{collections::HashMap, env, fs::File, sync::Arc};
 
 use anyhow::{anyhow, bail, Result};
@@ -172,70 +173,74 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
          * Setup our cron jobs, with our timezone.
          */
         let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
-        scheduler.every(1.day()).run(|| async {
-            do_job("localhost:8080", "sync-analytics").await;
-        });
-        scheduler.every(23.hours()).run(|| async {
-            do_job("localhost:8080", "sync-api-tokens").await;
-        });
-        scheduler.every(6.hours()).run(|| async {
-            do_job("localhost:8080", "sync-applications").await;
-        });
-        scheduler.every(2.hours()).run(|| async {
-            do_job("localhost:8080", "sync-asset-inventory").await;
-        });
-        scheduler.every(12.hours()).run(|| async {
-            do_job("localhost:8080", "sync-companies").await;
-        });
-        scheduler.every(4.hours()).run(|| async {
-            do_job("localhost:8080", "sync-configs").await;
-        });
-        scheduler.every(6.hours()).run(|| async {
-            do_job("localhost:8080", "sync-finance").await;
-        });
-        scheduler.every(2.hours()).run(|| async {
-            do_job("localhost:8080", "sync-functions").await;
-        });
-        scheduler.every(1.hours()).run(|| async {
-            do_job("localhost:8080", "sync-huddles").await;
-        });
-        scheduler.every(4.hours()).run(|| async {
-            do_job("localhost:8080", "sync-interviews").await;
-        });
-        scheduler.every(12.hours()).run(|| async {
-            do_job("localhost:8080", "sync-journal-clubs").await;
-        });
-        scheduler.every(20.hours()).run(|| async {
-            do_job("localhost:8080", "sync-mailing-lists").await;
-        });
-        scheduler.every(18.hours()).run(|| async {
-            do_job("localhost:8080", "sync-other").await;
-        });
-        scheduler.every(2.hours()).run(|| async {
-            do_job("localhost:8080", "sync-recorded-meetings").await;
-        });
-        scheduler.every(16.hours()).run(|| async {
-            do_job("localhost:8080", "sync-repos").await;
-        });
-        scheduler.every(14.hours()).run(|| async {
-            do_job("localhost:8080", "sync-rfds").await;
-        });
-        scheduler.every(2.hours()).run(|| async {
-            do_job("localhost:8080", "sync-shipments").await;
-        });
-        scheduler.every(3.hours()).run(|| async {
-            do_job("localhost:8080", "sync-shorturls").await;
-        });
-        scheduler.every(9.hours()).run(|| async {
-            do_job("localhost:8080", "sync-swag-inventory").await;
-        });
-        scheduler.every(5.hours()).run(|| async {
-            do_job("localhost:8080", "sync-travel").await;
-        });
+        // TODO: probably a better way to do this without all the freaking clones.
+        let ctx = api_context.clone();
+        scheduler.every(1.day()).run(move || ctx.create_fnmut("sync-analytics"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(23.hours())
+            .run(move || ctx.create_fnmut("sync-api-tokens"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(6.hours())
+            .run(move || ctx.create_fnmut("sync-applications"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(2.hours())
+            .run(move || ctx.create_fnmut("sync-asset-inventory"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(12.hours())
+            .run(move || ctx.create_fnmut("sync-companies"));
+        let ctx = api_context.clone();
+        scheduler.every(4.hours()).run(move || ctx.create_fnmut("sync-configs"));
+        let ctx = api_context.clone();
+        scheduler.every(6.hours()).run(move || ctx.create_fnmut("sync-finance"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(12.hours())
+            .run(move || ctx.create_fnmut("sync-functions"));
+        let ctx = api_context.clone();
+        scheduler.every(1.hours()).run(move || ctx.create_fnmut("sync-huddles"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(4.hours())
+            .run(move || ctx.create_fnmut("sync-interviews"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(12.hours())
+            .run(move || ctx.create_fnmut("sync-journal-clubs"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(20.hours())
+            .run(move || ctx.create_fnmut("sync-mailing-lists"));
+        let ctx = api_context.clone();
+        scheduler.every(18.hours()).run(move || ctx.create_fnmut("sync-other"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(2.hours())
+            .run(move || ctx.create_fnmut("sync-recorded-meetings"));
+        let ctx = api_context.clone();
+        scheduler.every(16.hours()).run(move || ctx.create_fnmut("sync-repos"));
+        let ctx = api_context.clone();
+        scheduler.every(14.hours()).run(move || ctx.create_fnmut("sync-rfds"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(2.hours())
+            .run(move || ctx.create_fnmut("sync-shipments"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(3.hours())
+            .run(move || ctx.create_fnmut("sync-shorturls"));
+        let ctx = api_context.clone();
+        scheduler
+            .every(9.hours())
+            .run(move || ctx.create_fnmut("sync-swag-inventory"));
+        let ctx = api_context.clone();
+        scheduler.every(5.hours()).run(move || ctx.create_fnmut("sync-travel"));
         // TODO: Run the RFD changelog.
-        /*scheduler.every(Monday).at("8:00 am").run(|| async {
-            do_job("localhost:8080", "send-rfd-changelog").await;
-        });*/
+        // Turn this on once we know cron jobs are consistently running.
+        /* scheduler.every(Monday).at("8:00 am").run(move || ctx.create_fnmut("send-rfd-changelog")); */
 
         tokio::spawn(async move {
             info!("starting cron job scheduler...");
@@ -250,7 +255,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     /*
      * Set up the server.
      */
-    let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
+    let server = HttpServerStarter::new(&config_dropshot, api, api_context.clone(), &log)
         .map_err(|error| anyhow!("failed to create server: {}", error))?
         .start();
 
@@ -283,6 +288,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
 /**
  * Application-specific context (state shared by handler functions)
  */
+#[derive(Clone)]
 pub struct Context {
     pub db: Database,
 
@@ -305,6 +311,26 @@ impl Context {
             db,
             sec: Arc::new(sec),
             schema,
+        }
+    }
+
+    pub fn create_fnmut(&self, job: &str) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+        Box::pin(do_job(self.clone(), job.to_string()))
+    }
+}
+
+pub async fn do_job(ctx: Context, job: String) {
+    info!("triggering cron job `{}`", job);
+
+    sentry::start_session();
+    match crate::handlers_cron::handle_reexec_cmd(&ctx, &job, true).await {
+        Ok(_) => {
+            sentry::end_session();
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            handle_anyhow_err_as_http_err(e);
         }
     }
 }
@@ -2229,15 +2255,4 @@ async fn start_job(address: &str, job: &str) -> Result<()> {
     }
 
     Ok(())
-}
-
-async fn do_job(address: &str, job: &str) {
-    if let Err(e) = start_job(address, job).await {
-        if !e.to_string().contains("operation timed out")
-            && !e.to_string().contains("connection closed before message completed")
-        {
-            // We don't care about timeout errors.
-            sentry_anyhow::capture_anyhow(&e);
-        }
-    }
 }
