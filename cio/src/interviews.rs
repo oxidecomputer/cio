@@ -40,7 +40,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "applicant_interviews"]
+#[diesel(table_name = "applicant_interviews")]
 pub struct NewApplicantInterview {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,

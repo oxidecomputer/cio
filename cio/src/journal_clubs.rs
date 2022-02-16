@@ -29,7 +29,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
-#[table_name = "journal_club_meetings"]
+#[diesel(table_name = "journal_club_meetings")]
 pub struct NewJournalClubMeeting {
     pub title: String,
     pub issue: String,
@@ -166,7 +166,7 @@ impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, Deserialize, Serialize)]
-#[table_name = "journal_club_papers"]
+#[diesel(table_name = "journal_club_papers")]
 pub struct NewJournalClubPaper {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title: String,

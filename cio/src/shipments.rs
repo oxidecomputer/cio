@@ -38,7 +38,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "inbound_shipments"]
+#[diesel(table_name = "inbound_shipments")]
 pub struct NewInboundShipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tracking_number: String,
@@ -389,7 +389,7 @@ impl InboundShipment {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "outbound_shipments"]
+#[diesel(table_name = "outbound_shipments")]
 pub struct NewOutboundShipment {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -745,7 +745,7 @@ impl From<OutboundShipment> for FormattedMessage {
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "package_pickups"]
+#[diesel(table_name = "package_pickups")]
 pub struct NewPackagePickup {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub shippo_id: String,

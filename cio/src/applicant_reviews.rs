@@ -24,7 +24,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "applicant_reviews"]
+#[diesel(table_name = "applicant_reviews")]
 pub struct NewApplicantReview {
     // TODO: We don't have to do this crazy rename after we update to not use the
     // Airtable form.

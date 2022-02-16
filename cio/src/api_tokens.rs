@@ -24,7 +24,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "api_tokens"]
+#[diesel(table_name = "api_tokens")]
 pub struct NewAPIToken {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub product: String,

@@ -36,7 +36,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "software_vendors"]
+#[diesel(table_name = "software_vendors")]
 pub struct NewSoftwareVendor {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
@@ -332,7 +332,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "credit_card_transactions"]
+#[diesel(table_name = "credit_card_transactions")]
 pub struct NewCreditCardTransaction {
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "Id")]
     pub transaction_id: String,
@@ -956,7 +956,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "accounts_payables"]
+#[diesel(table_name = "accounts_payables")]
 pub struct NewAccountsPayable {
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "CONFIRMATION #")]
     pub confirmation_number: String,
@@ -1071,7 +1071,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Resul
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "expensed_items"]
+#[diesel(table_name = "expensed_items")]
 pub struct NewExpensedItem {
     #[serde(default, skip_serializing_if = "String::is_empty", alias = "Id")]
     pub transaction_id: String,

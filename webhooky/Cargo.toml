@@ -22,7 +22,7 @@ cio-api = { path = "../cio" }
 clap = { version = "^3.0.14", features = ["cargo", "derive", "env", "unicode"] }
 clokwerk = "0.4.0-rc1"
 # Tracking pending 2.0 version.
-diesel = { git = "https://github.com/diesel-rs/diesel", rev = "ce77c382",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
+diesel = { git = "https://github.com/diesel-rs/diesel", rev = "fd723880",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
 docusign = "^0.1.0"
 #dropshot = "^0.5.0"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot", branch = "main" }

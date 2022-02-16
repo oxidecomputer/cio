@@ -74,7 +74,7 @@ pub static DOCUSIGN_PIIA_SUBJECT: &str = "Sign your Oxide Computer Company Emplo
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "applicants"]
+#[diesel(table_name = "applicants")]
 pub struct NewApplicant {
     pub name: String,
     pub role: String,

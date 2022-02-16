@@ -48,7 +48,7 @@ use crate::{
     }
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "rfds"]
+#[diesel(table_name = "rfds")]
 pub struct NewRFD {
     // TODO: remove this alias when we update https://github.com/oxidecomputer/rfd/blob/master/.helpers/rfd.csv
     // When you do this you need to update src/components/images.js in the rfd repo as well.

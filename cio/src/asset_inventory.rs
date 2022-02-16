@@ -30,7 +30,7 @@ use crate::{
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[table_name = "asset_items"]
+#[diesel(table_name = "asset_items")]
 pub struct NewAssetItem {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,

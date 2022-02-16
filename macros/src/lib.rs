@@ -516,7 +516,6 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             Debug,
             Queryable,
             Identifiable,
-            Associations,
             AsChangeset,
             #partial_eq_text
             Clone,
