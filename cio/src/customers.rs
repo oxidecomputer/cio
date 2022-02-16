@@ -2,6 +2,7 @@ use std::str::from_utf8;
 
 use airtable_api::Record;
 use anyhow::Result;
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use log::info;
 
 use crate::{companies::Company, core::CustomerInteraction, utils::get_file_content_from_repo};

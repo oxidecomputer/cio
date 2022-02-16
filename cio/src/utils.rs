@@ -429,7 +429,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_create_and_get_repo_secret() {
         // Initialize our database.
-        let db = crate::db::Database::new();
+        let db = crate::db::Database::new().await;
         let company = crate::companies::Company::get_by_id(&db, 1).unwrap();
         let github = company.authenticate_github().unwrap();
 

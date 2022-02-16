@@ -15,12 +15,14 @@ path = "src/main.rs"
 [dependencies]
 acme-lib = "^0.8.0"
 airtable-api = "^0.1.33"
-anyhow = "1"
 #airtable-api = { path = "../airtable" }
+anyhow = "1"
+async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "22c26ef" }
 async-recursion = "^1.0.0"
 async-trait = "^0.1.0"
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
 base64 = "^0.13"
+bb8 = "^0.7.1"
 byte-unit = "4"
 checkr = "^0.0.10"
 #checkr = { path = "../checkr" }
@@ -31,7 +33,8 @@ cloudflare = "^0.8.0"
 csv = "1.1"
 comrak = "0.12"
 deunicode = "1.3.0"
-diesel = { version = "^1.4.6", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
+# Tracking pending 2.0 version.
+diesel = { git = "https://github.com/diesel-rs/diesel", rev = "ce77c382",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
 diffy = "^0.2.0"
 docusign = "^0.1.0"
 #docusign = { path = "../docusign" }

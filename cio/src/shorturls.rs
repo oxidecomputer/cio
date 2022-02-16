@@ -224,7 +224,7 @@ pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()>
 
 /// Update all the short URLs and DNS.
 pub async fn refresh_shorturls() -> Result<()> {
-    let db = Database::new();
+    let db = Database::new().await;
 
     let companies = Companys::get_from_db(&db, 1)?;
 

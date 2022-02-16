@@ -2,6 +2,7 @@ use std::{convert::TryInto, env, fs, io::Write};
 
 use airtable_api::Airtable;
 use anyhow::{anyhow, bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use checkr::Checkr;
 use chrono::Utc;
@@ -156,9 +157,9 @@ impl UpdateAirtableRecord<Company> for Company {
 impl Company {
     /// Returns the shippo data structure for the address at the office
     /// for the company.
-    pub fn hq_shipping_address(&self, db: &Database) -> Result<shippo::Address> {
+    pub async fn hq_shipping_address(&self, db: &Database) -> Result<shippo::Address> {
         // Get the buildings from the company.
-        let buildings: Vec<Building> = Buildings::get_from_db(db, self.cio_company_id)?.into();
+        let buildings: Vec<Building> = Buildings::get_from_db(db, self.cio_company_id).await?.into();
         // Get the first one.
         // TODO: when there is more than one building, figure this out.
         let building = buildings.get(0).unwrap();
@@ -208,7 +209,7 @@ impl Company {
         Ok(())
     }
 
-    pub fn get_from_slack_team_id(db: &Database, team_id: &str) -> Result<Self> {
+    pub async fn get_from_slack_team_id(db: &Database, team_id: &str) -> Result<Self> {
         // We need to get the token first with the matching team id.
         let token = api_tokens::dsl::api_tokens
             .filter(
@@ -216,48 +217,53 @@ impl Company {
                     .eq(team_id.to_string())
                     .and(api_tokens::dsl::product.eq("slack".to_lowercase())),
             )
-            .first::<APIToken>(&db.conn())?;
+            .first_async::<APIToken>(&db.pool())
+            .await?;
 
         // Now we can get the company.
-        Company::get_by_id(db, token.auth_company_id)
+        Company::get_by_id(db, token.auth_company_id).await
     }
 
-    pub fn get_from_github_org(db: &Database, org: &str) -> Result<Self> {
+    pub async fn get_from_github_org(db: &Database, org: &str) -> Result<Self> {
         Ok(companys::dsl::companys
             .filter(
                 companys::dsl::github_org
                     .eq(org.to_string())
                     .or(companys::dsl::github_org.eq(org.to_lowercase())),
             )
-            .first::<Company>(&db.conn())?)
+            .first_async::<Company>(&db.pool())
+            .await?)
     }
 
-    pub fn get_from_shipbob_channel_id(db: &Database, channel_id: &str) -> Result<Self> {
+    pub async fn get_from_shipbob_channel_id(db: &Database, channel_id: &str) -> Result<Self> {
         let token = api_tokens::dsl::api_tokens
             .filter(
                 api_tokens::dsl::company_id
                     .eq(channel_id.to_string())
                     .and(api_tokens::dsl::product.eq("shipbob".to_string())),
             )
-            .first::<APIToken>(&db.conn())?;
+            .first_async::<APIToken>(&db.pool())
+            .await?;
 
-        Company::get_by_id(db, token.auth_company_id)
+        Company::get_by_id(db, token.auth_company_id).await
     }
 
-    pub fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Result<Self> {
+    pub async fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Result<Self> {
         Ok(companys::dsl::companys
             .filter(companys::dsl::mailchimp_list_id.eq(list_id.to_string()))
-            .first::<Company>(&db.conn())?)
+            .first_async::<Company>(&db.pool())
+            .await?)
     }
 
-    pub fn get_from_domain(db: &Database, domain: &str) -> Result<Self> {
+    pub async fn get_from_domain(db: &Database, domain: &str) -> Result<Self> {
         Ok(companys::dsl::companys
             .filter(
                 companys::dsl::domain
                     .eq(domain.to_string())
                     .or(companys::dsl::gsuite_domain.eq(domain.to_string())),
             )
-            .first::<Company>(&db.conn())?)
+            .first_async::<Company>(&db.pool())
+            .await?)
     }
 
     /// Authenticate with Cloudflare.
@@ -452,7 +458,7 @@ impl Company {
     }
 
     /// Authenticate with Slack.
-    pub fn authenticate_slack(&self, db: &Database) -> Result<Slack> {
+    pub async fn authenticate_slack(&self, db: &Database) -> Result<Slack> {
         // Get the bot token and user token from the database.
         if let Ok(bot_token) = api_tokens::dsl::api_tokens
             .filter(
@@ -461,7 +467,8 @@ impl Company {
                     .and(api_tokens::dsl::product.eq("slack".to_string()))
                     .and(api_tokens::dsl::token_type.eq("bot".to_string())),
             )
-            .first::<APIToken>(&db.conn())
+            .first_async::<APIToken>(&db.pool())
+            .await
         {
             if let Ok(user_token) = api_tokens::dsl::api_tokens
                 .filter(
@@ -470,7 +477,8 @@ impl Company {
                         .and(api_tokens::dsl::product.eq("slack".to_string()))
                         .and(api_tokens::dsl::token_type.eq("user".to_string())),
                 )
-                .first::<APIToken>(&db.conn())
+                .first_async::<APIToken>(&db.pool())
+                .await
             {
                 // Initialize the Slack client.
                 let slack = Slack::new_from_env(
@@ -1017,7 +1025,7 @@ impl Company {
 }
 
 pub async fn refresh_companies() -> Result<()> {
-    let db = Database::new();
+    let db = Database::new().await;
 
     // This should forever only be Oxide.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();

@@ -1,6 +1,7 @@
 use std::{collections::HashMap, env, fs::File};
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use log::{info, warn};
@@ -896,7 +897,8 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
                     .eq(last_name.to_string())
                     .and(users::dsl::cio_company_id.eq(company.id)),
             )
-            .first::<User>(&db.conn())
+            .first_async::<User>(&db.pool())
+            .await
         {
             Ok(user) => {
                 // Set the user's email.
@@ -1168,7 +1170,8 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
                     .or(users::dsl::username.eq(last_name.to_string())),
             )
             .filter(users::dsl::cio_company_id.eq(company.id))
-            .first::<User>(&db.conn())
+            .first_async::<User>(&db.pool())
+            .await
         {
             Ok(user) => {
                 // Set the user's email.
@@ -1325,7 +1328,8 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                     .and(accounts_payables::dsl::amount.eq(bill_payment.total_amt))
                     .and(accounts_payables::dsl::date.eq(bill_payment.txn_date)),
             )
-            .first::<AccountsPayable>(&db.conn())
+            .first_async::<AccountsPayable>(&db.pool())
+            .await
         {
             Ok(mut transaction) => {
                 // Add the receipt.
@@ -1390,7 +1394,8 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                         .and(credit_card_transactions::dsl::time.ge(DateTime::<Utc>::from_utc(sdt, Utc)))
                         .and(credit_card_transactions::dsl::time.le(DateTime::<Utc>::from_utc(edt, Utc))),
                 )
-                .first::<CreditCardTransaction>(&db.conn())
+                .first_async::<CreditCardTransaction>(&db.pool())
+                .await
             {
                 Ok(mut transaction) => {
                     // Add the receipt.
@@ -1478,7 +1483,7 @@ mod tests {
     async fn test_finance_bill_com() {
         crate::utils::setup_logger();
 
-        let db = Database::new();
+        let db = Database::new().await;
 
         // Get the company id for Oxide.
         // TODO: split this out per company.
@@ -1492,7 +1497,7 @@ mod tests {
     async fn test_finance_expensify() {
         crate::utils::setup_logger();
 
-        let db = Database::new();
+        let db = Database::new().await;
 
         // Get the company id for Oxide.
         // TODO: split this out per company.
@@ -1506,7 +1511,7 @@ mod tests {
     async fn test_finance_brex() {
         crate::utils::setup_logger();
 
-        let db = Database::new();
+        let db = Database::new().await;
 
         // Get the company id for Oxide.
         // TODO: split this out per company.

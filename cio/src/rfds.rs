@@ -9,6 +9,7 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -1216,7 +1217,7 @@ mod tests {
         crate::utils::setup_logger();
 
         // Initialize our database.
-        let db = Database::new();
+        let db = Database::new().await;
 
         // Get the company id for Oxide.
         // TODO: split this out per company.

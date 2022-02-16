@@ -1,8 +1,9 @@
 use std::{env, fmt, sync::Arc};
 
 use anyhow::Result;
+use async_bb8_diesel::ConnectionManager;
 use async_trait::async_trait;
-use diesel::{pg::PgConnection, r2d2};
+use diesel::PgConnection;
 
 #[derive(Debug, Clone)]
 pub struct Database {
@@ -10,22 +11,7 @@ pub struct Database {
 }
 
 #[derive(Clone)]
-struct DB(Arc<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>>);
-
-impl Default for Database {
-    fn default() -> Self {
-        let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
-
-        let manager = r2d2::ConnectionManager::new(&database_url);
-        // TODO: once we remove creating new databases for each of the cron tests, then
-        // make this max something like 100+
-        let pool = r2d2::Pool::builder().max_size(5).build(manager).unwrap();
-
-        Database {
-            pool: DB(Arc::new(pool)),
-        }
-    }
-}
+struct DB(Arc<bb8::Pool<ConnectionManager<PgConnection>>>);
 
 // This is a workaround so we can implement Debug for PgConnection.
 impl fmt::Debug for DB {
@@ -36,20 +22,24 @@ impl fmt::Debug for DB {
 
 impl Database {
     /// Establish a connection to the database.
-    pub fn new() -> Database {
-        Default::default()
+    pub async fn new() -> Self {
+        let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
+
+        let manager = ConnectionManager::<PgConnection>::new(&database_url);
+        let pool = bb8::Pool::builder().max_size(25).build(manager).await.unwrap();
+
+        Database {
+            pool: DB(Arc::new(pool)),
+        }
     }
 
     /// Returns a connection from the pool.
-    pub fn conn(&self) -> r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>> {
-        self.pool
-            .0
-            .get()
-            .unwrap_or_else(|e| panic!("getting a connection from the pool failed: {}", e))
+    pub fn pool(&self) -> Arc<bb8::Pool<ConnectionManager<PgConnection>>> {
+        self.pool.0
     }
 }
 
-#[async_trait]
+/*#[async_trait]
 impl steno::SecStore for Database {
     async fn saga_create(&self, create_params: steno::SagaCreateParams) -> Result<()> {
         crate::functions::Function::from_saga_create_params(self, &create_params).await?;
@@ -68,4 +58,4 @@ impl steno::SecStore for Database {
             .await
             .unwrap();
     }
-}
+}*/

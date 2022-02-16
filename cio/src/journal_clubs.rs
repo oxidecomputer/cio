@@ -2,6 +2,7 @@
 use std::str::from_utf8;
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use macros::db;
@@ -186,7 +187,7 @@ impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
     async fn update_airtable_record(&mut self, _record: JournalClubPaper) -> Result<()> {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new();
+        let db = Database::new().await;
         let journal_club_meetings = JournalClubMeetings::get_from_airtable(&db, self.cio_company_id).await?;
 
         // Iterate over the journal_club_meetings and see if we find a match.

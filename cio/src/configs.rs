@@ -488,12 +488,13 @@ impl UserConfig {
         self.work_address_formatted = self.work_address_formatted.replace('\n', "\\n");
     }
 
-    pub fn populate_start_date(&mut self, db: &Database) {
+    pub async fn populate_start_date(&mut self, db: &Database) {
         // Only populate the start date, if we could not update it from Gusto.
         if self.start_date == crate::utils::default_date() {
             if let Ok(a) = applicants::dsl::applicants
                 .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
-                .first::<Applicant>(&db.conn())
+                .first_async::<Applicant>(&db.pool())
+                .await
             {
                 // Get their start date.
                 if a.start_date.is_some() {
@@ -566,7 +567,7 @@ impl UserConfig {
         self.populate_home_address().await?;
         self.populate_work_address(db).await;
 
-        self.populate_start_date(db);
+        self.populate_start_date(db).await;
 
         // Create the link to the manager.
         if !self.manager.is_empty() {
@@ -582,13 +583,13 @@ impl UserConfig {
 
 impl User {
     /// Get the user's manager, if they have one, otherwise return Jess.
-    pub fn manager(&self, db: &Database) -> User {
+    pub async fn manager(&self, db: &Database) -> User {
         let mut manager = self.manager.to_string();
         if manager.is_empty() {
             manager = "jess".to_string();
         }
 
-        User::get_from_db(db, self.cio_company_id, manager).unwrap()
+        User::get_from_db(db, self.cio_company_id, manager).await.unwrap()
     }
 
     /// Generate and return the full name for the user.
@@ -896,7 +897,7 @@ xoxo,
             dept: self.department.to_string(),
             first_name: self.first_name.to_string(),
             last_name: self.last_name.to_string(),
-            manager: self.manager(db).email,
+            manager: self.manager(db).await.email,
             /*
              * This is broken and should be an array the spec is wrong.
              * FIX THIS WHEN THE SPEC IS FIXED.
@@ -928,7 +929,7 @@ impl UpdateAirtableRecord<User> for User {
     async fn update_airtable_record(&mut self, record: User) -> Result<()> {
         // Get the current groups in Airtable so we can link to them.
         // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new();
+        let db = Database::new().await;
         let groups = Groups::get_from_airtable(&db, self.cio_company_id).await?;
 
         let mut links: Vec<String> = Default::default();
@@ -1261,7 +1262,7 @@ impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new();
+        let db = Database::new().await;
         let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await?;
         // Iterate over the buildings to get the ID.
         for building in buildings.values() {

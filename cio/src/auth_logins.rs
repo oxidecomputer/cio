@@ -1,6 +1,7 @@
 #![allow(clippy::from_over_into)]
 
 use anyhow::Result;
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime};
 use macros::db;
@@ -166,7 +167,7 @@ impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
     async fn update_airtable_record(&mut self, _record: AuthUserLogin) -> Result<()> {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new();
+        let db = Database::new().await;
         let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await?;
 
         // Iterate over the auth_users and see if we find a match.

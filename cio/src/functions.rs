@@ -1,7 +1,7 @@
-use std::fmt;
-use std::ops::Deref;
+use std::{fmt, ops::Deref};
 
 use anyhow::Result;
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_humanize::HumanTime;
@@ -384,8 +384,8 @@ impl Function {
 }
 
 pub async fn refresh_functions() -> Result<()> {
-    let db = Database::new();
-    let company = Company::get_by_id(&db, 1)?;
+    let db = Database::new().await;
+    let company = Company::get_by_id(&db, 1).await?;
 
     let hours_ago = Utc::now().checked_sub_signed(chrono::Duration::days(1)).unwrap();
 
@@ -393,7 +393,8 @@ pub async fn refresh_functions() -> Result<()> {
     let fns = functions::dsl::functions
         .filter(functions::dsl::status.eq(octorust::types::JobStatus::InProgress.to_string()))
         .filter(functions::dsl::created_at.lt(hours_ago))
-        .load::<Function>(&db.conn())?;
+        .load_async::<Function>(&db.pool())
+        .await?;
 
     for mut f in fns {
         // Set the function as TimedOut.
@@ -409,7 +410,8 @@ pub async fn refresh_functions() -> Result<()> {
     let fns = functions::dsl::functions
         .filter(functions::dsl::status.eq(octorust::types::JobStatus::Completed.to_string()))
         .filter(functions::dsl::conclusion.eq("".to_string()))
-        .load::<Function>(&db.conn())?;
+        .load_async::<Function>(&db.pool())
+        .await?;
 
     for mut f in fns {
         // Set the function as Neutral.

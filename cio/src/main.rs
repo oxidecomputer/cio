@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 use std::{fs::File, sync::Arc};
 
 use cio_api::{
@@ -100,7 +101,7 @@ impl Context {
     pub async fn new(schema: String) -> Context {
         Context {
             schema,
-            db: Database::new(),
+            db: Database::new().await,
         }
     }
 }

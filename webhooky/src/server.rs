@@ -1,5 +1,4 @@
-use std::pin::Pin;
-use std::{collections::HashMap, env, fs::File, sync::Arc};
+use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, bail, Result};
 use chrono::{DateTime, Utc};
@@ -302,7 +301,7 @@ impl Context {
      * Return a new Context.
      */
     pub async fn new(schema: serde_json::Value, logger: slog::Logger) -> Context {
-        let db = Database::new();
+        let db = Database::new().await;
 
         let sec = steno::sec(logger, Arc::new(db.clone()));
 

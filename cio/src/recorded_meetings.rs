@@ -2,6 +2,7 @@
 use std::str::from_utf8;
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
 use chrono_humanize::HumanTime;
@@ -359,7 +360,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
                     .eq(meeting.host_id.to_string())
                     .and(users::dsl::cio_company_id.eq(company.id)),
             )
-            .first::<User>(&db.conn())?;
+            .first_async::<User>(&db.pool())
+            .await?;
 
         // Create the meeting in the database.
         let m = NewRecordedMeeting {

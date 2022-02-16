@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
@@ -175,7 +176,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                                     .and(users::dsl::cio_company_id.eq(company.id)),
                             )
                             .limit(1)
-                            .load::<User>(&db.conn())
+                            .load_async::<User>(&db.pool())
+                            .await
                         {
                             Ok(r) => {
                                 if !r.is_empty() {
@@ -206,7 +208,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                             )
                             .filter(users::dsl::cio_company_id.eq(company.id))
                             .limit(1)
-                            .load::<User>(&db.conn())
+                            .load_async::<User>(&db.pool())
+                            .await
                         {
                             Ok(r) => {
                                 if !r.is_empty() {
@@ -236,7 +239,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
 
             if let Ok(mut a) = applicants::dsl::applicants
                 .filter(applicants::dsl::email.eq(interview.email.to_string()))
-                .first::<Applicant>(&db.conn())
+                .first_async::<Applicant>(&db.pool())
+                .await
             {
                 // Set the applicant to interviewing.
                 if a.status != crate::applicant_status::Status::Interviewing.to_string()
@@ -318,7 +322,8 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         let mut materials_url = "".to_string();
         if let Ok(a) = applicants::dsl::applicants
             .filter(applicants::dsl::email.eq(employee.recovery_email.to_string()))
-            .first::<Applicant>(&db.conn())
+            .first_async::<Applicant>(&db.pool())
+            .await
         {
             materials_url = a.materials;
         }
@@ -355,7 +360,8 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
                         .or(users::dsl::aliases.contains(vec![username.to_string()])),
                 )
                 .filter(users::dsl::cio_company_id.eq(company.id))
-                .first::<User>(&db.conn())
+                .first_async::<User>(&db.pool())
+                .await
             {
                 existing.push((
                     user,
@@ -379,7 +385,8 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
     for (email, itrs) in interviewers {
         if let Ok(applicant) = applicants::dsl::applicants
             .filter(applicants::dsl::email.eq(email.to_string()))
-            .first::<Applicant>(&db.conn())
+            .first_async::<Applicant>(&db.pool())
+            .await
         {
             // Create the cover page.
             let mut user_html = "".to_string();

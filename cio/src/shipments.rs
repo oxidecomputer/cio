@@ -2,6 +2,7 @@
 use std::convert::From;
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
 use chrono_humanize::HumanTime;
@@ -797,7 +798,8 @@ impl OutboundShipments {
                     .and(outbound_shipments::dsl::provider.eq("Shippo".to_string()))
                     .and(outbound_shipments::dsl::pickup_date.is_null()),
             )
-            .load::<OutboundShipment>(&db.conn())?;
+            .load_async::<OutboundShipment>(&db.pool())
+            .await?;
 
         if shipments.is_empty() {
             // We can return early.

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use macros::db;
@@ -73,8 +74,8 @@ pub struct NewAPIToken {
 impl UpdateAirtableRecord<APIToken> for APIToken {
     async fn update_airtable_record(&mut self, _record: APIToken) -> Result<()> {
         // Link to the correct company.
-        let db = Database::new();
-        let company = Company::get_by_id(&db, self.auth_company_id)?;
+        let db = Database::new().await;
+        let company = Company::get_by_id(&db, self.auth_company_id).await?;
         self.company = vec![company.airtable_record_id];
 
         Ok(())

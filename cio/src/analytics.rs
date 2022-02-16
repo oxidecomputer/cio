@@ -1,5 +1,6 @@
 #![allow(clippy::from_over_into)]
 use anyhow::Result;
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use macros::db;
@@ -47,7 +48,7 @@ impl UpdateAirtableRecord<PageView> for PageView {
     async fn update_airtable_record(&mut self, _record: PageView) -> Result<()> {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new();
+        let db = Database::new().await;
         let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await?;
 
         // Iterate over the auth_users and see if we find a match.
@@ -70,10 +71,10 @@ impl NewPageView {
         self.page_link = format!("https://{}/{}", self.domain, self.path.trim_start_matches('/'));
     }
 
-    pub fn set_company_id(&mut self, db: &Database) -> Result<()> {
+    pub async fn set_company_id(&mut self, db: &Database) -> Result<()> {
         // Match the company ID with the link.
         // All the companies are owned by Oxide.
-        let companies = Companys::get_from_db(db, 1)?;
+        let companies = Companys::get_from_db(db, 1).await?;
         for company in companies {
             if self.domain.ends_with(&company.domain) {
                 self.cio_company_id = company.id;

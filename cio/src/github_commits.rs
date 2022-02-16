@@ -145,7 +145,7 @@ impl FromTagger for Option<octorust::types::Tagger> {
 }
 
 pub async fn refresh_commits() -> Result<()> {
-    let db = Database::new();
+    let db = Database::new().await;
 
     let companies = Companys::get_from_db(&db, 1)?;
 

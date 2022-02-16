@@ -66,7 +66,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
                 }
             }
 
-            let manager = user.manager(db);
+            let manager = user.manager(db).await;
             let manager_ramp_id = if manager.id == user.id {
                 "".to_string()
             } else {
@@ -107,7 +107,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
             phone: user.recovery_phone.to_string(),
             role: ramp_api::types::Role::BusinessUser,
             // Add the manager.
-            direct_manager_id: user.manager(db).ramp_id,
+            direct_manager_id: user.manager(db).await.ramp_id,
             department_id: "".to_string(),
             location_id: "".to_string(),
         };
@@ -801,7 +801,7 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             last_name: user.last_name.to_string(),
             locale: Default::default(),
             login: user.email.to_string(),
-            manager: user.manager(db).email,
+            manager: user.manager(db).await.email,
             manager_id: Default::default(),
             middle_name: Default::default(),
             mobile_phone: user.recovery_phone.to_string(),
@@ -1322,10 +1322,10 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
             .user_delete(
                 &user.zoom_id, // ID of the user to delete.
                 zoom_api::types::UserDeleteAction::Delete,
-                &user.manager(db).email, // Email of the user's manager to transfer items to
-                true,                    // Tranfer meetings
-                true,                    // Transfer webinars
-                true,                    // Transfer recordings
+                &user.manager(db).await.email, // Email of the user's manager to transfer items to
+                true,                          // Tranfer meetings
+                true,                          // Transfer webinars
+                true,                          // Transfer recordings
             )
             .await?;
 

@@ -225,7 +225,7 @@ impl FromVecPullRequestSimpleLinks for octorust::types::PullRequestSimpleLinks {
 }
 
 pub async fn refresh_pulls() -> Result<()> {
-    let db = Database::new();
+    let db = Database::new().await;
 
     let companies = Companys::get_from_db(&db, 1)?;
 

@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration, NaiveDate};
 use chrono_humanize::HumanTime;
@@ -660,7 +661,7 @@ impl Applicant {
     }
 
     /// Update the interviews start and end time, if we have it.
-    pub fn update_interviews_start_end_time(&mut self, db: &Database) {
+    pub async fn update_interviews_start_end_time(&mut self, db: &Database) {
         // If we have interviews for them, let's update the interviews_started and
         // interviews_completed times.
         if self.interviews.is_empty() || self.airtable_record_id.is_empty() {
@@ -673,7 +674,8 @@ impl Applicant {
         let data = applicant_interviews::dsl::applicant_interviews
             .filter(applicant_interviews::dsl::applicant.contains(vec![self.airtable_record_id.to_string()]))
             .order_by(applicant_interviews::dsl::start_time.asc())
-            .load::<ApplicantInterview>(&db.conn())
+            .load_async::<ApplicantInterview>(&db.pool())
+            .await
             .unwrap();
         // Probably a better way to do this using first and last, but whatever.
         for (index, r) in data.iter().enumerate() {
@@ -1729,8 +1731,8 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     Ok(result)
 }
 
-pub fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>> {
-    let users = Users::get_from_db(db, company.id)?;
+pub async fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>> {
+    let users = Users::get_from_db(db, company.id).await?;
 
     let mut reviewers: Vec<String> = Default::default();
     for user in users {
@@ -1744,6 +1746,7 @@ pub fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>
             reviewers.push(user.email);
         }
     }
+
     Ok(reviewers)
 }
 
@@ -2647,7 +2650,8 @@ Sincerely,
                     .eq(self.email.to_string())
                     .and(users::dsl::cio_company_id.eq(company.id)),
             )
-            .first::<User>(&db.conn());
+            .first_async::<User>(&db.pool())
+            .await;
         if result.is_ok() {
             let mut employee = result?;
             // Only do this if we don't have the employee's home address or start date.
@@ -3010,7 +3014,8 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
     // about. Everything else came from Google Sheets and therefore uses the old system.
     let applicants = applicants::dsl::applicants
         .filter(applicants::dsl::sheet_id.eq("".to_string()))
-        .load::<Applicant>(&db.conn())?;
+        .load_async::<Applicant>(&db.pool())
+        .await?;
 
     // Iterate over the applicants and update them.
     for mut applicant in applicants {
@@ -3038,7 +3043,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
             .await?;
 
         // Update the interviews start and end time if we have interviews.
-        applicant.update_interviews_start_end_time(db);
+        applicant.update_interviews_start_end_time(db).await;
 
         // Update airtable and the database again, we want to save our status just in
         // case there is an error.
@@ -3070,10 +3075,11 @@ mod tests {
     fn test_serialize_deserialize_applicants() {
         crate::utils::setup_logger();
 
-        let db = Database::new();
+        let db = Database::new().await;
         let applicant = applicants::dsl::applicants
             .filter(applicants::dsl::id.eq(318))
-            .first::<Applicant>(&db.conn())
+            .first_async::<Applicant>(&db.pool())
+            .await
             .unwrap();
 
         // Let's test that serializing this is going to give us an array of Airtable users.

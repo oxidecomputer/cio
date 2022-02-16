@@ -1,6 +1,7 @@
 use std::io::BufWriter;
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use async_trait::async_trait;
 use barcoders::{
     generators::{image::Image, svg::SVG},
@@ -544,8 +545,8 @@ impl SwagInventoryItem {
         Ok(())
     }
 
-    pub fn get_item(&self, db: &Database) -> Option<SwagItem> {
-        SwagItem::get_from_db(db, self.item.to_string())
+    pub async fn get_item(&self, db: &Database) -> Option<SwagItem> {
+        SwagItem::get_from_db(db, self.item.to_string()).await
     }
 
     pub async fn send_slack_notification_if_inventory_changed(
@@ -560,7 +561,7 @@ impl SwagInventoryItem {
             // Send a slack notification since it changed.
             let mut msg: FormattedMessage = self.clone().into();
 
-            let item = self.get_item(db).unwrap();
+            let item = self.get_item(db).await.unwrap();
 
             // Add our image as an accessory.
             let accessory = MessageBlockAccessory {
@@ -696,12 +697,13 @@ impl BarcodeScan {
         let barcode = b.trim().to_uppercase().to_string();
 
         // Initialize the database connection.
-        let db = Database::new();
+        let db = Database::new().await;
 
         // Firstly, let's make sure we have the barcode in the database.
         match swag_inventory_items::dsl::swag_inventory_items
             .filter(swag_inventory_items::dsl::barcode.eq(barcode.to_string()))
-            .first::<SwagInventoryItem>(&db.conn())
+            .first_async::<SwagInventoryItem>(&db.pool())
+            .await
         {
             Ok(mut swag_inventory_item) => {
                 // We found the matching inventory item!

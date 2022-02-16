@@ -1,4 +1,5 @@
 use anyhow::Result;
+use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
 use chrono::Utc;
 use log::info;
 use schemars::JsonSchema;
@@ -46,12 +47,12 @@ pub struct OrderItem {
 }
 
 impl Order {
-    pub fn format_contents(&self) -> Result<String> {
-        let db = Database::new();
+    pub async fn format_contents(&self) -> Result<String> {
+        let db = Database::new().await;
         let mut contents = String::new();
         for item in &self.items {
             // Get the swag item from the database.
-            let swag_inventory_item = SwagInventoryItem::get_by_id(&db, item.id)?;
+            let swag_inventory_item = SwagInventoryItem::get_by_id(&db, item.id).await?;
             contents = format!(
                 "{} x {}, Size: {}\n{}",
                 item.quantity, swag_inventory_item.item, swag_inventory_item.size, contents
@@ -129,33 +130,31 @@ impl Order {
 
         Ok(())
     }
-}
 
-impl From<Order> for NewOutboundShipment {
-    fn from(order: Order) -> Self {
-        let db = Database::new();
-        let company = Company::get_by_id(&db, order.cio_company_id).unwrap();
+    async fn to_outbound_shipment(&self) -> NewOutboundShipment {
+        let db = Database::new().await;
+        let company = Company::get_by_id(&db, self.cio_company_id).await.unwrap();
 
         NewOutboundShipment {
             created_time: Utc::now(),
-            name: order.name.to_string(),
-            email: order.email.to_string(),
-            phone: order.phone.to_string(),
-            street_1: order.street_1.to_string(),
-            street_2: order.street_2.to_string(),
-            city: order.city.to_string(),
-            state: order.state.to_string(),
-            zipcode: order.zipcode.to_string(),
-            country: order.country.to_string(),
+            name: self.name.to_string(),
+            email: self.email.to_string(),
+            phone: self.phone.to_string(),
+            street_1: self.street_1.to_string(),
+            street_2: self.street_2.to_string(),
+            city: self.city.to_string(),
+            state: self.state.to_string(),
+            zipcode: self.zipcode.to_string(),
+            country: self.country.to_string(),
             notes: format!(
                 "Automatically generated order from the {} store. \"Who do you know at {}?\" {}",
-                company.name, company.name, order.notes
+                company.name, company.name, self.notes
             ),
             // This will be populated when we update shippo.
             address_formatted: Default::default(),
             latitude: Default::default(),
             longitude: Default::default(),
-            contents: order.format_contents().unwrap(),
+            contents: self.format_contents().await.unwrap(),
             // The rest will be populated when we update shippo and create a label.
             carrier: Default::default(),
             pickup_date: None,
@@ -175,7 +174,7 @@ impl From<Order> for NewOutboundShipment {
             geocode_cache: Default::default(),
             local_pickup: false,
             link_to_package_pickup: Default::default(),
-            cio_company_id: order.cio_company_id,
+            cio_company_id: self.cio_company_id,
         }
     }
 }
