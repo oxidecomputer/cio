@@ -2,7 +2,7 @@
 use std::str::from_utf8;
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::{AsyncRunQueryDsl};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
 use chrono_humanize::HumanTime;

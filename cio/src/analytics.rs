@@ -1,6 +1,6 @@
 #![allow(clippy::from_over_into)]
 use anyhow::Result;
-use async_bb8_diesel::{AsyncRunQueryDsl};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use macros::db;

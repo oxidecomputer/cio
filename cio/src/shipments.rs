@@ -2,7 +2,7 @@
 use std::convert::From;
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::{AsyncRunQueryDsl};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
 use chrono_humanize::HumanTime;
