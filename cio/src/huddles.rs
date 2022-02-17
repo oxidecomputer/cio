@@ -616,7 +616,9 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
                                     .trim_end_matches(&company.gsuite_domain)
                                     .trim_end_matches('@')
                                     .to_string(),
-                            ) {
+                            )
+                            .await
+                            {
                                 attendees.push(user.email);
                             }
                         }

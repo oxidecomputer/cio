@@ -17,7 +17,7 @@ acme-lib = "^0.8.0"
 airtable-api = "^0.1.33"
 #airtable-api = { path = "../airtable" }
 anyhow = "1"
-async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "22c26ef" }
+async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "d7f05b8faac1e14d4a522f1ccde2c3830b1a8ca5" }
 async-recursion = "^1.0.0"
 async-trait = "^0.1.0"
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}

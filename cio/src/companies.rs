@@ -184,7 +184,7 @@ impl Company {
 
     pub async fn post_to_slack_channel(&self, db: &Database, msg: &slack_chat_api::FormattedMessage) -> Result<()> {
         // Create the Slack client.
-        let r = self.authenticate_slack(db);
+        let r = self.authenticate_slack(db).await;
         if let Err(e) = r {
             if e.to_string().contains("no token") {
                 // Return early, this company does not use Slack.
@@ -320,7 +320,7 @@ impl Company {
     /// Authenticate with ShipBob.
     pub async fn authenticate_shipbob(&self, db: &Database) -> Result<ShipBob> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "shipbob".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "shipbob".to_string()).await {
             // Initialize the ShipBob client.
             let mut shipbob = ShipBob::new_from_env(
                 t.access_token.to_string(),
@@ -420,7 +420,7 @@ impl Company {
     /// Authenticate with MailChimp.
     pub async fn authenticate_mailchimp(&self, db: &Database) -> Result<MailChimp> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()).await {
             // Initialize the MailChimp client.
             let mut mailchimp = MailChimp::new_from_env(
                 t.access_token.to_string(),
@@ -499,7 +499,7 @@ impl Company {
     /// Authenticate with Ramp.
     pub async fn authenticate_ramp(&self, db: &Database) -> Result<Ramp> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "ramp".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "ramp".to_string()).await {
             // Initialize the Ramp client.
             let mut ramp = Ramp::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
 
@@ -533,7 +533,7 @@ impl Company {
     /// Authenticate with Zoom.
     pub async fn authenticate_zoom(&self, db: &Database) -> Result<Zoom> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "zoom".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "zoom".to_string()).await {
             // Initialize the Zoom client.
             let mut zoom = Zoom::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
 
@@ -567,7 +567,7 @@ impl Company {
     /// Authenticate with DocuSign.
     pub async fn authenticate_docusign(&self, db: &Database) -> Result<DocuSign> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "docusign".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "docusign".to_string()).await {
             // Initialize the DocuSign client.
             let mut ds = DocuSign::new_from_env(
                 t.access_token.to_string(),
@@ -606,7 +606,7 @@ impl Company {
     /// Authenticate with Gusto.
     pub async fn authenticate_gusto(&self, db: &Database) -> Result<(Gusto, String)> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()).await {
             // Initialize the Gusto client.
             let mut gusto = Gusto::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
 
@@ -650,7 +650,7 @@ impl Company {
         }
 
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "tripactions".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "tripactions".to_string()).await {
             // Initialize the TripActions client.
             let mut ta = TripActions::new(
                 self.tripactions_client_id.to_string(),
@@ -718,7 +718,7 @@ impl Company {
     /// Authenticate with QuickBooks.
     pub async fn authenticate_quickbooks(&self, db: &Database) -> Result<QuickBooks> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "quickbooks".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "quickbooks".to_string()).await {
             // Initialize the QuickBooks client.
             let mut qb = QuickBooks::new_from_env(
                 t.company_id.to_string(),
@@ -756,7 +756,7 @@ impl Company {
     /// Authenticate Google Admin.
     pub async fn authenticate_google_admin(&self, db: &Database) -> Result<GoogleAdmin> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleAdmin::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
@@ -790,7 +790,7 @@ impl Company {
     /// Authenticate Google Calendar.
     pub async fn authenticate_google_calendar(&self, db: &Database) -> Result<GoogleCalendar> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleCalendar::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
@@ -834,7 +834,7 @@ impl Company {
     /// Authenticate Google Drive.
     pub async fn authenticate_google_drive(&self, db: &Database) -> Result<GoogleDrive> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
@@ -926,7 +926,7 @@ impl Company {
     /// Authenticate Google Sheets.
     pub async fn authenticate_google_sheets(&self, db: &Database) -> Result<GoogleSheets> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleSheets::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
 
@@ -960,7 +960,7 @@ impl Company {
     /// Authenticate Google Groups Settings.
     pub async fn authenticate_google_groups_settings(&self, db: &Database) -> Result<GoogleGroupsSettings> {
         // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()) {
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g =
                 GoogleGroupsSettings::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
@@ -1028,7 +1028,7 @@ pub async fn refresh_companies() -> Result<()> {
     let db = Database::new().await;
 
     // This should forever only be Oxide.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+    let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
 
     let is: Vec<airtable_api::Record<Company>> = oxide
         .authenticate_airtable(&oxide.airtable_base_id_cio)
@@ -1043,7 +1043,7 @@ pub async fn refresh_companies() -> Result<()> {
 
         let new_company: NewCompany = record.fields.into();
 
-        let mut company = new_company.upsert_in_db(&db)?;
+        let mut company = new_company.upsert_in_db(&db).await?;
         if company.airtable_record_id.is_empty() {
             company.airtable_record_id = record.id;
         }
@@ -1051,7 +1051,7 @@ pub async fn refresh_companies() -> Result<()> {
         company.update(&db).await?;
     }
     // Companies are only stored with Oxide.
-    Companys::get_from_db(&db, 1)?.update_airtable(&db).await?;
+    Companys::get_from_db(&db, 1).await?.update_airtable(&db).await?;
 
     Ok(())
 }

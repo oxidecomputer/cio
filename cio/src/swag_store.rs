@@ -64,10 +64,10 @@ impl Order {
 
     pub async fn create_shipment_for_order(&self, db: &Database) -> Result<()> {
         // Convert the shipment to an order.
-        let shipment: NewOutboundShipment = self.clone().into();
+        let shipment: NewOutboundShipment = self.to_outbound_shipment().await?;
 
         // Add the shipment to the database.
-        let mut new_shipment = shipment.upsert_in_db(db)?;
+        let mut new_shipment = shipment.upsert_in_db(db).await?;
         // Create or update the shipment from shippo.
         new_shipment.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
@@ -83,7 +83,7 @@ impl Order {
     pub async fn subtract_order_from_inventory(&self, db: &Database) -> Result<()> {
         for item in &self.items {
             // Get the swag item from the database.
-            let mut swag_inventory_item = SwagInventoryItem::get_by_id(db, item.id)?;
+            let mut swag_inventory_item = SwagInventoryItem::get_by_id(db, item.id).await?;
             let mut new = swag_inventory_item.current_stock - item.quantity;
             if swag_inventory_item.current_stock < 0 {
                 // TODO: Hopefully this never happens. The store code _should_ only allow people
@@ -92,7 +92,7 @@ impl Order {
                 new = 0;
             }
 
-            let company = swag_inventory_item.company(db)?;
+            let company = swag_inventory_item.company(db).await?;
 
             // This will also set the value.
             swag_inventory_item
@@ -131,11 +131,11 @@ impl Order {
         Ok(())
     }
 
-    async fn to_outbound_shipment(&self) -> NewOutboundShipment {
+    async fn to_outbound_shipment(&self) -> Result<NewOutboundShipment> {
         let db = Database::new().await;
-        let company = Company::get_by_id(&db, self.cio_company_id).await.unwrap();
+        let company = Company::get_by_id(&db, self.cio_company_id).await?;
 
-        NewOutboundShipment {
+        Ok(NewOutboundShipment {
             created_time: Utc::now(),
             name: self.name.to_string(),
             email: self.email.to_string(),
@@ -154,7 +154,7 @@ impl Order {
             address_formatted: Default::default(),
             latitude: Default::default(),
             longitude: Default::default(),
-            contents: self.format_contents().await.unwrap(),
+            contents: self.format_contents().await?,
             // The rest will be populated when we update shippo and create a label.
             carrier: Default::default(),
             pickup_date: None,
@@ -175,6 +175,6 @@ impl Order {
             local_pickup: false,
             link_to_package_pickup: Default::default(),
             cio_company_id: self.cio_company_id,
-        }
+        })
     }
 }

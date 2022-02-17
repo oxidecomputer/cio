@@ -117,10 +117,10 @@ impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
 
 impl ApplicantReview {
     pub async fn expand(&mut self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         // We need to get the person from the leaderboard that matches this reviewer.
-        if let Some(reviewer) = ApplicantReviewer::get_from_db(db, self.reviewer.to_string()) {
+        if let Some(reviewer) = ApplicantReviewer::get_from_db(db, self.reviewer.to_string()).await {
             // Set this to the link to leaderboard.
             self.link_to_leaderboard = vec![reviewer.airtable_record_id];
         } else if let Some(user) = User::get_from_db(
@@ -130,7 +130,9 @@ impl ApplicantReview {
                 .trim_end_matches(&company.gsuite_domain)
                 .trim_end_matches('@')
                 .to_string(),
-        ) {
+        )
+        .await
+        {
             // We need to addd them to the leaderboard.
             let reviewer = NewApplicantReviewer {
                 name: user.full_name(),
@@ -171,7 +173,7 @@ pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
 
         let new_review: NewApplicantReview = record.fields.into();
 
-        let mut review = new_review.upsert_in_db(db)?;
+        let mut review = new_review.upsert_in_db(db).await?;
         if review.airtable_record_id.is_empty() {
             review.airtable_record_id = record.id;
         }
@@ -183,7 +185,8 @@ pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
     }
 
     // Update them all from the database.
-    ApplicantReviews::get_from_db(db, company.id)?
+    ApplicantReviews::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 

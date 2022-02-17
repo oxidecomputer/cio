@@ -719,7 +719,7 @@ impl Applicant {
         self.scoring_underwhelming_materials_count = 0;
 
         // Create the Airtable client.
-        let company = Company::get_by_id(db, self.cio_company_id)?;
+        let company = Company::get_by_id(db, self.cio_company_id).await?;
         let airtable = company.authenticate_airtable(&company.airtable_base_id_hiring);
 
         if self.status == crate::applicant_status::Status::Onboarding.to_string()
@@ -751,7 +751,7 @@ impl Applicant {
                     .await?;
 
                 // Delete the record if it exists in the Database.
-                let r = ApplicantReview::get_by_id(db, record.fields.id)?;
+                let r = ApplicantReview::get_by_id(db, record.fields.id).await?;
                 // Delete it.
                 r.delete(db).await?;
             }
@@ -871,7 +871,7 @@ impl Applicant {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         let checkr_auth = company.authenticate_checkr();
         if checkr_auth.is_none() {
             // Return early.
@@ -1013,7 +1013,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         github: &octorust::Client,
         configs_issues: &[octorust::types::IssueSimple],
     ) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         // Make sure they have a start date.
         if self.start_date.is_none() {
@@ -1032,7 +1032,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         // Let's check the user's database to see if we can give this person the
         // {first_name}@ email.
         let mut username = first_name.to_lowercase().to_string();
-        let existing_user = User::get_from_db(db, company.id, username.to_string());
+        let existing_user = User::get_from_db(db, company.id, username.to_string()).await;
         if existing_user.is_some() {
             username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
         }
@@ -1225,7 +1225,7 @@ Notes:
 
     /// Send an email to the applicant that we love them but they are too junior.
     pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -1265,7 +1265,7 @@ The Oxide Team",
 
     /// Send an email to the applicant that they did not provide materials.
     pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -1296,7 +1296,7 @@ The Oxide Team",
 
     /// Send an email to the applicant about timing.
     pub async fn send_email_rejection_timing(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -1834,7 +1834,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -
     let piia_template_id = get_docusign_template_id(&ds, DOCUSIGN_PIIA_TEMPLATE).await;
 
     // TODO: we could actually query the DB by status, but whatever.
-    let applicants = Applicants::get_from_db(db, company.id)?;
+    let applicants = Applicants::get_from_db(db, company.id).await?;
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
@@ -2102,7 +2102,7 @@ The applicants Airtable \
 
     /// Send an email internally that we have a new application.
     async fn send_email_internally(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -2124,7 +2124,7 @@ The applicants Airtable \
 
     /// Send an email to the applicant that we recieved their application.
     async fn send_email_recieved_application_to_applicant(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -2554,7 +2554,7 @@ Sincerely,
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         let send_notification = self.docusign_envelope_status != envelope.status;
 
@@ -2887,7 +2887,7 @@ Sincerely,
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
 
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         let send_notification = self.docusign_piia_envelope_status != envelope.status;
 

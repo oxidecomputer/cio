@@ -352,11 +352,13 @@ pub async fn refresh_db_journal_club_meetings(db: &Database, company: &Company) 
         }
     }
 
-    JournalClubPapers::get_from_db(db, company.id)?
+    JournalClubPapers::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 
-    JournalClubMeetings::get_from_db(db, company.id)?
+    JournalClubMeetings::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 

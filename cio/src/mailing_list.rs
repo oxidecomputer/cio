@@ -284,7 +284,8 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
         ns.upsert(db).await?;
     }
 
-    MailingListSubscribers::get_from_db(db, company.id)?
+    MailingListSubscribers::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 

@@ -238,7 +238,7 @@ impl Function {
         }
 
         // Get the saga from it's id.
-        let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
+        let mut nf = Function::get_from_db(db, saga_id.to_string()).await.unwrap();
         nf.logs = logs.to_string();
         nf.update(db).await?;
 
@@ -258,7 +258,7 @@ impl Function {
         }
 
         // Get the saga from it's id.
-        let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
+        let mut nf = Function::get_from_db(db, saga_id.to_string()).await.unwrap();
 
         let mut send_notification = false;
         if conclusion.to_string() != nf.conclusion && nf.status == octorust::types::JobStatus::Completed.to_string() {
@@ -270,7 +270,7 @@ impl Function {
         let new = nf.update(db).await?;
 
         if send_notification {
-            let company = new.company(db)?;
+            let company = new.company(db).await?;
             new.send_slack_notification(db, &company).await?;
         }
 
@@ -298,7 +298,7 @@ impl Function {
 
         let new = nf.upsert(db).await?;
 
-        let company = new.company(db)?;
+        let company = new.company(db).await?;
         new.send_slack_notification(db, &company).await?;
 
         Ok(new)
@@ -311,7 +311,7 @@ impl Function {
         state: &steno::SagaCachedState,
     ) -> Result<Self> {
         // Get the saga from it's id.
-        let mut nf = Function::get_from_db(db, saga_id.to_string()).unwrap();
+        let mut nf = Function::get_from_db(db, saga_id.to_string()).await.unwrap();
 
         let status = match state {
             steno::SagaCachedState::Running => octorust::types::JobStatus::InProgress,
@@ -334,7 +334,7 @@ impl Function {
         let new = nf.update(db).await?;
 
         if send_notification {
-            let company = new.company(db)?;
+            let company = new.company(db).await?;
             new.send_slack_notification(db, &company).await?;
         }
 
@@ -344,7 +344,7 @@ impl Function {
     /// Update a job from SagaNodeEvent.
     pub async fn from_saga_node_event(db: &Database, event: &steno::SagaNodeEvent) -> Result<Self> {
         // Get the saga from it's id.
-        let mut nf = Function::get_from_db(db, event.saga_id.to_string()).unwrap();
+        let mut nf = Function::get_from_db(db, event.saga_id.to_string()).await.unwrap();
 
         match &event.event_type {
             steno::SagaNodeEventType::Started => {}
@@ -422,7 +422,7 @@ pub async fn refresh_functions() -> Result<()> {
         new.send_slack_notification(&db, &company).await?;
     }
 
-    Functions::get_from_db(&db, 1)?.update_airtable(&db).await?;
+    Functions::get_from_db(&db, 1).await?.update_airtable(&db).await?;
 
     Ok(())
 }

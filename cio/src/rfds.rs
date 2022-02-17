@@ -1007,7 +1007,7 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     // Sync rfds.
     for (_, mut rfd) in rfds {
         // Check if we already have an existing RFD.
-        if let Some(existing) = RFD::get_from_db(db, rfd.number) {
+        if let Some(existing) = RFD::get_from_db(db, rfd.number).await {
             // Set the rfd_sections_id so we don't overwrite it.
             rfd.rfd_sections_id = existing.rfd_sections_id;
         }
@@ -1034,14 +1034,14 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     }
 
     // Update rfds in airtable.
-    RFDs::get_from_db(db, company.id)?.update_airtable(db).await?;
+    RFDs::get_from_db(db, company.id).await?.update_airtable(db).await?;
 
     Ok(())
 }
 
 pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
     // Get all the rfds from the database.
-    let rfds = RFDs::get_from_db(db, company.id)?;
+    let rfds = RFDs::get_from_db(db, company.id).await?;
     let github = company.authenticate_github()?;
 
     // Check if the repo exists, if not exit early.
@@ -1159,7 +1159,7 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
 
 /// Create a changelog email for the RFDs.
 pub async fn send_rfd_changelog(db: &Database, company: &Company) -> Result<()> {
-    let rfds = RFDs::get_from_db(db, company.id)?;
+    let rfds = RFDs::get_from_db(db, company.id).await?;
 
     if rfds.0.is_empty() {
         // Return early.

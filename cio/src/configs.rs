@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use google_calendar::types::{Event, EventAttendee, EventDateTime};
@@ -435,7 +436,9 @@ impl UserConfig {
         if !self.building.is_empty() {
             // The user has an actual building for their work address.
             // Let's get it.
-            let building = Building::get_from_db(db, self.cio_company_id, self.building.to_string()).unwrap();
+            let building = Building::get_from_db(db, self.cio_company_id, self.building.to_string())
+                .await
+                .unwrap();
             // Now let's set their address to the building's address.
             self.work_address_street_1 = building.street_address.to_string();
             self.work_address_street_2 = "".to_string();
@@ -629,7 +632,7 @@ impl User {
         // Let's create the shipment.
         let new_shipment = NewOutboundShipment::from(self.clone());
         // Let's add it to our database.
-        let mut shipment = new_shipment.upsert_in_db(db)?;
+        let mut shipment = new_shipment.upsert_in_db(db).await?;
         // Create the shipment in shippo.
         shipment.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
@@ -640,7 +643,7 @@ impl User {
 
     /// Send an email to the new consultant about their account.
     pub async fn send_email_new_consultant(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -692,7 +695,7 @@ xoxo,
 
     /// Send an email to the GSuite user about their account.
     pub async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
@@ -754,7 +757,7 @@ xoxo,
 
     /// Send an email to the new user about their account.
     pub async fn send_email_new_user(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
 
@@ -1470,7 +1473,7 @@ pub async fn sync_github_outside_collaborators(
 
     // Get all the internal to the company collaborators.
     let mut internal_github_users: Vec<String> = Vec::new();
-    let internal_users = Users::get_from_db(db, company.id)?;
+    let internal_users = Users::get_from_db(db, company.id).await?;
     for i in internal_users {
         if !i.github.is_empty() {
             internal_github_users.push(i.github.to_string());
@@ -1635,7 +1638,7 @@ pub async fn sync_users(
     }
 
     // Get all the users.
-    let db_users = Users::get_from_db(db, company.id)?;
+    let db_users = Users::get_from_db(db, company.id).await?;
     // Create a BTreeMap
     let mut user_map: BTreeMap<String, User> = Default::default();
     for u in db_users {
@@ -1647,7 +1650,7 @@ pub async fn sync_users(
         user.email = format!("{}@{}", user.username, company.gsuite_domain);
 
         // Check if we already have the new user in the database.
-        let existing = User::get_from_db(db, company.id, user.username.to_string());
+        let existing = User::get_from_db(db, company.id, user.username.to_string()).await;
 
         // Update or create the user in the database.
         if let Some(e) = existing.clone() {
@@ -1848,7 +1851,7 @@ pub async fn sync_users(
     info!("updated configs users in the database");
 
     // Update users in airtable.
-    Users::get_from_db(db, company.id)?.update_airtable(db).await?;
+    Users::get_from_db(db, company.id).await?.update_airtable(db).await?;
 
     Ok(())
 }
@@ -1870,7 +1873,7 @@ pub async fn sync_buildings(
         .await?;
 
     // Get all the buildings.
-    let db_buildings = Buildings::get_from_db(db, company.id)?;
+    let db_buildings = Buildings::get_from_db(db, company.id).await?;
     // Create a BTreeMap
     let mut building_map: BTreeMap<String, Building> = Default::default();
     for u in db_buildings {
@@ -1904,7 +1907,7 @@ pub async fn sync_buildings(
 
     // Update the buildings in GSuite.
     // Get all the buildings.
-    let db_buildings = Buildings::get_from_db(db, company.id)?;
+    let db_buildings = Buildings::get_from_db(db, company.id).await?;
     // Create a BTreeMap
     let mut building_map: BTreeMap<String, Building> = Default::default();
     for u in db_buildings {
@@ -1971,7 +1974,10 @@ pub async fn sync_buildings(
     }
 
     // Update buildings in airtable.
-    Buildings::get_from_db(db, company.id)?.update_airtable(db).await?;
+    Buildings::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }
@@ -1997,7 +2003,7 @@ pub async fn sync_conference_rooms(
         .await?;
 
     // Get all the conference_rooms.
-    let db_conference_rooms = ConferenceRooms::get_from_db(db, company.id)?;
+    let db_conference_rooms = ConferenceRooms::get_from_db(db, company.id).await?;
     // Create a BTreeMap
     let mut conference_room_map: BTreeMap<String, ConferenceRoom> = Default::default();
     for u in db_conference_rooms {
@@ -2022,7 +2028,7 @@ pub async fn sync_conference_rooms(
 
     // Update the conference_rooms in GSuite.
     // Get all the conference_rooms.
-    let db_conference_rooms = ConferenceRooms::get_from_db(db, company.id)?;
+    let db_conference_rooms = ConferenceRooms::get_from_db(db, company.id).await?;
     // Create a BTreeMap
     let mut conference_room_map: BTreeMap<String, ConferenceRoom> = Default::default();
     for u in db_conference_rooms {
@@ -2080,7 +2086,8 @@ pub async fn sync_conference_rooms(
     }
 
     // Update conference_rooms in airtable.
-    ConferenceRooms::get_from_db(db, company.id)?
+    ConferenceRooms::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 
@@ -2098,7 +2105,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     let okta_auth = company.authenticate_okta();
 
     // Get all the groups.
-    let db_groups = Groups::get_from_db(db, company.id)?;
+    let db_groups = Groups::get_from_db(db, company.id).await?;
     // Create a BTreeMap
     let mut group_map: BTreeMap<String, Group> = Default::default();
     for u in db_groups {
@@ -2137,7 +2144,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
 
     // Update the groups in GitHub and GSuite.
     // Get all the groups.
-    let db_groups = Groups::get_from_db(db, company.id)?;
+    let db_groups = Groups::get_from_db(db, company.id).await?;
     // Iterate over all the groups in our database.
     // TODO: delete any groups that are not in the database for each vendor.
     for g in db_groups {
@@ -2151,7 +2158,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     }
 
     // Update groups in airtable.
-    Groups::get_from_db(db, company.id)?.update_airtable(db).await?;
+    Groups::get_from_db(db, company.id).await?.update_airtable(db).await?;
 
     Ok(())
 }
@@ -2164,7 +2171,7 @@ pub async fn sync_links(
     company: &Company,
 ) -> Result<()> {
     // Get all the links.
-    let db_links = Links::get_from_db(db, company.id)?;
+    let db_links = Links::get_from_db(db, company.id).await?;
     // Create a BTreeMap
     let mut link_map: BTreeMap<String, Link> = Default::default();
     for u in db_links {
@@ -2221,7 +2228,7 @@ pub async fn sync_links(
     info!("updated configs links in the database");
 
     // Update links in airtable.
-    Links::get_from_db(db, company.id)?.update_airtable(db).await?;
+    Links::get_from_db(db, company.id).await?.update_airtable(db).await?;
 
     Ok(())
 }
@@ -2234,7 +2241,7 @@ pub async fn sync_certificates(
     company: &Company,
 ) -> Result<()> {
     // Get all the certificates.
-    let db_certificates = Certificates::get_from_db(db, company.id)?;
+    let db_certificates = Certificates::get_from_db(db, company.id).await?;
     // Create a BTreeMap
     let mut certificate_map: BTreeMap<String, Certificate> = Default::default();
     for u in db_certificates {
@@ -2295,7 +2302,10 @@ pub async fn sync_certificates(
     info!("updated configs certificates in the database");
 
     // Update certificates in airtable.
-    Certificates::get_from_db(db, company.id)?.update_airtable(db).await?;
+    Certificates::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }
@@ -2360,7 +2370,7 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
     }
 
     // Get our list of users from our database.
-    let users = Users::get_from_db(db, company.id)?;
+    let users = Users::get_from_db(db, company.id).await?;
     // For each user, create an anniversary for their start date.
     for mut user in users {
         // We only care if the user has a start date.

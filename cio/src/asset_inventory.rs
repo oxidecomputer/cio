@@ -220,7 +220,7 @@ pub struct PrintLabelsRequest {
 impl AssetItem {
     /// Send the label to our printer.
     pub async fn print_label(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         if company.printer_url.is_empty() {
             // Return early.
@@ -296,12 +296,15 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()>
         item.expand(&drive_client, &drive_id, &parent_id).await?;
         item.cio_company_id = company.id;
 
-        let mut db_item = item.upsert_in_db(db)?;
+        let mut db_item = item.upsert_in_db(db).await?;
         db_item.airtable_record_id = item_record.id.to_string();
         db_item.update(db).await?;
     }
 
-    AssetItems::get_from_db(db, company.id)?.update_airtable(db).await?;
+    AssetItems::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }

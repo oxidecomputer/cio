@@ -230,7 +230,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
 
     let okta_auth = company.authenticate_okta();
 
-    let slack_auth = company.authenticate_slack(db);
+    let slack_auth = company.authenticate_slack(db).await;
 
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SoftwareVendor>> = company
@@ -243,7 +243,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
         let new_cost_per_user_per_month = vendor.cost_per_user_per_month;
 
         // Get the existing record if there is one.
-        let existing = SoftwareVendor::get_from_db(db, company.id, vendor.name.to_string());
+        let existing = SoftwareVendor::get_from_db(db, company.id, vendor.name.to_string()).await;
         // Set the existing cost and number of users, since we want to know
         // via slack notification if it changed.
         vendor.cost_per_user_per_month = if let Some(ref ex) = existing {
@@ -286,7 +286,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
         {
             // Airtable, Brex, Gusto, Expensify are all the same number of users as
             // in all@.
-            let group = Group::get_from_db(db, company.id, "all".to_string()).unwrap();
+            let group = Group::get_from_db(db, company.id, "all".to_string()).await.unwrap();
             let airtable_group = group.get_existing_airtable_record(db).await.unwrap();
 
             airtable_group.fields.members.len() as i32
@@ -302,7 +302,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
             .await?;
 
         // Upsert the record in our database.
-        let mut db_vendor = vendor.upsert_in_db(db)?;
+        let mut db_vendor = vendor.upsert_in_db(db).await?;
 
         if db_vendor.airtable_record_id.is_empty() {
             db_vendor.airtable_record_id = vendor_record.id;
@@ -315,7 +315,8 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
         db_vendor.update(db).await?;
     }
 
-    SoftwareVendors::get_from_db(db, company.id)?
+    SoftwareVendors::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 
@@ -445,7 +446,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&transaction.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -475,7 +476,8 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
         nt.upsert(db).await?;
     }
 
-    CreditCardTransactions::get_from_db(db, company.id)?
+    CreditCardTransactions::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 
@@ -518,7 +520,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         let mut link_to_vendor: Vec<String> = Default::default();
         let vendor = clean_vendor_name(&reimbursement.merchant);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
                 link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -548,7 +550,10 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         nt.upsert(db).await?;
     }
 
-    ExpensedItems::get_from_db(db, company.id)?.update_airtable(db).await?;
+    ExpensedItems::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }
@@ -928,7 +933,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -1033,7 +1038,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Resul
 
         let vendor = clean_vendor_name(&bill.vendor);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
                 bill.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -1043,7 +1048,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Resul
         }
 
         // Upsert the record in our database.
-        let mut db_bill = bill.upsert_in_db(db)?;
+        let mut db_bill = bill.upsert_in_db(db).await?;
 
         db_bill.cio_company_id = company.id;
 
@@ -1054,7 +1059,8 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Resul
         db_bill.update(db).await?;
     }
 
-    AccountsPayables::get_from_db(db, company.id)?
+    AccountsPayables::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 
@@ -1128,7 +1134,10 @@ impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
 pub async fn refresh_expensify_transactions(db: &Database, company: &Company) -> Result<()> {
-    ExpensedItems::get_from_db(db, company.id)?.update_airtable(db).await?;
+    ExpensedItems::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     let mut path = env::current_dir()?;
     path.push("expensify.csv");
@@ -1227,7 +1236,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.merchant_name);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }
@@ -1279,7 +1288,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
         // Try to link to the correct vendor.
         let vendor = clean_vendor_name(&record.vendor);
         // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()) {
+        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
                 record.link_to_vendor = vec![v.airtable_record_id.to_string()];
             }

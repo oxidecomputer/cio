@@ -2,6 +2,7 @@
 use std::env;
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
@@ -209,7 +210,8 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
         ns.upsert(db).await?;
     }
 
-    RackLineSubscribers::get_from_db(db, company.id)?
+    RackLineSubscribers::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 

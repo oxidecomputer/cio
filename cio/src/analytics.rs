@@ -86,7 +86,10 @@ impl NewPageView {
 }
 
 pub async fn refresh_analytics(db: &Database, company: &Company) -> Result<()> {
-    PageViews::get_from_db(db, company.id)?.update_airtable(db).await?;
+    PageViews::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }

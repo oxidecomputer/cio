@@ -138,11 +138,11 @@ checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 [[package]]
 name = "async-bb8-diesel"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git?rev=22c26ef#22c26ef840075a57b18ac2eae3ead989b992773e"
+source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git?rev=d7f05b8faac1e14d4a522f1ccde2c3830b1a8ca5#d7f05b8faac1e14d4a522f1ccde2c3830b1a8ca5"
 dependencies = [
  "async-trait",
  "bb8",
- "diesel 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=ce77c382)",
+ "diesel",
  "thiserror",
  "tokio",
 ]
@@ -528,7 +528,7 @@ dependencies = [
  "comrak",
  "csv",
  "deunicode",
- "diesel 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=fd723880)",
+ "diesel",
  "diffy",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.6.1-dev",
@@ -906,37 +906,16 @@ checksum = "f2c9736e15e7df1638a7f6eee92a6511615c738246a052af5ba86f039b65aede"
 [[package]]
 name = "diesel"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=ce77c382#ce77c382d2836f6b385225991cf58cb2d2dd65d6"
-dependencies = [
- "byteorder",
- "diesel_derives 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=ce77c382)",
- "itoa 0.4.8",
- "r2d2",
-]
-
-[[package]]
-name = "diesel"
-version = "2.0.0"
 source = "git+https://github.com/diesel-rs/diesel?rev=fd723880#fd723880db6887a859ffa691890fe964de7dd3f8"
 dependencies = [
  "bitflags",
  "byteorder",
  "chrono",
- "diesel_derives 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=fd723880)",
+ "diesel_derives",
  "itoa 0.4.8",
  "pq-sys",
  "r2d2",
  "serde_json",
-]
-
-[[package]]
-name = "diesel_derives"
-version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=ce77c382#ce77c382d2836f6b385225991cf58cb2d2dd65d6"
-dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
 ]
 
 [[package]]
@@ -5568,7 +5547,7 @@ dependencies = [
  "cio-api",
  "clap 3.0.14",
  "clokwerk",
- "diesel 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=fd723880)",
+ "diesel",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.6.1-dev",
  "duct",

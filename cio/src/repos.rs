@@ -69,7 +69,7 @@ pub struct GitHubUser {
 }
 
 impl FromSql<Jsonb, Pg> for GitHubUser {
-    fn from_sql(bytes: Option<&[u8]>) -> deserialize::Result<Self> {
+    fn from_sql(bytes: Option<&Pg::RawValue>) -> deserialize::Result<Self> {
         let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
         Ok(serde_json::from_value(value)?)
     }
@@ -548,7 +548,7 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
     let github_repos = list_all_github_repos(github, company).await?;
 
     // Get all the repos.
-    let db_repos = GithubRepos::get_from_db(db, company.id)?;
+    let db_repos = GithubRepos::get_from_db(db, company.id).await?;
 
     // Create a BTreeMap
     let mut repo_map: BTreeMap<String, GithubRepo> = Default::default();
@@ -571,7 +571,10 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
         repo.delete(db).await?;
     }
 
-    GithubRepos::get_from_db(db, company.id)?.update_airtable(db).await?;
+    GithubRepos::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }
@@ -587,7 +590,7 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
  * - Adds outside collaborators to their specified repositories.
  */
 pub async fn sync_all_repo_settings(db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
-    let repos = GithubRepos::get_from_db(db, company.id)?;
+    let repos = GithubRepos::get_from_db(db, company.id).await?;
 
     // Iterate over the repos and set a number of default settings.
     for r in repos {

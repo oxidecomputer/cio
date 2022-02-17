@@ -488,7 +488,9 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                             .trim_end_matches(&company.gsuite_domain)
                             .trim_end_matches('@')
                             .to_string(),
-                    ) {
+                    )
+                    .await
+                    {
                         owner = attendee.email.to_string()
                     }
                 }
@@ -557,7 +559,9 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                                 .trim_end_matches(&company.gsuite_domain)
                                 .trim_end_matches('@')
                                 .to_string(),
-                        ) {
+                        )
+                        .await
+                        {
                             owner = o.email_address.to_string();
                             break;
                         }
@@ -667,7 +671,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
 
             // Let's try to get the meeting.
             let existing = RecordedMeeting::get_from_db(db, event.id.to_string());
-            if let Some(m) = existing {
+            if let Some(m) = existing.await {
                 // Update the meeting.
                 meeting.transcript = m.transcript.to_string();
                 meeting.transcript_id = m.transcript_id.to_string();
@@ -835,7 +839,8 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
         }
     }
 
-    RecordedMeetings::get_from_db(db, company.id)?
+    RecordedMeetings::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 

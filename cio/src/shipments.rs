@@ -851,7 +851,7 @@ impl OutboundShipments {
                 building_location_type: "Office".to_string(),
                 building_type: "building".to_string(),
                 instructions: "Knock on the glass door and someone will come open it.".to_string(),
-                address: company.hq_shipping_address(db)?,
+                address: company.hq_shipping_address(db).await?,
             },
             transactions: transaction_ids.clone(),
             requested_start_time: start_time,
@@ -1010,7 +1010,7 @@ impl OutboundShipment {
             return Ok(());
         }
 
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         if company.printer_url.is_empty() {
             // Return early.
@@ -1051,7 +1051,7 @@ impl OutboundShipment {
             return Ok(());
         }
 
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         if company.printer_url.is_empty() {
             // Return early.
@@ -1095,7 +1095,7 @@ impl OutboundShipment {
             return Ok(());
         }
 
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -1141,7 +1141,7 @@ xoxo,
             return Ok(());
         }
 
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -1184,7 +1184,7 @@ xoxo,
 
     /// Send an email internally that we need to package the shipment.
     pub async fn send_email_internally(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
         // Send the message.
@@ -1358,7 +1358,7 @@ The Shipping Bot",
             return Ok(());
         }
 
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         // Update the formatted address.
         self.populate_formatted_address();
@@ -1457,7 +1457,7 @@ The Shipping Bot",
         }
 
         // We need to create the label since we don't have one already.
-        let address_from = company.hq_shipping_address(db)?;
+        let address_from = company.hq_shipping_address(db).await?;
 
         // If this is an international shipment, we need to define our customs
         // declarations.
@@ -1657,7 +1657,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
     // This ensures that any one offs (that don't come from spreadsheets) are also updated.
     // TODO: if we decide to accept one-offs straight in airtable support that, but for now
     // we do not.
-    let shipments = OutboundShipments::get_from_db(db, company.id)?;
+    let shipments = OutboundShipments::get_from_db(db, company.id).await?;
     for mut s in shipments {
         if let Some(existing) = s.get_existing_airtable_record(db).await {
             // Take the field from Airtable.
@@ -1673,7 +1673,8 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
 
     update_manual_shippo_shipments(db, company).await?;
 
-    OutboundShipments::get_from_db(db, company.id)?
+    OutboundShipments::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
     Ok(())
@@ -1759,14 +1760,14 @@ async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Res
         // in the loop above. Otherwise the email notifications get stuck and you get
         // innundated with notifications your package is on the way. Since it
         // thinks the status is always changing.
-        let existing = OutboundShipment::get_from_db(db, ns.carrier.to_string(), ns.tracking_number.to_string());
+        let existing = OutboundShipment::get_from_db(db, ns.carrier.to_string(), ns.tracking_number.to_string()).await;
         if existing.is_some() {
             // We already have this shipment. Continue through our loop.
             continue;
         }
 
         // Upsert the record in the database.
-        let mut s = ns.upsert_in_db(db)?;
+        let mut s = ns.upsert_in_db(db).await?;
 
         // The shipment is actually new, lets send the notification for the status
         // as queued then.
@@ -1803,14 +1804,15 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Resu
         let mut new_shipment: NewInboundShipment = record.fields.into();
         new_shipment.expand(db, company).await?;
         new_shipment.cio_company_id = company.id;
-        let mut shipment = new_shipment.upsert_in_db(db)?;
+        let mut shipment = new_shipment.upsert_in_db(db).await?;
         if shipment.airtable_record_id.is_empty() {
             shipment.airtable_record_id = record.id;
         }
         shipment.update(db).await?;
     }
 
-    InboundShipments::get_from_db(db, company.id)?
+    InboundShipments::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 

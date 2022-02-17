@@ -25,7 +25,7 @@ pub async fn generate_shorturls_for_repos(
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the github repos from the database.
-    let repos = GithubRepos::get_from_db(db, company.id)?;
+    let repos = GithubRepos::get_from_db(db, company.id).await?;
 
     // Create the array of links.
     for repo in repos {
@@ -65,7 +65,7 @@ pub async fn generate_shorturls_for_rfds(
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the rfds from the database.
-    let rfds = RFDs::get_from_db(db, company.id)?;
+    let rfds = RFDs::get_from_db(db, company.id).await?;
     for rfd in rfds {
         let mut link = ShortUrl {
             name: rfd.number.to_string(),
@@ -111,7 +111,7 @@ pub async fn generate_shorturls_for_configs_links(
     let mut links: Vec<ShortUrl> = Default::default();
 
     // Get the config.
-    let configs_links = Links::get_from_db(db, company.id)?;
+    let configs_links = Links::get_from_db(db, company.id).await?;
 
     // Create the array of links.
     for link in configs_links {
@@ -226,7 +226,7 @@ pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()>
 pub async fn refresh_shorturls() -> Result<()> {
     let db = Database::new().await;
 
-    let companies = Companys::get_from_db(&db, 1)?;
+    let companies = Companys::get_from_db(&db, 1).await?;
 
     // Iterate over the companies and update.
     for company in companies {

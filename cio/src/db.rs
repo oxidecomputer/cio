@@ -11,7 +11,7 @@ pub struct Database {
 }
 
 #[derive(Clone)]
-struct DB(Arc<bb8::Pool<ConnectionManager<PgConnection>>>);
+struct DB(bb8::Pool<ConnectionManager<diesel::PgConnection>>);
 
 // This is a workaround so we can implement Debug for PgConnection.
 impl fmt::Debug for DB {
@@ -28,18 +28,16 @@ impl Database {
         let manager = ConnectionManager::<PgConnection>::new(&database_url);
         let pool = bb8::Pool::builder().max_size(25).build(manager).await.unwrap();
 
-        Database {
-            pool: DB(Arc::new(pool)),
-        }
+        Database { pool: DB(pool) }
     }
 
     /// Returns a connection from the pool.
-    pub fn pool(&self) -> Arc<bb8::Pool<ConnectionManager<PgConnection>>> {
+    pub fn pool(&self) -> bb8::Pool<ConnectionManager<diesel::PgConnection>> {
         self.pool.0
     }
 }
 
-/*#[async_trait]
+#[async_trait]
 impl steno::SecStore for Database {
     async fn saga_create(&self, create_params: steno::SagaCreateParams) -> Result<()> {
         crate::functions::Function::from_saga_create_params(self, &create_params).await?;
@@ -58,4 +56,4 @@ impl steno::SecStore for Database {
             .await
             .unwrap();
     }
-}*/
+}

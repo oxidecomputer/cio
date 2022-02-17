@@ -105,12 +105,15 @@ pub async fn refresh_swag_items(db: &Database, company: &Company) -> Result<()> 
         let mut item: NewSwagItem = item_record.fields.into();
         item.cio_company_id = company.id;
 
-        let mut db_item = item.upsert_in_db(db)?;
+        let mut db_item = item.upsert_in_db(db).await?;
         db_item.airtable_record_id = item_record.id.to_string();
         db_item.update(db).await?;
     }
 
-    SwagItems::get_from_db(db, company.id)?.update_airtable(db).await?;
+    SwagItems::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }
@@ -495,7 +498,7 @@ pub struct PrintRequest {
 impl SwagInventoryItem {
     /// Send the label to our printer.
     pub async fn print_label(&self, db: &Database) -> Result<()> {
-        let company = self.company(db)?;
+        let company = self.company(db).await?;
 
         if company.printer_url.is_empty() {
             // Return early.
@@ -632,12 +635,13 @@ pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> R
 
         // TODO: send a slack notification for a new item (?)
 
-        let mut db_inventory_item = inventory_item.upsert_in_db(db)?;
+        let mut db_inventory_item = inventory_item.upsert_in_db(db).await?;
         db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();
         db_inventory_item.update(db).await?;
     }
 
-    SwagInventoryItems::get_from_db(db, company.id)?
+    SwagInventoryItems::get_from_db(db, company.id)
+        .await?
         .update_airtable(db)
         .await?;
 
@@ -744,7 +748,10 @@ pub async fn refresh_barcode_scans(db: &Database, company: &Company) -> Result<(
         return Ok(());
     }
 
-    BarcodeScans::get_from_db(db, company.id)?.update_airtable(db).await?;
+    BarcodeScans::get_from_db(db, company.id)
+        .await?
+        .update_airtable(db)
+        .await?;
 
     Ok(())
 }

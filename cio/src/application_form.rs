@@ -59,7 +59,7 @@ impl ApplicationForm {
         // Add the applicant to the database.
         let mut applicant = new_applicant.upsert(db).await?;
 
-        let company = Company::get_by_id(db, self.cio_company_id)?;
+        let company = Company::get_by_id(db, self.cio_company_id).await?;
 
         // Initialize the GSuite sheets client.
         let drive_client = company.authenticate_google_drive(db).await?;
