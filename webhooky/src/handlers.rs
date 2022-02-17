@@ -21,7 +21,7 @@ use cio_api::{
     swag_store::Order,
     utils::{decode_base64, merge_json},
 };
-use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, QueryDsl};
 use dropshot::{Path, RequestContext, TypedBody, UntypedBody};
 use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
