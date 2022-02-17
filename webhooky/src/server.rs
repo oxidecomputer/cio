@@ -25,7 +25,6 @@ use signal_hook::{
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::enclose::enclose;
 use crate::github_types::GitHubWebhook;
 
 pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {

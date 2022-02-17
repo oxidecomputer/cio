@@ -459,7 +459,7 @@ pub async fn handle_auth_slack_callback(
         .first_async::<APIToken>(&api_context.db.pool())
         .await
     {
-        diesel::update(api_tokens::dsl::api_tokens
+        diesel::update(api_tokens::dsl::api_tokens)
             .filter(api_tokens::dsl::id.eq(existing.id))
             .set(token)
             .get_result_async::<APIToken>(&api_context.db.pool())
