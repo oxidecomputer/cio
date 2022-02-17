@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::async_traits::AsyncRunQueryDsl;
 use chrono::Utc;
 use cio_api::{
     api_tokens::{APIToken, NewAPIToken},
@@ -506,7 +507,7 @@ pub async fn handle_auth_slack_callback(
                 .set(user_token)
                 .get_result_async::<APIToken>(&api_context.db.pool())?
         } else {
-            user_token.create_in_db(&api_context.db)?
+            user_token.create_in_db(&api_context.db).await?
         };
         new_user_token.upsert_in_airtable(&api_context.db).await?;
     }
@@ -538,7 +539,7 @@ pub async fn handle_auth_quickbooks_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain)?;
+    let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -591,7 +592,7 @@ pub async fn handle_auth_docusign_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain)?;
+    let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {

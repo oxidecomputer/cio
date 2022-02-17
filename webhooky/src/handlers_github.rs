@@ -77,7 +77,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
             }
         }
         EventType::Repository => {
-            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login)?;
+            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login).await?;
             let github = company.authenticate_github()?;
 
             sentry::configure_scope(|scope| {
@@ -101,7 +101,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
         let repo = &event.repository;
         let repo_name = Repo::from_str(&repo.name).unwrap();
 
-        let company = Company::get_from_github_org(&api_context.db, &repo.owner.login)?;
+        let company = Company::get_from_github_org(&api_context.db, &repo.owner.login).await?;
         let github = company.authenticate_github()?;
 
         match repo_name {
@@ -225,7 +225,7 @@ pub async fn handle_rfd_pull_request(
     }
 
     // Try to get the RFD from the database.
-    let result = RFD::get_from_db(db, number);
+    let result = RFD::get_from_db(db, number).await;
     if result.is_none() {
         return Ok((
             octorust::types::ChecksCreateRequestConclusion::Skipped,
@@ -540,7 +540,7 @@ pub async fn handle_rfd_push(
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
             // We will need this later to check if the RFD's state changed.
-            let old_rfd = RFD::get_from_db(db, new_rfd.number);
+            let old_rfd = RFD::get_from_db(db, new_rfd.number).await;
             let mut old_rfd_state = "".to_string();
             let mut old_rfd_pdf = "".to_string();
             if let Some(o) = old_rfd {

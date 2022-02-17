@@ -130,8 +130,9 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // See if we already have the record in the database.
             if let Some(r) = #new_struct_name::get_from_db(db, #function_args).await {
                 // Update the record.
-                // // TODO: special error here.
-                let record = diesel::update(&r)
+                // TODO: special error here.
+                let record = diesel::update(#db_schema::dsl::#db_schema)
+                    .filter(#db_schema::dsl::id.eq(r.id))
                     .set(self.clone())
                     .get_result_async::<#new_struct_name>(&db.pool()).await?;
 
@@ -185,7 +186,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Update the record in the database.
         pub async fn update_in_db(&self, db: &crate::db::Database) -> anyhow::Result<Self> {
             // Update the record.
-            let record = diesel::update(self)
+            let record = diesel::update(#db_schema::dsl::#db_schema)
+                .filter(#db_schema::dsl::id.eq(self.id))
                 .set(self.clone())
                 .get_result_async::<#new_struct_name>(&db.pool()).await?;
 

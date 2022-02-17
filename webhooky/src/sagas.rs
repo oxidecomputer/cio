@@ -91,7 +91,7 @@ pub async fn on_saga_complete(
     cmd_name: &str,
 ) -> Result<()> {
     // Get the function.
-    let mut f = Function::get_from_db(db, saga_id.to_string()).unwrap();
+    let mut f = Function::get_from_db(db, saga_id.to_string()).await.unwrap();
 
     // Print the results.
     match result.kind.clone() {

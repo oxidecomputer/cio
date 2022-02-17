@@ -68,23 +68,6 @@ pub struct GitHubUser {
     pub site_admin: bool,
 }
 
-impl<DB> FromSql<Jsonb, DB> for GitHubUser
-where
-    DB: diesel::backend::Backend,
-{
-    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
-        let value = <serde_json::Value as FromSql<Jsonb, DB>>::from_sql(bytes)?;
-        Ok(serde_json::from_value(value)?)
-    }
-}
-
-impl ToSql<Jsonb, Pg> for GitHubUser {
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
-        let value = serde_json::to_value(self)?;
-        <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&value, out)
-    }
-}
-
 /// The data type for a GitHub repository.
 #[db {
     new_struct_name = "GithubRepo",

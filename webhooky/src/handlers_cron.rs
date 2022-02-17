@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::async_traits::AsyncRunQueryDsl;
 use chrono::Utc;
 use chrono_humanize::HumanTime;
 use cio_api::{functions::Function, schema::functions};
@@ -20,7 +21,7 @@ pub async fn handle_get_function_by_uuid(
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    let result = Function::get_from_db(db, uuid.to_string());
+    let result = Function::get_from_db(db, uuid.to_string()).await;
     if result.is_none() {
         // Return early, we couldn't find a function.
         bail!("no function was found with uuid `{}`", uuid);

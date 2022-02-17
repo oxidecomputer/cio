@@ -173,73 +173,69 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
          */
         let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
         // TODO: probably a better way to do this without all the freaking clones.
-        let ctx = api_context.clone();
-        scheduler.every(1.day()).run(move || ctx.create_fnmut("sync-analytics"));
-        let ctx = api_context.clone();
+        scheduler
+            .every(1.day())
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-analytics")});
         scheduler
             .every(23.hours())
-            .run(move || ctx.create_fnmut("sync-api-tokens"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-api-tokens")});
         scheduler
             .every(6.hours())
-            .run(move || ctx.create_fnmut("sync-applications"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-applications")});
         scheduler
             .every(2.hours())
-            .run(move || ctx.create_fnmut("sync-asset-inventory"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-asset-inventory")});
         scheduler
             .every(12.hours())
-            .run(move || ctx.create_fnmut("sync-companies"));
-        let ctx = api_context.clone();
-        scheduler.every(4.hours()).run(move || ctx.create_fnmut("sync-configs"));
-        let ctx = api_context.clone();
-        scheduler.every(6.hours()).run(move || ctx.create_fnmut("sync-finance"));
-        let ctx = api_context.clone();
-        scheduler
-            .every(12.hours())
-            .run(move || ctx.create_fnmut("sync-functions"));
-        let ctx = api_context.clone();
-        scheduler.every(1.hours()).run(move || ctx.create_fnmut("sync-huddles"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-companies")});
         scheduler
             .every(4.hours())
-            .run(move || ctx.create_fnmut("sync-interviews"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-configs")});
+        scheduler
+            .every(6.hours())
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-finance")});
         scheduler
             .every(12.hours())
-            .run(move || ctx.create_fnmut("sync-journal-clubs"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-functions")});
+        scheduler
+            .every(1.hours())
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-huddles")});
+        scheduler
+            .every(4.hours())
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-interviews")});
+        scheduler
+            .every(12.hours())
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-journal-clubs")});
         scheduler
             .every(20.hours())
-            .run(move || ctx.create_fnmut("sync-mailing-lists"));
-        let ctx = api_context.clone();
-        scheduler.every(18.hours()).run(move || ctx.create_fnmut("sync-other"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-mailing-lists")});
+        scheduler
+            .every(18.hours())
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-other")});
         scheduler
             .every(2.hours())
-            .run(move || ctx.create_fnmut("sync-recorded-meetings"));
-        let ctx = api_context.clone();
-        scheduler.every(16.hours()).run(move || ctx.create_fnmut("sync-repos"));
-        let ctx = api_context.clone();
-        scheduler.every(14.hours()).run(move || ctx.create_fnmut("sync-rfds"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-recorded-meetings")});
+        scheduler
+            .every(16.hours())
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-repos")});
+        scheduler
+            .every(14.hours())
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-rfds")});
         scheduler
             .every(2.hours())
-            .run(move || ctx.create_fnmut("sync-shipments"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-shipments")});
         scheduler
             .every(3.hours())
-            .run(move || ctx.create_fnmut("sync-shorturls"));
-        let ctx = api_context.clone();
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-shorturls")});
         scheduler
             .every(9.hours())
-            .run(move || ctx.create_fnmut("sync-swag-inventory"));
-        let ctx = api_context.clone();
-        scheduler.every(5.hours()).run(move || ctx.create_fnmut("sync-travel"));
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-swag-inventory")});
+        scheduler
+            .every(5.hours())
+            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-travel")});
         // TODO: Run the RFD changelog.
         // Turn this on once we know cron jobs are consistently running.
-        /* scheduler.every(Monday).at("8:00 am").run(move || ctx.create_fnmut("send-rfd-changelog")); */
+        /* scheduler.every(Monday).at("8:00 am").run(enclose!{ (api_context) move || ctx.create_fnmut("send-rfd-changelog")}); */
 
         tokio::spawn(async move {
             info!("starting cron job scheduler...");
@@ -264,20 +260,20 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
     // Regsitering SIGKILL here will panic at runtime, so let's avoid that.
     let mut signals = Signals::new(&[SIGINT, SIGTERM])?;
 
-    tokio::spawn(async move {
+    tokio::spawn(enclose! { (api_context) async move {
         for sig in signals.forever() {
             info!("received signal: {:?}", sig);
             info!("triggering cleanup...");
 
             // Run the cleanup job.
-            if let Err(e) = start_job(&s.address, "cleanup").await {
+            if let Err(e) = do_cleanup(&api_context).await {
                 sentry_anyhow::capture_anyhow(&e);
             }
             // Exit the process.
             info!("all clean, exiting!");
             std::process::exit(0);
         }
-    });
+    }});
 
     server.await.unwrap();
 
@@ -2184,8 +2180,22 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
     sentry::start_session();
 
     let ctx = rqctx.context();
-    let sec = &ctx.sec;
 
+    match do_cleanup(ctx).await {
+        Ok(_) => {
+            sentry::end_session();
+            Ok(HttpResponseAccepted(()))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            sentry::end_session();
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+async fn do_cleanup(ctx: &Context) -> Result<()> {
+    let sec = &ctx.sec;
     // Get all our sagas.
     let sagas = sec.saga_list(None, std::num::NonZeroU32::new(1000).unwrap()).await;
 
@@ -2196,7 +2206,7 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
     // Set all the in-progress sagas to 'cancelled'.
     for saga in sagas {
         // Get the saga in the database.
-        if let Some(mut f) = Function::get_from_db(&ctx.db, saga.id.to_string()) {
+        if let Some(mut f) = Function::get_from_db(&ctx.db, saga.id.to_string()).await {
             // We only care about jobs that aren't completed.
             if f.status != octorust::types::JobStatus::Completed.to_string() {
                 // Let's set the job to "Completed".
@@ -2211,8 +2221,7 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
         }
     }
 
-    sentry::end_session();
-    Ok(HttpResponseAccepted(()))
+    Ok(())
 }
 
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
@@ -2224,34 +2233,11 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     return HttpError::for_internal_error(format!("{:?}", err));
 }
 
-async fn start_job(address: &str, job: &str) -> Result<()> {
-    info!("triggering job `{}`", job);
-
-    let client = if job == "cleanup" {
-        // Don't timeout if we have a cleanup request.
-        reqwest::Client::new()
-    } else {
-        // Timeout for the cron jobs.
-        reqwest::ClientBuilder::new()
-            .timeout(std::time::Duration::from_secs(60))
-            .connect_timeout(std::time::Duration::from_secs(2))
-            .build()?
-    };
-
-    let resp = client.post(&format!("http://{}/run/{}", address, job)).send().await?;
-
-    match resp.status() {
-        reqwest::StatusCode::OK => (),
-        reqwest::StatusCode::ACCEPTED => (),
-        s => {
-            bail!(
-                "starting job `{}` failed with status code `{}`: {}`",
-                job,
-                s,
-                resp.text().await?
-            )
+macro_rules! enclose {
+    ( ($( $x:ident ),*) $y:expr ) => {
+        {
+            $(let $x = $x.clone();)*
+            $y
         }
-    }
-
-    Ok(())
+    };
 }

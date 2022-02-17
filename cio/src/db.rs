@@ -33,7 +33,7 @@ impl Database {
 
     /// Returns a connection from the pool.
     pub fn pool(&self) -> bb8::Pool<ConnectionManager<diesel::PgConnection>> {
-        self.pool.0
+        self.pool.0.clone()
     }
 }
 
