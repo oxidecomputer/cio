@@ -1,6 +1,5 @@
 use std::{
     env,
-    io::{BufRead, BufReader},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -12,6 +11,7 @@ use cio_api::{
     functions::{FnOutput, Function},
 };
 use serde::{Deserialize, Serialize};
+use tokio::io::AsyncBufReadExt;
 
 /// Define our saga for syncing repos.
 #[derive(Debug)]
@@ -176,16 +176,24 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
 
     let mut output = String::new();
 
-    let out = BufReader::new(reader);
+    let out = tokio::io::BufReader::new(reader);
 
     let mut start = Instant::now();
 
     // Scope a new logger for this command.
     let logger = slog_scope::logger().new(slog::slog_o!("cmd" => cmd.to_string(), "saga_id" => saga_id.to_string()));
 
-    for line in out.lines() {
-        match line {
-            Ok(l) => {
+    let mut lines = out.lines();
+
+    loop {
+        match lines.next_line().await {
+            Ok(tl) => {
+                if tl.is_none() {
+                    // Break the loop there are no more lines.
+                    break;
+                }
+
+                let l = tl.unwrap();
                 output.push_str(&l);
                 output.push('\n');
 

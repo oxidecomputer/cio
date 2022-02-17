@@ -27,7 +27,8 @@ diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  featu
 docusign = "^0.1.0"
 #dropshot = "^0.5.0"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot", branch = "main" }
-duct = "^0.13"
+#duct = "^0.13"
+duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
 formdata = "^0.13.0"
 futures-util = "0.3"
 google-drive = "^0.2.0"
