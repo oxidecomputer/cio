@@ -1,7 +1,7 @@
 use std::{collections::HashMap, env, fs::File};
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use log::{info, warn};
@@ -1496,7 +1496,7 @@ mod tests {
 
         // Get the company id for Oxide.
         // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
 
         refresh_bill_com_transactions(&db, &oxide).await.unwrap();
     }
@@ -1510,7 +1510,7 @@ mod tests {
 
         // Get the company id for Oxide.
         // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
 
         refresh_expensify_transactions(&db, &oxide).await.unwrap();
     }
@@ -1524,7 +1524,7 @@ mod tests {
 
         // Get the company id for Oxide.
         // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
 
         refresh_brex_transactions(&db, &oxide).await.unwrap();
     }

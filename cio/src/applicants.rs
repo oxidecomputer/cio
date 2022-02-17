@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration, NaiveDate};
 use chrono_humanize::HumanTime;
@@ -3066,13 +3066,14 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
 
 #[cfg(test)]
 mod tests {
+    use async_bb8_diesel::AsyncRunQueryDsl;
     use diesel::prelude::*;
     use serde_json::json;
 
     use crate::{applicants::Applicant, db::Database, schema::applicants};
 
-    #[test]
-    fn test_serialize_deserialize_applicants() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_serialize_deserialize_applicants() {
         crate::utils::setup_logger();
 
         let db = Database::new().await;

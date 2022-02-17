@@ -1,4 +1,4 @@
-use std::{env, fmt, sync::Arc};
+use std::{env, fmt};
 
 use anyhow::Result;
 use async_bb8_diesel::ConnectionManager;

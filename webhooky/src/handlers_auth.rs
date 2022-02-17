@@ -8,7 +8,7 @@ use cio_api::{
     companies::{Company, Companys},
     schema::api_tokens,
 };
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use docusign::DocuSign;
 use dropshot::{Query, RequestContext, UntypedBody};
 use google_drive::Client as GoogleDrive;

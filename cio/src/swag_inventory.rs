@@ -1,7 +1,7 @@
 use std::io::BufWriter;
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
+use async_bb8_diesel::{AsyncRunQueryDsl};
 use async_trait::async_trait;
 use barcoders::{
     generators::{image::Image, svg::SVG},

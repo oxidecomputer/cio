@@ -5,7 +5,7 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::Utc;
 use chrono_humanize::HumanTime;
 use cio_api::{functions::Function, schema::functions};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::{Path, RequestContext};
 use log::info;
 

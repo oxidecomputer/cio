@@ -9,7 +9,7 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Result};
-use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -1221,7 +1221,7 @@ mod tests {
 
         // Get the company id for Oxide.
         // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).unwrap();
+        let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
 
         send_rfd_changelog(&db, &oxide).await.unwrap();
     }

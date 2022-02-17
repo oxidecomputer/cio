@@ -1,7 +1,7 @@
 use std::{fmt, ops::Deref};
 
 use anyhow::Result;
-use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
+use async_bb8_diesel::{AsyncRunQueryDsl};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use chrono_humanize::HumanTime;

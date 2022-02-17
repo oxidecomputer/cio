@@ -2,7 +2,7 @@
 use std::str::from_utf8;
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
+use async_bb8_diesel::{AsyncRunQueryDsl};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use macros::db;

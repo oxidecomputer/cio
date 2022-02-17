@@ -1,13 +1,10 @@
-use std::{collections::BTreeMap, io::Write};
+use std::{collections::BTreeMap};
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::{AsyncConnection, AsyncRunQueryDsl, AsyncSaveChangesDsl};
+use async_bb8_diesel::{AsyncRunQueryDsl};
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime};
 use diesel::{
-    deserialize::{self, FromSql},
-    pg::Pg,
-    serialize::{self, Output, ToSql},
     sql_types::Jsonb,
 };
 use log::info;
