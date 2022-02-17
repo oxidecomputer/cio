@@ -17,7 +17,7 @@ async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.gi
 checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.0.11"
-chrono-tz = { version = "0.4", features = ["serde"] }
+chrono-tz = { version = "0.6", features = ["serde"] }
 #cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "acc1c2365d81ef8be38b61db75fee5886b7fe6a6" }
 cio-api = { path = "../cio" }
 clap = { version = "^3.0.14", features = ["cargo", "derive", "env", "unicode"] }
