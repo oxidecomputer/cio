@@ -16,6 +16,10 @@ env:
   RUN_REGION: us-central1
   SERVICE_NAME: webhooky
 
+concurrency:
+  group: cloudrun
+  cancel-in-progress: true
+
 jobs:
   setup-build-deploy:
     name: Setup, Build, and Deploy
