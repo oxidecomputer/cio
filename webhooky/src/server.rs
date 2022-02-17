@@ -25,6 +25,7 @@ use signal_hook::{
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
+use crate::enclose::enclose;
 use crate::github_types::GitHubWebhook;
 
 pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
@@ -178,64 +179,64 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
             .run(enclose! { (api_context) move || api_context.create_fnmut("sync-analytics")});
         scheduler
             .every(23.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-api-tokens")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-api-tokens")});
         scheduler
             .every(6.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-applications")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-applications")});
         scheduler
             .every(2.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-asset-inventory")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-asset-inventory")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-companies")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-companies")});
         scheduler
             .every(4.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-configs")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-configs")});
         scheduler
             .every(6.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-finance")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-finance")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-functions")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-functions")});
         scheduler
             .every(1.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-huddles")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-huddles")});
         scheduler
             .every(4.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-interviews")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-interviews")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-journal-clubs")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-journal-clubs")});
         scheduler
             .every(20.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-mailing-lists")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-mailing-lists")});
         scheduler
             .every(18.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-other")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-other")});
         scheduler
             .every(2.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-recorded-meetings")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-recorded-meetings")});
         scheduler
             .every(16.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-repos")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-repos")});
         scheduler
             .every(14.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-rfds")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-rfds")});
         scheduler
             .every(2.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-shipments")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-shipments")});
         scheduler
             .every(3.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-shorturls")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-shorturls")});
         scheduler
             .every(9.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-swag-inventory")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-swag-inventory")});
         scheduler
             .every(5.hours())
-            .run(enclose! { (api_context) move || ctx.create_fnmut("sync-travel")});
+            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-travel")});
         // TODO: Run the RFD changelog.
         // Turn this on once we know cron jobs are consistently running.
-        /* scheduler.every(Monday).at("8:00 am").run(enclose!{ (api_context) move || ctx.create_fnmut("send-rfd-changelog")}); */
+        /* scheduler.every(Monday).at("8:00 am").run(enclose!{ (api_context) move || api_context.create_fnmut("send-rfd-changelog")}); */
 
         tokio::spawn(async move {
             info!("starting cron job scheduler...");
@@ -2231,13 +2232,4 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
 
     // We use the debug formatting here so we get the stack trace.
     return HttpError::for_internal_error(format!("{:?}", err));
-}
-
-macro_rules! enclose {
-    ( ($( $x:ident ),*) $y:expr ) => {
-        {
-            $(let $x = $x.clone();)*
-            $y
-        }
-    };
 }

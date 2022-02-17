@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::async_traits::AsyncRunQueryDsl;
+use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::Utc;
 use cio_api::{
     api_tokens::{APIToken, NewAPIToken},
@@ -62,7 +62,7 @@ pub async fn handle_auth_google_callback(
     // Get the response.
     let metadata: cio_api::companies::UserInfo = resp.json().await?;
 
-    let company = Company::get_from_domain(&api_context.db, &metadata.hd)?;
+    let company = Company::get_from_domain(&api_context.db, &metadata.hd).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -110,7 +110,7 @@ pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, b
 
     // Get all our domains so we can match on that if we have multiple installations.
     let mut domains: Vec<String> = Default::default();
-    let companies = Companys::get_from_db(&api_context.db, 1)?;
+    let companies = Companys::get_from_db(&api_context.db, 1).await?;
     for c in companies {
         domains.push(c.domain.to_string());
     }
@@ -129,7 +129,7 @@ pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, b
         bail!("could not find matching channel in channels: {:?}", channels);
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain)?;
+    let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -183,7 +183,7 @@ pub async fn handle_auth_mailchimp_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain)?;
+    let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -244,7 +244,7 @@ pub async fn handle_auth_gusto_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain)?;
+    let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -305,7 +305,7 @@ pub async fn handle_auth_zoom_callback(
         }
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain)?;
+    let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -365,7 +365,7 @@ pub async fn handle_auth_ramp_callback(
         }
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain)?;
+    let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -418,7 +418,7 @@ pub async fn handle_auth_slack_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain)?;
+    let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     let mut webhook = "".to_string();
     if let Some(wh) = t.incoming_webhook {
@@ -459,12 +459,13 @@ pub async fn handle_auth_slack_callback(
         .first_async::<APIToken>(&api_context.db.pool())
         .await
     {
-        diesel::update(&existing)
+        diesel::update(api_tokens::dsl::api_tokens
+            .filter(api_tokens::dsl::id.eq(existing.id))
             .set(token)
             .get_result_async::<APIToken>(&api_context.db.pool())
             .await?
     } else {
-        token.create_in_db(&api_context.db)?
+        token.create_in_db(&api_context.db).await?
     };
     new_token.upsert_in_airtable(&api_context.db).await?;
 
@@ -503,9 +504,11 @@ pub async fn handle_auth_slack_callback(
             .first_async::<APIToken>(&api_context.db.pool())
             .await
         {
-            diesel::update(&existing)
+            diesel::update(api_tokens::dsl::api_tokens)
+                .filter(api_tokens::dsl::id.eq(existing.id))
                 .set(user_token)
-                .get_result_async::<APIToken>(&api_context.db.pool())?
+                .get_result_async::<APIToken>(&api_context.db.pool())
+                .await?
         } else {
             user_token.create_in_db(&api_context.db).await?
         };

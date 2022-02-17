@@ -1,5 +1,7 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
+#[macro_use]
+mod enclose;
 mod event_types;
 mod github_types;
 mod handlers;
@@ -217,7 +219,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SendRFDChangelog(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and send.
             for company in companies {
@@ -226,7 +228,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncAnalytics(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -235,7 +237,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncAPITokens(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -244,7 +246,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncApplications(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -258,7 +260,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncAssetInventory(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -270,7 +272,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncConfigs(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -279,7 +281,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncFinance(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -291,7 +293,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncHuddles(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -306,7 +308,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncInterviews(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -316,7 +318,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncJournalClubs(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -325,7 +327,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncMailingLists(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -337,7 +339,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncRecordedMeetings(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -347,7 +349,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncRepos(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -358,7 +360,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncRFDs(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -368,7 +370,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncOther(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -380,7 +382,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncShipments(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -396,7 +398,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncSwagInventory(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {
@@ -407,7 +409,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         }
         SubCommand::SyncTravel(_) => {
             let db = Database::new().await;
-            let companies = Companys::get_from_db(&db, 1)?;
+            let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
             for company in companies {

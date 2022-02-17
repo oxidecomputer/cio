@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
-use async_bb8_diesel::async_traits::AsyncRunQueryDsl;
+use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::Utc;
 use chrono_humanize::HumanTime;
 use cio_api::{functions::Function, schema::functions};

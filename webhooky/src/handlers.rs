@@ -1,6 +1,7 @@
 use std::{collections::HashMap, ffi::OsStr, str::FromStr, sync::Arc};
 
 use anyhow::{bail, Result};
+use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::{TimeZone, Utc};
 use chrono_humanize::HumanTime;
 use cio_api::{
@@ -45,7 +46,9 @@ pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> 
     let api_context = rqctx.context();
 
     // TODO: find a better way to do this.
-    let company = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+    let company = Company::get_from_db(&api_context.db, "Oxide".to_string())
+        .await
+        .unwrap();
 
     // TODO: change this one day to be the number of racks sold.
     // For now, use it as number of applications that need to be triaged.
@@ -76,11 +79,11 @@ pub async fn handle_rfd_update_by_number(
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).await.unwrap();
 
     let github = oxide.authenticate_github()?;
 
-    let result = RFD::get_from_db(db, num);
+    let result = RFD::get_from_db(db, num).await;
     if result.is_none() {
         // Return early, we couldn't find an RFD.
         bail!("no RFD was found with number `{}`", num);
@@ -118,7 +121,7 @@ pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Re
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).unwrap();
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).await.unwrap();
 
     let github = oxide.authenticate_github()?;
 
@@ -146,7 +149,7 @@ pub async fn handle_slack_commands(
     let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes())?;
 
     // Get the company from the Slack team id.
-    let company = Company::get_from_slack_team_id(db, &bot_command.team_id)?;
+    let company = Company::get_from_slack_team_id(db, &bot_command.team_id).await?;
 
     // Get the command type.
     let command = SlackCommand::from_str(&bot_command.command).unwrap();
@@ -533,9 +536,9 @@ pub async fn handle_slack_interactive(
     let mut interactive_response: InteractiveResponse = Default::default();
 
     // Get the company from the Slack team id.
-    let company = Company::get_from_slack_team_id(db, &payload.team.id)?;
+    let company = Company::get_from_slack_team_id(db, &payload.team.id).await?;
 
-    let slack = company.authenticate_slack(db)?;
+    let slack = company.authenticate_slack(db).await?;
 
     // Handle the view_submission modal.
     if payload.interactive_slack_payload_type == "view_submission" {
@@ -704,7 +707,7 @@ pub async fn handle_airtable_certificates_renew(
     // Get the row from airtable.
     let cert = Certificate::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
 
-    let company = cert.company(&api_context.db)?;
+    let company = cert.company(&api_context.db).await?;
 
     let github = company.authenticate_github()?;
 
@@ -802,7 +805,7 @@ pub async fn handle_airtable_applicants_update(
     }
 
     // Grab our old applicant from the database.
-    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id)?;
+    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id).await?;
 
     // Grab the status and the status raw.
     let status = cio_api::applicant_status::Status::from_str(&applicant.status).unwrap();
@@ -826,7 +829,7 @@ pub async fn handle_airtable_applicants_update(
         db_applicant.update(&api_context.db).await?;
 
         // Create our docusign client.
-        let company = db_applicant.company(&api_context.db)?;
+        let company = db_applicant.company(&api_context.db).await?;
         let dsa = company.authenticate_docusign(&api_context.db).await;
         if let Ok(ds) = dsa {
             // Get the template we need.
@@ -847,7 +850,7 @@ pub async fn handle_airtable_applicants_update(
     db_applicant.update(&api_context.db).await?;
 
     if status_changed {
-        let company = db_applicant.company(&api_context.db)?;
+        let company = db_applicant.company(&api_context.db).await?;
 
         db_applicant
             .send_slack_notification_status_changed(&api_context.db, &company)
@@ -985,7 +988,7 @@ pub async fn handle_airtable_shipments_outbound_schedule_pickup(
 
     // Schedule the pickup.
     let api_context = rqctx.context();
-    let company = Company::get_by_id(&api_context.db, event.cio_company_id)?;
+    let company = Company::get_by_id(&api_context.db, event.cio_company_id).await?;
     OutboundShipments::create_pickup(&api_context.db, &company).await?;
 
     Ok(())
@@ -1168,7 +1171,7 @@ pub async fn handle_application_files_upload(
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    let company = Company::get_by_id(db, data.cio_company_id)?;
+    let company = Company::get_by_id(db, data.cio_company_id).await?;
 
     // Initialize the Google Drive client.
     let drive = company.authenticate_google_drive(db).await?;
@@ -1271,12 +1274,12 @@ pub async fn handle_airtable_shipments_inbound_create(
         return Ok(());
     }
 
-    let company = record.company(db)?;
+    let company = record.company(db).await?;
 
     let mut new_shipment: NewInboundShipment = record.into();
 
     new_shipment.expand(db, &company).await?;
-    let mut shipment = new_shipment.upsert_in_db(db)?;
+    let mut shipment = new_shipment.upsert_in_db(db).await?;
     if shipment.airtable_record_id.is_empty() {
         shipment.airtable_record_id = event.record_id;
     }
@@ -1335,16 +1338,16 @@ pub async fn handle_shippo_tracking_update(
 
     // Update the inbound shipment, if it exists.
     if let Some(mut shipment) =
-        InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
+        InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()).await
     {
-        let company = shipment.company(&api_context.db)?;
+        let company = shipment.company(&api_context.db).await?;
 
         shipment.expand(&api_context.db, &company).await?;
     }
 
     // Update the outbound shipment if it exists.
     if let Some(mut shipment) =
-        OutboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string())
+        OutboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()).await
     {
         // Update the shipment in shippo.
         // TODO: we likely don't need the extra request here, but it makes the code more DRY.
@@ -1376,7 +1379,9 @@ pub async fn handle_checkr_background_update(
     }
 
     // TODO: change this to the real company name.
-    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string()).unwrap();
+    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string())
+        .await
+        .unwrap();
 
     let checkr_auth = oxide.authenticate_checkr();
     if checkr_auth.is_none() {
@@ -1401,7 +1406,7 @@ pub async fn handle_checkr_background_update(
         // Keep the fields from Airtable we need just in case they changed.
         applicant.keep_fields_from_airtable(&api_context.db).await;
 
-        let company = applicant.company(&api_context.db)?;
+        let company = applicant.company(&api_context.db).await?;
 
         let mut send_notification = false;
 
@@ -1445,7 +1450,7 @@ pub async fn handle_docusign_envelope_update(
         .await;
     match result {
         Ok(mut applicant) => {
-            let company = applicant.company(db)?;
+            let company = applicant.company(db).await?;
 
             // Create our docusign client.
             let dsa = company.authenticate_docusign(db).await;
@@ -1475,7 +1480,7 @@ pub async fn handle_docusign_envelope_update(
         .await;
     match result {
         Ok(mut applicant) => {
-            let company = applicant.company(db)?;
+            let company = applicant.company(db).await?;
 
             // Create our docusign client.
             let dsa = company.authenticate_docusign(db).await;
@@ -1510,7 +1515,7 @@ pub async fn handle_analytics_page_view(
 
     // Expand the page_view.
     event.set_page_link();
-    event.set_company_id(db).unwrap();
+    event.set_company_id(db).await.unwrap();
 
     // Add the page_view to the database and Airttable.
     let pv = event.create(db).await?;
@@ -1535,16 +1540,16 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
     }
 
     // Parse the webhook as a new mailing list subscriber.
-    let new_subscriber = cio_api::mailing_list::as_mailing_list_subscriber(event, db)?;
+    let new_subscriber = cio_api::mailing_list::as_mailing_list_subscriber(event, db).await?;
 
-    let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string());
+    let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string()).await;
     if existing.is_none() {
         // Update the subscriber in the database.
         let subscriber = new_subscriber.upsert(db).await?;
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
-        let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
+        let company = Company::get_by_id(db, new_subscriber.cio_company_id).await?;
         subscriber.send_slack_notification(db, &company).await?;
         info!("subscriber {} posted to Slack", subscriber.email);
 
@@ -1572,16 +1577,16 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     }
 
     // Parse the webhook as a new rack line subscriber.
-    let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db);
+    let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db).await;
 
-    let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string());
+    let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string()).await;
     if existing.is_none() {
         // Update the subscriber in the database.
         let subscriber = new_subscriber.upsert(db).await?;
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
-        let company = Company::get_by_id(db, new_subscriber.cio_company_id)?;
+        let company = Company::get_by_id(db, new_subscriber.cio_company_id).await?;
         subscriber.send_slack_notification(db, &company).await?;
         info!("subscriber {} posted to Slack", subscriber.email);
 
