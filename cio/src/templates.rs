@@ -6,6 +6,7 @@ use crate::{configs::User, shorturls::ShortUrl, utils::create_or_update_file_in_
 
 /// Helper function so the terraform names do not start with a number.
 /// Otherwise terraform will fail.
+#[tracing::instrument(skip(out))]
 fn terraform_name_helper(
     h: &Helper,
     _: &Handlebars,
@@ -39,6 +40,7 @@ struct GitHubTeamMembers {
 ///   - {num}.rfd.oxide.computer
 /// This function saves the generated files in the GitHub repository, in the
 /// given path.
+#[tracing::instrument(skip(github))]
 pub async fn generate_nginx_files_for_shorturls(
     github: &octorust::Client,
     owner: &str,

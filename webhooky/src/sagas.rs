@@ -12,6 +12,7 @@ use cio_api::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncBufReadExt;
+use tracing_subscriber::prelude::*;
 
 /// Define our saga for syncing repos.
 #[derive(Debug)]
@@ -36,12 +37,14 @@ impl steno::SagaType for Saga {
     type ExecContextType = Arc<Context>;
 }
 
+#[tracing::instrument]
 async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> {
     // This is a noop, we don't have to undo anything.
     Ok(())
 }
 
 /// Create a new saga with the given parameters and then execute it.
+#[tracing::instrument]
 pub async fn do_saga(
     db: &Database,
     sec: &steno::SecClient,
@@ -84,6 +87,7 @@ pub async fn do_saga(
     Ok(())
 }
 
+#[tracing::instrument]
 pub async fn on_saga_complete(
     db: &Database,
     saga_id: &steno::SagaId,
@@ -118,6 +122,8 @@ pub async fn on_saga_complete(
 
     Ok(())
 }
+
+#[tracing::instrument]
 pub async fn run_cmd(
     db: &Database,
     sec: &steno::SecClient,
@@ -141,6 +147,8 @@ pub async fn run_cmd(
 
     do_saga(db, sec, id, builder.build(), cmd_name, background).await
 }
+
+#[tracing::instrument]
 async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<FnOutput, steno::ActionError> {
     let db = &action_context.user_data().db;
     let cmd_name = &action_context.saga_params().cmd_name;
@@ -168,6 +176,7 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
 
 // We re-exec our current binary so we can get the best log output.
 // The only downside is we are creating more connections to the database.
+#[tracing::instrument]
 async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String> {
     let exe = env::current_exe()?;
 

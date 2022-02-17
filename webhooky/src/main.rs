@@ -23,6 +23,7 @@ use cio_api::{companies::Companys, db::Database};
 use clap::Parser;
 use sentry::IntoDsn;
 use slog::Drain;
+use tracing_subscriber::prelude::*;
 
 /// This doc string acts as a help message when the user runs '--help'
 /// as do all doc strings on fields.
@@ -175,6 +176,10 @@ async fn main() -> Result<()> {
     let _guard = sentry::init(sentry::ClientOptions {
         dsn: sentry_dsn.clone().into_dsn()?,
 
+        // Send 100% of all transactions to Sentry.
+        // This is for testing purposes only, after a bit of testing set this to be like 20%.
+        traces_sample_rate: 1.0,
+
         release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
         environment: Some(
             env::var("SENTRY_ENV")
@@ -200,6 +205,12 @@ async fn main() -> Result<()> {
     }
     let _log_guard = slog_stdlog::init_with_level(log_level)?;
 
+    // Initialize the Sentry tracing.
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(sentry_tracing::layer())
+        .init();
+
     if let Err(err) = run_cmd(opts.clone(), logger).await {
         sentry_anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
         bail!("running cmd `{:?}` failed: {:?}", &opts.subcmd, err);
@@ -208,6 +219,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+#[tracing::instrument]
 async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
     sentry::configure_scope(|scope| {
         scope.set_tag("command", &format!("{:?}", opts.subcmd));

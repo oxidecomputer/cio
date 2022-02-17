@@ -87,6 +87,7 @@ pub struct NewPullRequest {
 }
 
 impl From<octorust::types::PullRequestSimple> for NewPullRequest {
+    #[tracing::instrument]
     fn from(item: octorust::types::PullRequestSimple) -> Self {
         NewPullRequest {
             links: item.links.to_vec(),
@@ -134,6 +135,7 @@ pub trait FromSimpleUser {
 }
 
 impl FromSimpleUser for Option<octorust::types::SimpleUser> {
+    #[tracing::instrument(skip(self))]
     fn to_string(&self) -> String {
         if let Some(u) = self {
             u.login.to_string()
@@ -148,6 +150,7 @@ pub trait FromMilestone {
 }
 
 impl FromMilestone for Option<octorust::types::Milestone> {
+    #[tracing::instrument(skip(self))]
     fn to_string(&self) -> String {
         if let Some(u) = self {
             u.title.to_string()
@@ -162,6 +165,7 @@ pub trait FromVecTeams {
 }
 
 impl FromVecTeams for Vec<octorust::types::Team> {
+    #[tracing::instrument(skip(self))]
     fn to_vec(&self) -> Vec<String> {
         let mut teams: Vec<String> = Default::default();
 
@@ -178,6 +182,7 @@ pub trait FromVecSimpleUsers {
 }
 
 impl FromVecSimpleUsers for Vec<octorust::types::SimpleUser> {
+    #[tracing::instrument(skip(self))]
     fn to_vec(&self) -> Vec<String> {
         let mut users: Vec<String> = Default::default();
 
@@ -194,6 +199,7 @@ pub trait FromVecPullRequestSimpleLabels {
 }
 
 impl FromVecPullRequestSimpleLabels for Vec<octorust::types::PullRequestSimpleLabels> {
+    #[tracing::instrument(skip(self))]
     fn to_vec(&self) -> Vec<String> {
         let mut labels: Vec<String> = Default::default();
 
@@ -210,6 +216,7 @@ pub trait FromVecPullRequestSimpleLinks {
 }
 
 impl FromVecPullRequestSimpleLinks for octorust::types::PullRequestSimpleLinks {
+    #[tracing::instrument(skip(self))]
     fn to_vec(&self) -> Vec<String> {
         vec![
             self.comments.href.to_string(),
@@ -224,6 +231,7 @@ impl FromVecPullRequestSimpleLinks for octorust::types::PullRequestSimpleLinks {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_pulls() -> Result<()> {
     let db = Database::new().await;
 

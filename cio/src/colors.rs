@@ -10,12 +10,14 @@ pub enum Colors {
 }
 
 impl Default for Colors {
+    #[tracing::instrument]
     fn default() -> Self {
         Colors::Blue
     }
 }
 
 impl ToString for Colors {
+    #[tracing::instrument]
     fn to_string(&self) -> String {
         match self {
             Colors::Blue => "#4969F6".to_string(),

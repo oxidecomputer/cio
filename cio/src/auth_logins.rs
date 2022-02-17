@@ -82,6 +82,7 @@ pub struct NewAuthUser {
 /// Implement updating the Airtable record for a AuthUser.
 #[async_trait]
 impl UpdateAirtableRecord<AuthUser> for AuthUser {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: AuthUser) -> Result<()> {
         // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
         self.link_to_people = record.link_to_people.clone();
@@ -94,6 +95,7 @@ impl UpdateAirtableRecord<AuthUser> for AuthUser {
 
 impl PartialEq for AuthUser {
     // We implement our own here because Airtable has a different data type for the picture.
+    #[tracing::instrument]
     fn eq(&self, other: &Self) -> bool {
         self.user_id == other.user_id
             && self.last_login == other.last_login
@@ -164,6 +166,7 @@ pub struct NewAuthUserLogin {
 /// Implement updating the Airtable record for a AuthUserLogin.
 #[async_trait]
 impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: AuthUserLogin) -> Result<()> {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.

@@ -34,6 +34,7 @@ pub enum Status {
 }
 
 impl Default for Status {
+    #[tracing::instrument]
     fn default() -> Self {
         Status::NeedsToBeTriaged
     }
@@ -42,6 +43,7 @@ impl Default for Status {
 impl FromStr for Status {
     type Err = &'static str;
 
+    #[tracing::instrument]
     fn from_str(status: &str) -> Result<Self, Self::Err> {
         let s = status.to_lowercase().trim().to_string();
 
@@ -68,6 +70,7 @@ impl FromStr for Status {
 }
 
 impl ToString for Status {
+    #[tracing::instrument]
     fn to_string(&self) -> String {
         match self {
             Status::NextSteps => "Next steps".to_string(),

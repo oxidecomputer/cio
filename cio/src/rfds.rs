@@ -106,6 +106,7 @@ pub struct NewRFD {
 
 impl NewRFD {
     /// Return a NewRFD from a parsed file on a specific GitHub branch.
+    #[tracing::instrument(skip(github))]
     pub async fn new_from_github(
         company: &Company,
         github: &octorust::Client,
@@ -168,6 +169,7 @@ impl NewRFD {
         })
     }
 
+    #[tracing::instrument]
     pub fn get_title(content: &str) -> Result<String> {
         let mut re = Regex::new(r"(?m)(RFD .*$)")?;
         match re.find(content) {
@@ -212,6 +214,7 @@ impl NewRFD {
         }
     }
 
+    #[tracing::instrument]
     pub fn get_state(content: &str) -> Result<String> {
         let re = Regex::new(r"(?m)(state:.*$)")?;
         match re.find(content) {
@@ -220,6 +223,7 @@ impl NewRFD {
         }
     }
 
+    #[tracing::instrument]
     pub fn get_discussion(content: &str) -> Result<String> {
         let re = Regex::new(r"(?m)(discussion:.*$)")?;
         match re.find(content) {
@@ -234,6 +238,7 @@ impl NewRFD {
         }
     }
 
+    #[tracing::instrument]
     pub fn generate_number_string(number: i32) -> String {
         // Add leading zeros to the number for the number_string.
         let mut number_string = number.to_string();
@@ -244,18 +249,22 @@ impl NewRFD {
         number_string
     }
 
+    #[tracing::instrument]
     pub fn generate_name(number: i32, title: &str) -> String {
         format!("RFD {} {}", number, title)
     }
 
+    #[tracing::instrument]
     pub fn generate_short_link(number: i32) -> String {
         format!("https://{}.rfd.oxide.computer", number)
     }
 
+    #[tracing::instrument]
     pub fn generate_rendered_link(number_string: &str) -> String {
         format!("https://rfd.shared.oxide.computer/rfd/{}", number_string)
     }
 
+    #[tracing::instrument]
     pub fn get_authors(content: &str, is_markdown: bool) -> Result<String> {
         if is_markdown {
             // TODO: make work w asciidoc.
@@ -295,6 +304,7 @@ impl NewRFD {
 
 /// Convert an RFD into Slack message.
 impl From<NewRFD> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: NewRFD) -> Self {
         let mut msg = format!(
             "{} (_*{}*_) <{}|github> <{}|rendered>",
@@ -324,6 +334,7 @@ impl From<NewRFD> for FormattedMessage {
 }
 
 impl From<RFD> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: RFD) -> Self {
         let new: NewRFD = item.into();
         new.into()
@@ -331,6 +342,7 @@ impl From<RFD> for FormattedMessage {
 }
 
 impl RFD {
+    #[tracing::instrument(skip(github))]
     pub async fn get_html(
         &self,
         github: &octorust::Client,
@@ -350,6 +362,7 @@ impl RFD {
         clean_rfd_html_links(&html, &self.number_string)
     }
 
+    #[tracing::instrument(skip(github))]
     pub async fn parse_asciidoc(
         &self,
         github: &octorust::Client,
@@ -407,6 +420,7 @@ impl RFD {
     }
 
     /// Get a changelog for the RFD.
+    #[tracing::instrument(skip(github))]
     pub async fn get_weekly_changelog(
         &self,
         github: &octorust::Client,
@@ -465,6 +479,7 @@ impl RFD {
     }
 
     /// Get the filename for the PDF of the RFD.
+    #[tracing::instrument]
     pub fn get_pdf_filename(&self) -> String {
         format!(
             "RFD {} {}.pdf",
@@ -474,6 +489,7 @@ impl RFD {
     }
 
     /// Update an RFDs state.
+    #[tracing::instrument]
     pub fn update_state(&mut self, state: &str, is_markdown: bool) -> Result<()> {
         self.content = update_state(&self.content, state, is_markdown)?;
         self.state = state.to_string();
@@ -491,6 +507,7 @@ impl RFD {
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
     /// repository.
+    #[tracing::instrument(skip(github))]
     pub async fn convert_and_upload_pdf(
         &mut self,
         db: &Database,
@@ -590,6 +607,7 @@ impl RFD {
     }
 
     /// Update the pull request information for an RFD.
+    #[tracing::instrument(skip(github))]
     pub async fn update_pull_request(
         &self,
         github: &octorust::Client,
@@ -657,6 +675,7 @@ impl RFD {
     }
 
     /// Trigger updating the search index for the RFD.
+    #[tracing::instrument]
     pub async fn update_search_index(&self) -> Result<()> {
         let client = reqwest::Client::new();
         let req = client.put(&format!("https://rfd.shared.oxide.computer/api/search/{}", self.number));
@@ -667,6 +686,7 @@ impl RFD {
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
+    #[tracing::instrument(skip(github))]
     pub async fn expand(&mut self, github: &octorust::Client, company: &Company) -> Result<()> {
         let owner = &company.github_org;
         let repo = "rfd";
@@ -727,6 +747,7 @@ impl RFD {
 /// Implement updating the Airtable record for an RFD.
 #[async_trait]
 impl UpdateAirtableRecord<RFD> for RFD {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: RFD) -> Result<()> {
         // Set the Link to People from the original so it stays intact.
         self.milestones = record.milestones.clone();
@@ -743,6 +764,7 @@ impl UpdateAirtableRecord<RFD> for RFD {
 }
 
 /// Get the RFDs from the rfd GitHub repo.
+#[tracing::instrument(skip(github))]
 pub async fn get_rfds_from_repo(github: &octorust::Client, company: &Company) -> Result<BTreeMap<i32, NewRFD>> {
     let owner = &company.github_org;
     let repo = "rfd";
@@ -777,6 +799,7 @@ pub async fn get_rfds_from_repo(github: &octorust::Client, company: &Company) ->
 }
 
 /// Try to get the markdown or asciidoc contents from the repo.
+#[tracing::instrument(skip(github))]
 pub async fn get_rfd_contents_from_repo(
     github: &octorust::Client,
     _owner: &str,
@@ -838,6 +861,7 @@ pub async fn get_rfd_contents_from_repo(
 }
 
 // Get all the images in a specific directory of a GitHub branch.
+#[tracing::instrument(skip(github))]
 #[async_recursion]
 pub async fn get_images_in_branch(
     github: &octorust::Client,
@@ -906,15 +930,18 @@ pub async fn get_images_in_branch(
     Ok(files)
 }
 
+#[tracing::instrument]
 pub fn parse_markdown(content: &str) -> String {
     markdown_to_html(content, &ComrakOptions::default())
 }
 
 /// Return if the file is an image.
+#[tracing::instrument]
 pub fn is_image(file: &str) -> bool {
     file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
 }
 
+#[tracing::instrument]
 pub fn clean_rfd_html_links(content: &str, num: &str) -> Result<String> {
     let mut cleaned = content
         .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
@@ -948,6 +975,7 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> Result<String> {
         .replace(&format!("link:https://{}.rfd.oxide.computer/http", num), "link:http"))
 }
 
+#[tracing::instrument]
 pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> Result<String> {
     // TODO: there is probably a better way to do these regexes.
     let mut re = Regex::new(r"(?m)(:discussion:.*$)")?;
@@ -968,6 +996,7 @@ pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> R
     Ok(content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1))
 }
 
+#[tracing::instrument]
 pub fn update_state(content: &str, state: &str, is_markdown: bool) -> Result<String> {
     // TODO: there is probably a better way to do these regexes.
     let mut re = Regex::new(r"(?m)(:state:.*$)")?;
@@ -989,6 +1018,7 @@ pub fn update_state(content: &str, state: &str, is_markdown: bool) -> Result<Str
 }
 
 // Sync the rfds with our database.
+#[tracing::instrument]
 pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     // Authenticate GitHub.
     let github = company.authenticate_github()?;
@@ -1039,6 +1069,7 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     Ok(())
 }
 
+#[tracing::instrument]
 pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
     // Get all the rfds from the database.
     let rfds = RFDs::get_from_db(db, company.id).await?;
@@ -1158,6 +1189,7 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
 }
 
 /// Create a changelog email for the RFDs.
+#[tracing::instrument]
 pub async fn send_rfd_changelog(db: &Database, company: &Company) -> Result<()> {
     let rfds = RFDs::get_from_db(db, company.id).await?;
 

@@ -1,5 +1,7 @@
 use std::{fmt, str::FromStr};
 
+use tracing_subscriber::prelude::*;
+
 /// Slack commands.
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -21,6 +23,7 @@ pub enum SlackCommand {
 
 impl SlackCommand {
     /// Returns a static string for the command.
+    #[tracing::instrument]
     pub fn name(self) -> &'static str {
         match self {
             SlackCommand::RFD => "/rfd",
@@ -37,6 +40,7 @@ impl SlackCommand {
 impl FromStr for SlackCommand {
     type Err = String;
 
+    #[tracing::instrument]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "/rfd" => Ok(SlackCommand::RFD),
@@ -52,6 +56,7 @@ impl FromStr for SlackCommand {
 }
 
 impl fmt::Display for SlackCommand {
+    #[tracing::instrument]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }

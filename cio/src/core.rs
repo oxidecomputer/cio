@@ -207,6 +207,7 @@ pub struct GitHubPullRequest {
 }
 
 impl From<octorust::types::PullRequestSimple> for GitHubPullRequest {
+    #[tracing::instrument]
     fn from(item: octorust::types::PullRequestSimple) -> Self {
         GitHubPullRequest {
             id: item.id,
@@ -327,6 +328,7 @@ pub struct GitHubCommit {
 impl GitHubCommit {
     /// Filter the files that were added, modified, or removed by their prefix
     /// including a specified directory or path.
+    #[tracing::instrument]
     pub fn filter_files_by_path(&mut self, dir: &str) {
         self.added = filter(&self.added, dir);
         self.modified = filter(&self.modified, dir);
@@ -334,11 +336,13 @@ impl GitHubCommit {
     }
 
     /// Return if the commit has any files that were added, modified, or removed.
+    #[tracing::instrument]
     pub fn has_changed_files(&self) -> bool {
         !self.added.is_empty() || !self.modified.is_empty() || !self.removed.is_empty()
     }
 
     /// Return if a specific file was added, modified, or removed in a commit.
+    #[tracing::instrument]
     pub fn file_changed(&self, file: &str) -> bool {
         self.added.contains(&file.to_string())
             || self.modified.contains(&file.to_string())
@@ -346,6 +350,7 @@ impl GitHubCommit {
     }
 }
 
+#[tracing::instrument]
 fn filter(files: &[String], dir: &str) -> Vec<String> {
     let mut in_dir: Vec<String> = Default::default();
     for file in files {

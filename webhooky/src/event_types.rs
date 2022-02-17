@@ -1,5 +1,7 @@
 use std::{fmt, str::FromStr};
 
+use tracing_subscriber::prelude::*;
+
 /// GitHub events that are specified in the X-Github-Event header.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum EventType {
@@ -172,6 +174,7 @@ pub enum EventType {
 
 impl EventType {
     /// Returns a static string for the event name.
+    #[tracing::instrument]
     pub fn name(self) -> &'static str {
         match self {
             EventType::Wildcard => "*",
@@ -226,6 +229,7 @@ impl EventType {
 impl FromStr for EventType {
     type Err = &'static str;
 
+    #[tracing::instrument]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "*" => Ok(EventType::Wildcard),
@@ -282,6 +286,7 @@ impl FromStr for EventType {
 }
 
 impl fmt::Display for EventType {
+    #[tracing::instrument]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }

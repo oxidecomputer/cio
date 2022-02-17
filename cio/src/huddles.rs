@@ -18,6 +18,7 @@ use crate::{
 };
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
+#[tracing::instrument]
 pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
@@ -173,6 +174,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
     Ok(())
 }
 
+#[tracing::instrument]
 pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
@@ -410,6 +412,7 @@ See you soon,
 The Airtable Huddle Bot"#;
 
 /// Sync the huddle meeting notes with the GitHub reports repository.
+#[tracing::instrument]
 pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;
@@ -471,6 +474,7 @@ pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
     Ok(())
 }
 
+#[tracing::instrument]
 pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let configs = get_configs_from_repo(&github, company).await?;

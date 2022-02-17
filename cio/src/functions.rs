@@ -51,12 +51,14 @@ pub struct NewFunction {
 /// Implement updating the Airtable record for a Function.
 #[async_trait]
 impl UpdateAirtableRecord<Function> for Function {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: Function) -> Result<()> {
         self.logs = truncate(&self.logs, 100000);
         Ok(())
     }
 }
 
+#[tracing::instrument]
 fn get_color_based_from_status_and_conclusion(status: &str, conclusion: &str) -> String {
     if status == octorust::types::JobStatus::InProgress.to_string() {
         return crate::colors::Colors::Blue.to_string();
@@ -84,6 +86,7 @@ fn get_color_based_from_status_and_conclusion(status: &str, conclusion: &str) ->
 
 /// Convert the function into a Slack message.
 impl From<NewFunction> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: NewFunction) -> Self {
         let dur = item.created_at - Utc::now();
         let human_date = HumanTime::from(dur);
@@ -189,6 +192,7 @@ impl From<NewFunction> for FormattedMessage {
 }
 
 impl From<Function> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: Function) -> Self {
         let new: NewFunction = item.into();
         new.into()
@@ -197,6 +201,7 @@ impl From<Function> for FormattedMessage {
 
 impl NewFunction {
     // Send a slack notification to the channels in the object.
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
 
@@ -225,12 +230,14 @@ impl fmt::Display for FnOutput {
 }
 
 impl Function {
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewFunction = self.into();
         n.send_slack_notification(db, company).await
     }
 
     /// Add logs to a running saga.
+    #[tracing::instrument]
     pub async fn add_logs(db: &Database, saga_id: &uuid::Uuid, logs: &str) -> Result<()> {
         if logs.is_empty() {
             // Return early.
@@ -246,6 +253,7 @@ impl Function {
     }
 
     /// Add logs with a conclusion saga.
+    #[tracing::instrument]
     pub async fn add_logs_with_conclusion(
         db: &Database,
         saga_id: &uuid::Uuid,
@@ -278,6 +286,7 @@ impl Function {
     }
 
     /// Update a job from SagaCreateParams.
+    #[tracing::instrument]
     pub async fn from_saga_create_params(db: &Database, saga: &steno::SagaCreateParams) -> Result<Self> {
         let status = match saga.state {
             steno::SagaCachedState::Running => octorust::types::JobStatus::InProgress,
@@ -305,6 +314,7 @@ impl Function {
     }
 
     /// Update a job from SagaCachedState.
+    #[tracing::instrument]
     pub async fn from_saga_cached_state(
         db: &Database,
         saga_id: &steno::SagaId,
@@ -342,6 +352,7 @@ impl Function {
     }
 
     /// Update a job from SagaNodeEvent.
+    #[tracing::instrument]
     pub async fn from_saga_node_event(db: &Database, event: &steno::SagaNodeEvent) -> Result<Self> {
         // Get the saga from it's id.
         let mut nf = Function::get_from_db(db, event.saga_id.to_string()).await.unwrap();
@@ -383,6 +394,7 @@ impl Function {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_functions() -> Result<()> {
     let db = Database::new().await;
     let company = Company::get_by_id(&db, 1).await?;

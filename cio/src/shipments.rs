@@ -75,6 +75,7 @@ pub struct NewInboundShipment {
 /// Implement updating the Airtable record for an InboundShipment.
 #[async_trait]
 impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: InboundShipment) -> Result<()> {
         if self.carrier.is_empty() {
             self.carrier = record.carrier;
@@ -106,6 +107,7 @@ impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
 }
 
 impl NewInboundShipment {
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
         // Set the channel.
@@ -116,11 +118,13 @@ impl NewInboundShipment {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     // Get the tracking link for the provider.
+    #[tracing::instrument]
     fn tracking_link(&mut self) {
         let carrier = self.carrier.to_lowercase();
 
@@ -146,6 +150,7 @@ impl NewInboundShipment {
     }
 
     /// Get the details about the shipment from the tracking API.
+    #[tracing::instrument]
     pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
         // Create the shippo client.
         let shippo = Shippo::new_from_env();
@@ -214,6 +219,7 @@ impl NewInboundShipment {
 
 impl InboundShipment {
     /// Get the details about the shipment from the tracking API.
+    #[tracing::instrument]
     pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
         let mut ns: NewInboundShipment = self.clone().into();
         ns.expand(db, company).await?;
@@ -221,12 +227,14 @@ impl InboundShipment {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewInboundShipment = self.into();
         n.send_slack_notification(db, company).await
     }
 }
 
+#[tracing::instrument]
 fn get_color_based_on_tracking_status(s: &str) -> String {
     let status = s.to_lowercase().trim().to_string();
 
@@ -249,6 +257,7 @@ fn get_color_based_on_tracking_status(s: &str) -> String {
 
 /// Convert the inbound shipment into a Slack message.
 impl From<NewInboundShipment> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: NewInboundShipment) -> Self {
         let mut status_msg = format!(
             "Inbound shipment | *{}* | <{}|{}>",
@@ -341,6 +350,7 @@ impl From<NewInboundShipment> for FormattedMessage {
 }
 
 impl From<InboundShipment> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: InboundShipment) -> Self {
         let new: NewInboundShipment = item.into();
         new.into()
@@ -348,11 +358,13 @@ impl From<InboundShipment> for FormattedMessage {
 }
 
 impl InboundShipment {
+    #[tracing::instrument]
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     // Get the tracking link for the provider.
+    #[tracing::instrument]
     pub fn tracking_link(&mut self) {
         let carrier = self.carrier.to_lowercase();
 
@@ -469,6 +481,7 @@ pub struct NewOutboundShipment {
 }
 
 impl From<User> for NewOutboundShipment {
+    #[tracing::instrument]
     fn from(user: User) -> Self {
         NewOutboundShipment {
             created_time: Utc::now(),
@@ -510,6 +523,7 @@ impl From<User> for NewOutboundShipment {
 }
 
 impl From<shipbob::types::Order> for NewOutboundShipment {
+    #[tracing::instrument]
     fn from(item: shipbob::types::Order) -> Self {
         let recipient = item.recipient.unwrap();
 
@@ -596,6 +610,7 @@ impl From<shipbob::types::Order> for NewOutboundShipment {
 }
 
 impl From<shipbob::types::Status> for crate::shipment_status::Status {
+    #[tracing::instrument]
     fn from(item: shipbob::types::Status) -> Self {
         match item {
             shipbob::types::Status::Cancelled => crate::shipment_status::Status::Cancelled,
@@ -615,6 +630,7 @@ impl From<shipbob::types::Status> for crate::shipment_status::Status {
 }
 
 impl From<shipbob::types::OrderStatus> for crate::shipment_status::Status {
+    #[tracing::instrument]
     fn from(item: shipbob::types::OrderStatus) -> Self {
         match item {
             shipbob::types::OrderStatus::Cancelled => crate::shipment_status::Status::Cancelled,
@@ -630,6 +646,7 @@ impl From<shipbob::types::OrderStatus> for crate::shipment_status::Status {
 }
 
 impl NewOutboundShipment {
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
         // Set the channel.
@@ -643,6 +660,7 @@ impl NewOutboundShipment {
 
 /// Convert the outbound shipment into a Slack message.
 impl From<NewOutboundShipment> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: NewOutboundShipment) -> Self {
         let mut status_msg = format!(
             "Outbound shipment | *{}* | _{}_ | <{}|{}>",
@@ -729,6 +747,7 @@ impl From<NewOutboundShipment> for FormattedMessage {
 }
 
 impl From<OutboundShipment> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: OutboundShipment) -> Self {
         let new: NewOutboundShipment = item.into();
         new.into()
@@ -779,6 +798,7 @@ pub struct NewPackagePickup {
 /// Implement updating the Airtable record for an PackagePickup.
 #[async_trait]
 impl UpdateAirtableRecord<PackagePickup> for PackagePickup {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: PackagePickup) -> Result<()> {
         Ok(())
     }
@@ -788,6 +808,7 @@ impl OutboundShipments {
     // Always schedule the pickup for the next business day.
     // It will create a pickup for all the shipments that have "Label printed"
     // status and no pickup date currently.
+    #[tracing::instrument]
     pub async fn create_pickup(db: &Database, company: &Company) -> Result<()> {
         // We should only do this for USPS, OR if we use DHL in the future.
         let shipments = outbound_shipments::dsl::outbound_shipments
@@ -905,6 +926,7 @@ impl OutboundShipments {
 }
 
 /// Returns the next buisness day in terms of start and end.
+#[tracing::instrument]
 pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
     let now = Utc::now();
     let pacific_time = now.with_timezone(&chrono_tz::US::Pacific);
@@ -929,6 +951,7 @@ pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
 /// Implement updating the Airtable record for an OutboundShipment.
 #[async_trait]
 impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: OutboundShipment) -> Result<()> {
         self.link_to_package_pickup = record.link_to_package_pickup;
 
@@ -979,11 +1002,13 @@ impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
 }
 
 impl OutboundShipment {
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewOutboundShipment = self.into();
         n.send_slack_notification(db, company).await
     }
 
+    #[tracing::instrument]
     fn populate_formatted_address(&mut self) {
         let mut street_address = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -999,11 +1024,13 @@ impl OutboundShipment {
         .to_string();
     }
 
+    #[tracing::instrument]
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
 
     /// Send the receipt to our printer.
+    #[tracing::instrument]
     pub async fn print_receipt(&self, db: &Database) -> Result<()> {
         if self.contents.trim().is_empty() {
             // Return early.
@@ -1045,6 +1072,7 @@ impl OutboundShipment {
     }
 
     /// Send the label to our printer.
+    #[tracing::instrument]
     pub async fn print_label(&self, db: &Database) -> Result<()> {
         if self.label_link.trim().is_empty() {
             // Return early.
@@ -1076,6 +1104,7 @@ impl OutboundShipment {
     }
 
     /// Format address.
+    #[tracing::instrument]
     pub fn format_address(&self) -> String {
         let mut street = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -1090,6 +1119,7 @@ impl OutboundShipment {
 
     /// Send an email to the recipient with their order information.
     /// This should happen before they get the email that it has been shipped.
+    #[tracing::instrument]
     pub async fn send_email_to_recipient_pre_shipping(&self, db: &Database) -> Result<()> {
         if self.email.is_empty() {
             return Ok(());
@@ -1136,6 +1166,7 @@ xoxo,
     }
 
     /// Send an email to the recipient with their tracking code and information.
+    #[tracing::instrument]
     pub async fn send_email_to_recipient(&self, db: &Database) -> Result<()> {
         if self.email.is_empty() {
             return Ok(());
@@ -1183,6 +1214,7 @@ xoxo,
     }
 
     /// Send an email internally that we need to package the shipment.
+    #[tracing::instrument]
     pub async fn send_email_internally(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
         // Initialize the SendGrid client.
@@ -1237,6 +1269,7 @@ The Shipping Bot",
 
     /// Sends a Slack notification if the status of the shipment changed.
     /// And changes the status of the shipment.
+    #[tracing::instrument]
     pub async fn set_status(
         &mut self,
         db: &Database,
@@ -1255,6 +1288,7 @@ The Shipping Bot",
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn set_lat_lng(&mut self, db: &Database) -> Result<()> {
         // Create the geocode client.
         let geocode = Geocode::new_from_env();
@@ -1273,6 +1307,7 @@ The Shipping Bot",
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
         // Update the formatted address.
         self.populate_formatted_address();
@@ -1352,6 +1387,7 @@ The Shipping Bot",
     }
 
     /// Create or get a shipment in shippo that matches this shipment.
+    #[tracing::instrument]
     pub async fn create_or_get_shippo_shipment(&mut self, db: &Database) -> Result<()> {
         if self.provider != "Shippo" {
             // Return early it's not a shippo shipment.
@@ -1615,6 +1651,7 @@ The Shipping Bot",
 }
 
 // Sync the outbound shipments.
+#[tracing::instrument]
 pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_shipments.is_empty() {
         // Return early.
@@ -1680,6 +1717,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
     Ok(())
 }
 
+#[tracing::instrument]
 pub fn clean_carrier_name(s: &str) -> String {
     let l = s.to_lowercase();
     if l == "ups" || l.starts_with("ups") {
@@ -1695,6 +1733,7 @@ pub fn clean_carrier_name(s: &str) -> String {
     s.to_string()
 }
 
+#[tracing::instrument]
 async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Result<()> {
     // Only do this if the company is Oxide, as it is our account.
     if company.id != 1 {
@@ -1784,6 +1823,7 @@ async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Res
 }
 
 // Sync the inbound shipments.
+#[tracing::instrument]
 pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_shipments.is_empty() {
         // Return early.
@@ -1819,6 +1859,7 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Resu
     Ok(())
 }
 
+#[tracing::instrument]
 pub fn clean_address_string(s: &str) -> String {
     if s == "DE" {
         return "Germany".to_string();

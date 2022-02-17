@@ -47,6 +47,7 @@ pub struct OrderItem {
 }
 
 impl Order {
+    #[tracing::instrument]
     pub async fn format_contents(&self) -> Result<String> {
         let db = Database::new().await;
         let mut contents = String::new();
@@ -62,6 +63,7 @@ impl Order {
         Ok(contents.trim().to_string())
     }
 
+    #[tracing::instrument]
     pub async fn create_shipment_for_order(&self, db: &Database) -> Result<()> {
         // Convert the shipment to an order.
         let shipment: NewOutboundShipment = self.to_outbound_shipment().await?;
@@ -80,6 +82,7 @@ impl Order {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn subtract_order_from_inventory(&self, db: &Database) -> Result<()> {
         for item in &self.items {
             // Get the swag item from the database.
@@ -109,6 +112,7 @@ impl Order {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn do_order(&self, db: &Database) -> Result<()> {
         // If their email is empty return early.
         if self.email.is_empty()
@@ -131,6 +135,7 @@ impl Order {
         Ok(())
     }
 
+    #[tracing::instrument]
     async fn to_outbound_shipment(&self) -> Result<NewOutboundShipment> {
         let db = Database::new().await;
         let company = Company::get_by_id(&db, self.cio_company_id).await?;

@@ -78,6 +78,7 @@ pub struct NewRecordedMeeting {
 /// Implement updating the Airtable record for a RecordedMeeting.
 #[async_trait]
 impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: RecordedMeeting) -> Result<()> {
         if !record.transcript_id.is_empty() {
             self.transcript_id = record.transcript_id;
@@ -94,6 +95,7 @@ impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
 
 /// Convert the recorded meeting into a Slack message.
 impl From<NewRecordedMeeting> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: NewRecordedMeeting) -> Self {
         let mut context = format!("<{}|Recorded Meeting>", item.event_link);
 
@@ -175,6 +177,7 @@ impl From<NewRecordedMeeting> for FormattedMessage {
 }
 
 impl From<RecordedMeeting> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: RecordedMeeting) -> Self {
         let new: NewRecordedMeeting = item.into();
         new.into()
@@ -183,6 +186,7 @@ impl From<RecordedMeeting> for FormattedMessage {
 
 impl NewRecordedMeeting {
     // Send a slack notification to the channels in the object.
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
 
@@ -197,6 +201,7 @@ impl NewRecordedMeeting {
 }
 
 impl RecordedMeeting {
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewRecordedMeeting = self.into();
         n.send_slack_notification(db, company).await
@@ -204,6 +209,7 @@ impl RecordedMeeting {
 }
 
 /// Sync the recorded meetings from zoom.
+#[tracing::instrument]
 pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
     let zoom_auth = company.authenticate_zoom(db).await;
     if let Err(e) = zoom_auth {
@@ -391,6 +397,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
 }
 
 /// Sync the recorded meetings from Google.
+#[tracing::instrument]
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
     let mut gcal = match company.authenticate_google_calendar_with_service_account("").await {
         Ok(dc) => dc,
@@ -854,6 +861,7 @@ trait FileInfo {
 
 impl FileInfo for GetAccountCloudRecordingResponseMeetingsFilesFileType {
     // Returns the extension for each file type.
+    #[tracing::instrument]
     fn to_extension(&self) -> String {
         match self {
             GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => "-video.mp4".to_string(),
@@ -868,6 +876,7 @@ impl FileInfo for GetAccountCloudRecordingResponseMeetingsFilesFileType {
     }
 
     // Returns the mime type for each file type.
+    #[tracing::instrument]
     fn get_mime_type(&self) -> String {
         match self {
             GetAccountCloudRecordingResponseMeetingsFilesFileType::Mp4 => "video/mp4".to_string(),

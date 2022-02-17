@@ -13,6 +13,7 @@ use crate::{
 };
 
 /// Generate the files for the GitHub repository short URLs.
+#[tracing::instrument(skip(github))]
 pub async fn generate_shorturls_for_repos(
     db: &Database,
     github: &octorust::Client,
@@ -53,6 +54,7 @@ pub async fn generate_shorturls_for_repos(
 }
 
 /// Generate the files for the RFD short URLs.
+#[tracing::instrument(skip(github))]
 pub async fn generate_shorturls_for_rfds(
     db: &Database,
     github: &octorust::Client,
@@ -99,6 +101,7 @@ pub async fn generate_shorturls_for_rfds(
 }
 
 /// Generate the files for the configs links.
+#[tracing::instrument(skip(github))]
 pub async fn generate_shorturls_for_configs_links(
     db: &Database,
     github: &octorust::Client,
@@ -153,6 +156,7 @@ pub async fn generate_shorturls_for_configs_links(
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
+#[tracing::instrument]
 pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()> {
     let subdomain = "internal";
     // Initialize the array of links.
@@ -223,6 +227,7 @@ pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()>
 }
 
 /// Update all the short URLs and DNS.
+#[tracing::instrument]
 pub async fn refresh_shorturls() -> Result<()> {
     let db = Database::new().await;
 
@@ -264,6 +269,7 @@ pub struct ShortUrl {
     pub discussion: String,
 }
 
+#[tracing::instrument]
 async fn create_dns_records_for_links(company: &Company, shorturls: Vec<ShortUrl>) -> Result<()> {
     let cf = company.authenticate_cloudflare()?;
     for s in shorturls {

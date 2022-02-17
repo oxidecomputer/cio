@@ -1,6 +1,8 @@
 #![allow(clippy::upper_case_acronyms)]
 use std::{fmt, str::FromStr};
 
+use tracing_subscriber::prelude::*;
+
 /// GitHub repos.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Repo {
@@ -13,6 +15,7 @@ pub enum Repo {
 
 impl Repo {
     /// Returns a static string for the repo name.
+    #[tracing::instrument]
     pub fn name(self) -> &'static str {
         match self {
             Repo::Wildcard => "*",
@@ -25,6 +28,7 @@ impl Repo {
 impl FromStr for Repo {
     type Err = &'static str;
 
+    #[tracing::instrument]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "*" => Ok(Repo::Wildcard),
@@ -39,6 +43,7 @@ impl FromStr for Repo {
 }
 
 impl fmt::Display for Repo {
+    #[tracing::instrument]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }

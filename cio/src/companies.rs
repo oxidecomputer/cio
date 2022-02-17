@@ -149,6 +149,7 @@ pub struct NewCompany {
 /// Implement updating the Airtable record for a Company.
 #[async_trait]
 impl UpdateAirtableRecord<Company> for Company {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: Company) -> Result<()> {
         Ok(())
     }
@@ -157,6 +158,7 @@ impl UpdateAirtableRecord<Company> for Company {
 impl Company {
     /// Returns the shippo data structure for the address at the office
     /// for the company.
+    #[tracing::instrument]
     pub async fn hq_shipping_address(&self, db: &Database) -> Result<shippo::Address> {
         // Get the buildings from the company.
         let buildings: Vec<Building> = Buildings::get_from_db(db, self.cio_company_id).await?.into();
@@ -182,6 +184,7 @@ impl Company {
         })
     }
 
+    #[tracing::instrument]
     pub async fn post_to_slack_channel(&self, db: &Database, msg: &slack_chat_api::FormattedMessage) -> Result<()> {
         // Create the Slack client.
         let r = self.authenticate_slack(db).await;
@@ -209,6 +212,7 @@ impl Company {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn get_from_slack_team_id(db: &Database, team_id: &str) -> Result<Self> {
         // We need to get the token first with the matching team id.
         let token = api_tokens::dsl::api_tokens
@@ -224,6 +228,7 @@ impl Company {
         Company::get_by_id(db, token.auth_company_id).await
     }
 
+    #[tracing::instrument]
     pub async fn get_from_github_org(db: &Database, org: &str) -> Result<Self> {
         Ok(companys::dsl::companys
             .filter(
@@ -235,6 +240,7 @@ impl Company {
             .await?)
     }
 
+    #[tracing::instrument]
     pub async fn get_from_shipbob_channel_id(db: &Database, channel_id: &str) -> Result<Self> {
         let token = api_tokens::dsl::api_tokens
             .filter(
@@ -248,6 +254,7 @@ impl Company {
         Company::get_by_id(db, token.auth_company_id).await
     }
 
+    #[tracing::instrument]
     pub async fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Result<Self> {
         Ok(companys::dsl::companys
             .filter(companys::dsl::mailchimp_list_id.eq(list_id.to_string()))
@@ -255,6 +262,7 @@ impl Company {
             .await?)
     }
 
+    #[tracing::instrument]
     pub async fn get_from_domain(db: &Database, domain: &str) -> Result<Self> {
         Ok(companys::dsl::companys
             .filter(
@@ -267,6 +275,7 @@ impl Company {
     }
 
     /// Authenticate with Cloudflare.
+    #[tracing::instrument]
     pub fn authenticate_cloudflare(&self) -> Result<CloudflareClient> {
         if self.cloudflare_api_key.is_empty() || self.gsuite_subject.is_empty() {
             // Return early.
@@ -283,6 +292,7 @@ impl Company {
     }
 
     /// Authenticate with Checkr.
+    #[tracing::instrument]
     pub fn authenticate_checkr(&self) -> Option<Checkr> {
         if self.checkr_api_key.is_empty() {
             // Return early.
@@ -292,6 +302,7 @@ impl Company {
     }
 
     /// Authenticate with Okta.
+    #[tracing::instrument]
     pub fn authenticate_okta(&self) -> Option<Okta> {
         if self.okta_api_key.is_empty() || self.okta_domain.is_empty() {
             // Return early.
@@ -300,6 +311,7 @@ impl Company {
         Some(Okta::new(&self.okta_api_key).with_host(self.okta_endpoint()))
     }
 
+    #[tracing::instrument]
     fn okta_endpoint(&self) -> String {
         format!(
             "https://{}.okta.com",
@@ -313,11 +325,13 @@ impl Company {
     }
 
     /// Authenticate with Airtable.
+    #[tracing::instrument]
     pub fn authenticate_airtable(&self, base_id: &str) -> Airtable {
         Airtable::new(&self.airtable_api_key, base_id, &self.airtable_enterprise_account_id)
     }
 
     /// Authenticate with ShipBob.
+    #[tracing::instrument]
     pub async fn authenticate_shipbob(&self, db: &Database) -> Result<ShipBob> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "shipbob".to_string()).await {
@@ -355,6 +369,7 @@ impl Company {
     }
 
     /// Ensure the company has ShipBob webhooks setup.
+    #[tracing::instrument]
     pub async fn ensure_shipbob_webhooks(&self, db: &Database) -> Result<()> {
         let shipbob_auth = self.authenticate_shipbob(db).await;
         if let Err(e) = shipbob_auth {
@@ -418,6 +433,7 @@ impl Company {
     }
 
     /// Authenticate with MailChimp.
+    #[tracing::instrument]
     pub async fn authenticate_mailchimp(&self, db: &Database) -> Result<MailChimp> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()).await {
@@ -458,6 +474,7 @@ impl Company {
     }
 
     /// Authenticate with Slack.
+    #[tracing::instrument]
     pub async fn authenticate_slack(&self, db: &Database) -> Result<Slack> {
         // Get the bot token and user token from the database.
         if let Ok(bot_token) = api_tokens::dsl::api_tokens
@@ -497,6 +514,7 @@ impl Company {
     }
 
     /// Authenticate with Ramp.
+    #[tracing::instrument]
     pub async fn authenticate_ramp(&self, db: &Database) -> Result<Ramp> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "ramp".to_string()).await {
@@ -531,6 +549,7 @@ impl Company {
     }
 
     /// Authenticate with Zoom.
+    #[tracing::instrument]
     pub async fn authenticate_zoom(&self, db: &Database) -> Result<Zoom> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "zoom".to_string()).await {
@@ -565,6 +584,7 @@ impl Company {
     }
 
     /// Authenticate with DocuSign.
+    #[tracing::instrument]
     pub async fn authenticate_docusign(&self, db: &Database) -> Result<DocuSign> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "docusign".to_string()).await {
@@ -604,6 +624,7 @@ impl Company {
     }
 
     /// Authenticate with Gusto.
+    #[tracing::instrument]
     pub async fn authenticate_gusto(&self, db: &Database) -> Result<(Gusto, String)> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()).await {
@@ -638,11 +659,13 @@ impl Company {
     }
 
     /// Authenticate with Tailscale.
+    #[tracing::instrument]
     pub fn authenticate_tailscale(&self) -> Tailscale {
         Tailscale::new(&self.tailscale_api_key, &self.gsuite_domain)
     }
 
     /// Authenticate with TripActions.
+    #[tracing::instrument]
     pub async fn authenticate_tripactions(&self, db: &Database) -> Result<TripActions> {
         if self.tripactions_client_id.is_empty() || self.tripactions_client_secret.is_empty() {
             // bail early we don't have a token.
@@ -716,6 +739,7 @@ impl Company {
     }
 
     /// Authenticate with QuickBooks.
+    #[tracing::instrument]
     pub async fn authenticate_quickbooks(&self, db: &Database) -> Result<QuickBooks> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "quickbooks".to_string()).await {
@@ -754,6 +778,7 @@ impl Company {
     }
 
     /// Authenticate Google Admin.
+    #[tracing::instrument]
     pub async fn authenticate_google_admin(&self, db: &Database) -> Result<GoogleAdmin> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
@@ -788,6 +813,7 @@ impl Company {
     }
 
     /// Authenticate Google Calendar.
+    #[tracing::instrument]
     pub async fn authenticate_google_calendar(&self, db: &Database) -> Result<GoogleCalendar> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
@@ -824,6 +850,7 @@ impl Company {
     /// Authenticate Google Calendar with Service Account.
     /// This allows mocking as another user.
     /// TODO: figure out why we can't mock with the standard token.
+    #[tracing::instrument]
     pub async fn authenticate_google_calendar_with_service_account(&self, as_user: &str) -> Result<GoogleCalendar> {
         let token = self.get_google_service_account_token(as_user).await?;
 
@@ -832,6 +859,7 @@ impl Company {
     }
 
     /// Authenticate Google Drive.
+    #[tracing::instrument]
     pub async fn authenticate_google_drive(&self, db: &Database) -> Result<GoogleDrive> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
@@ -868,6 +896,7 @@ impl Company {
     /// Authenticate Google Drive with Service Account.
     /// This allows mocking as another user.
     /// TODO: figure out why we can't mock with the standard token.
+    #[tracing::instrument]
     pub async fn authenticate_google_drive_with_service_account(&self, as_user: &str) -> Result<GoogleDrive> {
         let token = self.get_google_service_account_token(as_user).await?;
 
@@ -875,6 +904,7 @@ impl Company {
         Ok(GoogleDrive::new_from_env(&token, "").await)
     }
 
+    #[tracing::instrument]
     async fn get_google_service_account_token(&self, as_user: &str) -> Result<String> {
         if self.google_service_account.is_empty() {
             bail!("no service account");
@@ -924,6 +954,7 @@ impl Company {
     }
 
     /// Authenticate Google Sheets.
+    #[tracing::instrument]
     pub async fn authenticate_google_sheets(&self, db: &Database) -> Result<GoogleSheets> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
@@ -958,6 +989,7 @@ impl Company {
     }
 
     /// Authenticate Google Groups Settings.
+    #[tracing::instrument]
     pub async fn authenticate_google_groups_settings(&self, db: &Database) -> Result<GoogleGroupsSettings> {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
@@ -992,6 +1024,7 @@ impl Company {
     }
 
     /// Authenticate GitHub with JSON web token credentials, for an application installation.
+    #[tracing::instrument]
     pub fn authenticate_github(&self) -> Result<octorust::Client> {
         // Parse our env variables.
         let app_id_str = env::var("GH_APP_ID")?;
@@ -1024,6 +1057,7 @@ impl Company {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_companies() -> Result<()> {
     let db = Database::new().await;
 
@@ -1056,6 +1090,7 @@ pub async fn refresh_companies() -> Result<()> {
     Ok(())
 }
 
+#[tracing::instrument]
 pub fn get_google_scopes() -> Vec<String> {
     vec![
         "https://www.googleapis.com/auth/admin.directory.group".to_string(),
@@ -1070,6 +1105,7 @@ pub fn get_google_scopes() -> Vec<String> {
     ]
 }
 
+#[tracing::instrument]
 pub fn get_shipbob_scopes() -> Vec<String> {
     vec![
         "channels_read".to_string(),

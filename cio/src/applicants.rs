@@ -250,6 +250,7 @@ pub struct NewApplicant {
     pub cio_company_id: i32,
 }
 
+#[tracing::instrument]
 pub fn clean_interested_in(st: &str) -> String {
     let s = st.trim().to_lowercase();
 
@@ -270,6 +271,7 @@ pub fn clean_interested_in(st: &str) -> String {
 
 impl NewApplicant {
     /// Get the human duration of time since the application was submitted.
+    #[tracing::instrument]
     fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
         if dur.num_seconds() > 0 {
@@ -279,6 +281,7 @@ impl NewApplicant {
         HumanTime::from(dur)
     }
 
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
         // Set the channel.
@@ -290,6 +293,7 @@ impl NewApplicant {
     }
 }
 
+#[tracing::instrument]
 fn get_color_based_on_status(s: &str) -> String {
     let status = crate::applicant_status::Status::from_str(s).unwrap();
 
@@ -310,6 +314,7 @@ fn get_color_based_on_status(s: &str) -> String {
 
 /// Convert the applicant into a Slack message.
 impl From<NewApplicant> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: NewApplicant) -> Self {
         let time = item.human_duration();
 
@@ -454,6 +459,7 @@ impl From<NewApplicant> for FormattedMessage {
 }
 
 impl From<Applicant> for FormattedMessage {
+    #[tracing::instrument]
     fn from(item: Applicant) -> Self {
         let new: NewApplicant = item.into();
         new.into()
@@ -461,11 +467,13 @@ impl From<Applicant> for FormattedMessage {
 }
 
 impl Applicant {
+    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewApplicant = self.into();
         n.send_slack_notification(db, company).await
     }
 
+    #[tracing::instrument]
     pub async fn send_slack_notification_background_check_status_changed(
         &self,
         db: &Database,
@@ -499,6 +507,7 @@ impl Applicant {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn send_slack_notification_status_changed(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
         // Set the channel.
@@ -525,6 +534,7 @@ impl Applicant {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn send_slack_notification_start_date_changed(&self, db: &Database, company: &Company) -> Result<()> {
         if self.start_date.is_none() {
             // Return early, we don't care.
@@ -560,6 +570,7 @@ impl Applicant {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn send_slack_notification_docusign_offer_status_changed(
         &self,
         db: &Database,
@@ -590,6 +601,7 @@ impl Applicant {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn send_slack_notification_docusign_piia_status_changed(
         &self,
         db: &Database,
@@ -624,6 +636,7 @@ impl Applicant {
     }
 
     /// Update an applicant's status based on dates, interviews, etc.
+    #[tracing::instrument]
     pub async fn update_status(&mut self, db: &Database, company: &Company) -> Result<()> {
         let mut send_notification = false;
 
@@ -661,6 +674,7 @@ impl Applicant {
     }
 
     /// Update the interviews start and end time, if we have it.
+    #[tracing::instrument]
     pub async fn update_interviews_start_end_time(&mut self, db: &Database) {
         // If we have interviews for them, let's update the interviews_started and
         // interviews_completed times.
@@ -697,6 +711,7 @@ impl Applicant {
     }
 
     /// Update applicant reviews counts.
+    #[tracing::instrument]
     pub async fn update_reviews_scoring(&mut self, db: &Database) -> Result<()> {
         self.keep_fields_from_airtable(db).await;
 
@@ -857,6 +872,7 @@ impl Applicant {
     }
 
     /// Get the human duration of time since the application was submitted.
+    #[tracing::instrument]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.submitted_time - Utc::now();
         if dur.num_seconds() > 0 {
@@ -867,6 +883,7 @@ impl Applicant {
     }
 
     /// Send an invite to the applicant to do a background check.
+    #[tracing::instrument]
     pub async fn send_background_check_invitation(&mut self, db: &Database) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
@@ -925,6 +942,7 @@ impl Applicant {
     }
 
     /// Send an email to a scorer that they are assigned to an applicant.
+    #[tracing::instrument]
     pub async fn send_email_to_scorer(&self, scorer: &str, company: &Company) {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
@@ -946,6 +964,7 @@ impl Applicant {
 
     /// Get the applicant's information in the form of the body of an email for a
     /// scorer email that they have been assigned to score the applicant.
+    #[tracing::instrument]
     pub fn as_scorer_email(&self) -> String {
         let time = self.human_duration();
 
@@ -1007,6 +1026,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         msg
     }
 
+    #[tracing::instrument]
     pub async fn create_github_onboarding_issue(
         &self,
         db: &Database,
@@ -1224,6 +1244,7 @@ Notes:
     }
 
     /// Send an email to the applicant that we love them but they are too junior.
+    #[tracing::instrument]
     pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
         // Initialize the SendGrid client.
@@ -1264,6 +1285,7 @@ The Oxide Team",
     }
 
     /// Send an email to the applicant that they did not provide materials.
+    #[tracing::instrument]
     pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
         // Initialize the SendGrid client.
@@ -1295,6 +1317,7 @@ The Oxide Team",
     }
 
     /// Send an email to the applicant about timing.
+    #[tracing::instrument]
     pub async fn send_email_rejection_timing(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
         // Initialize the SendGrid client.
@@ -1335,6 +1358,7 @@ The Oxide Team",
     }
 }
 
+#[tracing::instrument]
 fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     if materials_contents.is_empty() {
         Default::default()
@@ -1366,6 +1390,7 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
 /// Implement updating the Airtable record for an Applicant.
 #[async_trait]
 impl UpdateAirtableRecord<Applicant> for Applicant {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: Applicant) -> Result<()> {
         self.interviews = record.interviews;
         self.geocode_cache = record.geocode_cache;
@@ -1379,6 +1404,7 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
 }
 
 /// Get the contexts of a file in Google Drive by it's URL as a text string.
+#[tracing::instrument]
 pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<String> {
     let id = url
         .replace("https://drive.google.com/open?id=", "")
@@ -1661,6 +1687,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
     Ok(result.trim().to_string())
 }
 
+#[tracing::instrument]
 fn read_doc(path: std::path::PathBuf) -> String {
     // Extract the text from the DOC
     let cmd_output = Command::new("catdoc").args(&[path.to_str().unwrap()]).output().unwrap();
@@ -1677,6 +1704,7 @@ fn read_doc(path: std::path::PathBuf) -> String {
     result
 }
 
+#[tracing::instrument]
 fn read_rtf(path: std::path::PathBuf) -> String {
     // Extract the text from the RTF
     let cmd_output = Command::new("unrtf")
@@ -1696,6 +1724,7 @@ fn read_rtf(path: std::path::PathBuf) -> String {
     result
 }
 
+#[tracing::instrument]
 fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     let mut output = env::temp_dir();
     output.push("tempfile.txt");
@@ -1731,6 +1760,7 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     Ok(result)
 }
 
+#[tracing::instrument]
 pub async fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>> {
     let users = Users::get_from_db(db, company.id).await?;
 
@@ -1750,6 +1780,7 @@ pub async fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<S
     Ok(reviewers)
 }
 
+#[tracing::instrument]
 fn is_materials(file_name: &str) -> bool {
     file_name.ends_with("responses.pdf")
         || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
@@ -1806,11 +1837,13 @@ pub struct NewApplicantReviewer {
 /// Implement updating the Airtable record for an ApplicantReviewer.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
+    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: ApplicantReviewer) -> Result<()> {
         Ok(())
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
@@ -1848,6 +1881,7 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -
     Ok(())
 }
 
+#[tracing::instrument]
 pub async fn get_docusign_template_id(ds: &DocuSign, name: &str) -> String {
     let templates = ds.list_templates().await.unwrap();
     for template in templates {
@@ -1860,6 +1894,7 @@ pub async fn get_docusign_template_id(ds: &DocuSign, name: &str) -> String {
 }
 
 impl Applicant {
+    #[tracing::instrument]
     pub fn cleanup_linkedin(&mut self) {
         if self.linkedin.trim().is_empty() {
             self.linkedin = "".to_string();
@@ -1880,6 +1915,8 @@ impl Applicant {
                 .trim()
         );
     }
+
+    #[tracing::instrument]
     pub async fn set_lat_long(&mut self) {
         // Get the latitude and longitude if we don't already have it.
         if self.latitude != 0.0 && self.longitude != 0.0 {
@@ -1905,6 +1942,7 @@ impl Applicant {
     }
 
     /// Send a rejection email if we need to.
+    #[tracing::instrument]
     pub async fn send_email_follow_up_if_necessary(&mut self, db: &Database) -> Result<()> {
         // Send an email follow up if we should.
         if self.sent_email_follow_up {
@@ -1972,6 +2010,7 @@ impl Applicant {
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
+    #[tracing::instrument]
     pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive) -> Result<()> {
         self.cleanup_phone();
         self.parse_github_gitlab();
@@ -2101,6 +2140,7 @@ The applicants Airtable \
     }
 
     /// Send an email internally that we have a new application.
+    #[tracing::instrument]
     async fn send_email_internally(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
         // Initialize the SendGrid client.
@@ -2123,6 +2163,7 @@ The applicants Airtable \
     }
 
     /// Send an email to the applicant that we recieved their application.
+    #[tracing::instrument]
     async fn send_email_recieved_application_to_applicant(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
         // Initialize the SendGrid client.
@@ -2159,6 +2200,7 @@ Sincerely,
     }
 
     /// Parse the questions from the materials.
+    #[tracing::instrument]
     fn parse_materials(&mut self) {
         // Parse the samples and materials.
         let materials_contents = self.materials_contents.clone();
@@ -2280,6 +2322,7 @@ Sincerely,
         self.question_why_oxide = parse_question(QUESTION_WHY_OXIDE, "", &materials_contents);
     }
 
+    #[tracing::instrument]
     fn parse_github_gitlab(&mut self) {
         let mut github = "".to_string();
         let mut gitlab = "".to_string();
@@ -2329,6 +2372,7 @@ Sincerely,
     }
 
     /// Cleanup the applicants phone.
+    #[tracing::instrument]
     fn cleanup_phone(&mut self) {
         // Cleanup and parse the phone number and country code.
         let mut phone = self
@@ -2423,6 +2467,7 @@ Sincerely,
         self.country_code = country_code;
     }
 
+    #[tracing::instrument]
     pub async fn do_docusign_offer(
         &mut self,
         db: &Database,
@@ -2545,6 +2590,7 @@ Sincerely,
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn update_applicant_from_docusign_offer_envelope(
         &mut self,
         db: &Database,
@@ -2720,6 +2766,7 @@ Sincerely,
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn do_docusign_piia(
         &mut self,
         db: &Database,
@@ -2856,6 +2903,7 @@ Sincerely,
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn keep_fields_from_airtable(&mut self, db: &Database) {
         // Let's get the existing record from Airtable, so we can use it as the source
         // of truth for various things.
@@ -2878,6 +2926,7 @@ Sincerely,
         self.start_date = existing.start_date;
     }
 
+    #[tracing::instrument]
     pub async fn update_applicant_from_docusign_piia_envelope(
         &mut self,
         db: &Database,
@@ -2973,6 +3022,7 @@ Sincerely,
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.

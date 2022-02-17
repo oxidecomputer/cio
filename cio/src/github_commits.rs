@@ -50,6 +50,7 @@ pub struct NewCommit {
 }
 
 impl From<octorust::types::CommitDataType> for NewCommit {
+    #[tracing::instrument]
     fn from(item: octorust::types::CommitDataType) -> Self {
         let mut additions = 0;
         let mut deletions = 0;
@@ -90,6 +91,7 @@ pub trait FromVecParents {
 }
 
 impl FromVecParents for Vec<octorust::types::Parents> {
+    #[tracing::instrument]
     fn to_vec(&self) -> Vec<String> {
         let mut parents: Vec<String> = Default::default();
 
@@ -106,6 +108,7 @@ pub trait FromVecCommitFiles {
 }
 
 impl FromVecCommitFiles for Vec<octorust::types::CommitFiles> {
+    #[tracing::instrument]
     fn to_vec(&self) -> Vec<String> {
         let mut files: Vec<String> = Default::default();
 
@@ -123,6 +126,7 @@ pub trait FromTagger {
 }
 
 impl FromTagger for Option<octorust::types::Tagger> {
+    #[tracing::instrument]
     fn to_string(&self) -> String {
         if let Some(u) = self {
             u.email.to_string()
@@ -131,6 +135,7 @@ impl FromTagger for Option<octorust::types::Tagger> {
         }
     }
 
+    #[tracing::instrument]
     fn to_date(&self) -> Option<DateTime<Utc>> {
         if let Some(u) = self {
             if let Ok(d) = DateTime::parse_from_str(&u.date, "%+") {
@@ -144,6 +149,7 @@ impl FromTagger for Option<octorust::types::Tagger> {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_commits() -> Result<()> {
     let db = Database::new().await;
 
