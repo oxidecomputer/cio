@@ -68,9 +68,12 @@ pub struct GitHubUser {
     pub site_admin: bool,
 }
 
-impl FromSql<Jsonb, Pg> for GitHubUser {
-    fn from_sql(bytes: Option<&Pg::RawValue>) -> deserialize::Result<Self> {
-        let value = <serde_json::Value as FromSql<Jsonb, Pg>>::from_sql(bytes)?;
+impl<DB> FromSql<Jsonb, DB> for GitHubUser
+where
+    DB: diesel::backend::Backend,
+{
+    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
+        let value = <serde_json::Value as FromSql<Jsonb, DB>>::from_sql(bytes)?;
         Ok(serde_json::from_value(value)?)
     }
 }

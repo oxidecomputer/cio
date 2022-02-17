@@ -103,7 +103,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         pub async fn create_in_db(&self, db: &crate::db::Database) -> anyhow::Result<#new_struct_name> {
             // // TODO: special error here.
             let r = diesel::insert_into(crate::schema::#db_schema::table)
-                .values(self)
+                .values(self.clone())
                 .get_result_async(&db.pool()).await?;
 
             Ok(r)
@@ -132,7 +132,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // Update the record.
                 // // TODO: special error here.
                 let record = diesel::update(&r)
-                    .set(self)
+                    .set(self.clone())
                     .get_result_async::<#new_struct_name>(&db.pool()).await?;
 
                 return Ok(record);
