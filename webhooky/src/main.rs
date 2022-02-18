@@ -189,12 +189,27 @@ async fn main() -> Result<()> {
         tracing_subscriber::filter::LevelFilter::INFO
     };
 
+    // Format fields using the provided closure.
+    // We want to make this very consise otherwise the logs are not able to be read by humans.
+    let format = tracing_subscriber::fmt::format::debug_fn(|writer, field, value| {
+        if format!("{}", field) == "message" {
+            write!(writer, "{}: {:?}", field, value)
+        } else {
+            write!(writer, "{}", field)
+        }
+    })
+    // Separate each field with a comma.
+    // This method is provided by an extension trait in the
+    // `tracing-subscriber` prelude.
+    .delimited(", ");
+
     // Initialize the Sentry tracing.
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
                 .with_ansi(true)
-                .pretty()
+                .fmt_fields(format)
+                .compact()
                 .with_filter(level_filter),
         )
         .with(sentry::integrations::tracing::layer())
@@ -226,8 +241,6 @@ async fn main() -> Result<()> {
         session_mode: sentry::SessionMode::Request,
         ..sentry::ClientOptions::default()
     });
-
-    slog::info!(LOGGER, "DOES THIS WORK"; "sentry_dsn" => sentry_dsn, "another" => "value");
 
     if let Err(err) = run_cmd(opts.clone(), LOGGER.clone()).await {
         sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));

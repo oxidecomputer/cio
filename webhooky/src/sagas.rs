@@ -11,7 +11,7 @@ use cio_api::{
     functions::{FnOutput, Function},
 };
 use serde::{Deserialize, Serialize};
-use tokio::io::AsyncBufReadExt;
+use std::io::BufRead;
 
 /// Define our saga for syncing repos.
 #[derive(Debug)]
@@ -176,21 +176,24 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
 
     let mut output = String::new();
 
-    let out = tokio::io::BufReader::new(reader);
+    let out = std::io::BufReader::new(reader);
 
     let mut start = Instant::now();
 
-    let mut lines = out.lines();
+    //let mut lines = out.lines();
 
-    loop {
-        match lines.next_line().await {
-            Ok(tl) => {
-                if tl.is_none() {
-                    // Break the loop there are no more lines.
-                    break;
-                }
+    for line in out.lines() {
+        match line {
+            Ok(l) => {
+                /*loop {
+                match lines.next_line().await {
+                    Ok(tl) => {
+                        if tl.is_none() {
+                            // Break the loop there are no more lines.
+                            break;
+                        }
 
-                let l = tl.unwrap();
+                        let l = tl.unwrap();*/
                 output.push_str(&l);
                 output.push('\n');
 
