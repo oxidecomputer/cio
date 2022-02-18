@@ -1,7 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 use std::{fmt, str::FromStr};
 
-use tracing_subscriber::prelude::*;
+
 
 /// GitHub repos.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

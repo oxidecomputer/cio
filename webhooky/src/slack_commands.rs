@@ -1,6 +1,6 @@
 use std::{fmt, str::FromStr};
 
-use tracing_subscriber::prelude::*;
+
 
 /// Slack commands.
 #[allow(clippy::upper_case_acronyms)]

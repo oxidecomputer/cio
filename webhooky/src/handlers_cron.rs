@@ -8,7 +8,7 @@ use cio_api::{functions::Function, schema::functions};
 use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::{Path, RequestContext};
 use log::info;
-use tracing_subscriber::prelude::*;
+
 
 use crate::server::{Context, FunctionPathParams};
 

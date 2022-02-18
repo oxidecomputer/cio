@@ -12,7 +12,7 @@ use cio_api::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::io::AsyncBufReadExt;
-use tracing_subscriber::prelude::*;
+
 
 /// Define our saga for syncing repos.
 #[derive(Debug)]
