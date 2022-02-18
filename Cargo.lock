@@ -5735,6 +5735,7 @@ dependencies = [
  "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog",
  "slog-async",
+ "slog-json",
  "slog-term",
  "steno",
  "tokio",

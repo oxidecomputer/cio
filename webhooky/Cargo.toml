@@ -63,6 +63,7 @@ signal-hook = "^0.3"
 slack-chat-api = "^0.1.46"
 slog = "2"
 slog-async = "2"
+slog-json = "^2.5.0"
 slog-term = "2"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full", "time"] }

@@ -235,6 +235,20 @@ async fn main() -> Result<()> {
         .with(sentry::integrations::tracing::layer())
         .init();
 
+    let logger = if opts.json {
+        // Build a JSON slog logger.
+        // This way cloud run can read the logs as JSON.
+        let drain = slog_json::Json::new(std::io::stdout())
+            .set_pretty(true)
+            .add_default_keys()
+            .build()
+            .fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        slog::Logger::root(drain, slog::slog_o!())
+    } else {
+        LOGGER.clone()
+    };
+
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
@@ -262,7 +276,7 @@ async fn main() -> Result<()> {
         ..sentry::ClientOptions::default()
     });
 
-    if let Err(err) = run_cmd(opts.clone(), LOGGER.clone()).await {
+    if let Err(err) = run_cmd(opts.clone(), logger).await {
         sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
         bail!("running cmd `{:?}` failed: {:?}", &opts.subcmd, err);
     }
