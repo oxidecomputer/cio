@@ -211,6 +211,8 @@ async fn main() -> Result<()> {
         TODO:
     We can't initialize the global logger here since the tracing subscriber does that below.
         Instead we should find a way to pass this logger to the tracing subscriber.
+    Or, maybe we don't even need this, since the tracing subscriber is already doing this.
+    Just think about it.
     */
 
     // Initialize the Sentry tracing.
