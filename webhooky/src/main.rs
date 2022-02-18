@@ -239,7 +239,6 @@ async fn main() -> Result<()> {
         // Build a JSON slog logger.
         // This way cloud run can read the logs as JSON.
         let drain = slog_json::Json::new(std::io::stdout())
-            .set_pretty(true)
             .add_default_keys()
             .build()
             .fuse();
