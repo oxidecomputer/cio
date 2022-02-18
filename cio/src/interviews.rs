@@ -364,7 +364,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
             .filter(applicants::dsl::status.eq(crate::applicant_status::Status::Interviewing.to_string()))
             .first_async::<Applicant>(&db.pool())
             .await;
-        if result.is_none() {
+        if result.is_err() {
             // Continue early we couldn't find the applicant.
             continue;
         }
