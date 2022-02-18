@@ -221,8 +221,8 @@ async fn main() -> Result<()> {
             None,
             Some(
                 tracing_subscriber::fmt::layer()
-                    .fmt_fields(format)
                     .pretty()
+                    .fmt_fields(format)
                     .with_filter(level_filter),
             ),
         )
