@@ -350,9 +350,25 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
 
     let interviews = ApplicantInterviews::get_from_db(db, company.id).await?;
 
+    // TODO: There is probably a bunch of ways this logic could be improved and better.
+    // Especially if we join tables.
+
     // Let's group the interviewers into each interview.
     let mut interviewers: HashMap<String, Vec<(User, DateTime<Tz>, DateTime<Tz>)>> = HashMap::new();
     for interview in interviews.clone() {
+        // Let's make sure the applicant is in the interviewing stage.
+        // This will save us time later, since we aren't iterating over all applicants.
+        // Even from the past.
+        let result = applicants::dsl::applicants
+            .filter(applicants::dsl::email.eq(interview.email.to_string()))
+            .filter(applicants::dsl::status.eq(crate::applicant_status::Status::Interviewing.to_string()))
+            .first_async::<Applicant>(&db.pool())
+            .await;
+        if result.is_none() {
+            // Continue early we couldn't find the applicant.
+            continue;
+        }
+
         let mut existing: Vec<(User, DateTime<Tz>, DateTime<Tz>)> = Default::default();
         if let Some(v) = interviewers.get(&interview.email) {
             existing = v.clone();
@@ -399,16 +415,6 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
             .first_async::<Applicant>(&db.pool())
             .await
         {
-            // Make sure we are actually interviewing this person.
-            if applicant.status != crate::applicant_status::Status::Interviewing.to_string() {
-                info!(
-                    "skipping {} because they are not in the interviewing status, status: {}",
-                    email, applicant.status
-                );
-
-                continue;
-            }
-
             // Create the cover page.
             let mut user_html = "".to_string();
             for (i, start_time, end_time) in itrs.clone() {
