@@ -33,7 +33,6 @@ use slack_chat_api::{
     MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageResponse, MessageResponseType,
     MessageType, SelectInputOption, View,
 };
-use tracing_subscriber::prelude::*;
 
 use crate::{
     server::{

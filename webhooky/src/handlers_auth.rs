@@ -18,7 +18,6 @@ use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
-use tracing_subscriber::prelude::*;
 use zoom_api::Client as Zoom;
 
 use crate::server::{AuthCallback, Context};

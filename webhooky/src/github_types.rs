@@ -10,7 +10,6 @@ use log::warn;
 use octorust::Client as GitHub;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tracing_subscriber::prelude::*;
 
 /// A GitHub organization.
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]

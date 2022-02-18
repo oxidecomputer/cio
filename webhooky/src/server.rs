@@ -23,7 +23,6 @@ use signal_hook::{
     iterator::Signals,
 };
 use slack_chat_api::Slack;
-use tracing_subscriber::prelude::*;
 use zoom_api::Client as Zoom;
 
 use crate::github_types::GitHubWebhook;
