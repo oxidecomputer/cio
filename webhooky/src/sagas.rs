@@ -153,9 +153,17 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     let cmd_name = &action_context.saga_params().cmd_name;
     let saga_id = &action_context.saga_params().saga_id;
 
-    // Execute the function within the scope of the logger.
+    // We use spawn_blocking here since the BufReader etc from duct will otherwise,
+    // block the main thread.
+    let result = tokio::task::spawn_blocking(
+        enclose! { (db, cmd_name, saga_id) async move || { reexec(&db, &cmd_name, &saga_id).await } },
+    )
+    .await
+    .map_err(|err| steno::ActionError::action_failed(format!("ERROR:\n\n{:?}", err)))?
+    .await;
+
     // Print the error and return an ActionError.
-    match reexec(db, cmd_name, saga_id).await {
+    match result {
         Ok(s) => Ok(FnOutput(s)),
         Err(err) => {
             // Return an action error but include the logs.
