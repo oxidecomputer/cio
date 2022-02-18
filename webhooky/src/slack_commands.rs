@@ -1,7 +1,5 @@
 use std::{fmt, str::FromStr};
 
-
-
 /// Slack commands.
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

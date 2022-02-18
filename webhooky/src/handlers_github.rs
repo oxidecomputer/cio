@@ -17,7 +17,6 @@ use dropshot::{RequestContext, TypedBody};
 use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
 
-
 use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context};
 
 /// Handle a request to the /github endpoint.

@@ -1,7 +1,6 @@
 #![allow(clippy::never_loop)]
 use regex::Regex;
 
-
 /// This function returns a tracking number and a carrier.
 /// The carrier is first followed by the tracking number.
 #[tracing::instrument]

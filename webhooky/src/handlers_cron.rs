@@ -9,7 +9,6 @@ use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::{Path, RequestContext};
 use log::info;
 
-
 use crate::server::{Context, FunctionPathParams};
 
 #[tracing::instrument(skip_all)]
