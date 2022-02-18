@@ -50,7 +50,7 @@ rand = "^0.8.4"
 regex = "^1.5.4"
 reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
-sentry = { version = "^0.24.3", features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"] }
+sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"], git = "https://github.com/jessfraz/sentry-rust", branch = "fix-transaction-names"  }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.8"
