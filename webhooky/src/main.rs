@@ -186,7 +186,8 @@ async fn main() -> Result<()> {
                 .unwrap_or_else(|_| "development".to_string())
                 .into(),
         ),
-        ..Default::default()
+        default_integrations: true,
+        ..sentry::ClientOptions::default()
     });
 
     // Initialize our logger.

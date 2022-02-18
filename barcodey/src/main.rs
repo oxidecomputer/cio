@@ -45,7 +45,8 @@ async fn main() -> Result<(), String> {
                 .unwrap_or_else(|_| "development".to_string())
                 .into(),
         ),
-        ..Default::default()
+        default_integrations: true,
+        ..sentry::ClientOptions::default()
     });
 
     let api = HidApi::new().expect("Failed to create API instance");

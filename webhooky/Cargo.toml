@@ -16,7 +16,7 @@ anyhow = "1"
 async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
 checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
-chrono-humanize = "0.0.11"
+chrono-humanize = "0.2.1"
 chrono-tz = { version = "0.6", features = ["serde"] }
 #cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "acc1c2365d81ef8be38b61db75fee5886b7fe6a6" }
 cio-api = { path = "../cio" }
@@ -49,7 +49,7 @@ rand = "^0.8.4"
 regex = "^1.5.4"
 reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
-sentry = { version = "^0.24.3", features = ["anyhow", "log", "slog", "backtrace", "default"] }
+sentry = { version = "^0.24.3", features = ["anyhow", "log", "slog", "backtrace", "default", "panic", "contexts", "debug-images"] }
 sentry-anyhow = "^0.24.3"
 sentry-slog = "^0.24.3"
 sentry-tracing = "^0.24.3"
@@ -71,7 +71,7 @@ slog-term = "2"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full", "time"] }
 tracing = "^0.1"
-tracing-subscriber = { version = "^0.3", features = ["registry", "std", "fmt"] }
+tracing-subscriber = { version = "^0.3.9", features = ["registry", "std", "fmt"] }
 urlencoding = "2.1.0"
 uuid = { version = "^0.8", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"

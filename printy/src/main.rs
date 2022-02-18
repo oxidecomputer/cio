@@ -47,7 +47,8 @@ async fn main() -> Result<(), String> {
                 .unwrap_or_else(|_| "development".to_string())
                 .into(),
         ),
-        ..Default::default()
+        default_integrations: true,
+        ..sentry::ClientOptions::default()
     });
 
     let service_address = "0.0.0.0:8080";
