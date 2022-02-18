@@ -46,6 +46,10 @@ struct Opts {
     #[clap(short, long)]
     debug: bool,
 
+    /// Print logs as json
+    #[clap(short, long)]
+    json: bool,
+
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -203,15 +207,31 @@ async fn main() -> Result<()> {
     // `tracing-subscriber` prelude.
     .delimited(", ");
 
+    let (json, plain) = if opts.json {
+        // Cloud run likes json formatted logs if possible.
+        // See: https://cloud.google.com/run/docs/logging
+        // We could probably format these specifically for cloud run if we wanted,
+        // will save that as a TODO: https://cloud.google.com/run/docs/logging#special-fields
+        (
+            Some(tracing_subscriber::fmt::layer().json().with_filter(level_filter)),
+            None,
+        )
+    } else {
+        (
+            None,
+            Some(
+                tracing_subscriber::fmt::layer()
+                    .fmt_fields(format)
+                    .pretty()
+                    .with_filter(level_filter),
+            ),
+        )
+    };
+
     // Initialize the Sentry tracing.
     tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::fmt::layer()
-                .with_ansi(true)
-                .fmt_fields(format)
-                .compact()
-                .with_filter(level_filter),
-        )
+        .with(json)
+        .with(plain)
         .with(sentry::integrations::tracing::layer())
         .init();
 
