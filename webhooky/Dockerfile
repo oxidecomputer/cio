@@ -45,22 +45,24 @@ WORKDIR /usr/src/webhooky
 
 FROM cargo-nightly AS cargo-build
 
-COPY webhooky/src/dummy.rs ./src/dummy.rs
+#COPY webhooky/src/dummy.rs ./src/dummy.rs
 
-COPY webhooky/Cargo.toml ./Cargo.toml
+#COPY webhooky/Cargo.toml ./Cargo.toml
 
 # Move the deps we need to compile.
-COPY cio ../cio
+#COPY cio ../cio
 
-COPY macros ../macros
+#COPY macros ../macros
 
-RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
+#RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
-RUN cargo build --release --bin webhooky
+#RUN cargo build --release --bin webhooky
 
-RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
+#RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
-COPY webhooky/src src
+#COPY webhooky/src ./src
+
+COPY . .
 
 RUN cargo build --release --bin webhooky
 
@@ -70,6 +72,6 @@ RUN cargo build --release --bin webhooky
 
 FROM app-base
 
-COPY --from=cargo-build /usr/src/target/release/webhooky /usr/bin/webhooky
+COPY --from=cargo-build /usr/src/webhooky/target/release/webhooky /usr/bin/webhooky
 
 CMD ["webhooky", "server", "--do-cron"]

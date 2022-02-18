@@ -183,6 +183,23 @@ pub struct SyncTravel {}
 async fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
 
+    let level_filter = if opts.debug {
+        tracing_subscriber::filter::LevelFilter::DEBUG
+    } else {
+        tracing_subscriber::filter::LevelFilter::INFO
+    };
+
+    // Initialize the Sentry tracing.
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_ansi(true)
+                .pretty()
+                .with_filter(level_filter),
+        )
+        .with(sentry::integrations::tracing::layer())
+        .init();
+
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
@@ -210,22 +227,7 @@ async fn main() -> Result<()> {
         ..sentry::ClientOptions::default()
     });
 
-    let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
-        .or_else(|_| {
-            if opts.debug {
-                tracing_subscriber::EnvFilter::try_new("debug")
-            } else {
-                tracing_subscriber::EnvFilter::try_new("info")
-            }
-        })
-        .unwrap();
-
-    // Initialize the Sentry tracing.
-    tracing_subscriber::registry()
-        .with(filter_layer)
-        .with(tracing_subscriber::fmt::layer())
-        .with(sentry::integrations::tracing::layer())
-        .init();
+    slog::info!(LOGGER, "DOES THIS WORK"; "sentry_dsn" => sentry_dsn, "another" => "value");
 
     if let Err(err) = run_cmd(opts.clone(), LOGGER.clone()).await {
         sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));

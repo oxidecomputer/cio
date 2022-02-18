@@ -211,7 +211,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                     return Some(r);
                 }
                 Err(e) => {
-                    log::info!("[db] we don't have the record in the database: {}", e);
+                    log::debug!("[db] we don't have the record in the database: {}", e);
                     return None;
                 }
             }
