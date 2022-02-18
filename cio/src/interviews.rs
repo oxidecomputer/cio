@@ -155,88 +155,95 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                     continue;
                 }
 
+                // The "end" part of the invite is the name of the person who is interviewing the
+                // person, this is how we know whether this is the interviewer or interviewee.
+                // In this case, the string in "()" is the interviewer.
                 let end = &format!("({})", attendee.display_name);
-                // TODO: Sometimes Dave and Nils use their personal email, find a better way to do this other than
-                // a one-off.
-                if attendee.email.ends_with(&company.gsuite_domain)
-                    || attendee.email.ends_with(&company.domain)
-                    || event.summary.ends_with(end)
-                    || attendee.email.starts_with("dave.pacheco")
-                    || attendee.email.starts_with("nils.nieuwejaar")
-                {
-                    // This is the interviewer.
-                    let email = attendee.email.to_string();
-                    let mut final_email = "".to_string();
 
-                    // If the email is not their work email, let's firgure it out based
-                    // on the information from their user.
-                    if !email.ends_with(&company.gsuite_domain) && !email.ends_with(&company.domain) {
-                        match users::dsl::users
-                            .filter(
-                                users::dsl::recovery_email
-                                    .eq(email.to_string())
-                                    .and(users::dsl::cio_company_id.eq(company.id)),
-                            )
-                            .limit(1)
-                            .load_async::<User>(&db.pool())
-                            .await
-                        {
-                            Ok(r) => {
-                                if !r.is_empty() {
-                                    let record = r.get(0).unwrap().clone();
-                                    final_email = record.email;
-                                }
-                            }
-                            Err(e) => {
-                                warn!(
-                                    "we don't have the record in the database where recovery email `{}`: {}",
-                                    email, e
-                                );
-                            }
-                        }
-                    } else {
-                        let username = email
-                            .trim_end_matches(&company.gsuite_domain)
-                            .trim_end_matches(&company.domain)
-                            .trim_end_matches('@')
-                            .trim()
-                            .to_string();
-                        // Find the real user.
-                        match users::dsl::users
-                            .filter(
-                                users::dsl::username
-                                    .eq(username.to_string())
-                                    .or(users::dsl::aliases.contains(vec![username.to_string()])),
-                            )
-                            .filter(users::dsl::cio_company_id.eq(company.id))
-                            .limit(1)
-                            .load_async::<User>(&db.pool())
-                            .await
-                        {
-                            Ok(r) => {
-                                if !r.is_empty() {
-                                    let record = r.get(0).unwrap().clone();
-                                    final_email = record.email;
-                                }
-                            }
-                            Err(e) => {
-                                warn!(
-                                    "we don't have the record in the database where username `{}`: {}",
-                                    username, e
-                                );
-                            }
-                        }
-                    }
+                if !event.summary.ends_with(end) {
+                    // It must be the person being interviewed.
+                    // See if we can get the Applicant record ID for them.
+                    interview.email = attendee.email.to_string();
 
-                    if !final_email.is_empty() {
-                        interview.interviewers.push(final_email.to_string());
-                    }
+                    // Continue through our loop.
                     continue;
                 }
 
-                // It must be the person being interviewed.
-                // See if we can get the Applicant record ID for them.
-                interview.email = attendee.email.to_string();
+                // This is the interviewer.
+                let email = attendee.email.to_string();
+                let mut final_email = "".to_string();
+
+                // If the email is not their work email, let's figure it out based
+                // on the information from their user.
+                // Sometimes people use their personal email, we will look for those matching
+                // their "recovery email" we know from GSuite.
+                if !email.ends_with(&company.gsuite_domain) && !email.ends_with(&company.domain) {
+                    match users::dsl::users
+                        .filter(
+                            users::dsl::recovery_email
+                                .eq(email.to_string())
+                                .and(users::dsl::cio_company_id.eq(company.id)),
+                        )
+                        .limit(1)
+                        .load_async::<User>(&db.pool())
+                        .await
+                    {
+                        Ok(r) => {
+                            if !r.is_empty() {
+                                let record = r.get(0).unwrap().clone();
+                                final_email = record.email;
+                            }
+                        }
+                        Err(e) => {
+                            warn!(
+                                "we don't have the record in the database where recovery email `{}`: {}",
+                                email, e
+                            );
+
+                            // Continue through our loop.
+                            continue;
+                        }
+                    }
+                } else {
+                    let username = email
+                        .trim_end_matches(&company.gsuite_domain)
+                        .trim_end_matches(&company.domain)
+                        .trim_end_matches('@')
+                        .trim()
+                        .to_string();
+                    // Find the real user.
+                    match users::dsl::users
+                        .filter(
+                            users::dsl::username
+                                .eq(username.to_string())
+                                .or(users::dsl::aliases.contains(vec![username.to_string()])),
+                        )
+                        .filter(users::dsl::cio_company_id.eq(company.id))
+                        .limit(1)
+                        .load_async::<User>(&db.pool())
+                        .await
+                    {
+                        Ok(r) => {
+                            if !r.is_empty() {
+                                let record = r.get(0).unwrap().clone();
+                                final_email = record.email;
+                            }
+                        }
+                        Err(e) => {
+                            warn!(
+                                "we don't have the record in the database where username `{}`: {}",
+                                username, e
+                            );
+
+                            // Continue through our loop.
+                            continue;
+                        }
+                    }
+                }
+
+                if !final_email.is_empty() {
+                    interview.interviewers.push(final_email.to_string());
+                }
             }
 
             if let Ok(mut a) = applicants::dsl::applicants
