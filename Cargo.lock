@@ -246,7 +246,7 @@ dependencies = [
  "log 0.4.14",
  "pretty_env_logger",
  "sentry 0.23.0",
- "sentry-log 0.23.0",
+ "sentry-log 0.24.3",
  "tokio",
  "uuid",
 ]
@@ -3253,7 +3253,7 @@ dependencies = [
  "pretty_env_logger",
  "reqwest",
  "sentry 0.23.0",
- "sentry-log 0.23.0",
+ "sentry-log 0.24.3",
  "tokio",
  "uuid",
 ]
