@@ -187,6 +187,8 @@ async fn main() -> Result<()> {
                 .into(),
         ),
         default_integrations: true,
+
+        session_mode: sentry::SessionMode::Request,
         ..sentry::ClientOptions::default()
     });
 
