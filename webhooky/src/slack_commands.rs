@@ -56,7 +56,6 @@ impl FromStr for SlackCommand {
 }
 
 impl fmt::Display for SlackCommand {
-    #[tracing::instrument]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }

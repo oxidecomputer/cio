@@ -201,7 +201,7 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
 }
 
 /// Update a user's aliases in GSuite to match our database.
-#[tracing::instrument]
+#[tracing::instrument(skip(gsuite))]
 pub async fn update_user_aliases(
     gsuite: &GSuite,
     u: &GSuiteUser,
@@ -250,7 +250,7 @@ pub async fn update_user_aliases(
 }
 
 /// Update a user's groups in GSuite to match our database.
-#[tracing::instrument]
+#[tracing::instrument(skip(gsuite))]
 pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, company: &Company) -> Result<()> {
     // Iterate over the groups and add the user as a member to it.
     for group in &user.groups {
@@ -283,7 +283,7 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, company: &C
 }
 
 /// Update a group's aliases in GSuite to match our configuration files.
-#[tracing::instrument]
+#[tracing::instrument(skip(gsuite))]
 pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) -> Result<()> {
     if g.aliases.is_empty() {
         // return early

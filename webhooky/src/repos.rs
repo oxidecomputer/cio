@@ -43,7 +43,6 @@ impl FromStr for Repo {
 }
 
 impl fmt::Display for Repo {
-    #[tracing::instrument]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }

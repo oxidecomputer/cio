@@ -286,7 +286,6 @@ impl FromStr for EventType {
 }
 
 impl fmt::Display for EventType {
-    #[tracing::instrument]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }

@@ -212,7 +212,7 @@ fn content_equals(a: cloudflare::endpoints::dns::DnsContent, b: cloudflare::endp
     false
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(client))]
 async fn get_zone_identifier(client: &CloudflareClient, domain: &str) -> Result<String> {
     // We need the root of the domain not a subdomain.
     let domain_parts: Vec<&str> = domain.split('.').collect();

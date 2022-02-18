@@ -280,7 +280,7 @@ impl NewCertificate {
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// GitHub, then fill in the rest.
-    #[tracing::instrument]
+    #[tracing::instrument(skip(github))]
     pub async fn populate_from_github(&mut self, github: &octorust::Client, company: &Company) -> Result<()> {
         let owner = &company.github_org;
         let repo = "configs";
@@ -367,7 +367,7 @@ impl NewCertificate {
     }
 
     /// Saves the fullchain certificate and privkey to the configs github repo.
-    #[tracing::instrument]
+    #[tracing::instrument(skip(github))]
     pub async fn save_to_github_repo(&self, github: &octorust::Client, company: &Company) -> Result<()> {
         if self.certificate.is_empty() {
             // Return early.
@@ -402,7 +402,7 @@ impl NewCertificate {
     }
 
     /// For the repos given, update the GitHub actions secrets with the new cert and key.
-    #[tracing::instrument]
+    #[tracing::instrument(skip(github))]
     pub async fn update_github_action_secrets(&self, github: &octorust::Client, company: &Company) -> Result<()> {
         if self.repos.is_empty()
             || self.certificate_github_actions_secret_name.is_empty()
@@ -497,7 +497,7 @@ impl Certificate {
         n.send_slack_notification(db, company).await
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(github))]
     pub async fn renew(&self, db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
         let mut cert: NewCertificate = self.into();
 

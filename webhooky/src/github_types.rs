@@ -156,7 +156,7 @@ pub struct GitHubWebhook {
 
 impl GitHubWebhook {
     // Returns the check_run id so we can update it later.
-    #[tracing::instrument]
+    #[tracing::instrument(skip(github))]
     pub async fn create_check_run(&self, github: &octorust::Client) -> Result<i64> {
         let sha = if self.pull_request.head.sha.is_empty() {
             self.pull_request.head.id.to_string()
@@ -229,7 +229,7 @@ cc @jessfraz"#,
     }
 
     // Updates the check run after it has completed.
-    #[tracing::instrument]
+    #[tracing::instrument(skip(github))]
     pub async fn update_check_run(
         &self,
         github: &octorust::Client,
@@ -285,7 +285,7 @@ cc @jessfraz"#,
         Ok(())
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(github))]
     pub async fn create_comment(&self, github: &GitHub, comment: &str) -> Result<()> {
         if comment.is_empty() {
             // Return early.

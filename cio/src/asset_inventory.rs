@@ -141,7 +141,7 @@ impl NewAssetItem {
         self.barcode = barcode;
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(drive_client))]
     pub async fn generate_barcode_images(
         &mut self,
         drive_client: &GoogleDrive,
@@ -205,7 +205,7 @@ impl NewAssetItem {
         Ok(self.barcode_pdf_label.to_string())
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(drive_client))]
     pub async fn expand(&mut self, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) -> Result<String> {
         self.generate_barcode();
         self.generate_barcode_images(drive_client, drive_id, parent_id).await

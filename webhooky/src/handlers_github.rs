@@ -21,7 +21,7 @@ use tracing_subscriber::prelude::*;
 use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context};
 
 /// Handle a request to the /github endpoint.
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GitHubWebhook>) -> Result<()> {
     let api_context = rqctx.context();
 
@@ -187,7 +187,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
 }
 
 /// Handle a `pull_request` event for the rfd repo.
-#[tracing::instrument]
+#[tracing::instrument(skip(github))]
 pub async fn handle_rfd_pull_request(
     github: &octorust::Client,
     api_context: &Context,
@@ -352,7 +352,7 @@ pub async fn handle_rfd_pull_request(
 }
 
 /// Handle a `push` event for the rfd repo.
-#[tracing::instrument]
+#[tracing::instrument(skip(github))]
 pub async fn handle_rfd_push(
     github: &octorust::Client,
     api_context: &Context,
@@ -778,7 +778,7 @@ pub async fn handle_rfd_push(
 }
 
 /// Handle a `push` event for the configs repo.
-#[tracing::instrument]
+#[tracing::instrument(skip(github))]
 pub async fn handle_configs_push(
     github: &octorust::Client,
     api_context: &Context,
@@ -896,7 +896,7 @@ pub async fn handle_configs_push(
 }
 
 /// Handle the `repository` event for all repos.
-#[tracing::instrument]
+#[tracing::instrument(skip(github))]
 pub async fn handle_repository_event(
     github: &octorust::Client,
     api_context: &Context,

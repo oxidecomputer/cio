@@ -1026,7 +1026,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         msg
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(github))]
     pub async fn create_github_onboarding_issue(
         &self,
         db: &Database,
@@ -1404,7 +1404,7 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
 }
 
 /// Get the contexts of a file in Google Drive by it's URL as a text string.
-#[tracing::instrument]
+#[tracing::instrument(skip(drive_client))]
 pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<String> {
     let id = url
         .replace("https://drive.google.com/open?id=", "")
@@ -2010,7 +2010,7 @@ impl Applicant {
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
-    #[tracing::instrument]
+    #[tracing::instrument(skip(drive_client))]
     pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive) -> Result<()> {
         self.cleanup_phone();
         self.parse_github_gitlab();

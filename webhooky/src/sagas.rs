@@ -37,7 +37,7 @@ impl steno::SagaType for Saga {
     type ExecContextType = Arc<Context>;
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(_action_context))]
 async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> {
     // This is a noop, we don't have to undo anything.
     Ok(())
@@ -148,7 +148,7 @@ pub async fn run_cmd(
     do_saga(db, sec, id, builder.build(), cmd_name, background).await
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(action_context))]
 async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<FnOutput, steno::ActionError> {
     let db = &action_context.user_data().db;
     let cmd_name = &action_context.saga_params().cmd_name;

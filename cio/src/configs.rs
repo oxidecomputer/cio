@@ -269,7 +269,7 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
-    #[tracing::instrument]
+    #[tracing::instrument(skip(gusto))]
     pub async fn create_in_gusto_if_needed(&mut self, gusto: &Gusto, gusto_company_id: &str) -> Result<()> {
         // Only do this if we have a start date.
         if self.start_date == crate::utils::default_date() {
@@ -883,7 +883,7 @@ xoxo,
         Ok(())
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(zoom))]
     pub async fn update_zoom_vanity_name(
         &self,
         db: &Database,
@@ -1385,7 +1385,7 @@ impl HuddleConfig {
     }
 }
 /// Get the configs from the GitHub repository and parse them.
-#[tracing::instrument]
+#[tracing::instrument(skip(github))]
 pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company) -> Result<Config> {
     let owner = &company.github_org;
     let repo = "configs";
@@ -1423,7 +1423,7 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
 }
 
 /// Sync GitHub outside collaborators with our configs.
-#[tracing::instrument]
+#[tracing::instrument(skip(github))]
 pub async fn sync_github_outside_collaborators(
     db: &Database,
     github: &octorust::Client,
@@ -1560,7 +1560,7 @@ pub async fn sync_github_outside_collaborators(
 }
 
 /// Sync our users with our database and then update Airtable from the database.
-#[tracing::instrument]
+#[tracing::instrument(skip(github))]
 pub async fn sync_users(
     db: &Database,
     github: &octorust::Client,
@@ -2271,7 +2271,7 @@ pub async fn sync_links(
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
-#[tracing::instrument]
+#[tracing::instrument(skip(github))]
 pub async fn sync_certificates(
     db: &Database,
     github: &octorust::Client,

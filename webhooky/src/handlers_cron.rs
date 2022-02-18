@@ -12,7 +12,7 @@ use tracing_subscriber::prelude::*;
 
 use crate::server::{Context, FunctionPathParams};
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 pub async fn handle_get_function_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<FunctionPathParams>,
@@ -32,7 +32,7 @@ pub async fn handle_get_function_by_uuid(
     Ok(result.unwrap())
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip_all)]
 pub async fn handle_get_function_logs_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<FunctionPathParams>,
