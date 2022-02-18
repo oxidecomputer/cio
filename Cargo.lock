@@ -4032,6 +4032,7 @@ dependencies = [
  "sentry-log",
  "sentry-panic",
  "sentry-slog",
+ "sentry-tracing",
  "tokio",
 ]
 
