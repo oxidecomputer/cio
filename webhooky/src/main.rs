@@ -286,7 +286,6 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-#[tracing::instrument]
 async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
     sentry::configure_scope(|scope| {
         scope.set_tag("command", &format!("{:?}", opts.subcmd));
