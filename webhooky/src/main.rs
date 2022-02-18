@@ -174,6 +174,7 @@ async fn main() -> Result<()> {
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
+        debug: opts.debug,
         dsn: sentry_dsn.clone().into_dsn()?,
 
         // Send 100% of all transactions to Sentry.
@@ -199,14 +200,18 @@ async fn main() -> Result<()> {
     let drain = sentry_slog::SentryDrain::new(drain);
     let logger = slog::Logger::root(drain, slog::slog_o!());
 
-    let _scope_guard = slog_scope::set_global_logger(logger.clone());
+    /*let _scope_guard = slog_scope::set_global_logger(logger.clone());
 
-    // Set the logging level.
-    let mut log_level = log::Level::Info;
-    if opts.debug {
-        log_level = log::Level::Debug;
-    }
-    let _log_guard = slog_stdlog::init_with_level(log_level)?;
+        // Set the logging level.
+        let mut log_level = log::Level::Info;
+        if opts.debug {
+            log_level = log::Level::Debug;
+        }
+        let _log_guard = slog_stdlog::init_with_level(log_level)?;
+        TODO:
+    We can't initialize the global logger here since the tracing subscriber does that below.
+        Instead we should find a way to pass this logger to the tracing subscriber.
+    */
 
     // Initialize the Sentry tracing.
     tracing_subscriber::registry()
