@@ -71,7 +71,7 @@ slog-term = "2"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full", "time"] }
 tracing = "^0.1"
-tracing-subscriber = { version = "^0.3.9", default-features = true, features = ["registry", "std", "fmt", "smallvec", "ansi", "json"] }
+tracing-subscriber = { version = "^0.3.9", default-features = true, features = ["registry", "std", "fmt", "smallvec", "ansi", "json", "env-filter"] }
 urlencoding = "2.1.0"
 uuid = { version = "^0.8", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"
