@@ -364,7 +364,6 @@ impl Function {
                 let value: serde_json::Value = s.deref().clone();
                 if value != serde_json::Value::Null {
                     let string: String = serde_json::from_value(value).unwrap_or_default();
-                    println!("SAGA SUCCESS: `{}`", string);
 
                     // Save the success output to the logs.
                     // For each function.

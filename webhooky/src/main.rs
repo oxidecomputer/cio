@@ -14,6 +14,8 @@ mod server;
 mod slack_commands;
 mod tracking_numbers;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate serde_json;
 
 use std::env;
@@ -24,6 +26,16 @@ use clap::Parser;
 use sentry::IntoDsn;
 use slog::Drain;
 use tracing_subscriber::prelude::*;
+
+lazy_static! {
+    // We need a slog::Logger for steno and when we export out the logs from re-exec-ed processes.
+    static ref LOGGER: slog::Logger = {
+        let decorator = slog_term::TermDecorator::new().build();
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        slog::Logger::root(drain, slog::slog_o!())
+    };
+}
 
 /// This doc string acts as a help message when the user runs '--help'
 /// as do all doc strings on fields.
@@ -179,6 +191,7 @@ async fn main() -> Result<()> {
 
         // Send 100% of all transactions to Sentry.
         // This is for testing purposes only, after a bit of testing set this to be like 20%.
+        // Or we can keep it at 100% if it is not messing with performance.
         traces_sample_rate: 1.0,
 
         release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
@@ -187,42 +200,35 @@ async fn main() -> Result<()> {
                 .unwrap_or_else(|_| "development".to_string())
                 .into(),
         ),
+
+        // We want to send 100% of errors to Sentry.
+        sample_rate: 1.0,
+
         default_integrations: true,
 
         session_mode: sentry::SessionMode::Request,
         ..sentry::ClientOptions::default()
     });
 
-    // Initialize our logger.
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    let drain = sentry_slog::SentryDrain::new(drain);
-    let logger = slog::Logger::root(drain, slog::slog_o!());
-
-    /*let _scope_guard = slog_scope::set_global_logger(logger.clone());
-
-        // Set the logging level.
-        let mut log_level = log::Level::Info;
-        if opts.debug {
-            log_level = log::Level::Debug;
-        }
-        let _log_guard = slog_stdlog::init_with_level(log_level)?;
-        TODO:
-    We can't initialize the global logger here since the tracing subscriber does that below.
-        Instead we should find a way to pass this logger to the tracing subscriber.
-    Or, maybe we don't even need this, since the tracing subscriber is already doing this.
-    Just think about it.
-    */
+    let filter_layer = tracing_subscriber::EnvFilter::try_from_default_env()
+        .or_else(|_| {
+            if opts.debug {
+                tracing_subscriber::EnvFilter::try_new("debug")
+            } else {
+                tracing_subscriber::EnvFilter::try_new("info")
+            }
+        })
+        .unwrap();
 
     // Initialize the Sentry tracing.
     tracing_subscriber::registry()
+        .with(filter_layer)
         .with(tracing_subscriber::fmt::layer())
-        .with(sentry_tracing::layer())
+        .with(sentry::integrations::tracing::layer())
         .init();
 
-    if let Err(err) = run_cmd(opts.clone(), logger).await {
-        sentry_anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
+    if let Err(err) = run_cmd(opts.clone(), LOGGER.clone()).await {
+        sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
         bail!("running cmd `{:?}` failed: {:?}", &opts.subcmd, err);
     }
 
@@ -237,7 +243,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
 
     match opts.subcmd {
         SubCommand::Server(s) => {
-            crate::server::server(s, logger).await?;
+            crate::server::server(s, logger, opts.debug).await?;
         }
         SubCommand::SendRFDChangelog(_) => {
             let db = Database::new().await;

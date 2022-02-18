@@ -398,7 +398,7 @@ pub fn setup_logger() {
     log_builder.parse_filters("info");
     log_builder.is_test(true);
 
-    let logger = sentry_log::SentryLogger::with_dest(log_builder.build());
+    let logger = sentry::integrations::log::SentryLogger::with_dest(log_builder.build());
 
     log::set_boxed_logger(Box::new(logger)).unwrap_or_default();
 

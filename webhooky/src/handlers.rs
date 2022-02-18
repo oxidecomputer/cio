@@ -668,7 +668,7 @@ pub async fn handle_slack_interactive(
         if action.action_id == "function" {
             // Run the command in the background so we don't have to wait for it.
             if let Err(e) = crate::handlers_cron::handle_reexec_cmd(ctx, &action.value, true).await {
-                sentry_anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", e));
+                sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", e));
             }
         }
     }

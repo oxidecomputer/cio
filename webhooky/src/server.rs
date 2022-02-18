@@ -27,8 +27,7 @@ use zoom_api::Client as Zoom;
 
 use crate::github_types::GitHubWebhook;
 
-#[tracing::instrument]
-pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
+pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Result<()> {
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
@@ -44,9 +43,11 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
      * For simplicity, we'll configure an "info"-level logger that writes to
      * stderr assuming that it's a terminal.
      */
-    let config_logging = ConfigLogging::StderrTerminal {
-        level: ConfigLoggingLevel::Info,
-    };
+    let mut log_level = ConfigLoggingLevel::Info;
+    if debug {
+        log_level = ConfigLoggingLevel::Debug;
+    }
+    let config_logging = ConfigLogging::StderrTerminal { level: log_level };
     let log = config_logging.to_logger("webhooky-server")?;
 
     // Describe the API.
@@ -176,67 +177,67 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
         // TODO: probably a better way to do this without all the freaking clones.
         scheduler
             .every(1.day())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-analytics")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-analytics")});
         scheduler
             .every(23.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-api-tokens")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-api-tokens")});
         scheduler
             .every(6.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-applications")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-applications")});
         scheduler
             .every(2.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-asset-inventory")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-asset-inventory")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-companies")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-companies")});
         scheduler
             .every(4.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-configs")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-configs")});
         scheduler
             .every(6.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-finance")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-finance")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-functions")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-functions")});
         scheduler
             .every(1.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-huddles")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-huddles")});
         scheduler
             .every(4.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-interviews")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-interviews")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-journal-clubs")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-journal-clubs")});
         scheduler
             .every(20.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-mailing-lists")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-mailing-lists")});
         scheduler
             .every(18.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-other")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-other")});
         scheduler
             .every(2.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-recorded-meetings")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-recorded-meetings")});
         scheduler
             .every(16.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-repos")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-repos")});
         scheduler
             .every(14.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-rfds")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-rfds")});
         scheduler
             .every(2.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-shipments")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-shipments")});
         scheduler
             .every(3.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-shorturls")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-shorturls")});
         scheduler
             .every(9.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-swag-inventory")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-swag-inventory")});
         scheduler
             .every(5.hours())
-            .run(enclose! { (api_context) move || api_context.create_fnmut("sync-travel")});
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-travel")});
         // TODO: Run the RFD changelog.
         // Turn this on once we know cron jobs are consistently running.
-        /* scheduler.every(Monday).at("8:00 am").run(enclose!{ (api_context) move || api_context.create_fnmut("send-rfd-changelog")}); */
+        /* scheduler.every(Monday).at("8:00 am").run(enclose!{ (api_context) move || api_context.create_do_job_fn("send-rfd-changelog")}); */
 
         tokio::spawn(async move {
             info!("starting cron job scheduler...");
@@ -268,7 +269,7 @@ pub async fn server(s: crate::Server, logger: slog::Logger) -> Result<()> {
 
             // Run the cleanup job.
             if let Err(e) = do_cleanup(&api_context).await {
-                sentry_anyhow::capture_anyhow(&e);
+                sentry::integrations::anyhow::capture_anyhow(&e);
             }
             // Exit the process.
             info!("all clean, exiting!");
@@ -312,7 +313,7 @@ impl Context {
     }
 
     #[tracing::instrument]
-    pub fn create_fnmut(&self, job: &str) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    pub fn create_do_job_fn(&self, job: &str) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         Box::pin(do_job(self.clone(), job.to_string()))
     }
 }
@@ -2312,7 +2313,7 @@ async fn do_cleanup(ctx: &Context) -> Result<()> {
 #[tracing::instrument]
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     // Send to sentry.
-    sentry_anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
+    sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
     sentry::end_session();
 
     // We use the debug formatting here so we get the stack trace.

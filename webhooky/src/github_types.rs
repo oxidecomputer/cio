@@ -222,7 +222,7 @@ cc @jessfraz"#,
         );
 
         // Send the error to sentry.
-        sentry_anyhow::capture_anyhow(&e);
+        sentry::integrations::anyhow::capture_anyhow(&e);
 
         err
     }

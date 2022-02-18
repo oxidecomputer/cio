@@ -37,7 +37,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN rustup default nightly
 
-WORKDIR /usr/src/cio
+WORKDIR /usr/src/webhooky
 
 # ------------------------------------------------------------------------------
 # Cargo Build Stage
@@ -45,7 +45,22 @@ WORKDIR /usr/src/cio
 
 FROM cargo-nightly AS cargo-build
 
-COPY . .
+COPY webhooky/src/dummy.rs ./src/dummy.rs
+
+COPY webhooky/Cargo.toml ./Cargo.toml
+
+# Move the deps we need to compile.
+COPY cio ../cio
+
+COPY macros ../macros
+
+RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
+
+RUN cargo build --release --bin webhooky
+
+RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
+
+COPY webhooky/src src
 
 RUN cargo build --release --bin webhooky
 
@@ -55,6 +70,6 @@ RUN cargo build --release --bin webhooky
 
 FROM app-base
 
-COPY --from=cargo-build /usr/src/cio/target/release/webhooky /usr/bin/webhooky
+COPY --from=cargo-build /usr/src/target/release/webhooky /usr/bin/webhooky
 
 CMD ["webhooky", "server", "--do-cron"]

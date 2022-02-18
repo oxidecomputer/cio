@@ -37,6 +37,7 @@ gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 http = "0.2.6"
 hyper = { version = "0.10" }
+lazy_static = "^1.4.0"
 log = { version = "0.4", features = ["serde"] }
 mailchimp-api = "^0.1.11"
 mime_guess = "2"
@@ -49,10 +50,7 @@ rand = "^0.8.4"
 regex = "^1.5.4"
 reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
-sentry = { version = "^0.24.3", features = ["anyhow", "log", "slog", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"] }
-sentry-anyhow = "^0.24.3"
-sentry-slog = "^0.24.3"
-sentry-tracing = "^0.24.3"
+sentry = { version = "^0.24.3", features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.8"
@@ -65,13 +63,11 @@ signal-hook = "^0.3"
 slack-chat-api = "^0.1.46"
 slog = "2"
 slog-async = "2"
-slog-scope = "4"
-slog-stdlog = "4"
 slog-term = "2"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full", "time"] }
 tracing = "^0.1"
-tracing-subscriber = { version = "^0.3.9", default-features = true, features = ["registry", "std", "fmt", "smallvec", "ansi", "json", "env-filter"] }
+tracing-subscriber = { version = "^0.3.9", features = ["registry", "std", "fmt", "smallvec", "ansi", "env-filter", "tracing-log"] }
 urlencoding = "2.1.0"
 uuid = { version = "^0.8", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"
