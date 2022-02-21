@@ -348,8 +348,13 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         }
 
         if materials_url.is_empty() {
-            info!("could not find materials for email {}", employee.recovery_email);
-            continue;
+            if employee.username == "ben.leonard" {
+                // Add Ben's materials.
+                materials_url = "https://drive.google.com/open?id=1bOHalcpSyXwaxr4E-_2LeT06HGXQCW0n".to_string();
+            } else {
+                info!("could not find materials for email {}", employee.recovery_email);
+                continue;
+            }
         }
 
         // Let's download the contents of their materials locally.
