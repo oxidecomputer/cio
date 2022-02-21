@@ -9,6 +9,7 @@ use std::{
 use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
+use chrono::Duration;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use google_drive::{
@@ -115,8 +116,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                 true, // show_deleted
                 true, // show_hidden_invitations
                 true, // single_events
-                "",   // time_max
-                "",   // time_min
+                &Utc::now().checked_add_signed(Duration::weeks(13)).unwrap().to_rfc3339(), // time_max
+                &Utc::now().checked_sub_signed(Duration::weeks(2)).unwrap().to_rfc3339(), // time_min
                 "",   // time_zone
                 "",   // updated_min
             )
@@ -155,22 +156,27 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                     continue;
                 }
 
+                // This is the interviewer.
+                let email = attendee.email.to_string();
+
                 // The "end" part of the invite is the name of the person who is interviewing the
                 // person, this is how we know whether this is the interviewer or interviewee.
                 // In this case, the string in "()" is the interviewer.
                 let end = &format!("({})", attendee.display_name);
-
-                if !event.summary.ends_with(end) {
+                if !event.summary.ends_with(end)
+                    && !email.ends_with(&company.gsuite_domain)
+                    && !email.ends_with(&company.domain)
+                {
                     // It must be the person being interviewed.
                     // See if we can get the Applicant record ID for them.
                     interview.email = attendee.email.to_string();
+
+                    info!("Got applicant email: {}, event: {}", interview.email, event.summary);
 
                     // Continue through our loop.
                     continue;
                 }
 
-                // This is the interviewer.
-                let email = attendee.email.to_string();
                 let mut final_email = "".to_string();
 
                 // If the email is not their work email, let's figure it out based
@@ -205,6 +211,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                         }
                     }
                 } else {
+                    info!("using oxide email: {}, event summary: {}", email, event.summary);
                     let username = email
                         .trim_end_matches(&company.gsuite_domain)
                         .trim_end_matches(&company.domain)
@@ -243,6 +250,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
 
                 if !final_email.is_empty() {
                     interview.interviewers.push(final_email.to_string());
+                    continue;
                 }
             }
 
