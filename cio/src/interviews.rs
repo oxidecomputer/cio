@@ -167,14 +167,24 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                     && !email.ends_with(&company.gsuite_domain)
                     && !email.ends_with(&company.domain)
                 {
-                    // It must be the person being interviewed.
-                    // See if we can get the Applicant record ID for them.
-                    interview.email = attendee.email.to_string();
+                    // Make sure it is and that we shouldn't just skip it.
+                    if let Ok(_a) = applicants::dsl::applicants
+                        .filter(applicants::dsl::email.eq(attendee.email.to_string()))
+                        .first_async::<Applicant>(&db.pool())
+                        .await
+                    {
+                        // It must be the person being interviewed.
+                        // See if we can get the Applicant record ID for them.
+                        interview.email = attendee.email.to_string();
 
-                    info!("Got applicant email: {}, event: {}", interview.email, event.summary);
+                        info!("Got applicant email: {}, event: {}", interview.email, event.summary);
 
-                    // Continue through our loop.
-                    continue;
+                        // Continue through our loop.
+                        continue;
+                    } else {
+                        // Just continue, likely the applicant added another email to the event.
+                        continue;
+                    }
                 }
 
                 let mut final_email = "".to_string();
