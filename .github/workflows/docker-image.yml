@@ -9,6 +9,8 @@ on:
       - .github/workflows/docker-image.yml
       - rust-toolchain
       - '*/Dockerfile'
+  workflow_dispatch:
+    inputs:
 jobs:
   docker-image:
     runs-on: ubuntu-latest
