@@ -719,12 +719,15 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -742,15 +745,18 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) =
         crate::handlers::handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(rqctx, body_param)
             .await
     {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -768,12 +774,15 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -833,12 +842,15 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -855,12 +867,15 @@ async fn listen_applicant_review_requests(
     body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_applicant_review(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -877,12 +892,15 @@ async fn listen_application_submit_requests(
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_application_submit(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -924,15 +942,17 @@ async fn listen_application_files_upload_requests(
     body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers::handle_application_files_upload(rqctx, body_param).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::OK);
             sentry::end_session();
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -952,12 +972,15 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_inbound_create(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -975,12 +998,15 @@ async fn listen_store_order_create(
     body_param: TypedBody<Order>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_store_order_create(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -998,12 +1024,15 @@ async fn listen_easypost_tracking_update_webhooks(
     body_param: TypedBody<EasyPostTrackingUpdateEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_easypost_tracking_update(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1064,12 +1093,15 @@ async fn listen_shippo_tracking_update_webhooks(
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_shippo_tracking_update(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1096,12 +1128,15 @@ async fn listen_checkr_background_update_webhooks(
     body_param: TypedBody<checkr::WebhookEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_checkr_background_update(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1130,15 +1165,17 @@ pub struct AuthCallback {
 }]
 #[tracing::instrument]
 async fn listen_auth_google_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Google client.
     // You can use any of the libs here, they all use the same endpoint
     // for tokens and we will send all the scopes.
     let g = GoogleDrive::new_from_env("", "").await;
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(&cio_api::companies::get_google_scopes()),
@@ -1156,12 +1193,15 @@ async fn listen_auth_google_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_google_callback(rqctx, query_args).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1173,15 +1213,17 @@ async fn listen_auth_google_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_shipbob_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the shipbob client.
     // You can use any of the libs here, they all use the same endpoint
     // for tokens and we will send all the scopes.
     let g = ShipBob::new_from_env("", "", "");
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         // We want to get the response as a form.
@@ -1200,12 +1242,15 @@ async fn listen_auth_shipbob_callback(
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_shipbob_callback(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1217,10 +1262,12 @@ async fn listen_auth_shipbob_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_github_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         url: "https://github.com/apps/oxidecomputerbot/installations/new".to_string(),
@@ -1234,14 +1281,17 @@ async fn listen_auth_github_consent(
 }]
 #[tracing::instrument]
 async fn listen_auth_github_callback(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
+
     let event = body_param.into_inner();
 
     warn!("github callback: {:?}", event);
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1253,13 +1303,15 @@ async fn listen_auth_github_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_mailchimp_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the MailChimp client.
     let g = MailChimp::new_from_env("", "", "");
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(),
@@ -1277,12 +1329,15 @@ async fn listen_auth_mailchimp_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_mailchimp_callback(rqctx, query_args).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1294,13 +1349,15 @@ async fn listen_auth_mailchimp_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_gusto_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Gusto client.
     let g = Gusto::new_from_env("", "");
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         // We don't need to define scopes for Gusto.
@@ -1319,12 +1376,15 @@ async fn listen_auth_gusto_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_gusto_callback(rqctx, query_args).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1336,15 +1396,17 @@ async fn listen_auth_gusto_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_zoom_deauthorization(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     let event = body_param.into_inner();
 
     warn!("zoom deauthorization: {:?}", event);
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1356,13 +1418,15 @@ async fn listen_auth_zoom_deauthorization(
 }]
 #[tracing::instrument]
 async fn listen_auth_zoom_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Zoom client.
     let g = Zoom::new_from_env("", "");
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(&[]),
@@ -1380,12 +1444,15 @@ async fn listen_auth_zoom_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_zoom_callback(rqctx, query_args).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1397,13 +1464,15 @@ async fn listen_auth_zoom_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_ramp_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Ramp client.
     let g = Ramp::new_from_env("", "");
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(&[
@@ -1429,12 +1498,15 @@ async fn listen_auth_ramp_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_ramp_callback(rqctx, query_args).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1446,13 +1518,15 @@ async fn listen_auth_ramp_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_slack_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Slack client.
     let s = Slack::new_from_env("", "", "");
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         url: s.user_consent_url(),
@@ -1470,12 +1544,15 @@ async fn listen_auth_slack_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_slack_callback(rqctx, query_args).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1487,13 +1564,15 @@ async fn listen_auth_slack_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_quickbooks_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the QuickBooks client.
     let g = QuickBooks::new_from_env("", "", "");
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(),
@@ -1511,12 +1590,15 @@ async fn listen_auth_quickbooks_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_quickbooks_callback(rqctx, query_args).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1528,14 +1610,17 @@ async fn listen_auth_quickbooks_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_plaid_callback(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
     body_args: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
+
     let event = body_args.into_inner();
 
     warn!("plaid callback: {:?}", event);
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1547,13 +1632,15 @@ async fn listen_auth_plaid_callback(
 }]
 #[tracing::instrument]
 async fn listen_auth_docusign_consent(
-    _rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the DocuSign client.
     let g = DocuSign::new_from_env("", "", "", "");
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(),
@@ -1571,12 +1658,15 @@ async fn listen_auth_docusign_callback(
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_auth::handle_auth_docusign_callback(rqctx, query_args).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1592,12 +1682,15 @@ async fn listen_docusign_envelope_update_webhooks(
     body_param: TypedBody<docusign::Envelope>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_docusign_envelope_update(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1613,12 +1706,15 @@ async fn listen_analytics_page_view_webhooks(
     body_param: TypedBody<NewPageView>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_analytics_page_view(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1646,12 +1742,15 @@ async fn listen_mailchimp_mailing_list_webhooks(
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_mailchimp_mailing_list(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1679,12 +1778,15 @@ async fn listen_mailchimp_rack_line_webhooks(
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_mailchimp_rack_line(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -1700,15 +1802,17 @@ async fn listen_slack_commands_webhooks(
     body_param: UntypedBody,
 ) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers::handle_slack_commands(rqctx, body_param).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::OK);
             sentry::end_session();
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1725,12 +1829,15 @@ async fn listen_slack_interactive_webhooks(
     body_param: UntypedBody,
 ) -> Result<HttpResponseOk<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_slack_interactive(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk("ok".to_string()))
 }
@@ -1746,12 +1853,15 @@ async fn listen_shipbob_webhooks(
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_shipbob(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::OK);
     sentry::end_session();
     Ok(HttpResponseOk("ok".to_string()))
 }
@@ -1772,15 +1882,17 @@ async fn listen_get_function_by_uuid(
     path_params: Path<FunctionPathParams>,
 ) -> Result<HttpResponseOk<Function>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_get_function_by_uuid(rqctx, path_params).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::OK);
             sentry::end_session();
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1797,15 +1909,17 @@ async fn listen_get_function_logs_by_uuid(
     path_params: Path<FunctionPathParams>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_get_function_logs_by_uuid(rqctx, path_params).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::OK);
             sentry::end_session();
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1821,15 +1935,17 @@ async fn trigger_sync_repos_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-repos", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1845,15 +1961,17 @@ async fn trigger_sync_rfds_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-rfds", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1869,15 +1987,17 @@ async fn trigger_sync_travel_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1893,15 +2013,17 @@ async fn trigger_sync_functions_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-functions", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1917,15 +2039,17 @@ async fn trigger_sync_finance_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-finance", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1941,15 +2065,17 @@ async fn trigger_sync_shipments_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shipments", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1965,15 +2091,17 @@ async fn trigger_sync_shorturls_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shorturls", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -1989,15 +2117,17 @@ async fn trigger_sync_configs_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-configs", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2013,15 +2143,17 @@ async fn trigger_sync_recorded_meetings_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-recorded-meetings", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2037,15 +2169,17 @@ async fn trigger_sync_asset_inventory_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-asset-inventory", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2061,15 +2195,17 @@ async fn trigger_sync_swag_inventory_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-swag-inventory", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2085,15 +2221,17 @@ async fn trigger_sync_interviews_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-interviews", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2109,15 +2247,17 @@ async fn trigger_sync_applications_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-applications", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2133,15 +2273,17 @@ async fn trigger_sync_analytics_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-analytics", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2157,15 +2299,17 @@ async fn trigger_sync_companies_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-companies", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2181,15 +2325,17 @@ async fn trigger_sync_other_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-other", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2205,15 +2351,17 @@ async fn trigger_sync_huddles_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-huddles", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2229,15 +2377,17 @@ async fn trigger_sync_mailing_lists_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-mailing-lists", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2253,15 +2403,17 @@ async fn trigger_sync_journal_clubs_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-journal-clubs", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2277,15 +2429,17 @@ async fn trigger_sync_api_tokens_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-api-tokens", true).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -2300,17 +2454,19 @@ async fn trigger_sync_api_tokens_create(
 #[tracing::instrument]
 async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseAccepted<()>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     let ctx = rqctx.context();
 
     match do_cleanup(ctx).await {
         Ok(_) => {
+            txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
             Ok(HttpResponseAccepted(()))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
