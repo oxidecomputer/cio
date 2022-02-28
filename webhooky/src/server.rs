@@ -2392,7 +2392,7 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
 }
 
 impl SentryTransaction {
-    pub fn finish(&mut self, status: StatusCode) -> () {
+    pub fn finish(&mut self, status: StatusCode) {
         if self.transaction.get_status().is_none() {
             let s = map_status(status);
             self.transaction.set_status(s);
@@ -2404,8 +2404,6 @@ impl SentryTransaction {
                 scope.set_span(Some(parent_span.clone()));
             });
         }
-
-        ()
     }
 }
 
