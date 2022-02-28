@@ -3064,6 +3064,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
     // about. Everything else came from Google Sheets and therefore uses the old system.
     let applicants = applicants::dsl::applicants
         .filter(applicants::dsl::sheet_id.eq("".to_string()))
+        .order_by(applicants::dsl::id.asc())
         .load_async::<Applicant>(&db.pool())
         .await?;
 
