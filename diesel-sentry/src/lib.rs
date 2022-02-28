@@ -3,6 +3,8 @@
 //! The `diesel-sentry` crate provides a diesel [`Connection`] that includes Sentry tracing points.
 //! These are fired when a connection to the database is established and for each query.
 
+use std::sync::Arc;
+
 use diesel::backend::Backend;
 use diesel::connection::{AnsiTransactionManager, ConnectionGatWorkaround, SimpleConnection, TransactionManager};
 use diesel::debug_query;
@@ -10,6 +12,7 @@ use diesel::expression::QueryMetadata;
 use diesel::prelude::*;
 use diesel::query_builder::{AsQuery, QueryFragment, QueryId};
 use diesel::r2d2::R2D2Connection;
+use sentry::Hub;
 use std::ops::{Deref, DerefMut};
 use uuid::Uuid;
 
@@ -29,6 +32,7 @@ struct ConnectionInfo {
 #[derive(Debug)]
 pub struct SentryConnection<C: Connection> {
     inner: C,
+    id: Uuid,
     info: ConnectionInfo,
 }
 
@@ -56,7 +60,9 @@ impl<C: Connection> SimpleConnection for SentryConnection<C> {
         skip(self, query),
     )]
     fn batch_execute(&mut self, query: &str) -> QueryResult<()> {
+        let mut txn = start_sentry_db_transaction("sql.query", query);
         let result = self.inner.batch_execute(query);
+        txn.finish();
         result
     }
 }
@@ -86,6 +92,7 @@ where
     fn establish(database_url: &str) -> ConnectionResult<Self> {
         tracing::debug!("establishing postgresql connection");
         let conn_id = Uuid::new_v4();
+        let mut txn = start_sentry_db_transaction("connection", &conn_id.to_string());
         let conn = C::establish(database_url);
         let inner = conn?;
 
@@ -98,6 +105,8 @@ where
         let span = tracing::Span::current();
         span.record("db.name", &info.current_database.as_str());
         span.record("db.version", &info.version.as_str());
+
+        txn.finish();
 
         Ok(SentryConnection {
             inner,
@@ -120,11 +129,15 @@ where
         F: FnOnce(&mut Self) -> Result<T, E>,
         E: From<diesel::result::Error>,
     {
+        let mut txn = start_sentry_db_transaction("transaction", &self.id.to_string());
         let result = f(self);
+        txn.finish();
         result
     }
     fn execute(&mut self, query: &str) -> QueryResult<usize> {
+        let mut txn = start_sentry_db_transaction("sql.query", query);
         let result = self.inner.execute(query);
+        txn.finish();
         result
     }
 
@@ -144,7 +157,9 @@ where
         Self::Backend: QueryMetadata<T::SqlType>,
     {
         let query = source.as_query();
+        let mut txn = start_sentry_db_transaction("sql.query", &debug_query::<Self::Backend, _>(&query).to_string());
         let result = self.inner.load(query);
+        txn.finish();
         result
     }
 
@@ -161,7 +176,9 @@ where
     where
         T: QueryFragment<Self::Backend> + QueryId,
     {
+        let mut txn = start_sentry_db_transaction("sql.query", &debug_query::<Self::Backend, _>(&source).to_string());
         let result = self.inner.execute_returning_count(source);
+        txn.finish();
         result
     }
 
@@ -186,5 +203,52 @@ where
 {
     fn ping(&mut self) -> QueryResult<()> {
         self.inner.ping()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SentryTransaction {
+    transaction: sentry::TransactionOrSpan,
+    parent_span: Option<sentry::TransactionOrSpan>,
+    hub: Arc<sentry::Hub>,
+}
+
+fn start_sentry_db_transaction(op: &str, name: &str) -> SentryTransaction {
+    // Create a new Sentry hub for every request.
+    // Ensures the scope stays right.
+    // The Clippy lint here is a false positive, the suggestion to write
+    // `Hub::with(Hub::new_from_top)` does not compiles:
+    //     143 |         Hub::with(Hub::new_from_top).into()
+    //         |         ^^^^^^^^^ implementation of `std::ops::FnOnce` is not general enough
+    #[allow(clippy::redundant_closure)]
+    let hub = Arc::new(Hub::with(|hub| Hub::new_from_top(hub)));
+
+    let trx_ctx = sentry::TransactionContext::new(name, &format!("db.{}", op));
+
+    let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
+
+    let mut trx = SentryTransaction {
+        transaction: transaction.clone(),
+        parent_span: None,
+        hub: hub.clone(),
+    };
+
+    hub.configure_scope(|scope| {
+        trx.parent_span = scope.get_span();
+        scope.set_span(Some(transaction.clone()));
+    });
+
+    trx
+}
+
+impl SentryTransaction {
+    pub fn finish(&mut self) {
+        self.transaction.clone().finish();
+
+        if let Some(parent_span) = &self.parent_span {
+            self.hub.configure_scope(|scope| {
+                scope.set_span(Some(parent_span.clone()));
+            });
+        }
     }
 }

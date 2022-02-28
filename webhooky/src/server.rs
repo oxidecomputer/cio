@@ -2552,15 +2552,6 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
 
     let trx_ctx = sentry::TransactionContext::continue_from_headers(&tx_name, "http.server", headers);
 
-    hub.configure_scope(|scope| {
-        scope.add_event_processor(move |mut event| {
-            if event.request.is_none() {
-                event.request = Some(sentry_req.clone());
-            }
-            Some(event)
-        });
-    });
-
     let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
 
     let mut trx = SentryTransaction {
@@ -2570,6 +2561,13 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
     };
 
     hub.configure_scope(|scope| {
+        scope.add_event_processor(move |mut event| {
+            if event.request.is_none() {
+                event.request = Some(sentry_req.clone());
+            }
+            Some(event)
+        });
+
         trx.parent_span = scope.get_span();
         scope.set_span(Some(transaction.clone()));
     });
