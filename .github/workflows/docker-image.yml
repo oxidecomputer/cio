@@ -2,6 +2,13 @@ name: docker-image
 on:
   push:
     branches: master
+    paths:
+      - '**.rs'
+      - '*/Cargo.toml'
+      - 'Cargo.lock'
+      - .github/workflows/docker-image.yml
+      - rust-toolchain
+      - '*/Dockerfile'
 jobs:
   docker-image:
     runs-on: ubuntu-latest
