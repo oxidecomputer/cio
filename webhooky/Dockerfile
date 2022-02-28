@@ -57,6 +57,8 @@ COPY webhooky/src/dummy.rs ./src/dummy.rs
 
 COPY webhooky/Cargo.toml ./Cargo.toml
 
+COPY rust-toolchain ./rust-toolchain
+
 # Move the deps we need to compile.
 COPY cio ../cio
 

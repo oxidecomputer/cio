@@ -43,6 +43,8 @@ COPY cio/src/dummy.rs ./src/dummy.rs
 
 COPY cio/Cargo.toml ./Cargo.toml
 
+COPY rust-toolchain ./rust-toolchain
+
 COPY macros ../macros
 
 RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
