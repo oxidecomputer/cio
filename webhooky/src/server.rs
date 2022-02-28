@@ -331,7 +331,6 @@ pub async fn do_job(ctx: Context, job: String) {
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
             handle_anyhow_err_as_http_err(e);
         }
     }
@@ -394,7 +393,6 @@ async fn listen_products_sold_count_requests(
         // Send the error to sentry.
         Err(e) => {
             txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-            sentry::end_session();
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -411,12 +409,15 @@ async fn listen_github_webhooks(
     body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers_github::handle_github(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -437,12 +438,15 @@ async fn trigger_rfd_update_by_number(
     path_params: Path<RFDPathParams>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_rfd_update_by_number(rqctx, path_params).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -455,15 +459,17 @@ async fn trigger_rfd_update_by_number(
 #[tracing::instrument]
 async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers::handle_github_rate_limit(rqctx).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::OK);
             sentry::end_session();
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
-            sentry::end_session();
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
@@ -493,12 +499,15 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_employees_print_home_address_label(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -516,12 +525,15 @@ async fn listen_airtable_certificates_renew_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_certificates_renew(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -539,12 +551,15 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_assets_items_print_barcode_label(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -562,13 +577,16 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(rqctx, body_param).await
     {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -586,12 +604,15 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_applicants_request_background_check(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -610,12 +631,15 @@ async fn listen_airtable_applicants_update_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_applicants_update(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -634,12 +658,15 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_create(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -666,12 +693,15 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_reprint_label(rqctx, body_param).await {
         // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
     }
 
+    txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
