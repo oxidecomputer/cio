@@ -31,21 +31,27 @@ WORKDIR /usr/src/cio
 
 FROM cargo-nightly AS cargo-build
 
-#COPY cio/src/dummy.rs ./src/dummy.rs
+RUN apt-get update && apt-get install -y \
+	ca-certificates \
+	libpq-dev \
+	libssl-dev \
+	libusb-1.0-0-dev \
+	--no-install-recommends \
+	&& rm -rf /var/lib/apt/lists/*
 
-#COPY cio/Cargo.toml ./Cargo.toml
+COPY cio/src/dummy.rs ./src/dummy.rs
 
-#COPY macros ../macros
+COPY cio/Cargo.toml ./Cargo.toml
 
-#RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
+COPY macros ../macros
 
-#RUN cargo build --release --bin cio-api
+RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
-#RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
+RUN cargo build --release --bin cio-api
 
-#COPY cio/src src
+RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
-COPY . .
+COPY cio/src src
 
 RUN cargo build --release --bin cio-api
 

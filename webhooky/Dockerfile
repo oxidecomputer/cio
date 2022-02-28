@@ -45,24 +45,30 @@ WORKDIR /usr/src/webhooky
 
 FROM cargo-nightly AS cargo-build
 
-#COPY webhooky/src/dummy.rs ./src/dummy.rs
+RUN apt-get update && apt-get install -y \
+	ca-certificates \
+	libpq-dev \
+	libssl-dev \
+	libusb-1.0-0-dev \
+	--no-install-recommends \
+	&& rm -rf /var/lib/apt/lists/*
 
-#COPY webhooky/Cargo.toml ./Cargo.toml
+COPY webhooky/src/dummy.rs ./src/dummy.rs
+
+COPY webhooky/Cargo.toml ./Cargo.toml
 
 # Move the deps we need to compile.
-#COPY cio ../cio
+COPY cio ../cio
 
-#COPY macros ../macros
+COPY macros ../macros
 
-#RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
+RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
-#RUN cargo build --release --bin webhooky
+RUN cargo build --release --bin webhooky
 
-#RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
+RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
-#COPY webhooky/src ./src
-
-COPY . .
+COPY webhooky/src ./src
 
 RUN cargo build --release --bin webhooky
 
