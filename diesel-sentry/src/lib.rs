@@ -74,10 +74,10 @@ impl<'a, C: Connection> ConnectionGatWorkaround<'a, C::Backend> for SentryConnec
 
 impl<C> Connection for SentryConnection<C>
 where
-    C: Connection<TransactionManager = AnsiTransactionManager>,
+    C: Connection<TransactionManager = AnsiTransactionManager, Backend = diesel::pg::Pg>,
     <C::Backend as Backend>::QueryBuilder: Default,
 {
-    type Backend = C::Backend;
+    type Backend = diesel::pg::Pg;
     type TransactionManager = C::TransactionManager;
 
     #[tracing::instrument(
@@ -94,17 +94,19 @@ where
         let conn_id = Uuid::new_v4();
         let mut txn = start_sentry_db_transaction("connection", &conn_id.to_string());
         let conn = C::establish(database_url);
-        let inner = conn?;
+        let mut inner = conn?;
 
         tracing::debug!("querying postgresql connection information");
-        let info: ConnectionInfo = Default::default();
-        /*diesel::select((current_database(), version()))
-        .get_result(&mut conn?)
-        .map_err(ConnectionError::CouldntSetupConfiguration)?;*/
+        let info: ConnectionInfo = diesel::select((current_database(), version()))
+            .get_result(&mut inner)
+            .map_err(ConnectionError::CouldntSetupConfiguration)?;
 
         let span = tracing::Span::current();
         span.record("db.name", &info.current_database.as_str());
         span.record("db.version", &info.version.as_str());
+
+        tracing::debug!("db.name: {}", info.current_database);
+        tracing::debug!("db.version: {}", info.version);
 
         txn.finish();
 
@@ -198,7 +200,7 @@ where
 
 impl<C> R2D2Connection for SentryConnection<C>
 where
-    C: R2D2Connection + Connection<TransactionManager = AnsiTransactionManager>,
+    C: R2D2Connection + Connection<TransactionManager = AnsiTransactionManager, Backend = diesel::pg::Pg>,
     <C::Backend as Backend>::QueryBuilder: Default,
 {
     fn ping(&mut self) -> QueryResult<()> {
@@ -243,6 +245,10 @@ fn start_sentry_db_transaction(op: &str, name: &str) -> SentryTransaction {
 
 impl SentryTransaction {
     pub fn finish(&mut self) {
+        if self.transaction.get_status().is_none() {
+            // TODO: we should actually pass if there was an error or not here.
+            self.transaction.set_status(sentry::protocol::SpanStatus::Ok);
+        }
         self.transaction.clone().finish();
 
         if let Some(parent_span) = &self.parent_span {
