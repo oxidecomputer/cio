@@ -1,4 +1,11 @@
-on: push
+on:
+  push:
+    paths:
+      - '**.rs'
+      - '*/Cargo.toml'
+      - 'Cargo.lock'
+      - .github/workflows/cargo-clippy.yml
+      - rust-toolchain
 name: cargo clippy
 jobs:
   cargoclippy:

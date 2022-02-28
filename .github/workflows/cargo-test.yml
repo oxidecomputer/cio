@@ -1,7 +1,11 @@
 on:
   push:
-    branches:
-      - '**'
+    paths:
+      - '**.rs'
+      - '*/Cargo.toml'
+      - 'Cargo.lock'
+      - .github/workflows/cargo-test.yml
+      - rust-toolchain
 name: cargo test
 jobs:
   cargotest:

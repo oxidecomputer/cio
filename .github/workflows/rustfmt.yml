@@ -1,4 +1,12 @@
-on: push
+on:
+  push:
+    paths:
+      - '**.rs'
+      - '*/Cargo.toml'
+      - 'Cargo.lock'
+      - .github/workflows/rustfmt.yml
+      - rustfmt.toml
+      - rust-toolchain
 name: rustfmt
 jobs:
   rustfmt:
