@@ -1,0 +1,13 @@
+[package]
+name = "diesel-sentry"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jess Frazelle <jess@oxide.computer>"]
+license = "Apache-2.0"
+repository = "https://github.com/oxidecomputer/cio.git"
+
+[dependencies]
+diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420", features = [ "r2d2", "postgres"] }
+serde = "1"
+tracing = "^0.1"
+uuid = { version = "^0.8", features = [ "v4", "serde" ] }

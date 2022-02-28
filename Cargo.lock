@@ -939,6 +939,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "diesel-sentry"
+version = "0.1.0"
+dependencies = [
+ "diesel 2.0.0",
+ "serde",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "diesel-tracing"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

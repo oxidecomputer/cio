@@ -5,6 +5,7 @@ members = [
 	"checkr",
 	"cfcert",
 	"cio",
+	"diesel-sentry",
 	"docusign",
 	"google-geocode",
 	"macros",
