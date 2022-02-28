@@ -9,3 +9,4 @@ Makefile
 Dockerfile
 .git
 rustfmt.toml
+rfds.1s.sh
