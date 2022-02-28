@@ -6,3 +6,5 @@ target
 LICENSE
 Makefile
 .dockerignore
+Dockerfile
+.git
