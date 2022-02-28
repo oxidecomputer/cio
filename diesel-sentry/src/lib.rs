@@ -236,6 +236,11 @@ fn start_sentry_db_transaction(op: &str, name: &str) -> SentryTransaction {
     };
 
     hub.configure_scope(|scope| {
+        scope.add_event_processor(move |mut event| {
+            // TODO: do we want to add information here like we did for the request event.
+            Some(event)
+        });
+
         trx.parent_span = scope.get_span();
         scope.set_span(Some(transaction.clone()));
     });
