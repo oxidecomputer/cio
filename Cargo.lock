@@ -4024,17 +4024,17 @@ dependencies = [
 [[package]]
 name = "sentry"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
  "httpdate",
  "reqwest",
- "sentry-anyhow 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
- "sentry-backtrace 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
- "sentry-contexts 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
- "sentry-core 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
- "sentry-debug-images 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
- "sentry-panic 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
- "sentry-tracing 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry-anyhow 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
+ "sentry-backtrace 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
+ "sentry-contexts 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
+ "sentry-core 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
+ "sentry-debug-images 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
+ "sentry-panic 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
+ "sentry-tracing 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
  "tokio",
 ]
 
@@ -4052,11 +4052,11 @@ dependencies = [
 [[package]]
 name = "sentry-anyhow"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
  "anyhow",
- "sentry-backtrace 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
- "sentry-core 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry-backtrace 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
+ "sentry-core 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
 ]
 
 [[package]]
@@ -4074,12 +4074,12 @@ dependencies = [
 [[package]]
 name = "sentry-backtrace"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
  "backtrace",
  "lazy_static",
  "regex",
- "sentry-core 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry-core 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
 ]
 
 [[package]]
@@ -4098,12 +4098,12 @@ dependencies = [
 [[package]]
 name = "sentry-contexts"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
  "hostname",
  "libc",
  "rustc_version 0.4.0",
- "sentry-core 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry-core 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
  "uname",
 ]
 
@@ -4123,11 +4123,11 @@ dependencies = [
 [[package]]
 name = "sentry-core"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
  "lazy_static",
  "rand 0.8.5",
- "sentry-types 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry-types 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
  "serde",
  "serde_json",
 ]
@@ -4146,11 +4146,11 @@ dependencies = [
 [[package]]
 name = "sentry-debug-images"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
  "findshlibs",
  "lazy_static",
- "sentry-core 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry-core 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
 ]
 
 [[package]]
@@ -4176,10 +4176,10 @@ dependencies = [
 [[package]]
 name = "sentry-panic"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
- "sentry-backtrace 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
- "sentry-core 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry-backtrace 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
+ "sentry-core 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
 ]
 
 [[package]]
@@ -4196,9 +4196,9 @@ dependencies = [
 [[package]]
 name = "sentry-tracing"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
- "sentry-core 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry-core 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
  "tracing-core",
  "tracing-subscriber",
 ]
@@ -4223,7 +4223,7 @@ dependencies = [
 [[package]]
 name = "sentry-types"
 version = "0.24.3"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names#5b098e5822acec1ca5d6440139e976deda2fd500"
+source = "git+https://github.com/getsentry/sentry-rust?branch=master#871f727706ac421417c9d2aeb86b93868e4f1a72"
 dependencies = [
  "debugid",
  "getrandom 0.2.5",
@@ -5835,7 +5835,7 @@ dependencies = [
  "regex",
  "reqwest",
  "schemars",
- "sentry 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=fix-transaction-names)",
+ "sentry 0.24.3 (git+https://github.com/getsentry/sentry-rust?branch=master)",
  "serde",
  "serde_json",
  "serde_qs 0.8.5",
