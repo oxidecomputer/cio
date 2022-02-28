@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # App Base Stage
 # ------------------------------------------------------------------------------
-FROM debian:sid-slim AS app-base
+FROM ubuntu:latest AS app-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
