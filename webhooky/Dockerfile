@@ -74,4 +74,4 @@ FROM app-base
 
 COPY --from=cargo-build /usr/src/webhooky/target/release/webhooky /usr/bin/webhooky
 
-CMD ["webhooky", "--json", "server", "--do-cron"]
+CMD ["webhooky", "--json", "server"]
