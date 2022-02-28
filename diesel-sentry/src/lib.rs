@@ -29,7 +29,6 @@ struct ConnectionInfo {
 #[derive(Debug)]
 pub struct SentryConnection<C: Connection> {
     inner: C,
-    id: Uuid,
     info: ConnectionInfo,
 }
 
