@@ -17,7 +17,7 @@ env:
   SERVICE_NAME: webhooky-crons
 
 concurrency:
-  group: cloudrun
+  group: cloudrun-crons
   cancel-in-progress: true
 
 jobs:
