@@ -47,6 +47,8 @@ COPY rust-toolchain ./rust-toolchain
 
 COPY macros ../macros
 
+COPY diesel-sentry ../diesel-sentry
+
 RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
 RUN cargo build --release --bin cio-api
