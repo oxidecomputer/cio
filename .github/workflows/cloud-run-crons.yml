@@ -1,4 +1,4 @@
-name: cloud-run
+name: cloud-run-crons
 
 on:
   push:
