@@ -11,11 +11,13 @@ use dropshot::{
 };
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
+use http::StatusCode;
 use log::{info, warn};
 use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use schemars::JsonSchema;
+use sentry::{protocol, Hub};
 use serde::{Deserialize, Serialize};
 use shipbob::Client as ShipBob;
 use signal_hook::{
@@ -348,8 +350,10 @@ pub async fn do_job(ctx: Context, job: String) {
 }]
 #[tracing::instrument]
 async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
     let api_context = rqctx.context();
 
+    txn.finish(http::StatusCode::OK);
     Ok(HttpResponseOk(api_context.schema.clone()))
 }
 
@@ -379,14 +383,17 @@ async fn listen_products_sold_count_requests(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
     sentry::start_session();
+    let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match crate::handlers::handle_products_sold_count(rqctx).await {
         Ok(r) => {
+            txn.finish(http::StatusCode::OK);
             sentry::end_session();
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
         Err(e) => {
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             sentry::end_session();
             Err(handle_anyhow_err_as_http_err(e))
         }
@@ -2318,4 +2325,102 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
 
     // We use the debug formatting here so we get the stack trace.
     return HttpError::for_internal_error(format!("{:?}", err));
+}
+
+#[derive(Debug, Clone)]
+pub struct SentryTransaction {
+    transaction: sentry::TransactionOrSpan,
+    parent_span: Option<sentry::TransactionOrSpan>,
+    hub: Arc<sentry::Hub>,
+}
+
+async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> SentryTransaction {
+    // Create a new Sentry hub for every request.
+    // Ensures the scope stays right.
+    // The Clippy lint here is a false positive, the suggestion to write
+    // `Hub::with(Hub::new_from_top)` does not compiles:
+    //     143 |         Hub::with(Hub::new_from_top).into()
+    //         |         ^^^^^^^^^ implementation of `std::ops::FnOnce` is not general enough
+    #[allow(clippy::redundant_closure)]
+    let hub = Arc::new(Hub::with(|hub| Hub::new_from_top(hub)));
+
+    // Get the raw headers.
+    let raw_req = rqctx.request.lock().await;
+    let raw_headers = raw_req.headers().clone();
+
+    let sentry_req = sentry::protocol::Request {
+        method: Some(raw_req.method().to_string()),
+        url: raw_req.uri().to_string().parse().ok(),
+        headers: raw_headers
+            .iter()
+            .map(|(header, value)| (header.to_string(), value.to_str().unwrap_or_default().into()))
+            .collect(),
+        ..Default::default()
+    };
+
+    let headers = raw_headers
+        .iter()
+        .flat_map(|(header, value)| value.to_str().ok().map(|value| (header.as_str(), value)));
+
+    let tx_name = format!("{} {}", raw_req.method(), raw_req.uri().path());
+
+    let trx_ctx = sentry::TransactionContext::continue_from_headers(&tx_name, "http.server", headers);
+
+    hub.configure_scope(|scope| {
+        scope.add_event_processor(move |mut event| {
+            if event.request.is_none() {
+                event.request = Some(sentry_req.clone());
+            }
+            Some(event)
+        });
+    });
+
+    let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
+
+    let mut trx = SentryTransaction {
+        transaction: transaction.clone(),
+        parent_span: None,
+        hub: hub.clone(),
+    };
+
+    hub.configure_scope(|scope| {
+        trx.parent_span = scope.get_span();
+        scope.set_span(Some(transaction.clone()));
+    });
+
+    trx
+}
+
+impl SentryTransaction {
+    pub fn finish(&mut self, status: StatusCode) -> () {
+        if self.transaction.get_status().is_none() {
+            let s = map_status(status);
+            self.transaction.set_status(s);
+        }
+        self.transaction.clone().finish();
+
+        if let Some(parent_span) = &self.parent_span {
+            self.hub.configure_scope(|scope| {
+                scope.set_span(Some(parent_span.clone()));
+            });
+        }
+
+        ()
+    }
+}
+
+fn map_status(status: StatusCode) -> protocol::SpanStatus {
+    match status {
+        StatusCode::UNAUTHORIZED => protocol::SpanStatus::Unauthenticated,
+        StatusCode::FORBIDDEN => protocol::SpanStatus::PermissionDenied,
+        StatusCode::NOT_FOUND => protocol::SpanStatus::NotFound,
+        StatusCode::TOO_MANY_REQUESTS => protocol::SpanStatus::ResourceExhausted,
+        status if status.is_client_error() => protocol::SpanStatus::InvalidArgument,
+        StatusCode::NOT_IMPLEMENTED => protocol::SpanStatus::Unimplemented,
+        StatusCode::SERVICE_UNAVAILABLE => protocol::SpanStatus::Unavailable,
+        status if status.is_server_error() => protocol::SpanStatus::InternalError,
+        StatusCode::CONFLICT => protocol::SpanStatus::AlreadyExists,
+        status if status.is_success() => protocol::SpanStatus::Ok,
+        _ => protocol::SpanStatus::UnknownError,
+    }
 }
