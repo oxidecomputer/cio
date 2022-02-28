@@ -14,10 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Install latest nightly
-        uses: actions-rs/toolchain@v1
+        uses: oxidecomputer/actions-rs_toolchain@oxide/master
         with:
-            toolchain: nightly
-            override: true
             components: rustfmt, clippy
       - name: Install libusb
         shell: bash
