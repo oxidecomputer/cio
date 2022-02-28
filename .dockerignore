@@ -8,3 +8,4 @@ Makefile
 .dockerignore
 Dockerfile
 .git
+rustfmt.toml
