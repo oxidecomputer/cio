@@ -2513,11 +2513,11 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     return HttpError::for_internal_error(format!("{:?}", err));
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SentryTransaction {
-    transaction: sentry::TransactionOrSpan,
+    transaction: Option<sentry::TransactionOrSpan>,
     parent_span: Option<sentry::TransactionOrSpan>,
-    hub: Arc<sentry::Hub>,
+    hub: Option<Arc<sentry::Hub>>,
 }
 
 async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> SentryTransaction {
@@ -2544,6 +2544,15 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
         ..Default::default()
     };
 
+    hub.configure_scope(|scope| {
+        scope.add_event_processor(move |mut event| {
+            if event.request.is_none() {
+                event.request = Some(sentry_req.clone());
+            }
+            Some(event)
+        });
+    });
+
     let headers = raw_headers
         .iter()
         .flat_map(|(header, value)| value.to_str().ok().map(|value| (header.as_str(), value)));
@@ -2552,24 +2561,18 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
 
     let trx_ctx = sentry::TransactionContext::continue_from_headers(&tx_name, "http.server", headers);
 
-    let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
-
-    let mut trx = SentryTransaction {
-        transaction: transaction.clone(),
-        parent_span: None,
-        hub: hub.clone(),
-    };
+    let mut trx: SentryTransaction = Default::default();
 
     hub.configure_scope(|scope| {
-        scope.add_event_processor(move |mut event| {
-            if event.request.is_none() {
-                event.request = Some(sentry_req.clone());
-            }
-            Some(event)
-        });
+        let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
 
-        trx.parent_span = scope.get_span();
+        let parent_span = scope.get_span();
         scope.set_span(Some(transaction.clone()));
+        trx = SentryTransaction {
+            transaction: Some(transaction),
+            parent_span,
+            hub: Some(hub.clone()),
+        };
     });
 
     trx
@@ -2577,14 +2580,15 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
 
 impl SentryTransaction {
     pub fn finish(&mut self, status: StatusCode) {
-        if self.transaction.get_status().is_none() {
+        let transaction = self.transaction.as_ref().unwrap();
+        if transaction.get_status().is_none() {
             let s = map_status(status);
-            self.transaction.set_status(s);
+            transaction.set_status(s);
         }
-        self.transaction.clone().finish();
+        transaction.clone().finish();
 
         if let Some(parent_span) = &self.parent_span {
-            self.hub.configure_scope(|scope| {
+            self.hub.as_ref().unwrap().configure_scope(|scope| {
                 scope.set_span(Some(parent_span.clone()));
             });
         }
