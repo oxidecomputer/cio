@@ -2531,8 +2531,12 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
     let hub = Arc::new(Hub::with(|hub| Hub::new_from_top(hub)));
 
     // Get the raw headers.
-    let raw_req = rqctx.request.lock().await;
+    let mut raw_req = rqctx.request.lock().await;
     let raw_headers = raw_req.headers().clone();
+
+    let mut body = raw_req.body_mut();
+    let b = read_body_to_string(&mut body).await;
+    let data = if b.is_empty() { None } else { Some(b) };
 
     let url = raw_req.uri();
 
@@ -2546,6 +2550,7 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
             .map(|(header, value)| (header.to_string(), value.to_str().unwrap_or_default().into()))
             .collect(),
         query_string,
+        data,
         ..Default::default()
     };
 
@@ -2618,4 +2623,9 @@ fn map_status(status: StatusCode) -> protocol::SpanStatus {
         status if status.is_success() => protocol::SpanStatus::Ok,
         _ => protocol::SpanStatus::UnknownError,
     }
+}
+
+async fn read_body_to_string(body: &mut hyper::body::Body) -> String {
+    let bytes = hyper::body::to_bytes(body).await.unwrap_or_default();
+    String::from_utf8(bytes.to_vec()).unwrap_or_default()
 }

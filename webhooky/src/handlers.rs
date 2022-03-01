@@ -1023,7 +1023,7 @@ pub async fn handle_emails_incoming_sendgrid_parse(
 
     let content_type = headers.get("content-type").unwrap();
     let content_length = headers.get("content-length").unwrap();
-    let mut h = hyper::header::Headers::new();
+    let mut h = hyperx::header::Headers::new();
     h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
     h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
 
