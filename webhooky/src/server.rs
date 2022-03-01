@@ -350,7 +350,7 @@ pub async fn do_job(ctx: Context, job: String) {
 #[tracing::instrument]
 async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
-    let api_context = rqctx.context();
+    let api_context = txn.run(|| rqctx.context());
 
     txn.finish(http::StatusCode::OK);
     Ok(HttpResponseOk(api_context.schema.clone()))
@@ -1239,7 +1239,7 @@ async fn listen_auth_google_consent(
     // Initialize the Google client.
     // You can use any of the libs here, they all use the same endpoint
     // for tokens and we will send all the scopes.
-    let g = GoogleDrive::new_from_env("", "").await;
+    let g = txn.run(|| GoogleDrive::new_from_env("", "")).await;
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -1290,7 +1290,7 @@ async fn listen_auth_shipbob_consent(
     // Initialize the shipbob client.
     // You can use any of the libs here, they all use the same endpoint
     // for tokens and we will send all the scopes.
-    let g = ShipBob::new_from_env("", "", "");
+    let g = txn.run(|| ShipBob::new_from_env("", "", ""));
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -1359,9 +1359,11 @@ async fn listen_auth_github_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    let event = body_param.into_inner();
+    txn.run(|| {
+        let event = body_param.into_inner();
 
-    warn!("github callback: {:?}", event);
+        warn!("github callback: {:?}", event);
+    });
 
     txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
@@ -1381,7 +1383,7 @@ async fn listen_auth_mailchimp_consent(
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the MailChimp client.
-    let g = MailChimp::new_from_env("", "", "");
+    let g = txn.run(|| MailChimp::new_from_env("", "", ""));
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -1430,7 +1432,7 @@ async fn listen_auth_gusto_consent(
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Gusto client.
-    let g = Gusto::new_from_env("", "");
+    let g = txn.run(|| Gusto::new_from_env("", ""));
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -1480,9 +1482,11 @@ async fn listen_auth_zoom_deauthorization(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    let event = body_param.into_inner();
+    txn.run(|| {
+        let event = body_param.into_inner();
 
-    warn!("zoom deauthorization: {:?}", event);
+        warn!("zoom deauthorization: {:?}", event);
+    });
 
     txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
@@ -1502,7 +1506,7 @@ async fn listen_auth_zoom_consent(
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Zoom client.
-    let g = Zoom::new_from_env("", "");
+    let g = txn.run(|| Zoom::new_from_env("", ""));
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -1551,7 +1555,7 @@ async fn listen_auth_ramp_consent(
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Ramp client.
-    let g = Ramp::new_from_env("", "");
+    let g = txn.run(|| Ramp::new_from_env("", ""));
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -1608,7 +1612,7 @@ async fn listen_auth_slack_consent(
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Slack client.
-    let s = Slack::new_from_env("", "", "");
+    let s = txn.run(|| Slack::new_from_env("", "", ""));
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -1657,7 +1661,7 @@ async fn listen_auth_quickbooks_consent(
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the QuickBooks client.
-    let g = QuickBooks::new_from_env("", "", "");
+    let g = txn.run(|| QuickBooks::new_from_env("", "", ""));
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -1706,9 +1710,11 @@ async fn listen_auth_plaid_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    let event = body_args.into_inner();
+    txn.run(|| {
+        let event = body_args.into_inner();
 
-    warn!("plaid callback: {:?}", event);
+        warn!("plaid callback: {:?}", event);
+    });
 
     txn.finish(http::StatusCode::ACCEPTED);
     sentry::end_session();
@@ -1728,7 +1734,7 @@ async fn listen_auth_docusign_consent(
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the DocuSign client.
-    let g = DocuSign::new_from_env("", "", "", "");
+    let g = txn.run(|| DocuSign::new_from_env("", "", "", ""));
 
     txn.finish(http::StatusCode::OK);
     sentry::end_session();
@@ -2633,9 +2639,7 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    let ctx = rqctx.context();
-
-    match txn.run(|| do_cleanup(ctx)).await {
+    match txn.run(|| do_cleanup(rqctx.context())).await {
         Ok(_) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
