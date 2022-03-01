@@ -320,17 +320,23 @@ impl Context {
     }
 }
 
-#[tracing::instrument]
 pub async fn do_job(ctx: Context, job: String) {
-    info!("triggering cron job `{}`", job);
-
     sentry::start_session();
-    match crate::handlers_cron::handle_reexec_cmd(&ctx, &job, true).await {
+    let mut txn = start_sentry_cron_transaction(&job);
+    match txn
+        .run(|| {
+            info!("triggering cron job `{}`", job);
+            crate::handlers_cron::handle_reexec_cmd(&ctx, &job, true)
+        })
+        .await
+    {
         Ok(_) => {
+            txn.finish(http::StatusCode::OK);
             sentry::end_session();
         }
         // Send the error to sentry.
         Err(e) => {
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
             handle_anyhow_err_as_http_err(e);
         }
     }
@@ -2813,4 +2819,33 @@ fn map_status(status: StatusCode) -> protocol::SpanStatus {
 async fn read_body_to_string(body: &mut hyper::body::Body) -> String {
     let bytes = hyper::body::to_bytes(body).await.unwrap_or_default();
     String::from_utf8(bytes.to_vec()).unwrap_or_default()
+}
+
+fn start_sentry_cron_transaction(job: &str) -> SentryTransaction {
+    // Create a new Sentry hub for every request.
+    // Ensures the scope stays right.
+    // The Clippy lint here is a false positive, the suggestion to write
+    // `Hub::with(Hub::new_from_top)` does not compiles:
+    //     143 |         Hub::with(Hub::new_from_top).into()
+    //         |         ^^^^^^^^^ implementation of `std::ops::FnOnce` is not general enough
+    #[allow(clippy::redundant_closure)]
+    let hub = Arc::new(Hub::with(|hub| Hub::new_from_top(hub)));
+
+    let trx_ctx = sentry::TransactionContext::new(job, "job.exec");
+
+    let mut trx: SentryTransaction = Default::default();
+
+    hub.configure_scope(|scope| {
+        let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
+
+        let parent_span = scope.get_span();
+        scope.set_span(Some(transaction.clone()));
+        trx = SentryTransaction {
+            transaction: Some(transaction),
+            parent_span,
+            hub: Some(hub.clone()),
+        };
+    });
+
+    trx
 }
