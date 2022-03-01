@@ -65,6 +65,6 @@ RUN cargo build --bin cio-api
 
 FROM app-base
 
-COPY --from=cargo-build /usr/src/cio/target/release/cio-api /usr/bin/cio-api
+COPY --from=cargo-build /usr/src/cio/target/debug/cio-api /usr/bin/cio-api
 
 CMD ["cio-api"]
