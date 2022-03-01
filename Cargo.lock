@@ -929,7 +929,7 @@ name = "diesel-sentry"
 version = "0.1.0"
 dependencies = [
  "diesel",
- "sentry 0.24.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sentry 0.24.3 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
  "serde",
  "tracing",
  "uuid",
