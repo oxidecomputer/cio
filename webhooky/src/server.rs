@@ -321,24 +321,25 @@ impl Context {
 }
 
 pub async fn do_job(ctx: Context, job: String) {
-    sentry::start_session();
     let mut txn = start_sentry_cron_transaction(&job);
-    match txn
-        .run(|| {
+    let errored = txn
+        .run(async || {
             info!("triggering cron job `{}`", job);
-            crate::handlers_cron::handle_reexec_cmd(&ctx, &job, true)
+            match crate::handlers_cron::handle_reexec_cmd(&ctx, &job, true).await {
+                Ok(_) => false,
+                // Send the error to sentry.
+                Err(e) => {
+                    handle_anyhow_err_as_http_err(e);
+                    true
+                }
+            }
         })
-        .await
-    {
-        Ok(_) => {
-            txn.finish(http::StatusCode::OK);
-            sentry::end_session();
-        }
-        // Send the error to sentry.
-        Err(e) => {
-            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-            handle_anyhow_err_as_http_err(e);
-        }
+        .await;
+
+    if errored {
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+    } else {
+        txn.finish(http::StatusCode::OK);
     }
 }
 
@@ -387,13 +388,12 @@ pub struct CounterResponse {
 async fn listen_products_sold_count_requests(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn.run(|| crate::handlers::handle_products_sold_count(rqctx)).await {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
-            sentry::end_session();
+
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
@@ -414,7 +414,6 @@ async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -427,7 +426,7 @@ async fn listen_github_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -446,7 +445,6 @@ async fn trigger_rfd_update_by_number(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<RFDPathParams>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -459,7 +457,7 @@ async fn trigger_rfd_update_by_number(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -470,13 +468,12 @@ async fn trigger_rfd_update_by_number(
 }]
 #[tracing::instrument]
 async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn.run(|| crate::handlers::handle_github_rate_limit(rqctx)).await {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
-            sentry::end_session();
+
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
@@ -510,7 +507,6 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -523,7 +519,7 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -539,7 +535,6 @@ async fn listen_airtable_certificates_renew_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -552,7 +547,7 @@ async fn listen_airtable_certificates_renew_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -568,7 +563,6 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -581,7 +575,7 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -597,7 +591,6 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -610,7 +603,7 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -626,7 +619,6 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -639,7 +631,7 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -656,7 +648,6 @@ async fn listen_airtable_applicants_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -669,7 +660,7 @@ async fn listen_airtable_applicants_update_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -686,7 +677,6 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -699,7 +689,7 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -724,7 +714,6 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -737,7 +726,7 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -753,7 +742,6 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -766,7 +754,7 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -782,7 +770,6 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -799,7 +786,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -815,7 +802,6 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -828,7 +814,7 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -886,7 +872,6 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -899,7 +884,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -914,7 +899,6 @@ async fn listen_applicant_review_requests(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -927,7 +911,7 @@ async fn listen_applicant_review_requests(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -942,7 +926,6 @@ async fn listen_application_submit_requests(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -955,7 +938,7 @@ async fn listen_application_submit_requests(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -995,7 +978,6 @@ async fn listen_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -1004,7 +986,7 @@ async fn listen_application_files_upload_requests(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
-            sentry::end_session();
+
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
@@ -1028,7 +1010,6 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1041,7 +1022,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1057,7 +1038,6 @@ async fn listen_store_order_create(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<Order>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1070,7 +1050,7 @@ async fn listen_store_order_create(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1086,7 +1066,6 @@ async fn listen_easypost_tracking_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<EasyPostTrackingUpdateEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1099,7 +1078,7 @@ async fn listen_easypost_tracking_update_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1158,7 +1137,6 @@ async fn listen_shippo_tracking_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1171,7 +1149,7 @@ async fn listen_shippo_tracking_update_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1196,7 +1174,6 @@ async fn listen_checkr_background_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<checkr::WebhookEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1209,7 +1186,7 @@ async fn listen_checkr_background_update_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1239,7 +1216,6 @@ pub struct AuthCallback {
 async fn listen_auth_google_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Google client.
@@ -1248,7 +1224,7 @@ async fn listen_auth_google_consent(
     let g = txn.run(|| GoogleDrive::new_from_env("", "")).await;
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(&cio_api::companies::get_google_scopes()),
     }))
@@ -1264,7 +1240,6 @@ async fn listen_auth_google_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1277,7 +1252,7 @@ async fn listen_auth_google_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1290,7 +1265,6 @@ async fn listen_auth_google_callback(
 async fn listen_auth_shipbob_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the shipbob client.
@@ -1299,7 +1273,7 @@ async fn listen_auth_shipbob_consent(
     let g = txn.run(|| ShipBob::new_from_env("", "", ""));
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         // We want to get the response as a form.
         url: g.user_consent_url(&cio_api::companies::get_shipbob_scopes()) + "&response_mode=form_post",
@@ -1316,7 +1290,6 @@ async fn listen_auth_shipbob_callback(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1329,7 +1302,7 @@ async fn listen_auth_shipbob_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1342,11 +1315,10 @@ async fn listen_auth_shipbob_callback(
 async fn listen_auth_github_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         url: "https://github.com/apps/oxidecomputerbot/installations/new".to_string(),
     }))
@@ -1362,7 +1334,6 @@ async fn listen_auth_github_callback(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     txn.run(|| {
@@ -1372,7 +1343,7 @@ async fn listen_auth_github_callback(
     });
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1385,14 +1356,13 @@ async fn listen_auth_github_callback(
 async fn listen_auth_mailchimp_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the MailChimp client.
     let g = txn.run(|| MailChimp::new_from_env("", "", ""));
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(),
     }))
@@ -1408,7 +1378,6 @@ async fn listen_auth_mailchimp_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1421,7 +1390,7 @@ async fn listen_auth_mailchimp_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1434,14 +1403,13 @@ async fn listen_auth_mailchimp_callback(
 async fn listen_auth_gusto_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Gusto client.
     let g = txn.run(|| Gusto::new_from_env("", ""));
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         // We don't need to define scopes for Gusto.
         url: g.user_consent_url(&[]),
@@ -1458,7 +1426,6 @@ async fn listen_auth_gusto_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1471,7 +1438,7 @@ async fn listen_auth_gusto_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1485,7 +1452,6 @@ async fn listen_auth_zoom_deauthorization(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     txn.run(|| {
@@ -1495,7 +1461,7 @@ async fn listen_auth_zoom_deauthorization(
     });
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1508,14 +1474,13 @@ async fn listen_auth_zoom_deauthorization(
 async fn listen_auth_zoom_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Zoom client.
     let g = txn.run(|| Zoom::new_from_env("", ""));
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(&[]),
     }))
@@ -1531,7 +1496,6 @@ async fn listen_auth_zoom_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1544,7 +1508,7 @@ async fn listen_auth_zoom_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1557,14 +1521,13 @@ async fn listen_auth_zoom_callback(
 async fn listen_auth_ramp_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Ramp client.
     let g = txn.run(|| Ramp::new_from_env("", ""));
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(&[
             "transactions:read".to_string(),
@@ -1588,7 +1551,6 @@ async fn listen_auth_ramp_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1601,7 +1563,7 @@ async fn listen_auth_ramp_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1614,14 +1576,13 @@ async fn listen_auth_ramp_callback(
 async fn listen_auth_slack_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the Slack client.
     let s = txn.run(|| Slack::new_from_env("", "", ""));
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         url: s.user_consent_url(),
     }))
@@ -1637,7 +1598,6 @@ async fn listen_auth_slack_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1650,7 +1610,7 @@ async fn listen_auth_slack_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1663,14 +1623,13 @@ async fn listen_auth_slack_callback(
 async fn listen_auth_quickbooks_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the QuickBooks client.
     let g = txn.run(|| QuickBooks::new_from_env("", "", ""));
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(),
     }))
@@ -1686,7 +1645,6 @@ async fn listen_auth_quickbooks_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1699,7 +1657,7 @@ async fn listen_auth_quickbooks_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1713,7 +1671,6 @@ async fn listen_auth_plaid_callback(
     rqctx: Arc<RequestContext<Context>>,
     body_args: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     txn.run(|| {
@@ -1723,7 +1680,7 @@ async fn listen_auth_plaid_callback(
     });
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1736,14 +1693,13 @@ async fn listen_auth_plaid_callback(
 async fn listen_auth_docusign_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     // Initialize the DocuSign client.
     let g = txn.run(|| DocuSign::new_from_env("", "", "", ""));
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk(UserConsentURL {
         url: g.user_consent_url(),
     }))
@@ -1759,7 +1715,6 @@ async fn listen_auth_docusign_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1772,7 +1727,7 @@ async fn listen_auth_docusign_callback(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1786,7 +1741,6 @@ async fn listen_docusign_envelope_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<docusign::Envelope>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1799,7 +1753,7 @@ async fn listen_docusign_envelope_update_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1813,7 +1767,6 @@ async fn listen_analytics_page_view_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<NewPageView>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1826,7 +1779,7 @@ async fn listen_analytics_page_view_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1852,7 +1805,6 @@ async fn listen_mailchimp_mailing_list_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1865,7 +1817,7 @@ async fn listen_mailchimp_mailing_list_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1891,7 +1843,6 @@ async fn listen_mailchimp_rack_line_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1904,7 +1855,7 @@ async fn listen_mailchimp_rack_line_webhooks(
     }
 
     txn.finish(http::StatusCode::ACCEPTED);
-    sentry::end_session();
+
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -1918,7 +1869,6 @@ async fn listen_slack_commands_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
 ) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -1927,7 +1877,7 @@ async fn listen_slack_commands_webhooks(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
-            sentry::end_session();
+
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
@@ -1948,7 +1898,6 @@ async fn listen_slack_interactive_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
 ) -> Result<HttpResponseOk<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn
@@ -1961,7 +1910,7 @@ async fn listen_slack_interactive_webhooks(
     }
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk("ok".to_string()))
 }
 
@@ -1975,7 +1924,6 @@ async fn listen_shipbob_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     if let Err(e) = txn.run(|| crate::handlers::handle_shipbob(rqctx, body_param)).await {
@@ -1985,7 +1933,7 @@ async fn listen_shipbob_webhooks(
     }
 
     txn.finish(http::StatusCode::OK);
-    sentry::end_session();
+
     Ok(HttpResponseOk("ok".to_string()))
 }
 
@@ -2004,7 +1952,6 @@ async fn listen_get_function_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<FunctionPathParams>,
 ) -> Result<HttpResponseOk<Function>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2013,7 +1960,7 @@ async fn listen_get_function_by_uuid(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
-            sentry::end_session();
+
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
@@ -2034,7 +1981,6 @@ async fn listen_get_function_logs_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<FunctionPathParams>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2043,7 +1989,7 @@ async fn listen_get_function_logs_by_uuid(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
-            sentry::end_session();
+
             Ok(HttpResponseOk(r))
         }
         // Send the error to sentry.
@@ -2063,7 +2009,6 @@ async fn listen_get_function_logs_by_uuid(
 async fn trigger_sync_repos_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2072,7 +2017,7 @@ async fn trigger_sync_repos_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2092,7 +2037,6 @@ async fn trigger_sync_repos_create(
 async fn trigger_sync_rfds_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2101,7 +2045,7 @@ async fn trigger_sync_rfds_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2121,7 +2065,6 @@ async fn trigger_sync_rfds_create(
 async fn trigger_sync_travel_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2130,7 +2073,7 @@ async fn trigger_sync_travel_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2150,7 +2093,6 @@ async fn trigger_sync_travel_create(
 async fn trigger_sync_functions_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2159,7 +2101,7 @@ async fn trigger_sync_functions_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2179,7 +2121,6 @@ async fn trigger_sync_functions_create(
 async fn trigger_sync_finance_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2188,7 +2129,7 @@ async fn trigger_sync_finance_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2208,7 +2149,6 @@ async fn trigger_sync_finance_create(
 async fn trigger_sync_shipments_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2217,7 +2157,7 @@ async fn trigger_sync_shipments_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2237,7 +2177,6 @@ async fn trigger_sync_shipments_create(
 async fn trigger_sync_shorturls_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2246,7 +2185,7 @@ async fn trigger_sync_shorturls_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2266,7 +2205,6 @@ async fn trigger_sync_shorturls_create(
 async fn trigger_sync_configs_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2275,7 +2213,7 @@ async fn trigger_sync_configs_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2295,7 +2233,6 @@ async fn trigger_sync_configs_create(
 async fn trigger_sync_recorded_meetings_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2304,7 +2241,7 @@ async fn trigger_sync_recorded_meetings_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2324,7 +2261,6 @@ async fn trigger_sync_recorded_meetings_create(
 async fn trigger_sync_asset_inventory_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2333,7 +2269,7 @@ async fn trigger_sync_asset_inventory_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2353,7 +2289,6 @@ async fn trigger_sync_asset_inventory_create(
 async fn trigger_sync_swag_inventory_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2362,7 +2297,7 @@ async fn trigger_sync_swag_inventory_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2382,7 +2317,6 @@ async fn trigger_sync_swag_inventory_create(
 async fn trigger_sync_interviews_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2391,7 +2325,7 @@ async fn trigger_sync_interviews_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2411,7 +2345,6 @@ async fn trigger_sync_interviews_create(
 async fn trigger_sync_applications_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2420,7 +2353,7 @@ async fn trigger_sync_applications_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2440,7 +2373,6 @@ async fn trigger_sync_applications_create(
 async fn trigger_sync_analytics_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2449,7 +2381,7 @@ async fn trigger_sync_analytics_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2469,7 +2401,6 @@ async fn trigger_sync_analytics_create(
 async fn trigger_sync_companies_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2478,7 +2409,7 @@ async fn trigger_sync_companies_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2498,7 +2429,6 @@ async fn trigger_sync_companies_create(
 async fn trigger_sync_other_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2507,7 +2437,7 @@ async fn trigger_sync_other_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2527,7 +2457,6 @@ async fn trigger_sync_other_create(
 async fn trigger_sync_huddles_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2536,7 +2465,7 @@ async fn trigger_sync_huddles_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2556,7 +2485,6 @@ async fn trigger_sync_huddles_create(
 async fn trigger_sync_mailing_lists_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2565,7 +2493,7 @@ async fn trigger_sync_mailing_lists_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2585,7 +2513,6 @@ async fn trigger_sync_mailing_lists_create(
 async fn trigger_sync_journal_clubs_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2594,7 +2521,7 @@ async fn trigger_sync_journal_clubs_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2614,7 +2541,6 @@ async fn trigger_sync_journal_clubs_create(
 async fn trigger_sync_api_tokens_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn
@@ -2623,7 +2549,7 @@ async fn trigger_sync_api_tokens_create(
     {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(r))
         }
         // Send the error to sentry.
@@ -2642,13 +2568,12 @@ async fn trigger_sync_api_tokens_create(
 }]
 #[tracing::instrument]
 async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseAccepted<()>, HttpError> {
-    sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
     match txn.run(|| do_cleanup(rqctx.context())).await {
         Ok(_) => {
             txn.finish(http::StatusCode::ACCEPTED);
-            sentry::end_session();
+
             Ok(HttpResponseAccepted(()))
         }
         // Send the error to sentry.
@@ -2694,7 +2619,6 @@ async fn do_cleanup(ctx: &Context) -> Result<()> {
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     // Send to sentry.
     sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
-    sentry::end_session();
 
     // We use the debug formatting here so we get the stack trace.
     return HttpError::for_internal_error(format!("{:?}", err));
@@ -2716,6 +2640,7 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
     //         |         ^^^^^^^^^ implementation of `std::ops::FnOnce` is not general enough
     #[allow(clippy::redundant_closure)]
     let hub = Arc::new(Hub::with(|hub| Hub::new_from_top(hub)));
+    hub.start_session();
 
     // Get the raw headers.
     let mut raw_req = rqctx.request.lock().await;
@@ -2797,6 +2722,8 @@ impl SentryTransaction {
                 scope.set_span(Some(parent_span.clone()));
             });
         }
+
+        self.hub.as_ref().unwrap().end_session();
     }
 }
 
@@ -2830,6 +2757,8 @@ fn start_sentry_cron_transaction(job: &str) -> SentryTransaction {
     //         |         ^^^^^^^^^ implementation of `std::ops::FnOnce` is not general enough
     #[allow(clippy::redundant_closure)]
     let hub = Arc::new(Hub::with(|hub| Hub::new_from_top(hub)));
+    // Start the session.
+    hub.start_session();
 
     let trx_ctx = sentry::TransactionContext::new(job, "job.exec");
 
