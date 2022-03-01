@@ -2534,13 +2534,18 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
     let raw_req = rqctx.request.lock().await;
     let raw_headers = raw_req.headers().clone();
 
+    let url = raw_req.uri();
+
+    let query_string = url.query().map(|query_string| query_string.to_string());
+
     let sentry_req = sentry::protocol::Request {
         method: Some(raw_req.method().to_string()),
-        url: raw_req.uri().to_string().parse().ok(),
+        url: url.to_string().parse().ok(),
         headers: raw_headers
             .iter()
             .map(|(header, value)| (header.to_string(), value.to_str().unwrap_or_default().into()))
             .collect(),
+        query_string,
         ..Default::default()
     };
 
