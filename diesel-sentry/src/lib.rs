@@ -99,7 +99,7 @@ where
     fn establish(database_url: &str) -> ConnectionResult<Self> {
         tracing::debug!("establishing postgresql connection");
         let conn_id = Uuid::new_v4();
-        let mut txn = start_sentry_db_transaction("connection", &conn_id.to_string());
+        let mut txn = start_sentry_db_transaction("connection", "establish");
         let conn = C::establish(database_url);
         let mut inner = conn?;
 
