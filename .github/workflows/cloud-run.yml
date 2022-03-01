@@ -8,6 +8,8 @@ on:
       - 'webhooky/**'
       - 'cio/**'
       - '.github/workflows/cloud-run.yml'
+      - 'macros/**'
+      - 'diesel-sentry/**'
   workflow_dispatch:
     inputs:
 
