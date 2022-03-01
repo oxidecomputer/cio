@@ -21,11 +21,14 @@ use uuid::Uuid;
 diesel::sql_function!(fn current_database() -> diesel::sql_types::Text);
 // db.version
 diesel::sql_function!(fn version() -> diesel::sql_types::Text);
+// db.user
+diesel::sql_function!(fn user() -> diesel::sql_types::Text);
 
 #[derive(Queryable, Clone, Debug, PartialEq, Default)]
 struct ConnectionInfo {
     current_database: String,
     version: String,
+    user: String,
 }
 
 /// A [`Connection`] that includes Sentry tracing points.
@@ -55,12 +58,15 @@ impl<C: Connection> SimpleConnection for SentryConnection<C> {
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
+            db.user=%self.info.user,
+            db.statement=%query,
             otel.kind="client",
         ),
         skip(self, query),
     )]
     fn batch_execute(&mut self, query: &str) -> QueryResult<()> {
         let mut txn = start_sentry_db_transaction("sql.query", query);
+
         let result = self.inner.batch_execute(query);
         txn.finish();
         result
@@ -85,6 +91,7 @@ where
             db.name=tracing::field::Empty,
             db.system="postgresql",
             db.version=tracing::field::Empty,
+            db.user=tracing::field::Empty,
             otel.kind="client",
         ),
         skip(database_url),
@@ -97,16 +104,18 @@ where
         let mut inner = conn?;
 
         tracing::debug!("querying postgresql connection information");
-        let info: ConnectionInfo = diesel::select((current_database(), version()))
+        let info: ConnectionInfo = diesel::select((current_database(), version(), user()))
             .get_result(&mut inner)
             .map_err(ConnectionError::CouldntSetupConfiguration)?;
 
         let span = tracing::Span::current();
         span.record("db.name", &info.current_database.as_str());
         span.record("db.version", &info.version.as_str());
+        span.record("db.user", &info.user.as_str());
 
         tracing::debug!("db.name: {}", info.current_database);
         tracing::debug!("db.version: {}", info.version);
+        tracing::debug!("db.user: {}", info.user);
 
         txn.finish();
 
@@ -122,6 +131,7 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
+            db.user=%self.info.user,
             otel.kind="client",
         ),
         skip(self, f),
@@ -136,8 +146,21 @@ where
         txn.finish();
         result
     }
+
+    #[tracing::instrument(
+        fields(
+            db.name=%self.info.current_database,
+            db.system="postgresql",
+            db.version=%self.info.version,
+            db.user=%self.info.user,
+            db.statement=%query,
+            otel.kind="client",
+        ),
+        skip(self),
+    )]
     fn execute(&mut self, query: &str) -> QueryResult<usize> {
         let mut txn = start_sentry_db_transaction("sql.query", query);
+
         let result = self.inner.execute(query);
         txn.finish();
         result
@@ -148,6 +171,8 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
+            db.user=%self.info.user,
+            db.statement=tracing::field::Empty,
             otel.kind="client",
         ),
         skip(self, source),
@@ -158,9 +183,14 @@ where
         T::Query: QueryFragment<Self::Backend> + QueryId,
         Self::Backend: QueryMetadata<T::SqlType>,
     {
-        let query = source.as_query();
-        let mut txn = start_sentry_db_transaction("sql.query", &debug_query::<Self::Backend, _>(&query).to_string());
-        let result = self.inner.load(query);
+        let q = source.as_query();
+        let query = debug_query::<Self::Backend, _>(&q).to_string();
+
+        let mut txn = start_sentry_db_transaction("sql.query", &query);
+        let span = tracing::Span::current();
+        span.record("db.statement", &query.as_str());
+
+        let result = self.inner.load(q);
         txn.finish();
         result
     }
@@ -170,6 +200,8 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
+            db.user=%self.info.user,
+            db.statement=tracing::field::Empty,
             otel.kind="client",
         ),
         skip(self, source),
@@ -178,7 +210,11 @@ where
     where
         T: QueryFragment<Self::Backend> + QueryId,
     {
-        let mut txn = start_sentry_db_transaction("sql.query", &debug_query::<Self::Backend, _>(&source).to_string());
+        let query = debug_query::<Self::Backend, _>(&source).to_string();
+        let mut txn = start_sentry_db_transaction("sql.query", &query);
+        let span = tracing::Span::current();
+        span.record("db.statement", &query.as_str());
+
         let result = self.inner.execute_returning_count(source);
         txn.finish();
         result
@@ -189,6 +225,7 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
+            db.user=%self.info.user,
             otel.kind="client",
         ),
         skip(self),
