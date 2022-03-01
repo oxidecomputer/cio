@@ -384,7 +384,7 @@ async fn listen_products_sold_count_requests(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers::handle_products_sold_count(rqctx).await {
+    match txn.run(|| crate::handlers::handle_products_sold_count(rqctx)).await {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
             sentry::end_session();
@@ -411,7 +411,10 @@ async fn listen_github_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_github::handle_github(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_github::handle_github(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -440,7 +443,10 @@ async fn trigger_rfd_update_by_number(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_rfd_update_by_number(rqctx, path_params).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_rfd_update_by_number(rqctx, path_params))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -461,7 +467,7 @@ async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers::handle_github_rate_limit(rqctx).await {
+    match txn.run(|| crate::handlers::handle_github_rate_limit(rqctx)).await {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
             sentry::end_session();
@@ -501,7 +507,10 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_employees_print_home_address_label(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_employees_print_home_address_label(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -527,7 +536,10 @@ async fn listen_airtable_certificates_renew_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_certificates_renew(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_certificates_renew(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -553,7 +565,10 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_assets_items_print_barcode_label(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_assets_items_print_barcode_label(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -579,7 +594,9 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(rqctx, body_param).await
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(rqctx, body_param))
+        .await
     {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
@@ -606,7 +623,10 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_applicants_request_background_check(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_applicants_request_background_check(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -633,7 +653,10 @@ async fn listen_airtable_applicants_update_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_applicants_update(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_applicants_update(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -660,7 +683,10 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_create(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_shipments_outbound_create(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -695,7 +721,10 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_reprint_label(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_shipments_outbound_reprint_label(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -721,7 +750,10 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -747,9 +779,13 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) =
-        crate::handlers::handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(rqctx, body_param)
-            .await
+    if let Err(e) = txn
+        .run(|| {
+            crate::handlers::handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(
+                rqctx, body_param,
+            )
+        })
+        .await
     {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
@@ -776,7 +812,10 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -844,7 +883,10 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -869,7 +911,10 @@ async fn listen_applicant_review_requests(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_applicant_review(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_applicant_review(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -894,7 +939,10 @@ async fn listen_application_submit_requests(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_application_submit(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_application_submit(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -944,7 +992,10 @@ async fn listen_application_files_upload_requests(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers::handle_application_files_upload(rqctx, body_param).await {
+    match txn
+        .run(|| crate::handlers::handle_application_files_upload(rqctx, body_param))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
             sentry::end_session();
@@ -974,7 +1025,10 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_airtable_shipments_inbound_create(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_airtable_shipments_inbound_create(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1000,7 +1054,10 @@ async fn listen_store_order_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_store_order_create(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_store_order_create(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1026,7 +1083,10 @@ async fn listen_easypost_tracking_update_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_easypost_tracking_update(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_easypost_tracking_update(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1095,7 +1155,10 @@ async fn listen_shippo_tracking_update_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_shippo_tracking_update(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_shippo_tracking_update(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1130,7 +1193,10 @@ async fn listen_checkr_background_update_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_checkr_background_update(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_checkr_background_update(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1195,7 +1261,10 @@ async fn listen_auth_google_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_google_callback(rqctx, query_args).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_google_callback(rqctx, query_args))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1244,7 +1313,10 @@ async fn listen_auth_shipbob_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_shipbob_callback(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_shipbob_callback(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1331,7 +1403,10 @@ async fn listen_auth_mailchimp_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_mailchimp_callback(rqctx, query_args).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_mailchimp_callback(rqctx, query_args))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1378,7 +1453,10 @@ async fn listen_auth_gusto_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_gusto_callback(rqctx, query_args).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_gusto_callback(rqctx, query_args))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1446,7 +1524,10 @@ async fn listen_auth_zoom_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_zoom_callback(rqctx, query_args).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_zoom_callback(rqctx, query_args))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1500,7 +1581,10 @@ async fn listen_auth_ramp_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_ramp_callback(rqctx, query_args).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_ramp_callback(rqctx, query_args))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1546,7 +1630,10 @@ async fn listen_auth_slack_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_slack_callback(rqctx, query_args).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_slack_callback(rqctx, query_args))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1592,7 +1679,10 @@ async fn listen_auth_quickbooks_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_quickbooks_callback(rqctx, query_args).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_quickbooks_callback(rqctx, query_args))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1660,7 +1750,10 @@ async fn listen_auth_docusign_callback(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers_auth::handle_auth_docusign_callback(rqctx, query_args).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers_auth::handle_auth_docusign_callback(rqctx, query_args))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1684,7 +1777,10 @@ async fn listen_docusign_envelope_update_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_docusign_envelope_update(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_docusign_envelope_update(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1708,7 +1804,10 @@ async fn listen_analytics_page_view_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_analytics_page_view(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_analytics_page_view(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1744,7 +1843,10 @@ async fn listen_mailchimp_mailing_list_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_mailchimp_mailing_list(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_mailchimp_mailing_list(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1780,7 +1882,10 @@ async fn listen_mailchimp_rack_line_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_mailchimp_rack_line(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_mailchimp_rack_line(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1804,7 +1909,10 @@ async fn listen_slack_commands_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers::handle_slack_commands(rqctx, body_param).await {
+    match txn
+        .run(|| crate::handlers::handle_slack_commands(rqctx, body_param))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
             sentry::end_session();
@@ -1831,7 +1939,10 @@ async fn listen_slack_interactive_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_slack_interactive(rqctx, body_param).await {
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_slack_interactive(rqctx, body_param))
+        .await
+    {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1855,7 +1966,7 @@ async fn listen_shipbob_webhooks(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    if let Err(e) = crate::handlers::handle_shipbob(rqctx, body_param).await {
+    if let Err(e) = txn.run(|| crate::handlers::handle_shipbob(rqctx, body_param)).await {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -1884,7 +1995,10 @@ async fn listen_get_function_by_uuid(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_get_function_by_uuid(rqctx, path_params).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_get_function_by_uuid(rqctx, path_params))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
             sentry::end_session();
@@ -1911,7 +2025,10 @@ async fn listen_get_function_logs_by_uuid(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_get_function_logs_by_uuid(rqctx, path_params).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_get_function_logs_by_uuid(rqctx, path_params))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
             sentry::end_session();
@@ -1937,7 +2054,10 @@ async fn trigger_sync_repos_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-repos", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-repos", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -1963,7 +2083,10 @@ async fn trigger_sync_rfds_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-rfds", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-rfds", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -1989,7 +2112,10 @@ async fn trigger_sync_travel_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2015,7 +2141,10 @@ async fn trigger_sync_functions_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-functions", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-functions", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2041,7 +2170,10 @@ async fn trigger_sync_finance_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-finance", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-finance", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2067,7 +2199,10 @@ async fn trigger_sync_shipments_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shipments", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shipments", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2093,7 +2228,10 @@ async fn trigger_sync_shorturls_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shorturls", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shorturls", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2119,7 +2257,10 @@ async fn trigger_sync_configs_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-configs", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-configs", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2145,7 +2286,10 @@ async fn trigger_sync_recorded_meetings_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-recorded-meetings", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-recorded-meetings", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2171,7 +2315,10 @@ async fn trigger_sync_asset_inventory_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-asset-inventory", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-asset-inventory", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2197,7 +2344,10 @@ async fn trigger_sync_swag_inventory_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-swag-inventory", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-swag-inventory", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2223,7 +2373,10 @@ async fn trigger_sync_interviews_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-interviews", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-interviews", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2249,7 +2402,10 @@ async fn trigger_sync_applications_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-applications", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-applications", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2275,7 +2431,10 @@ async fn trigger_sync_analytics_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-analytics", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-analytics", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2301,7 +2460,10 @@ async fn trigger_sync_companies_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-companies", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-companies", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2327,7 +2489,10 @@ async fn trigger_sync_other_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-other", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-other", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2353,7 +2518,10 @@ async fn trigger_sync_huddles_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-huddles", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-huddles", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2379,7 +2547,10 @@ async fn trigger_sync_mailing_lists_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-mailing-lists", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-mailing-lists", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2405,7 +2576,10 @@ async fn trigger_sync_journal_clubs_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-journal-clubs", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-journal-clubs", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2431,7 +2605,10 @@ async fn trigger_sync_api_tokens_create(
     sentry::start_session();
     let mut txn = start_sentry_http_transaction(rqctx.clone()).await;
 
-    match crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-api-tokens", true).await {
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-api-tokens", true))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2458,7 +2635,7 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
 
     let ctx = rqctx.context();
 
-    match do_cleanup(ctx).await {
+    match txn.run(|| do_cleanup(ctx)).await {
         Ok(_) => {
             txn.finish(http::StatusCode::ACCEPTED);
             sentry::end_session();
@@ -2593,6 +2770,10 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
 }
 
 impl SentryTransaction {
+    pub fn run<F: FnOnce() -> R, R>(&self, f: F) -> R {
+        Hub::run(self.hub.as_ref().unwrap().clone(), f)
+    }
+
     pub fn finish(&mut self, status: StatusCode) {
         let transaction = self.transaction.as_ref().unwrap();
         if transaction.get_status().is_none() {
