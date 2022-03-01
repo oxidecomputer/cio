@@ -37,7 +37,7 @@ gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 http = "0.2.6"
 hyper = { version = "^0.14" }
-hyperx = { version = "^1.4", features = ["headers"] }
+hyperx = { package = "hyper", version = "0.10" }
 lazy_static = "^1.4.0"
 log = { version = "0.4", features = ["serde"] }
 mailchimp-api = "^0.1.11"
