@@ -245,11 +245,11 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SentryTransaction {
-    transaction: sentry::TransactionOrSpan,
+    transaction: Option<sentry::TransactionOrSpan>,
     parent_span: Option<sentry::TransactionOrSpan>,
-    hub: Arc<sentry::Hub>,
+    hub: Option<Arc<sentry::Hub>>,
 }
 
 fn start_sentry_db_transaction(op: &str, name: &str) -> SentryTransaction {
@@ -264,22 +264,18 @@ fn start_sentry_db_transaction(op: &str, name: &str) -> SentryTransaction {
 
     let trx_ctx = sentry::TransactionContext::new(name, &format!("db.{}", op));
 
-    let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
-
-    let mut trx = SentryTransaction {
-        transaction: transaction.clone(),
-        parent_span: None,
-        hub: hub.clone(),
-    };
+    let mut trx: SentryTransaction = Default::default();
 
     hub.configure_scope(|scope| {
-        scope.add_event_processor(move |event| {
-            // TODO: do we want to add information here like we did for the request event.
-            Some(event)
-        });
+        let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
 
-        trx.parent_span = scope.get_span();
+        let parent_span = scope.get_span();
         scope.set_span(Some(transaction.clone()));
+        trx = SentryTransaction {
+            transaction: Some(transaction),
+            parent_span,
+            hub: Some(hub.clone()),
+        };
     });
 
     trx
@@ -287,14 +283,14 @@ fn start_sentry_db_transaction(op: &str, name: &str) -> SentryTransaction {
 
 impl SentryTransaction {
     pub fn finish(&mut self) {
-        if self.transaction.get_status().is_none() {
-            // TODO: we should actually pass if there was an error or not here.
-            self.transaction.set_status(sentry::protocol::SpanStatus::Ok);
+        let transaction = self.transaction.as_ref().unwrap();
+        if transaction.get_status().is_none() {
+            transaction.set_status(sentry::protocol::SpanStatus::Ok);
         }
-        self.transaction.clone().finish();
+        transaction.clone().finish();
 
         if let Some(parent_span) = &self.parent_span {
-            self.hub.configure_scope(|scope| {
+            self.hub.as_ref().unwrap().configure_scope(|scope| {
                 scope.set_span(Some(parent_span.clone()));
             });
         }
