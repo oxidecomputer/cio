@@ -2534,8 +2534,8 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
     let mut raw_req = rqctx.request.lock().await;
     let raw_headers = raw_req.headers().clone();
 
-    let mut body = raw_req.body_mut();
-    let b = read_body_to_string(&mut body).await;
+    let body = raw_req.body_mut();
+    let b = read_body_to_string(body).await;
     let data = if b.is_empty() { None } else { Some(b) };
 
     let url = raw_req.uri();
