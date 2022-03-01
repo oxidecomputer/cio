@@ -2544,10 +2544,12 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
         ..Default::default()
     };
 
+    let sentry_req_clone = sentry_req.clone();
+
     hub.configure_scope(|scope| {
         scope.add_event_processor(move |mut event| {
             if event.request.is_none() {
-                event.request = Some(sentry_req.clone());
+                event.request = Some(sentry_req_clone.clone());
             }
             Some(event)
         });
@@ -2565,6 +2567,8 @@ async fn start_sentry_http_transaction(rqctx: Arc<RequestContext<Context>>) -> S
 
     hub.configure_scope(|scope| {
         let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
+        // Set the request data for the transaction.
+        transaction.set_request(sentry_req.clone());
 
         let parent_span = scope.get_span();
         scope.set_span(Some(transaction.clone()));
