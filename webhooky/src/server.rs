@@ -2712,7 +2712,7 @@ impl SentryTransaction {
     pub fn finish(&mut self, status: StatusCode) {
         let transaction = self.transaction.as_ref().unwrap();
         if transaction.get_status().is_none() {
-            let s = map_status(status);
+            let s = map_http_status(status);
             transaction.set_status(s);
         }
         transaction.clone().finish();
@@ -2723,11 +2723,12 @@ impl SentryTransaction {
             });
         }
 
-        self.hub.as_ref().unwrap().end_session();
+        let s = map_session_status(status);
+        self.hub.as_ref().unwrap().end_session_with_status(s);
     }
 }
 
-fn map_status(status: StatusCode) -> protocol::SpanStatus {
+fn map_http_status(status: StatusCode) -> protocol::SpanStatus {
     match status {
         StatusCode::UNAUTHORIZED => protocol::SpanStatus::Unauthenticated,
         StatusCode::FORBIDDEN => protocol::SpanStatus::PermissionDenied,
@@ -2740,6 +2741,15 @@ fn map_status(status: StatusCode) -> protocol::SpanStatus {
         StatusCode::CONFLICT => protocol::SpanStatus::AlreadyExists,
         status if status.is_success() => protocol::SpanStatus::Ok,
         _ => protocol::SpanStatus::UnknownError,
+    }
+}
+
+fn map_session_status(status: StatusCode) -> protocol::SessionStatus {
+    match status {
+        status if status.is_client_error() => protocol::SessionStatus::Exited,
+        status if status.is_server_error() => protocol::SessionStatus::Crashed,
+        status if status.is_success() => protocol::SessionStatus::Ok,
+        _ => protocol::SessionStatus::Abnormal,
     }
 }
 
