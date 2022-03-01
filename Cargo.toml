@@ -17,3 +17,6 @@ members = [
 	"tailscale",
 	"webhooky",
 ]
+
+[profile.release]
+debug = true
