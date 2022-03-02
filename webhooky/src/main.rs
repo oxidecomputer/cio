@@ -291,6 +291,10 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
         scope.set_tag("command", &format!("{:?}", opts.subcmd));
     });
 
+    sentry::configure_scope(|scope| {
+        scope.set_tag("command", opts.subcmd.name());
+    });
+
     match opts.subcmd {
         SubCommand::Server(s) => {
             sentry::configure_scope(|scope| {
