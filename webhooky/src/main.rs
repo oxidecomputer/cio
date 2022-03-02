@@ -288,11 +288,10 @@ async fn main() -> Result<()> {
 
 async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
     sentry::configure_scope(|scope| {
-        scope.set_tag("command", &format!("{:?}", opts.subcmd));
-    });
-
-    sentry::configure_scope(|scope| {
-        scope.set_tag("command", opts.subcmd.name());
+        scope.set_tag(
+            "command",
+            &format!("{}", std::env::args().collect::<Vec<String>>().join(" ")),
+        );
     });
 
     match opts.subcmd {
