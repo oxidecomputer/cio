@@ -293,6 +293,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
 
     match opts.subcmd {
         SubCommand::Server(s) => {
+            sentry::configure_scope(|scope| {
+                scope.set_tag("do-cron", s.do_cron.to_string());
+            });
             crate::server::server(s, logger, opts.debug).await?;
         }
         SubCommand::SendRFDChangelog(_) => {
