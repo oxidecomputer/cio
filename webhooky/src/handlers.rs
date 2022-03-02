@@ -47,25 +47,25 @@ pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> 
     let api_context = rqctx.context();
 
     // TODO: find a better way to do this.
-    let company = Company::get_from_db(&api_context.db, "Oxide".to_string())
-        .await
-        .unwrap();
+    if let Some(company) = Company::get_from_db(&api_context.db, "Oxide".to_string()).await {
+        // TODO: change this one day to be the number of racks sold.
+        // For now, use it as number of applications that need to be triaged.
+        // Get the applicants that need to be triaged.
+        let applicants = applicants::dsl::applicants
+            .filter(
+                applicants::dsl::cio_company_id
+                    .eq(company.id)
+                    .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
+            )
+            .load_async::<Applicant>(&api_context.db.pool())
+            .await?;
 
-    // TODO: change this one day to be the number of racks sold.
-    // For now, use it as number of applications that need to be triaged.
-    // Get the applicants that need to be triaged.
-    let applicants = applicants::dsl::applicants
-        .filter(
-            applicants::dsl::cio_company_id
-                .eq(company.id)
-                .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
-        )
-        .load_async::<Applicant>(&api_context.db.pool())
-        .await?;
-
-    Ok(CounterResponse {
-        count: applicants.len() as i32,
-    })
+        Ok(CounterResponse {
+            count: applicants.len() as i32,
+        })
+    } else {
+        bail!("Could not find company with name 'Oxide'")
+    }
 }
 
 #[tracing::instrument(skip_all)]
