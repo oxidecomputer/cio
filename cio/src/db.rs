@@ -4,6 +4,7 @@ use anyhow::Result;
 use async_bb8_diesel::ConnectionManager;
 use async_trait::async_trait;
 use diesel::PgConnection;
+use diesel_sentry::SentryConnection;
 
 #[derive(Debug, Clone)]
 pub struct Database {
