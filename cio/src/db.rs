@@ -12,7 +12,7 @@ pub struct Database {
 }
 
 #[derive(Clone)]
-struct DB(bb8::Pool<ConnectionManager<SentryConnection<diesel::PgConnection>>>);
+struct DB(bb8::Pool<ConnectionManager<diesel::PgConnection>>);
 
 // This is a workaround so we can implement Debug for PgConnection.
 impl fmt::Debug for DB {
@@ -27,7 +27,7 @@ impl Database {
     pub async fn new() -> Self {
         let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
 
-        let manager = ConnectionManager::<SentryConnection<PgConnection>>::new(&database_url);
+        let manager = ConnectionManager::<PgConnection>::new(&database_url);
         let pool = bb8::Pool::builder().max_size(25).build(manager).await.unwrap();
 
         Database { pool: DB(pool) }
@@ -35,7 +35,7 @@ impl Database {
 
     /// Returns a connection from the pool.
     #[tracing::instrument]
-    pub fn pool(&self) -> bb8::Pool<ConnectionManager<SentryConnection<diesel::PgConnection>>> {
+    pub fn pool(&self) -> bb8::Pool<ConnectionManager<diesel::PgConnection>> {
         self.pool.0.clone()
     }
 }
