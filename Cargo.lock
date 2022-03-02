@@ -537,7 +537,7 @@ dependencies = [
  "diesel-sentry",
  "diffy",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot 0.6.1-dev",
+ "dropshot 0.6.1-dev (git+https://github.com/oxidecomputer/dropshot?branch=main)",
  "flate2",
  "futures-util",
  "google-calendar",
@@ -1093,6 +1093,44 @@ dependencies = [
 [[package]]
 name = "dropshot"
 version = "0.6.1-dev"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=clone#4599e5f644da2415c8b825508c16d3eb4e668b70"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "base64 0.13.0",
+ "bytes",
+ "chrono",
+ "dropshot_endpoint 0.6.1-dev (git+https://github.com/oxidecomputer/dropshot?branch=clone)",
+ "futures",
+ "hostname",
+ "http",
+ "hyper 0.14.17",
+ "indexmap",
+ "openapiv3 1.0.1",
+ "paste",
+ "percent-encoding 2.1.0",
+ "proc-macro2 1.0.36",
+ "rustls 0.20.4",
+ "rustls-pemfile",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_urlencoded 0.7.1",
+ "slog",
+ "slog-async",
+ "slog-bunyan",
+ "slog-json",
+ "slog-term",
+ "tokio",
+ "tokio-rustls 0.23.2",
+ "toml",
+ "usdt",
+ "uuid",
+]
+
+[[package]]
+name = "dropshot"
+version = "0.6.1-dev"
 source = "git+https://github.com/oxidecomputer/dropshot?branch=main#fef3a0e5b0e0386aaf5c1e07159e127c0b2fc09a"
 dependencies = [
  "async-stream",
@@ -1100,7 +1138,7 @@ dependencies = [
  "base64 0.13.0",
  "bytes",
  "chrono",
- "dropshot_endpoint 0.6.1-dev",
+ "dropshot_endpoint 0.6.1-dev (git+https://github.com/oxidecomputer/dropshot?branch=main)",
  "futures",
  "hostname",
  "http",
@@ -1133,6 +1171,18 @@ name = "dropshot_endpoint"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79e635a98e6f295a909d795d0011fb99f38390a1f18908cafa3f8ca38dc3f415"
+dependencies = [
+ "proc-macro2 1.0.36",
+ "quote 1.0.15",
+ "serde",
+ "serde_tokenstream",
+ "syn 1.0.86",
+]
+
+[[package]]
+name = "dropshot_endpoint"
+version = "0.6.1-dev"
+source = "git+https://github.com/oxidecomputer/dropshot?branch=clone#4599e5f644da2415c8b825508c16d3eb4e668b70"
 dependencies = [
  "proc-macro2 1.0.36",
  "quote 1.0.15",
@@ -5781,7 +5831,7 @@ dependencies = [
  "clokwerk",
  "diesel",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "dropshot 0.6.1-dev",
+ "dropshot 0.6.1-dev (git+https://github.com/oxidecomputer/dropshot?branch=clone)",
  "duct",
  "formdata",
  "futures-util",
