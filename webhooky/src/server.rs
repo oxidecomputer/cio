@@ -2682,14 +2682,24 @@ pub struct SentryTransaction {
 }
 
 pub enum TypedOrUntypedBody<
-    T: serde::Serialize + serde::de::DeserializeOwned + std::marker::Sync + std::marker::Send + schemars::JsonSchema,
+    T: serde::Serialize
+        + serde::de::DeserializeOwned
+        + std::marker::Sync
+        + std::marker::Send
+        + schemars::JsonSchema
+        + std::fmt::Debug,
 > {
     TypedBody(TypedBody<T>),
     UntypedBody(UntypedBody),
 }
 
 async fn start_sentry_http_transaction<
-    T: serde::Serialize + serde::de::DeserializeOwned + std::marker::Sync + std::marker::Send + schemars::JsonSchema,
+    T: serde::Serialize
+        + serde::de::DeserializeOwned
+        + std::marker::Sync
+        + std::marker::Send
+        + schemars::JsonSchema
+        + std::fmt::Debug,
 >(
     rqctx: Arc<RequestContext<Context>>,
     body: Option<TypedOrUntypedBody<T>>,
@@ -2710,7 +2720,14 @@ async fn start_sentry_http_transaction<
 
     let data = if let Some(b) = body {
         match b {
-            TypedOrUntypedBody::TypedBody(t) => Some(json!(t.into_inner()).to_string()),
+            TypedOrUntypedBody::TypedBody(t) => Some({
+                let inner: T = t.into_inner();
+
+                info!("INNER: {:?}", inner);
+                let result = serde_json::to_string(&inner).unwrap();
+                info!("RESULT: {}", result);
+                result
+            }),
             TypedOrUntypedBody::UntypedBody(t) => Some(t.as_str().unwrap().to_string()),
         }
     } else {
