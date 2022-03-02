@@ -1607,7 +1607,7 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     }
 
     // Parse the webhook as a new rack line subscriber.
-    let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db).await;
+    let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db).await?;
 
     let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string()).await;
     if existing.is_none() {
