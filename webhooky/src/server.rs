@@ -2722,11 +2722,7 @@ async fn start_sentry_http_transaction<
         match b {
             TypedOrUntypedBody::TypedBody(t) => Some({
                 let inner: T = t.into_inner();
-
-                info!("INNER: {:?}", inner);
-                let result = serde_json::to_string(&inner).unwrap();
-                info!("RESULT: {}", result);
-                result
+                serde_json::to_string(&inner).unwrap()
             }),
             TypedOrUntypedBody::UntypedBody(t) => Some(t.as_str().unwrap().to_string()),
         }
