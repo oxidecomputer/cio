@@ -938,7 +938,7 @@ xoxo,
         };
 
         zoom.users()
-            .user_update(
+            .update(
                 zoom_user_id,
                 zoom_api::types::LoginType::Noop, // We don't know their login type...
                 &update_user,

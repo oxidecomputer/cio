@@ -36,11 +36,11 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::{env, fmt, fmt::Debug, sync::Arc};
+use std::{env, fmt, fmt::Debug};
 
 use anyhow::{bail, Result};
 use chrono::{offset::Utc, DateTime};
-use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use reqwest::{header, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{
     de::{DeserializeOwned, MapAccess, SeqAccess, Visitor},
@@ -56,7 +56,7 @@ pub struct Airtable {
     base_id: String,
     enterprise_account_id: String,
 
-    client: Arc<Client>,
+    client: reqwest_middleware::ClientWithMiddleware,
 }
 
 /// Get the API key from the AIRTABLE_API_KEY env variable.
@@ -76,15 +76,25 @@ impl Airtable {
         B: ToString,
         E: ToString,
     {
-        let client = Client::builder().build();
-        match client {
-            Ok(c) => Self {
-                key: key.to_string(),
-                base_id: base_id.to_string(),
-                enterprise_account_id: enterprise_account_id.to_string(),
+        let http = reqwest::Client::builder().build();
+        match http {
+            Ok(c) => {
+                let retry_policy = reqwest_retry::policies::ExponentialBackoff::builder().build_with_max_retries(3);
+                let client = reqwest_middleware::ClientBuilder::new(c)
+                    // Trace HTTP requests. See the tracing crate to make use of these traces.
+                    .with(reqwest_tracing::TracingMiddleware)
+                    // Retry failed requests.
+                    .with(reqwest_retry::RetryTransientMiddleware::new_with_policy(retry_policy))
+                    .build();
 
-                client: Arc::new(c),
-            },
+                Self {
+                    key: key.to_string(),
+                    base_id: base_id.to_string(),
+                    enterprise_account_id: enterprise_account_id.to_string(),
+
+                    client,
+                }
+            }
             Err(e) => panic!("creating client failed: {:?}", e),
         }
     }

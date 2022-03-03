@@ -81,6 +81,9 @@ ramp-api = "^0.2.2"
 rand = { version = "^0.8.5", features = ["alloc"] }
 regex = "1"
 reqwest = { version = "0.11", features = ["json"] }
+reqwest-middleware = "0.1.5"
+reqwest-retry = "0.1.4"
+reqwest-tracing = { version = "0.2.1", features = ["opentelemetry_0_17"] }
 revai = { version = "^0.2.2" }
 #revai = { path = "../../third-party-api-clients/rev.ai" }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }

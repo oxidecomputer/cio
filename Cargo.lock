@@ -61,6 +61,8 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d2737e99a1d06334f8c5f1e81b14cb45a8eb949918b9fdcf221f1f29b0ce954"
 dependencies = [
  "anyhow",
  "chrono",
@@ -72,13 +74,14 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.34"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d2737e99a1d06334f8c5f1e81b14cb45a8eb949918b9fdcf221f1f29b0ce954"
+version = "0.1.35"
 dependencies = [
  "anyhow",
  "chrono",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -516,7 +519,7 @@ version = "0.2.0"
 dependencies = [
  "Inflector",
  "acme-lib",
- "airtable-api 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.34",
  "anyhow",
  "async-bb8-diesel",
  "async-recursion 1.0.0",
@@ -566,6 +569,9 @@ dependencies = [
  "rand 0.8.5",
  "regex",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "revai",
  "schemars",
  "sendgrid-api",
@@ -1622,9 +1628,9 @@ checksum = "78cc372d058dcf6d5ecd98510e7fbc9e5aec4d21de70f65fea8fecebcd881bd4"
 
 [[package]]
 name = "google-calendar"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4c2f89d04de89b6ecffd9f9251e76c2bf8503322e1193964432e93a2cf06204"
+checksum = "b7da2e635a675429d8afe27f9214524de64b2dd5bda1699c907ff6ec362621e3"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -1635,22 +1641,28 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "url 2.2.2",
+ "urlencoding 1.3.3",
  "uuid",
  "yup-oauth2 5.1.0",
 ]
 
 [[package]]
 name = "google-drive"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c68ab0cc20e6d5714b2264eca1673864ccdab460a9d7a09233132c7d25452801"
+checksum = "74bfec29faedb0ae24e1b8d2dfae08ef056df4fb470545862ba84642ed1aff48"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -1661,9 +1673,13 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -1696,9 +1712,9 @@ dependencies = [
 
 [[package]]
 name = "google-groups-settings"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5b7eac43136167e7e6b5ec142353900beb1b1b854b41f83149fb8131b104b21"
+checksum = "c05241f6a20057e26a3f1d2dac115b32fe520b068b42d654460e35d602d0d088"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -1709,22 +1725,28 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "url 2.2.2",
+ "urlencoding 1.3.3",
  "uuid",
  "yup-oauth2 5.1.0",
 ]
 
 [[package]]
 name = "gsuite-api"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7f58c74852b6c81d70b6c517dad690eaa3d6b6cee76e42c9097855f3a551348"
+checksum = "1dacc2292dcf453b570edd7bf9a032e2e3f7d1b5cbe0a66f4b6ab13cad389adb"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -1735,22 +1757,28 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "url 2.2.2",
+ "urlencoding 1.3.3",
  "uuid",
  "yup-oauth2 5.1.0",
 ]
 
 [[package]]
 name = "gusto-api"
-version = "0.2.11"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0db883bb45286b215e22ef886e5f63dcc0b9223691bc58a4b386fa434892542f"
+checksum = "dcddc0bc031f8bfe092113c1d7125d0305bb52e5867e64dd58fc0db9b4a2649e"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -1760,9 +1788,13 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -2753,9 +2785,9 @@ dependencies = [
 
 [[package]]
 name = "octorust"
-version = "0.1.33"
+version = "0.1.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d71ff16872b9dc26b903229ca6665f0383fd1f4947c6ce5309c6c262832c2caa"
+checksum = "684aa026ded301e4dbc47dba5c508ac19e099ee2a872ca43ce310f2a296d19e0"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -2764,9 +2796,13 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -2776,9 +2812,9 @@ dependencies = [
 
 [[package]]
 name = "okta"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f9719daeb60a4c744f480d2cab92816e16a6ec3e02c3ce83c46397aeb56fb99"
+checksum = "6f1235b6a27c1755c1979dcad14d2b5be92c33513e392c822497a42aea64e33d"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -2792,6 +2828,9 @@ dependencies = [
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -2895,6 +2934,25 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "opentelemetry"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6105e89802af13fdf48c49d7646d3b533a70e536d818aae7e78ba0433d01acb8"
+dependencies = [
+ "async-trait",
+ "crossbeam-channel",
+ "futures-channel",
+ "futures-executor",
+ "futures-util",
+ "js-sys",
+ "lazy_static",
+ "percent-encoding 2.1.0",
+ "pin-project",
+ "rand 0.8.5",
+ "thiserror",
 ]
 
 [[package]]
@@ -3159,6 +3217,26 @@ dependencies = [
  "serde",
  "serde_derive",
  "thiserror",
+]
+
+[[package]]
+name = "pin-project"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58ad3879ad3baf4e44784bc6a718a8698867bb991f8ce24d1bcbe2cfb4c3a75e"
+dependencies = [
+ "pin-project-internal",
+]
+
+[[package]]
+name = "pin-project-internal"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "744b6f092ba29c3650faf274db506afd39944f48420f6c86b17cfe0ee1cb36bb"
+dependencies = [
+ "proc-macro2 1.0.36",
+ "quote 1.0.15",
+ "syn 1.0.86",
 ]
 
 [[package]]
@@ -3427,9 +3505,9 @@ dependencies = [
 
 [[package]]
 name = "ramp-api"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86239491dbc35355d32f9240db8710433fb62ed205b28c99d30cd79e3695c4e9"
+checksum = "871b0210f42d34240d8362deea15f587c0a99a947af48f825b238c7fd9ea9901"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -3443,6 +3521,9 @@ dependencies = [
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -3706,10 +3787,73 @@ dependencies = [
 ]
 
 [[package]]
-name = "revai"
-version = "0.2.2"
+name = "reqwest-middleware"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "926c9fd609701278eebd4d356ede3e97b0cb63a5d1fd4e479ad6bd56b5cdcdfc"
+checksum = "3b58621b8223cfc85b63d38b8d335c69b96a666d9b7561aa30a3b070ce1df31c"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "http",
+ "reqwest",
+ "serde",
+ "task-local-extensions",
+ "thiserror",
+]
+
+[[package]]
+name = "reqwest-retry"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d5cb0170c4fa3f251c036ef482b35abc550afac6305cf875541c4b78dd76c6c"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "futures",
+ "http",
+ "hyper 0.14.17",
+ "reqwest",
+ "reqwest-middleware",
+ "retry-policies",
+ "task-local-extensions",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "reqwest-tracing"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03f32bd53de59d66d157bd974bafbb69fbb9e98f665d14218b5b991e7dba8d75"
+dependencies = [
+ "async-trait",
+ "opentelemetry",
+ "reqwest",
+ "reqwest-middleware",
+ "task-local-extensions",
+ "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+]
+
+[[package]]
+name = "retry-policies"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47f9e19b18c6cdd796cc70aea8a9ea5ee7b813be611c6589e3624fcdbfd05f9d"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "rand 0.8.5",
+]
+
+[[package]]
+name = "revai"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdca575f99350fdd42f3fb471af88fb04d91b450b01cb5bd5f91425cf363e2c1"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -3723,6 +3867,9 @@ dependencies = [
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -3996,9 +4143,9 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "sendgrid-api"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a2d679b7f98534e7d6ee0502f9b8f4397ec26fd1a704ab0069f84c8d8f1e5b8"
+checksum = "9c48275eaf5e88f40fb8e3bf9af17edfc1b89a2167323e923908690c221441b0"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -4008,13 +4155,19 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "url 2.2.2",
+ "urlencoding 1.3.3",
  "uuid",
 ]
 
@@ -4040,7 +4193,7 @@ dependencies = [
 [[package]]
 name = "sentry"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "httpdate",
  "reqwest",
@@ -4068,7 +4221,7 @@ dependencies = [
 [[package]]
 name = "sentry-anyhow"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "anyhow",
  "sentry-backtrace 0.25.0",
@@ -4090,7 +4243,7 @@ dependencies = [
 [[package]]
 name = "sentry-backtrace"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "backtrace",
  "lazy_static",
@@ -4114,7 +4267,7 @@ dependencies = [
 [[package]]
 name = "sentry-contexts"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "hostname",
  "libc",
@@ -4139,7 +4292,7 @@ dependencies = [
 [[package]]
 name = "sentry-core"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "lazy_static",
  "rand 0.8.5",
@@ -4162,7 +4315,7 @@ dependencies = [
 [[package]]
 name = "sentry-debug-images"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "findshlibs",
  "lazy_static",
@@ -4192,7 +4345,7 @@ dependencies = [
 [[package]]
 name = "sentry-panic"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "sentry-backtrace 0.25.0",
  "sentry-core 0.25.0",
@@ -4212,7 +4365,7 @@ dependencies = [
 [[package]]
 name = "sentry-tracing"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "sentry-core 0.25.0",
  "tracing-core",
@@ -4239,7 +4392,7 @@ dependencies = [
 [[package]]
 name = "sentry-types"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#2e699f02957f7b1dc705c0a225a1efd21172b654"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#512562d6176268a6b1191e6e14110bd712e415e6"
 dependencies = [
  "debugid",
  "getrandom 0.2.5",
@@ -4435,9 +4588,9 @@ dependencies = [
 
 [[package]]
 name = "sheets"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f41960d0e32e2ca24d8f4b3d8a4b9a57b74fb007a20fd27606e4e0cb46dd238f"
+checksum = "4fd8f016202d7cebe8e1284fb40a97cb8bcf5609541e4346d58f7191918c34a5"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -4448,13 +4601,19 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "url 2.2.2",
+ "urlencoding 1.3.3",
  "uuid",
  "yup-oauth2 5.1.0",
 ]
@@ -4467,9 +4626,9 @@ checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
 
 [[package]]
 name = "shipbob"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6ebfa33e11da1ac0828b518ba5acf3291bf579453ca7ce1c8f728a990e9401c"
+checksum = "76ef6458806a4248446ee563bd6d5bdea9bde587fd12be7f2f82636ae29b1cfa"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -4483,6 +4642,9 @@ dependencies = [
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -4952,6 +5114,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "task-local-extensions"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36794203e10c86e5998179e260869d156e0674f02d5451b4a3fb9fd86d02aaab"
+dependencies = [
+ "tokio",
+]
+
+[[package]]
 name = "tempdir"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5325,6 +5496,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-opentelemetry"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f9378e96a9361190ae297e7f3a8ff644aacd2897f244b1ff81f381669196fa6"
+dependencies = [
+ "opentelemetry",
+ "tracing",
+ "tracing-core",
+ "tracing-log",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-serde"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5378,9 +5562,9 @@ checksum = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
 
 [[package]]
 name = "tripactions"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2972900bb8553f854ee8c23a7a855128110050e8353536e6ba197f0d566d36d"
+checksum = "2b781773df81c36ca486dd0299618a3e4e793df5b8ce409740e9f8f2385c40b3"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -5390,13 +5574,18 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
 ]
@@ -6121,21 +6310,30 @@ dependencies = [
 
 [[package]]
 name = "zoom-api"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c12951f77b739ddcf686eb5a4b0974b9876d8ec7f2781cc40920b8cb3bdc310"
+checksum = "fb935b8603482dfd719a2b9e9353959d6f4f84ed28ca7e08073b279073f9d122"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
+ "async-trait",
+ "bytes",
  "chrono",
  "http",
  "hyperx",
  "jsonwebtoken",
+ "log 0.4.14",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
+ "serde_urlencoded 0.7.1",
+ "url 2.2.2",
+ "urlencoding 1.3.3",
  "uuid",
 ]

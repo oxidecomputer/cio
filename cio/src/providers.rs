@@ -1297,7 +1297,7 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
         // We can know this if the zoom_id is empty.
         let zoom_user = self
             .users()
-            .user_create(&zoom_api::types::UserCreateRequest {
+            .create(&zoom_api::types::UserCreateRequest {
                 // User will get an email sent from Zoom.
                 // There is a confirmation link in this email.
                 // The user will then need to use the link to activate their Zoom account.
@@ -1363,7 +1363,7 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
         }
 
         self.users()
-            .user_delete(
+            .delete(
                 &user.zoom_id, // ID of the user to delete.
                 zoom_api::types::UserDeleteAction::Delete,
                 &user.manager(db).await.email, // Email of the user's manager to transfer items to
