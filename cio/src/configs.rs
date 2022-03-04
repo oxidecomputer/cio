@@ -1802,11 +1802,17 @@ pub async fn sync_users(
         }
 
         if let Ok(ref ramp) = ramp_auth {
-            let ramp_id = ramp.ensure_user(db, company, &new_user).await?;
-            // Set the Ramp ID for the user.
-            new_user.ramp_id = ramp_id.to_string();
-            // Update the user in the database.
-            new_user = new_user.update(db).await?;
+            match ramp.ensure_user(db, company, &new_user).await {
+                Ok(ramp_id) => {
+                    // Set the Ramp ID for the user.
+                    new_user.ramp_id = ramp_id.to_string();
+                    // Update the user in the database.
+                    new_user = new_user.update(db).await?;
+                }
+                Err(e) => {
+                    warn!("Failed to ensure ramp user `{}`: {}", new_user.email, e);
+                }
+            }
         }
 
         // Get the Airtable information for the user.

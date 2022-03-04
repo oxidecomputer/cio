@@ -237,9 +237,12 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
         scheduler
             .every(5.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-travel")});
-        // TODO: Run the RFD changelog.
-        // Turn this on once we know cron jobs are consistently running.
-        /* scheduler.every(Monday).at("8:00 am").run(enclose!{ (api_context) move || api_context.create_do_job_fn("send-rfd-changelog")}); */
+        // Run the RFD changelog.
+        // // TODO: remove the github action when we know this is working consistently.
+        /*scheduler
+        .every(clokwerk::Interval::Monday)
+        .at("8:00 am")
+        .run(enclose! { (api_context) move || api_context.create_do_job_fn("send-rfd-changelog")});*/
 
         tokio::spawn(async move {
             info!("starting cron job scheduler...");

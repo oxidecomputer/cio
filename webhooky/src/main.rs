@@ -356,8 +356,23 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            for company in companies {
-                cio_api::configs::refresh_db_configs_and_airtable(&db, &company).await?;
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(async move {
+                        let db = Database::new().await;
+                        cio_api::configs::refresh_db_configs_and_airtable(&db, &company).await
+                    })
+                })
+                .collect();
+
+            let mut results: Vec<Result<()>> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for result in results {
+                result?;
             }
         }
         SubCommand::SyncFinance(_) => {
