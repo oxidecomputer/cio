@@ -27,7 +27,7 @@ impl Database {
         let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
 
         let manager = ConnectionManager::<PgConnection>::new(&database_url);
-        let pool = bb8::Pool::builder().max_size(25).build(manager).await.unwrap();
+        let pool = bb8::Pool::builder().max_size(10).build(manager).await.unwrap();
 
         Database { pool: DB(pool) }
     }
