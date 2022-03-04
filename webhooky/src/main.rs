@@ -312,8 +312,23 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            for company in companies {
-                cio_api::analytics::refresh_analytics(&db, &company).await?;
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(async move {
+                        let db = Database::new().await;
+                        cio_api::analytics::refresh_analytics(&db, &company).await
+                    })
+                })
+                .collect();
+
+            let mut results: Vec<Result<()>> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for result in results {
+                result?;
             }
         }
         SubCommand::SyncAPITokens(_) => {
@@ -321,8 +336,23 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            for company in companies {
-                cio_api::api_tokens::refresh_api_tokens(&db, &company).await?;
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(async move {
+                        let db = Database::new().await;
+                        cio_api::api_tokens::refresh_api_tokens(&db, &company).await
+                    })
+                })
+                .collect();
+
+            let mut results: Vec<Result<()>> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for result in results {
+                result?;
             }
         }
         SubCommand::SyncApplications(_) => {
@@ -380,8 +410,23 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            for company in companies {
-                cio_api::finance::refresh_all_finance(&db, &company).await?;
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(async move {
+                        let db = Database::new().await;
+                        cio_api::finance::refresh_all_finance(&db, &company).await
+                    })
+                })
+                .collect();
+
+            let mut results: Vec<Result<()>> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for result in results {
+                result?;
             }
         }
         SubCommand::SyncFunctions(_) => {
@@ -448,10 +493,27 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            for company in companies {
-                let github = company.authenticate_github()?;
-                cio_api::repos::sync_all_repo_settings(&db, &github, &company).await?;
-                cio_api::repos::refresh_db_github_repos(&db, &github, &company).await?;
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(async move {
+                        let db = Database::new().await;
+                        tokio::join!(
+                            cio_api::repos::sync_all_repo_settings(&db, &company),
+                            cio_api::repos::refresh_db_github_repos(&db, &company),
+                        )
+                    })
+                })
+                .collect();
+
+            let mut results: Vec<(Result<()>, Result<()>)> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for (refresh_result, cleanup_result) in results {
+                refresh_result?;
+                cleanup_result?;
             }
         }
         SubCommand::SyncRFDs(_) => {
@@ -459,9 +521,27 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            for company in companies {
-                cio_api::rfds::refresh_db_rfds(&db, &company).await?;
-                cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await?;
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(async move {
+                        let db = Database::new().await;
+                        tokio::join!(
+                            cio_api::rfds::refresh_db_rfds(&db, &company),
+                            cio_api::rfds::cleanup_rfd_pdfs(&db, &company),
+                        )
+                    })
+                })
+                .collect();
+
+            let mut results: Vec<(Result<()>, Result<()>)> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for (refresh_result, cleanup_result) in results {
+                refresh_result?;
+                cleanup_result?;
             }
         }
         SubCommand::SyncOther(_) => {
@@ -481,12 +561,30 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            for company in companies {
-                // Ensure we have the webhooks set up for shipbob, if applicable.
-                company.ensure_shipbob_webhooks(&db).await?;
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(async move {
+                        let db = Database::new().await;
+                        // Ensure we have the webhooks set up for shipbob, if applicable.
+                        tokio::join!(
+                            company.ensure_shipbob_webhooks(&db),
+                            cio_api::shipments::refresh_inbound_shipments(&db, &company),
+                            cio_api::shipments::refresh_outbound_shipments(&db, &company)
+                        )
+                    })
+                })
+                .collect();
 
-                cio_api::shipments::refresh_inbound_shipments(&db, &company).await?;
-                cio_api::shipments::refresh_outbound_shipments(&db, &company).await?;
+            let mut results: Vec<(Result<()>, Result<()>, Result<()>)> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for (webhooks_result, inbound_result, outbound_result) in results {
+                webhooks_result?;
+                inbound_result?;
+                outbound_result?;
             }
         }
         SubCommand::SyncShorturls(_) => {
@@ -508,8 +606,23 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            for company in companies {
-                cio_api::travel::refresh_trip_actions(&db, &company).await?;
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(async move {
+                        let db = Database::new().await;
+                        cio_api::travel::refresh_trip_actions(&db, &company).await
+                    })
+                })
+                .collect();
+
+            let mut results: Vec<Result<()>> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for result in results {
+                result?;
             }
         }
     }

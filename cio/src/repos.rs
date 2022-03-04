@@ -530,9 +530,10 @@ pub async fn list_all_github_repos(github: &octorust::Client, company: &Company)
 }
 
 /// Sync the repos with our database.
-#[tracing::instrument(skip(github))]
-pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
-    let github_repos = list_all_github_repos(github, company).await?;
+#[tracing::instrument]
+pub async fn refresh_db_github_repos(db: &Database, company: &Company) -> Result<()> {
+    let github = company.authenticate_github()?;
+    let github_repos = list_all_github_repos(&github, company).await?;
 
     // Get all the repos.
     let db_repos = GithubRepos::get_from_db(db, company.id).await?;
@@ -576,13 +577,14 @@ pub async fn refresh_db_github_repos(db: &Database, github: &octorust::Client, c
  * - Adds protection to the default branch to disallow force pushes.
  * - Adds outside collaborators to their specified repositories.
  */
-#[tracing::instrument(skip(github))]
-pub async fn sync_all_repo_settings(db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
+#[tracing::instrument]
+pub async fn sync_all_repo_settings(db: &Database, company: &Company) -> Result<()> {
+    let github = company.authenticate_github()?;
     let repos = GithubRepos::get_from_db(db, company.id).await?;
 
     // Iterate over the repos and set a number of default settings.
     for r in repos {
-        r.sync_settings(github, company).await?;
+        r.sync_settings(&github, company).await?;
     }
 
     Ok(())
