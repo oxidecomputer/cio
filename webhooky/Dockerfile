@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
 	poppler-utils \
 	ruby \
 	nodejs \
+	npm \
     texlive-latex-base \
 	texlive-fonts-recommended \
 	texlive-fonts-extra \
