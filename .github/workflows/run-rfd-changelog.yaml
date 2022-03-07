@@ -18,8 +18,10 @@ jobs:
             libusb-1.0-0-dev \
             pandoc \
             poppler-utils \
-            ruby
-          sudo gem install asciidoctor-pdf rouge
+            ruby \
+            nodejs
+          sudo gem install asciidoctor-pdf asciidoctor-mermaid rouge
+          npm install -g @mermaid-js/mermaid-cli
       - name: Install SQL proxy
         shell: bash
         run: |
