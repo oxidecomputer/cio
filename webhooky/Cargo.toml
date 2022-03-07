@@ -54,7 +54,7 @@ sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "
 #sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"], path = "../../sentry-rust/sentry"  }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_qs = "0.8"
+serde_qs = "0.9"
 serde_urlencoded = "^0.7.0"
 sheets = "^0.2.0"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
