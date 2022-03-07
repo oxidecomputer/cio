@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
 	pandoc \
 	poppler-utils \
 	ruby \
+	nodejs \
     texlive-latex-base \
 	texlive-fonts-recommended \
 	texlive-fonts-extra \
@@ -27,6 +28,8 @@ RUN gem install \
 	asciidoctor-pdf \
 	asciidoctor-mermaid \
 	rouge
+
+RUN npm install -g @mermaid-js/mermaid-cli
 
 # ------------------------------------------------------------------------------
 # Cargo Nightly Stage
