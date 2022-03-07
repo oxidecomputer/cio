@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - uses: actions/setup-node@v2
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
@@ -19,9 +20,9 @@ jobs:
             pandoc \
             poppler-utils \
             ruby \
-            nodejs
           sudo gem install asciidoctor-pdf asciidoctor-mermaid rouge
-          npm install -g @mermaid-js/mermaid-cli
+          npm install @mermaid-js/mermaid-cli
+          ln -s ./node_modules/.bin/mmdc /usr/local/bin/mmdc
       - name: Install SQL proxy
         shell: bash
         run: |

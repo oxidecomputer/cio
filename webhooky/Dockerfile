@@ -16,7 +16,6 @@ RUN apt-get update && apt-get install -y \
 	pandoc \
 	poppler-utils \
 	ruby \
-	nodejs \
 	npm \
     texlive-latex-base \
 	texlive-fonts-recommended \
@@ -25,12 +24,17 @@ RUN apt-get update && apt-get install -y \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+	sudo apt install -y --no-install-recommends \
+	nodejs
+
 RUN gem install \
 	asciidoctor-pdf \
 	asciidoctor-mermaid \
 	rouge
 
-RUN npm install -g @mermaid-js/mermaid-cli
+RUN npm install @mermaid-js/mermaid-cli && \
+	ln -s ./node_modules/.bin/mmdc /usr/local/bin/mmdc
 
 # ------------------------------------------------------------------------------
 # Cargo Nightly Stage
