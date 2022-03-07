@@ -85,6 +85,15 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
                 Some(ramp_user.role.clone())
             };
 
+            // Admins and Owners should not have a manager.
+            let manager_ramp_id = if ramp_user.role == ramp_api::types::Role::BusinessOwner
+                || ramp_user.role == ramp_api::types::Role::BusinessAdmin
+            {
+                "".to_string()
+            } else {
+                manager_ramp_id
+            };
+
             let updated_user = ramp_api::types::PatchUsersRequest {
                 department_id,
                 direct_manager_id: manager_ramp_id,
