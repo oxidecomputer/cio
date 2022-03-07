@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN gem install \
 	asciidoctor-pdf \
+	asciidoctor-mermaid \
 	rouge
 
 # ------------------------------------------------------------------------------

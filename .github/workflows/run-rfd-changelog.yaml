@@ -19,7 +19,7 @@ jobs:
             pandoc \
             poppler-utils \
             ruby
-          sudo gem install asciidoctor-pdf rouge
+          sudo gem install asciidoctor-pdf asciidoctor-mermaid rouge
       - name: Install SQL proxy
         shell: bash
         run: |

@@ -561,7 +561,7 @@ impl RFD {
 
         let cmd_output = Command::new("asciidoctor-pdf")
             .current_dir(env::temp_dir())
-            .args(&["-o", "-", "-a", "source-highlighter=rouge", path.to_str().unwrap()])
+            .args(&["-o", "-", "-r", "asciidoctor-mermaid/pdf", "-a", "source-highlighter=rouge", path.to_str().unwrap()])
             .output()?;
 
         if !cmd_output.status.success() {
