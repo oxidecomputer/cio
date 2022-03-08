@@ -1,5 +1,9 @@
+use std::collections::BTreeMap;
+
 use anyhow::Result;
 use chrono::{Duration, Utc};
+use cloudflare::endpoints::dns;
+use cloudflare::framework::async_api::ApiClient;
 use log::info;
 
 use crate::companies::Company;
@@ -44,6 +48,81 @@ pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
     }
 
     info!("cleaned up old tailscale devices successfully");
+
+    Ok(())
+}
+
+/// When we generate VMs for the console repo, we leave behind a lot of DNS records
+/// in Cloudflare. This function cleans these up when the tailscale device is no longer
+/// active.
+pub async fn cleanup_old_tailscale_cloudflare_dns(company: &Company) -> Result<()> {
+    if company.tailscale_api_key.is_empty() || company.name != "Oxide" {
+        info!(
+            "skipping `cleanup_old_tailscale_cloudflare_dns` for company `{}`",
+            company.name
+        );
+
+        // Return early.
+        return Ok(());
+    }
+
+    // Initialize the Tailscale API.
+    let tailscale = company.authenticate_tailscale();
+
+    // Get the devices.
+    let devices = tailscale.list_devices().await?;
+
+    // Create the array of links.
+    let tailscale_devices: BTreeMap<String, String> = devices
+        .iter()
+        .map(|device| {
+            (
+                device.hostname.trim_end_matches("-2").to_string(),
+                device.id.to_string(),
+            )
+        })
+        .collect();
+
+    // Initialize the Cloudflare API.
+    let cloudflare = company.authenticate_cloudflare()?;
+
+    // List the DNS records.
+    let domain = "oxide.computer";
+    let zone_identifier = &crate::dns_providers::get_zone_identifier(&cloudflare, domain).await?;
+    let dns_records = cloudflare
+        .request(&dns::ListDnsRecords {
+            zone_identifier,
+            params: dns::ListDnsRecordsParams { ..Default::default() },
+        })
+        .await?
+        .result;
+
+    for dns_record in dns_records {
+        if !dns_record.name.starts_with("console-git-") {
+            continue;
+        }
+
+        if !dns_record.name.ends_with(".internal") {
+            continue;
+        }
+
+        println!("{:?}", dns_record);
+
+        let name = dns_record.name.replace(".internal", "");
+
+        // If it does not exist in Tailscale, delete it.
+        if !tailscale_devices.contains_key(&name) {
+            info!("deleting dns record {}", dns_record.name);
+            /* cloudflare
+            .request(&dns::DeleteDnsRecord {
+                zone_identifier,
+                identifier: dns_record.id,
+            })
+            .await?;*/
+        }
+    }
+
+    info!("cleaned up old tailscale dns records in cloudflare successfully");
 
     Ok(())
 }

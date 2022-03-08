@@ -211,10 +211,10 @@ fn content_equals(a: cloudflare::endpoints::dns::DnsContent, b: cloudflare::endp
     false
 }
 
-async fn get_zone_identifier(client: &CloudflareClient, domain: &str) -> Result<String> {
+pub async fn get_zone_identifier(client: &CloudflareClient, domain: &str) -> Result<String> {
     // We need the root of the domain not a subdomain.
     let domain_parts: Vec<&str> = domain.split('.').collect();
-    let root_domain = if domain_parts.len() > 1 {
+    let root_domain = if domain_parts.len() > 2 {
         // We have a subdomain, get the root part of the domain.
         format!(
             "{}.{}",

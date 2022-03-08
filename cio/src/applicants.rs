@@ -1,5 +1,5 @@
 #![allow(clippy::from_over_into)]
-use std::{env, fs, io::Write, process::Command, str::FromStr};
+use std::{env, process::Command, str::FromStr};
 
 use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
@@ -21,6 +21,8 @@ use serde::{Deserialize, Serialize};
 use slack_chat_api::{
     FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
 };
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 
 use crate::{
     airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_REVIEWER_LEADERBOARD_TABLE},
@@ -1421,16 +1423,16 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
 
         path.push(format!("{}.pdf", id));
 
-        let mut file = fs::File::create(&path)?;
-        file.write_all(&contents)?;
+        let mut file = fs::File::create(&path).await?;
+        file.write_all(&contents).await?;
 
         read_pdf(&name, path.clone()).await?
     } else {
         let contents = drive_client.files().download_by_id(&id).await?;
         path.push(&name);
 
-        let mut file = fs::File::create(&path)?;
-        file.write_all(&contents)?;
+        let mut file = fs::File::create(&path).await?;
+        file.write_all(&contents).await?;
 
         output.push(format!("{}.txt", id));
 
@@ -1445,13 +1447,13 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
                 return Ok("".to_string());
             }
         }
-        fs::read_to_string(output.clone())?
+        fs::read_to_string(output.clone()).await?
     };
 
     // Delete the temporary file, if it exists.
     for p in vec![path, output] {
         if p.exists() && !p.is_dir() {
-            fs::remove_file(p)?;
+            fs::remove_file(p).await?;
         }
     }
 
@@ -1468,7 +1470,7 @@ async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     .output()}})
     .await??;
 
-    let result = match fs::read_to_string(output.clone()) {
+    let result = match fs::read_to_string(output.clone()).await {
         Ok(r) => r,
         Err(e) => {
             warn!(
@@ -1487,7 +1489,7 @@ async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     // Delete the temporary file, if it exists.
     for p in vec![path, output] {
         if p.exists() && !p.is_dir() {
-            fs::remove_file(p)?;
+            fs::remove_file(p).await?;
         }
     }
 

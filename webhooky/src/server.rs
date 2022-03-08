@@ -176,7 +176,6 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
          * Setup our cron jobs, with our timezone.
          */
         let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
-        // TODO: probably a better way to do this without all the freaking clones.
         scheduler
             .every(1.day())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-analytics")});
@@ -238,7 +237,6 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
             .every(5.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-travel")});
         // Run the RFD changelog.
-        // TODO: remove the github action when we know this is working consistently.
         scheduler
             .every(clokwerk::Interval::Monday)
             .at("8:00 am")

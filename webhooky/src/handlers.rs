@@ -1146,26 +1146,7 @@ pub async fn handle_application_submit(
     let api_context = rqctx.context();
     let event = body_param.into_inner();
 
-    let result = event.do_form(&api_context.db).await?;
-
-    if result.is_none() {
-        return Ok(());
-    }
-
-    let mut applicant = result.unwrap();
-
-    let company = Company::get_by_id(&api_context.db, applicant.cio_company_id).await?;
-
-    // Initialize the GSuite sheets client.
-    let drive_client = company.authenticate_google_drive(&api_context.db).await?;
-
-    // Expand the application.
-    applicant.expand(&api_context.db, &drive_client).await?;
-
-    // Update airtable and the database again.
-    applicant.update(&api_context.db).await?;
-
-    applicant.send_slack_notification(&api_context.db, &company).await?;
+    event.do_form(&api_context.db).await?;
 
     info!("application for {} {} created successfully", event.email, event.role);
 
