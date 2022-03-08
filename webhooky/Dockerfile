@@ -5,6 +5,8 @@ FROM ubuntu:latest AS app-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+WORKDIR /usr/src/webhooky
+
 RUN apt-get update && apt-get install -y \
 	asciidoctor \
 	ca-certificates \
@@ -46,7 +48,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN rustup default nightly
 
-WORKDIR /usr/src/webhooky
 
 # ------------------------------------------------------------------------------
 # Cargo Build Stage
