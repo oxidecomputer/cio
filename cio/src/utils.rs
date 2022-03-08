@@ -1,7 +1,6 @@
 use std::{
     collections::{BTreeMap, HashMap},
-    env, fs,
-    io::Write,
+    env,
     path::{Path, PathBuf},
     str::from_utf8,
 };
@@ -13,17 +12,19 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
 use sentry::IntoDsn;
 use serde_json::Value;
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 
 use crate::companies::Company;
 
 /// Write a file.
-pub fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
+pub async fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
     // create each directory.
-    fs::create_dir_all(file.parent().unwrap())?;
+    fs::create_dir_all(file.parent().unwrap()).await?;
 
     // Write to the file.
-    let mut f = fs::File::create(file)?;
-    f.write_all(contents)?;
+    let mut f = fs::File::create(file).await?;
+    f.write_all(contents).await?;
 
     info!("wrote file: {}", file.to_str().unwrap());
 

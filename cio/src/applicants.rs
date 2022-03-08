@@ -38,6 +38,7 @@ use crate::{
     configs::{User, Users},
     core::UpdateAirtableRecord,
     db::Database,
+    enclose,
     interviews::ApplicantInterview,
     schema::{applicant_interviews, applicant_reviewers, applicants, users},
     utils::{check_if_github_issue_exists, truncate},
@@ -1434,7 +1435,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
         let mut file = fs::File::create(&path)?;
         file.write_all(&contents)?;
 
-        result = read_pdf(&name, path.clone())?;
+        result = read_pdf(&name, path.clone()).await?;
     } else if mime_type == "text/html" {
         let contents = drive_client.files().download_by_id(&id).await?;
 
@@ -1457,9 +1458,10 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
         fs::create_dir_all(&output)?;
 
         // Extract the text from the archive.
-        let cmd_out = Command::new("7z")
-            .args(&["x", &format!("-o{}", output.to_str().unwrap()), path.to_str().unwrap()])
-            .output()?;
+        let cmd_out = tokio::task::spawn_blocking(enclose! { (output, path) move || {Command::new("7z")
+        .args(&["x", &format!("-o{}", output.to_str().unwrap()), path.to_str().unwrap()])
+        .output()}})
+        .await??;
         info!("pz7ip output: {}", String::from_utf8(cmd_out.stdout)?);
 
         // Walk the output directory trying to find our file.
@@ -1475,7 +1477,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
                         .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
-                    result += &read_pdf(&name, path.to_path_buf())?;
+                    result += &read_pdf(&name, path.to_path_buf()).await?;
                 } else {
                     result += &fs::read_to_string(&path)?;
                 }
@@ -1511,7 +1513,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
                         .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
-                    result += &read_pdf(&name, path.to_path_buf())?;
+                    result += &read_pdf(&name, path.to_path_buf()).await?;
                 } else {
                     result += &fs::read_to_string(&path)?;
                 }
@@ -1546,7 +1548,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
                         .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                 );
                 if path.extension().unwrap() == "pdf" {
-                    result += &read_pdf(&name, path.to_path_buf())?;
+                    result += &read_pdf(&name, path.to_path_buf()).await?;
                 } else {
                     result += &fs::read_to_string(&path)?;
                 }
@@ -1609,7 +1611,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
                                     .replace(env::temp_dir().as_path().to_str().unwrap(), "")
                             );
                             if output.as_path().extension().unwrap() == "pdf" {
-                                result += &read_pdf(&name, output.clone())?;
+                                result += &read_pdf(&name, output.clone()).await?;
                             } else {
                                 result += &fs::read_to_string(&output)?;
                             }
@@ -1640,7 +1642,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
         let mut file = fs::File::create(&path)?;
         file.write_all(&contents)?;
 
-        result = read_rtf(path.clone());
+        result = read_rtf(path.clone()).await?;
     } else if name.ends_with(".doc") {
         // Get the RTF contents from Drive.
         let contents = drive_client.files().download_by_id(&id).await?;
@@ -1650,7 +1652,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
         let mut file = fs::File::create(&path)?;
         file.write_all(&contents)?;
 
-        result = read_doc(path.clone());
+        result = read_doc(path.clone()).await?;
     } else {
         let contents = drive_client.files().download_by_id(&id).await?;
         path.push(&name);
@@ -1660,9 +1662,10 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
 
         output.push(format!("{}.txt", id));
 
-        match Command::new("pandoc")
-            .args(&["-o", output.clone().to_str().unwrap(), path.to_str().unwrap()])
-            .output()
+        match tokio::task::spawn_blocking(enclose! { (output, path) move || {Command::new("pandoc")
+        .args(&["-o", output.clone().to_str().unwrap(), path.to_str().unwrap()])
+        .output()}})
+        .await?
         {
             Ok(_) => (),
             Err(e) => {
@@ -1683,49 +1686,53 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
     Ok(result.trim().to_string())
 }
 
-fn read_doc(path: std::path::PathBuf) -> String {
+async fn read_doc(path: std::path::PathBuf) -> Result<String> {
     // Extract the text from the DOC
-    let cmd_output = Command::new("catdoc").args(&[path.to_str().unwrap()]).output().unwrap();
+    let cmd_output = tokio::task::spawn_blocking(
+        enclose! { (path) move || { Command::new("catdoc").args(&[path.to_str().unwrap()]).output()}},
+    )
+    .await??;
 
-    let result = String::from_utf8(cmd_output.stdout).unwrap();
+    let result = String::from_utf8(cmd_output.stdout)?;
 
     // Delete the temporary file, if it exists.
     for p in vec![path] {
         if p.exists() && !p.is_dir() {
-            fs::remove_file(p).unwrap();
+            fs::remove_file(p)?;
         }
     }
 
-    result
+    Ok(result)
 }
 
-fn read_rtf(path: std::path::PathBuf) -> String {
+async fn read_rtf(path: std::path::PathBuf) -> Result<String> {
     // Extract the text from the RTF
-    let cmd_output = Command::new("unrtf")
-        .args(&["--text", path.to_str().unwrap()])
-        .output()
-        .unwrap();
+    let cmd_output = tokio::task::spawn_blocking(enclose! { (path) move || {Command::new("unrtf")
+    .args(&["--text", path.to_str().unwrap()])
+    .output()}})
+    .await??;
 
-    let result = String::from_utf8(cmd_output.stdout).unwrap();
+    let result = String::from_utf8(cmd_output.stdout)?;
 
     // Delete the temporary file, if it exists.
     for p in vec![path] {
         if p.exists() && !p.is_dir() {
-            fs::remove_file(p).unwrap();
+            fs::remove_file(p)?;
         }
     }
 
-    result
+    Ok(result)
 }
 
-fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
+async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     let mut output = env::temp_dir();
     output.push("tempfile.txt");
 
     // Extract the text from the PDF
-    let cmd_output = Command::new("pdftotext")
-        .args(&["-enc", "UTF-8", path.to_str().unwrap(), output.to_str().unwrap()])
-        .output()?;
+    let cmd_output = tokio::task::spawn_blocking(enclose! { (output, path) move || {Command::new("pdftotext")
+    .args(&["-enc", "UTF-8", path.to_str().unwrap(), output.to_str().unwrap()])
+    .output()}})
+    .await??;
 
     let result = match fs::read_to_string(output.clone()) {
         Ok(r) => r,
@@ -1746,7 +1753,7 @@ fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     // Delete the temporary file, if it exists.
     for p in vec![path, output] {
         if p.exists() && !p.is_dir() {
-            fs::remove_file(p).unwrap();
+            fs::remove_file(p)?;
         }
     }
 

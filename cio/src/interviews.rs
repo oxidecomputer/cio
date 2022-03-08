@@ -496,9 +496,13 @@ The Oxide Team
             cover_output.push(format!("{}.pdf", email));
             let cover_page_str = cover_output.clone().to_str().unwrap().to_string();
             // Convert it to a PDF with pandoc.
-            let cmd_output = Command::new("pandoc")
-                .args(&["-o", &cover_page_str, cover_path.to_str().unwrap()])
-                .output()?;
+            let cmd_output =
+                tokio::task::spawn_blocking(enclose! { (cover_page_str, cover_path) move || {Command::new("pandoc")
+                    .args(&["-o", &cover_page_str, cover_path.to_str().unwrap()])
+                    .output()
+                }})
+                .await??;
+
             if !cmd_output.stdout.is_empty() || !cmd_output.stderr.is_empty() {
                 info!(
                     "creating coverpage `pandoc` stdout:{}\nstderr:{}",
@@ -534,9 +538,12 @@ The Oxide Team
                 header_output.push(format!("{}-{}.pdf", email, username));
                 let header_page_str = header_output.clone().to_str().unwrap().to_string();
                 // Convert it to a PDF with pandoc.
-                let cmd_output = Command::new("pandoc")
+                let cmd_output = tokio::task::spawn_blocking(
+                    enclose! { (header_page_str, html_path) move || {Command::new("pandoc")
                     .args(&["-o", &header_page_str, html_path.to_str().unwrap()])
-                    .output()?;
+                    .output()}},
+                )
+                .await??;
                 if !cmd_output.stdout.is_empty() || !cmd_output.stderr.is_empty() {
                     info!(
                         "creating header page `pandoc` stdout:{}\nstderr:{}",
@@ -702,9 +709,11 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
     output.push(format!("{}.pdf", username));
 
     // Convert it to a PDF with pandoc.
+    tokio::task::spawn_blocking(enclose! { (output, path) move || {
     Command::new("pandoc")
         .args(&["-o", output.to_str().unwrap(), path.to_str().unwrap()])
-        .output()?;
+        .output()}})
+    .await??;
 
     Ok(())
 }

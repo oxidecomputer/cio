@@ -1,4 +1,4 @@
-use std::{convert::TryInto, env, fs, io::Write};
+use std::{convert::TryInto, env};
 
 use airtable_api::Airtable;
 use anyhow::{anyhow, bail, Result};
@@ -31,6 +31,8 @@ use sheets::Client as GoogleSheets;
 use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 use tripactions::Client as TripActions;
 use zoom_api::Client as Zoom;
 
@@ -914,8 +916,8 @@ impl Company {
         file_path.push(&format!("{}-google_service_account.json", self.name));
 
         // Create the file and write to it.
-        let mut file = fs::File::create(file_path.clone())?;
-        file.write_all(self.google_service_account.as_bytes())?;
+        let mut file = fs::File::create(file_path.clone()).await?;
+        file.write_all(self.google_service_account.as_bytes()).await?;
 
         // Set the GSuite credential file to the temp path.
         let google_service_account_file = file_path.to_str().unwrap().to_string();

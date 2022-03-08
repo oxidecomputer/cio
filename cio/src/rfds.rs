@@ -1,8 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::{
     collections::BTreeMap,
-    env, fs,
-    io::Write,
+    env,
     path::{Path, PathBuf},
     process::Command,
     str::from_utf8,
@@ -23,6 +22,8 @@ use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
 
 use crate::{
     airtable::AIRTABLE_RFD_TABLE,
@@ -380,7 +381,7 @@ impl RFD {
         path.push("contents.adoc");
 
         // Write the contents to a temporary file.
-        write_file(&path, deunicode::deunicode(&self.content).as_bytes())?;
+        write_file(&path, deunicode::deunicode(&self.content).as_bytes()).await?;
 
         // If the file contains inline images, we need to save those images locally.
         // TODO: we don't need to save all the images, only the inline ones, clean this up
@@ -391,7 +392,7 @@ impl RFD {
                 // Save the image to our temporary directory.
                 let image_path = format!("{}/{}", parent, image.path.replace(&dir, "").trim_start_matches('/'));
 
-                write_file(&PathBuf::from(image_path), &decode_base64(&image.content))?;
+                write_file(&PathBuf::from(image_path), &decode_base64(&image.content)).await?;
             }
         }
 
@@ -416,7 +417,7 @@ impl RFD {
         // Delete the parent directory.
         let pdir = Path::new(&parent);
         if pdir.exists() && pdir.is_dir() {
-            fs::remove_dir_all(pdir)?;
+            fs::remove_dir_all(pdir).await?;
         }
 
         Ok(result.to_string())
@@ -532,8 +533,8 @@ impl RFD {
         let rfd_content = self.content.to_string();
 
         // Write the contents to a temporary file.
-        let mut file = fs::File::create(path.clone())?;
-        file.write_all(rfd_content.as_bytes())?;
+        let mut file = fs::File::create(path.clone()).await?;
+        file.write_all(rfd_content.as_bytes()).await?;
 
         let file_name = self.get_pdf_filename();
         let rfd_path = format!("/pdfs/{}", file_name);
@@ -559,7 +560,7 @@ impl RFD {
                 image.path.replace(&old_dir, "").trim_start_matches('/')
             );
 
-            write_file(&PathBuf::from(image_path), &decode_base64(&image.content))?;
+            write_file(&PathBuf::from(image_path), &decode_base64(&image.content)).await?;
         }
 
         let cmd_output = tokio::task::spawn_blocking(enclose! { (path) move || {
@@ -614,7 +615,7 @@ impl RFD {
 
         // Delete our temporary file.
         if path.exists() && !path.is_dir() {
-            fs::remove_file(path)?;
+            fs::remove_file(path).await?;
         }
 
         Ok(())
