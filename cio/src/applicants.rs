@@ -1460,7 +1460,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
 
 async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     let mut output = env::temp_dir();
-    output.push("tempfile.txt");
+    output.push(&format!("tempfile-{}.txt", name));
 
     // Extract the text from the PDF
     let cmd_output = tokio::task::spawn_blocking(enclose! { (output, path) move || {Command::new("pdftotext")
