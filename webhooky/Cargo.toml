@@ -47,7 +47,7 @@ quickbooks = "^0.1.12"
 ramp-api = "^0.2.2"
 #ramp-api = { path = "../../third-party-api-clients/ramp" }
 rand = "^0.8.5"
-regex = "^1.5.4"
+regex = "^1.5.5"
 reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "slog"], git = "https://github.com/jessfraz/sentry-rust", branch = "request"  }
