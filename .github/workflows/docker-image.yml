@@ -19,6 +19,9 @@ on:
       - '*/Dockerfile'
   workflow_dispatch:
     inputs:
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   docker-image:
     runs-on: ubuntu-latest
