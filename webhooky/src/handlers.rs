@@ -109,6 +109,9 @@ pub async fn handle_rfd_update_by_number(
     // Do the save before the pdf in case something goes wrong.
     let mut rfd = rfd.update(db).await?;
 
+    // Now that the database is updated, update the search index.
+    rfd.update_search_index().await?;
+
     rfd.convert_and_upload_pdf(db, &github, &oxide).await?;
     info!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 

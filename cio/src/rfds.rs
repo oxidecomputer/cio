@@ -1035,16 +1035,33 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
 
     // Sync rfds.
     for (_, mut rfd) in rfds {
+        rfd.sync(db, company, &github).await?;
+    }
+
+    // Update rfds in airtable.
+    RFDs::get_from_db(db, company.id).await?.update_airtable(db).await?;
+
+    Ok(())
+}
+
+impl NewRFD {
+    async fn sync(&mut self, db: &Database, company: &Company, github: &octorust::Client) -> Result<()> {
         // Check if we already have an existing RFD.
-        if let Some(existing) = RFD::get_from_db(db, rfd.number).await {
+        if let Some(existing) = RFD::get_from_db(db, self.number).await {
             // Set the rfd_sections_id so we don't overwrite it.
-            rfd.rfd_sections_id = existing.rfd_sections_id;
+            self.rfd_sections_id = existing.rfd_sections_id;
         }
 
-        let mut new_rfd = rfd.upsert(db).await?;
+        let mut new_rfd = self.upsert(db).await?;
 
         // Expand the fields in the RFD.
         new_rfd.expand(&github, company).await?;
+
+        // Update the RFD here just in case the PDF conversion fails.
+        let mut new_rfd = new_rfd.update(db).await?;
+
+        // Now that the database is updated, update the search index.
+        new_rfd.update_search_index().await?;
 
         // Make and update the PDF versions.
         if let Err(err) = new_rfd.convert_and_upload_pdf(db, &github, company).await {
@@ -1054,18 +1071,11 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
             );
         }
 
-        // Update the RFD again.
-        // We do this so the expand functions are only one place.
+        // Update the RFD again, for the PDF.
         new_rfd.update(db).await?;
 
-        // Now that the database is updated, update the search index.
-        new_rfd.update_search_index().await?;
+        Ok(())
     }
-
-    // Update rfds in airtable.
-    RFDs::get_from_db(db, company.id).await?.update_airtable(db).await?;
-
-    Ok(())
 }
 
 pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {

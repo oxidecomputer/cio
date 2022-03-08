@@ -3,7 +3,7 @@ use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
-use clokwerk::{AsyncScheduler, TimeUnits};
+use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
@@ -238,11 +238,11 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
             .every(5.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-travel")});
         // Run the RFD changelog.
-        // // TODO: remove the github action when we know this is working consistently.
-        /*scheduler
-        .every(clokwerk::Interval::Monday)
-        .at("8:00 am")
-        .run(enclose! { (api_context) move || api_context.create_do_job_fn("send-rfd-changelog")});*/
+        // TODO: remove the github action when we know this is working consistently.
+        scheduler
+            .every(clokwerk::Interval::Monday)
+            .at("8:00 am")
+            .run(enclose! { (api_context) move || api_context.create_do_job_fn("send-rfd-changelog")});
 
         tokio::spawn(async move {
             info!("starting cron job scheduler...");
