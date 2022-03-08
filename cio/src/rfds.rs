@@ -376,7 +376,7 @@ impl RFD {
         let mut path = env::temp_dir();
         path.push("asciidoc-temp/");
         let pparent = path.clone();
-        let parent = pparent.as_path().to_str().unwrap().trim_end_matches('/');
+        let parent = pparent.as_path().to_str().unwrap().trim_end_matches('/').to_string();
         path.push("contents.adoc");
 
         // Write the contents to a temporary file.
@@ -395,10 +395,13 @@ impl RFD {
             }
         }
 
-        let cmd_output = Command::new("asciidoctor")
-            .current_dir(parent)
-            .args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()])
-            .output()?;
+        let cmd_output = tokio::task::spawn_blocking(enclose! { (parent, path) move || {
+            Command::new("asciidoctor")
+                .current_dir(&parent)
+                .args(&["-o", "-", "--no-header-footer", path.to_str().unwrap()])
+                .output()
+        }})
+        .await??;
 
         let result = if cmd_output.status.success() {
             from_utf8(&cmd_output.stdout)?
@@ -411,7 +414,7 @@ impl RFD {
         };
 
         // Delete the parent directory.
-        let pdir = Path::new(parent);
+        let pdir = Path::new(&parent);
         if pdir.exists() && pdir.is_dir() {
             fs::remove_dir_all(pdir)?;
         }
@@ -559,18 +562,21 @@ impl RFD {
             write_file(&PathBuf::from(image_path), &decode_base64(&image.content))?;
         }
 
-        let cmd_output = Command::new("asciidoctor-pdf")
-            .current_dir(env::temp_dir())
-            .args(&[
-                "-o",
-                "-",
-                "-r",
-                "asciidoctor-mermaid/pdf",
-                "-a",
-                "source-highlighter=rouge",
-                path.to_str().unwrap(),
-            ])
-            .output()?;
+        let cmd_output = tokio::task::spawn_blocking(enclose! { (path) move || {
+            Command::new("asciidoctor-pdf")
+                .current_dir(env::temp_dir())
+                .args(&[
+                    "-o",
+                    "-",
+                    "-r",
+                    "asciidoctor-mermaid/pdf",
+                    "-a",
+                    "source-highlighter=rouge",
+                    path.to_str().unwrap(),
+                ])
+                .output()
+        }})
+        .await??;
 
         if !cmd_output.status.success() {
             bail!(

@@ -45,7 +45,7 @@ jobs:
       - name: Build and push - cfcert
         uses: docker/build-push-action@v2
         with:
-          push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') && ! startsWith(github.ref, 'refs/remotes/pull') }}
+          push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') && github.event_name != 'pull_request' }}
           file: ./cfcert/Dockerfile
           tags: ghcr.io/${{ github.repository_owner }}/cio:cfcert
           cache-from: type=local,src=/tmp/.buildx-cache
