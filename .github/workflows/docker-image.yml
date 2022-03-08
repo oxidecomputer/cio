@@ -42,7 +42,7 @@ jobs:
       - name: Build and push - cfcert
         uses: docker/build-push-action@v2
         with:
-          push: true
+          push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') }}
           file: ./cfcert/Dockerfile
           tags: ghcr.io/${{ github.repository_owner }}/cio:cfcert
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -50,7 +50,7 @@ jobs:
       - name: Build and push - webhooky
         uses: docker/build-push-action@v2
         with:
-          push: true
+          push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') }}
           file: ./webhooky/Dockerfile
           tags: ghcr.io/${{ github.repository_owner }}/cio:webhooky
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -58,7 +58,7 @@ jobs:
       - name: Build and push - cio
         uses: docker/build-push-action@v2
         with:
-          push: true
+          push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') }}
           file: ./cio/Dockerfile
           tags: ghcr.io/${{ github.repository_owner }}/cio:latest
           cache-from: type=local,src=/tmp/.buildx-cache
