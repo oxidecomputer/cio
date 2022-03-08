@@ -1055,7 +1055,7 @@ impl NewRFD {
         let mut new_rfd = self.upsert(db).await?;
 
         // Expand the fields in the RFD.
-        new_rfd.expand(&github, company).await?;
+        new_rfd.expand(github, company).await?;
 
         // Update the RFD here just in case the PDF conversion fails.
         let mut new_rfd = new_rfd.update(db).await?;
@@ -1064,7 +1064,7 @@ impl NewRFD {
         new_rfd.update_search_index().await?;
 
         // Make and update the PDF versions.
-        if let Err(err) = new_rfd.convert_and_upload_pdf(db, &github, company).await {
+        if let Err(err) = new_rfd.convert_and_upload_pdf(db, github, company).await {
             warn!(
                 "failed to convert and upload PDF for RFD {}: {}",
                 new_rfd.number_string, err
