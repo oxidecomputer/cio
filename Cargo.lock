@@ -2608,11 +2608,12 @@ dependencies = [
 
 [[package]]
 name = "names"
-version = "0.11.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef320dab323286b50fb5cdda23f61c796a72a89998ab565ca32525c5c556f2da"
+checksum = "e7d66043b25d4a6cccb23619d10c19c25304b355a7dccd4a8e11423dd2382146"
 dependencies = [
- "rand 0.3.23",
+ "clap 3.1.5",
+ "rand 0.8.5",
 ]
 
 [[package]]
@@ -3539,16 +3540,6 @@ dependencies = [
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
-]
-
-[[package]]
-name = "rand"
-version = "0.3.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64ac302d8f83c0c1974bf758f6b041c6c8ada916fbb44a609158ca8b064cc76c"
-dependencies = [
- "libc",
- "rand 0.4.6",
 ]
 
 [[package]]

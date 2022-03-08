@@ -64,7 +64,7 @@ log = { version = "0.4", features = ["serde"] }
 macros = { path = "../macros" }
 mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }
-names = "^0.11.0"
+names = "^0.13.0"
 nom_pem = "4"
 octorust = { version = "=0.1.33", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
