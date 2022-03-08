@@ -156,7 +156,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                             .await
                         {
                             Ok(_) => (),
-                            Err(err) => warn!(
+                            Err(err) => debug!(
                                 "could not update event description {}: {}",
                                 serde_json::to_string_pretty(&json!(event))?.to_string(),
                                 err

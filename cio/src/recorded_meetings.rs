@@ -807,7 +807,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                                 }
                             }
                         } else {
-                            warn!(
+                            debug!(
                                 "failed to upload video for `{}` with size `{}` to rev.ai: {}",
                                 db_meeting.name,
                                 b.to_string(),
