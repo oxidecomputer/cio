@@ -13,3 +13,7 @@ rfd/
 brex.csv
 expensify.csv
 bill.com.csv
+
+node_modules
+package-lock.json
+package.json
