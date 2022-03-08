@@ -68,15 +68,10 @@ jobs:
           cargo test test_monday_cron -- --ignored
         shell: bash
         env:
-          GOOGLE_KEY_ENCODED: ${{ secrets.GOOGLE_CIO_KEY_ENCODED }}
-          CIO_AUTH0_CLIENT_ID: ${{ secrets.CIO_AUTH0_CLIENT_ID }}
-          CIO_AUTH0_CLIENT_SECRET: ${{ secrets.CIO_AUTH0_CLIENT_SECRET }}
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           GH_APP_ID: ${{ secrets.GH_APP_ID }}
           GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
-          INFLUX_DB_URL: ${{ secrets.INFLUX_DB_URL }}
-          INFLUX_DB_TOKEN: ${{ secrets.INFLUX_DB_TOKEN }}
           SHIPPO_API_TOKEN: ${{ secrets.SHIPPO_API_TOKEN }}
           REVAI_API_KEY: ${{ secrets.REVAI_API_KEY }}
           RUST_LOG: trace
