@@ -2655,9 +2655,24 @@ async fn start_sentry_http_transaction<
 
     let query_string = url.query().map(|query_string| query_string.to_string());
 
+    let url = if let Ok(u) = url.to_string().parse::<String>() {
+        if !u.is_empty() && !u.starts_with("http://") && !u.starts_with("https://") {
+            let url_string = format!(
+                // TODO: should probably make this url configurable.
+                "https://webhooks.corp.oxide.computer/{}",
+                u.trim_start_matches('/')
+            );
+            Some(reqwest::Url::parse(&url_string).unwrap())
+        } else {
+            url.to_string().parse().ok()
+        }
+    } else {
+        None
+    };
+
     let sentry_req = sentry::protocol::Request {
         method: Some(raw_req.method().to_string()),
-        url: url.to_string().parse().ok(),
+        url,
         headers: raw_headers
             .iter()
             .map(|(header, value)| (header.to_string(), value.to_str().unwrap_or_default().into()))
