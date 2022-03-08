@@ -375,7 +375,7 @@ impl RFD {
 
         // Create the temporary directory.
         let mut path = env::temp_dir();
-        path.push("asciidoc-temp/");
+        path.push(&format!("asciidoc-{}-temp/", self.number_string));
         let pparent = path.clone();
         let parent = pparent.as_path().to_str().unwrap().trim_end_matches('/').to_string();
         path.push(&format!("contents-{}.adoc", self.number_string));
