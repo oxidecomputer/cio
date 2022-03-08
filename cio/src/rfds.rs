@@ -745,6 +745,10 @@ impl RFD {
         // Parse the HTML.
         self.html = self.get_html(github, owner, repo, &branch, is_markdown).await?;
 
+        if self.html.trim().is_empty() {
+            return Err(anyhow!("got empty html for rfd#{}", self.number));
+        }
+
         self.authors = NewRFD::get_authors(&self.content, is_markdown)?;
 
         // Set the pdf link
