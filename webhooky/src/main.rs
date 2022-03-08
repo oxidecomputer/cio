@@ -521,27 +521,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let companies = Companys::get_from_db(&db, 1).await?;
 
             // Iterate over the companies and update.
-            let tasks: Vec<_> = companies
-                .into_iter()
-                .map(|company| {
-                    tokio::spawn(async move {
-                        let db = Database::new().await;
-                        tokio::join!(
-                            cio_api::rfds::refresh_db_rfds(&db, &company),
-                            cio_api::rfds::cleanup_rfd_pdfs(&db, &company),
-                        )
-                    })
-                })
-                .collect();
-
-            let mut results: Vec<(Result<()>, Result<()>)> = Default::default();
-            for task in tasks {
-                results.push(task.await?);
-            }
-
-            for (refresh_result, cleanup_result) in results {
-                refresh_result?;
-                cleanup_result?;
+            for company in companies {
+                cio_api::rfds::refresh_db_rfds(&db, &company).await?;
+                cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await?;
             }
         }
         SubCommand::SyncOther(_) => {
