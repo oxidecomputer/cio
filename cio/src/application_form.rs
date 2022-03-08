@@ -4,7 +4,10 @@ use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{applicants::NewApplicant, companies::Company, db::Database};
+use crate::{
+    applicants::{Applicant, NewApplicant},
+    db::Database,
+};
 
 #[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct ApplicationForm {
@@ -40,7 +43,7 @@ pub struct ApplicationForm {
 
 impl ApplicationForm {
     #[tracing::instrument]
-    pub async fn do_form(&self, db: &Database) -> Result<()> {
+    pub async fn do_form(&self, db: &Database) -> Result<Option<Applicant>> {
         // If their email is empty return early.
         if self.email.is_empty()
             || self.name.is_empty()
@@ -51,29 +54,16 @@ impl ApplicationForm {
         {
             // This should not happen since we verify on the client side we have these
             // things.
-            return Ok(());
+            return Ok(None);
         }
 
         // Convert the application form to an applicant.
         let new_applicant: NewApplicant = self.clone().into();
 
         // Add the applicant to the database.
-        let mut applicant = new_applicant.upsert(db).await?;
+        let applicant = new_applicant.upsert(db).await?;
 
-        let company = Company::get_by_id(db, self.cio_company_id).await?;
-
-        // Initialize the GSuite sheets client.
-        let drive_client = company.authenticate_google_drive(db).await?;
-
-        // Expand the application.
-        applicant.expand(db, &drive_client).await?;
-
-        // Update airtable and the database again.
-        applicant.update(db).await?;
-
-        applicant.send_slack_notification(db, &company).await?;
-
-        Ok(())
+        Ok(Some(applicant))
     }
 }
 

@@ -1,7 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::{
     collections::BTreeMap,
-    env, fs,
+    env,
     path::{Path, PathBuf},
     str::from_utf8,
     time,
@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use slack_chat_api::{
     FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
 };
+use tokio::fs;
 
 use crate::{
     airtable::AIRTABLE_CERTIFICATES_TABLE,
@@ -323,11 +324,11 @@ impl NewCertificate {
     /// For a certificate struct, populate the certificate and private_key fields from
     /// disk, then fill in the rest.
     #[tracing::instrument]
-    pub fn populate_from_disk(&mut self, dir: &str) {
+    pub async fn populate_from_disk(&mut self, dir: &str) {
         let path = self.get_path(dir);
 
-        self.certificate = fs::read_to_string(path.join("fullchain.pem")).unwrap_or_default();
-        self.private_key = fs::read_to_string(path.join("privkey.pem")).unwrap_or_default();
+        self.certificate = fs::read_to_string(path.join("fullchain.pem")).await.unwrap_or_default();
+        self.private_key = fs::read_to_string(path.join("privkey.pem")).await.unwrap_or_default();
 
         if !self.certificate.is_empty() {
             let exp_date = self.expiration_date();
@@ -348,7 +349,7 @@ impl NewCertificate {
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
     #[tracing::instrument]
-    pub fn save_to_directory(&self, dir: &str) -> Result<()> {
+    pub async fn save_to_directory(&self, dir: &str) -> Result<()> {
         if self.certificate.is_empty() {
             // Return early.
             return Ok(());
@@ -357,11 +358,11 @@ impl NewCertificate {
         let path = self.get_path(dir);
 
         // Create the directory if it does not exist.
-        fs::create_dir_all(path.clone())?;
+        fs::create_dir_all(path.clone()).await?;
 
         // Write the files.
-        fs::write(path.join("fullchain.pem"), self.certificate.as_bytes())?;
-        fs::write(path.join("privkey.pem"), self.private_key.as_bytes())?;
+        fs::write(path.join("fullchain.pem"), self.certificate.as_bytes()).await?;
+        fs::write(path.join("privkey.pem"), self.private_key.as_bytes()).await?;
 
         Ok(())
     }
