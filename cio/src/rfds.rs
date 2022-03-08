@@ -378,7 +378,7 @@ impl RFD {
         path.push("asciidoc-temp/");
         let pparent = path.clone();
         let parent = pparent.as_path().to_str().unwrap().trim_end_matches('/').to_string();
-        path.push("contents.adoc");
+        path.push(&format!("contents-{}.adoc", self.number_string));
 
         // Write the contents to a temporary file.
         write_file(&path, deunicode::deunicode(&self.content).as_bytes()).await?;

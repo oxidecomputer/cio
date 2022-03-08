@@ -1,10 +1,5 @@
 #![allow(clippy::from_over_into)]
-use std::{
-    env, fs,
-    io::{copy, Write},
-    process::Command,
-    str::FromStr,
-};
+use std::{env, fs, io::Write, process::Command, str::FromStr};
 
 use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
@@ -12,13 +7,11 @@ use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration, NaiveDate};
 use chrono_humanize::HumanTime;
 use docusign::DocuSign;
-use flate2::read::GzDecoder;
 use google_drive::{
     traits::{DriveOps, FileOps},
     Client as GoogleDrive,
 };
 use google_geocode::Geocode;
-use html2text::from_read;
 use log::{info, warn};
 use macros::db;
 use regex::Regex;
@@ -28,8 +21,6 @@ use serde::{Deserialize, Serialize};
 use slack_chat_api::{
     FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
 };
-use tar::Archive;
-use walkdir::WalkDir;
 
 use crate::{
     airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_REVIEWER_LEADERBOARD_TABLE},
@@ -1424,9 +1415,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
     let mut path = env::temp_dir();
     let mut output = env::temp_dir();
 
-    let mut result: String = Default::default();
-
-    if mime_type == "application/pdf" {
+    let result: String = if mime_type == "application/pdf" {
         // Get the PDF contents from Drive.
         let contents = drive_client.files().download_by_id(&id).await?;
 
@@ -1435,7 +1424,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
         let mut file = fs::File::create(&path)?;
         file.write_all(&contents)?;
 
-        result = read_pdf(&name, path.clone()).await?;
+        read_pdf(&name, path.clone()).await?
     } else {
         let contents = drive_client.files().download_by_id(&id).await?;
         path.push(&name);
@@ -1456,8 +1445,8 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
                 return Ok("".to_string());
             }
         }
-        result = fs::read_to_string(output.clone())?;
-    }
+        fs::read_to_string(output.clone())?
+    };
 
     // Delete the temporary file, if it exists.
     for p in vec![path, output] {
@@ -1467,44 +1456,6 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
     }
 
     Ok(result.trim().to_string())
-}
-
-async fn read_doc(path: std::path::PathBuf) -> Result<String> {
-    // Extract the text from the DOC
-    let cmd_output = tokio::task::spawn_blocking(
-        enclose! { (path) move || { Command::new("catdoc").args(&[path.to_str().unwrap()]).output()}},
-    )
-    .await??;
-
-    let result = String::from_utf8(cmd_output.stdout)?;
-
-    // Delete the temporary file, if it exists.
-    for p in vec![path] {
-        if p.exists() && !p.is_dir() {
-            fs::remove_file(p)?;
-        }
-    }
-
-    Ok(result)
-}
-
-async fn read_rtf(path: std::path::PathBuf) -> Result<String> {
-    // Extract the text from the RTF
-    let cmd_output = tokio::task::spawn_blocking(enclose! { (path) move || {Command::new("unrtf")
-    .args(&["--text", path.to_str().unwrap()])
-    .output()}})
-    .await??;
-
-    let result = String::from_utf8(cmd_output.stdout)?;
-
-    // Delete the temporary file, if it exists.
-    for p in vec![path] {
-        if p.exists() && !p.is_dir() {
-            fs::remove_file(p)?;
-        }
-    }
-
-    Ok(result)
 }
 
 async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
@@ -1560,21 +1511,6 @@ pub async fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<S
     }
 
     Ok(reviewers)
-}
-
-fn is_materials(file_name: &str) -> bool {
-    file_name.ends_with("responses.pdf")
-        || (file_name.starts_with("Oxide Candidate Materials") && file_name.ends_with(".pdf"))
-        || (file_name.contains("Oxide_Candidate_Materials") && file_name.ends_with(".pdf"))
-        || file_name.ends_with("Oxide Candidate Materials.pdf")
-        || file_name.ends_with("Oxide Candidate Materials.pdf.pdf")
-        || file_name.ends_with("OxideQuestions.pdf")
-        || file_name.ends_with("oxide-computer-candidate-materials.pdf")
-        || file_name.ends_with("Questionnaire.pdf")
-        || file_name.ends_with("questionnaire.md")
-        || file_name.ends_with("Questionairre.pdf")
-        || file_name.ends_with("Operations Manager.pdf")
-        || file_name.ends_with("README.md")
 }
 
 /// The data type for a ApplicantReviewer.
