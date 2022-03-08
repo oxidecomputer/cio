@@ -5,7 +5,7 @@ use anyhow::Result;
 use chrono::{Duration, NaiveDate, Utc};
 use google_calendar::types::Event;
 use handlebars::Handlebars;
-use log::{info, warn};
+use log::{debug, info, warn};
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 
 use crate::{

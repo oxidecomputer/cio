@@ -8,7 +8,7 @@ use chrono::{offset::Utc, DateTime, Duration};
 use chrono_humanize::HumanTime;
 use google_drive::traits::{DriveOps, FileOps, PermissionOps};
 use inflector::cases::kebabcase::to_kebab_case;
-use log::{info, warn};
+use log::{debug, info, warn};
 use macros::db;
 use revai::{
     traits::JobOps,
