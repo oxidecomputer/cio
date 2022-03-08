@@ -1477,11 +1477,19 @@ fn clean_merchant_name(s: &str) -> String {
 }
 
 pub async fn refresh_all_finance(db: &Database, company: &Company) -> Result<()> {
-    refresh_software_vendors(db, company).await?;
-    refresh_ramp_reimbursements(db, company).await?;
-    refresh_ramp_transactions(db, company).await?;
-    refresh_accounts_payable(db, company).await?;
-    sync_quickbooks(db, company).await?;
+    let (sv, reim, trans, ap, qb) = tokio::join!(
+        refresh_software_vendors(db, company),
+        refresh_ramp_reimbursements(db, company),
+        refresh_ramp_transactions(db, company),
+        refresh_accounts_payable(db, company),
+        sync_quickbooks(db, company),
+    );
+
+    sv?;
+    reim?;
+    trans?;
+    ap?;
+    qb?;
 
     Ok(())
 }
