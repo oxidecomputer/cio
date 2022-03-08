@@ -19,6 +19,8 @@ pub mod core;
 pub mod customers;
 pub mod db;
 pub mod dns_providers;
+#[macro_use]
+pub mod enclose;
 pub mod finance;
 pub mod functions;
 pub mod github_commits;

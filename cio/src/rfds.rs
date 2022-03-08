@@ -1033,9 +1033,23 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
 
     let rfds = get_rfds_from_repo(&github, company).await?;
 
-    // Sync rfds.
-    for (_, mut rfd) in rfds {
-        rfd.sync(db, company, &github).await?;
+    // Iterate over the rfds and update.
+    let tasks: Vec<_> = rfds
+        .into_iter()
+        .map(|(_, mut rfd)| {
+            tokio::spawn(enclose! { (db, company, github) async move {
+                rfd.sync(&db, &company, &github).await
+            }})
+        })
+        .collect();
+
+    let mut results: Vec<Result<()>> = Default::default();
+    for task in tasks {
+        results.push(task.await?);
+    }
+
+    for result in results {
+        result?;
     }
 
     // Update rfds in airtable.

@@ -1,7 +1,6 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
 #[macro_use]
-mod enclose;
 mod event_types;
 mod github_types;
 mod handlers;
@@ -17,6 +16,8 @@ mod tracking_numbers;
 extern crate lazy_static;
 #[macro_use]
 extern crate serde_json;
+#[macro_use]
+extern crate cio_api;
 
 use std::env;
 
@@ -281,10 +282,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let tasks: Vec<_> = companies
                 .into_iter()
                 .map(|company| {
-                    tokio::spawn(async move {
-                        let db = Database::new().await;
+                    tokio::spawn(enclose! { (db)  async move {
                         cio_api::analytics::refresh_analytics(&db, &company).await
-                    })
+                    }})
                 })
                 .collect();
 
@@ -305,10 +305,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let tasks: Vec<_> = companies
                 .into_iter()
                 .map(|company| {
-                    tokio::spawn(async move {
-                        let db = Database::new().await;
+                    tokio::spawn(enclose! { (db) async move {
                         cio_api::api_tokens::refresh_api_tokens(&db, &company).await
-                    })
+                    }})
                 })
                 .collect();
 
@@ -355,10 +354,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let tasks: Vec<_> = companies
                 .into_iter()
                 .map(|company| {
-                    tokio::spawn(async move {
-                        let db = Database::new().await;
+                    tokio::spawn(enclose! { (db) async move {
                         cio_api::configs::refresh_db_configs_and_airtable(&db, &company).await
-                    })
+                    }})
                 })
                 .collect();
 
@@ -379,10 +377,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let tasks: Vec<_> = companies
                 .into_iter()
                 .map(|company| {
-                    tokio::spawn(async move {
-                        let db = Database::new().await;
+                    tokio::spawn(enclose! { (db) async move {
                         cio_api::finance::refresh_all_finance(&db, &company).await
-                    })
+                    }})
                 })
                 .collect();
 
@@ -462,13 +459,12 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let tasks: Vec<_> = companies
                 .into_iter()
                 .map(|company| {
-                    tokio::spawn(async move {
-                        let db = Database::new().await;
+                    tokio::spawn(enclose! { (db) async move {
                         tokio::join!(
                             cio_api::repos::sync_all_repo_settings(&db, &company),
                             cio_api::repos::refresh_db_github_repos(&db, &company),
                         )
-                    })
+                    }})
                 })
                 .collect();
 
@@ -512,15 +508,14 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let tasks: Vec<_> = companies
                 .into_iter()
                 .map(|company| {
-                    tokio::spawn(async move {
-                        let db = Database::new().await;
+                    tokio::spawn(enclose! { (db) async move {
                         // Ensure we have the webhooks set up for shipbob, if applicable.
                         tokio::join!(
                             company.ensure_shipbob_webhooks(&db),
                             cio_api::shipments::refresh_inbound_shipments(&db, &company),
                             cio_api::shipments::refresh_outbound_shipments(&db, &company)
                         )
-                    })
+                    }})
                 })
                 .collect();
 
@@ -557,10 +552,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             let tasks: Vec<_> = companies
                 .into_iter()
                 .map(|company| {
-                    tokio::spawn(async move {
-                        let db = Database::new().await;
+                    tokio::spawn(enclose! { (db) async move {
                         cio_api::travel::refresh_trip_actions(&db, &company).await
-                    })
+                    }})
                 })
                 .collect();
 
