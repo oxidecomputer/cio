@@ -48,6 +48,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN rustup default nightly
 
+WORKDIR /usr/src/webhooky
+
 
 # ------------------------------------------------------------------------------
 # Cargo Build Stage
