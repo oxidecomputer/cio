@@ -350,7 +350,6 @@ impl GitHubCommit {
     }
 }
 
-#[tracing::instrument]
 fn filter(files: &[String], dir: &str) -> Vec<String> {
     let mut in_dir: Vec<String> = Default::default();
     for file in files {

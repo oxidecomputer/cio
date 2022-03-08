@@ -42,7 +42,6 @@ use crate::{
     slack_commands::SlackCommand,
 };
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> Result<CounterResponse> {
     let api_context = rqctx.context();
 
@@ -68,7 +67,6 @@ pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> 
     }
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_rfd_update_by_number(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<RFDPathParams>,
@@ -116,7 +114,6 @@ pub async fn handle_rfd_update_by_number(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<GitHubRateLimit> {
     let api_context = rqctx.context();
 
@@ -140,7 +137,6 @@ pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Re
     })
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_slack_commands(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -516,7 +512,6 @@ pub async fn handle_slack_commands(
     Ok(response)
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_slack_interactive(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -676,7 +671,6 @@ pub async fn handle_slack_interactive(
     Ok(interactive_response)
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_employees_print_home_address_label(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -698,7 +692,6 @@ pub async fn handle_airtable_employees_print_home_address_label(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_certificates_renew(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -724,7 +717,6 @@ pub async fn handle_airtable_certificates_renew(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_assets_items_print_barcode_label(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -747,7 +739,6 @@ pub async fn handle_airtable_assets_items_print_barcode_label(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -771,7 +762,6 @@ pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_applicants_request_background_check(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -795,7 +785,6 @@ pub async fn handle_airtable_applicants_request_background_check(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_applicants_update(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -872,7 +861,6 @@ pub async fn handle_airtable_applicants_update(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_shipments_outbound_create(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -912,7 +900,6 @@ pub async fn handle_airtable_shipments_outbound_create(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_shipments_outbound_reprint_label(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -942,7 +929,6 @@ pub async fn handle_airtable_shipments_outbound_reprint_label(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_shipments_outbound_reprint_receipt(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -968,7 +954,6 @@ pub async fn handle_airtable_shipments_outbound_reprint_receipt(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -991,7 +976,6 @@ pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_shipments_outbound_schedule_pickup(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -1010,7 +994,6 @@ pub async fn handle_airtable_shipments_outbound_schedule_pickup(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_emails_incoming_sendgrid_parse(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -1108,7 +1091,6 @@ pub async fn handle_emails_incoming_sendgrid_parse(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_applicant_review(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
@@ -1150,7 +1132,6 @@ pub async fn handle_applicant_review(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_application_submit(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
@@ -1165,7 +1146,6 @@ pub async fn handle_application_submit(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_application_files_upload(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<ApplicationFileUploadData>,
@@ -1268,12 +1248,10 @@ pub async fn handle_application_files_upload(
     Ok(response)
 }
 
-#[tracing::instrument]
 fn get_extension_from_filename(filename: &str) -> Option<&str> {
     std::path::Path::new(filename).extension().and_then(OsStr::to_str)
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_airtable_shipments_inbound_create(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -1312,7 +1290,6 @@ pub async fn handle_airtable_shipments_inbound_create(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_store_order_create(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<Order>,
@@ -1326,7 +1303,6 @@ pub async fn handle_store_order_create(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_easypost_tracking_update(
     _rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<crate::server::EasyPostTrackingUpdateEvent>,
@@ -1340,7 +1316,6 @@ pub async fn handle_easypost_tracking_update(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_shippo_tracking_update(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
@@ -1385,7 +1360,6 @@ pub async fn handle_shippo_tracking_update(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_checkr_background_update(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<checkr::WebhookEvent>,
@@ -1459,7 +1433,6 @@ pub async fn handle_checkr_background_update(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_docusign_envelope_update(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<docusign::Envelope>,
@@ -1531,7 +1504,6 @@ pub async fn handle_docusign_envelope_update(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_analytics_page_view(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<NewPageView>,
@@ -1552,7 +1524,6 @@ pub async fn handle_analytics_page_view(
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -1590,7 +1561,6 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -1628,7 +1598,6 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     Ok(())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_shipbob(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
@@ -1654,7 +1623,6 @@ pub async fn handle_shipbob(
 
 const SLACK_TRACK_SHIPMENT_MODAL_DESCRIPTION:  &str = "After submitting the carrer and tracking number, your shipment will be tracked in the `Shipments` Airtable and notifications for status updates will post to the #shipments channel.";
 
-#[tracing::instrument(skip_all)]
 fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
     Ok(slack_chat_api::Modal {
         type_: slack_chat_api::ModalType::Modal,
@@ -1807,7 +1775,6 @@ fn create_slack_shipment_tracking_modal() -> Result<slack_chat_api::Modal> {
     })
 }
 
-#[tracing::instrument]
 fn from_json_value_to_string(t: &serde_json::Map<String, serde_json::Value>) -> String {
     let v = t.get("value").unwrap();
     match serde_json::from_value::<String>(v.clone()) {

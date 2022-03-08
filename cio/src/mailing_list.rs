@@ -264,7 +264,6 @@ impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
 }
 
 /// Sync the mailing_list_subscribers from Mailchimp with our database.
-#[tracing::instrument]
 pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Company) -> Result<()> {
     if company.mailchimp_list_id.is_empty() {
         // Return early.
@@ -301,7 +300,6 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
 }
 
 /// Convert to a signup data type.
-#[tracing::instrument]
 pub async fn as_mailing_list_subscriber(
     webhook: mailchimp_api::Webhook,
     db: &Database,

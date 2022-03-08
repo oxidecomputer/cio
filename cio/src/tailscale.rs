@@ -7,7 +7,6 @@ use crate::companies::Company;
 /// When we generate VMs for the console repo on every branch we get lingering
 /// Tailscale devices that need to cleaned up when they are no longer active.
 /// This function does that.
-#[tracing::instrument]
 pub async fn cleanup_old_tailscale_devices(company: &Company) -> Result<()> {
     if company.tailscale_api_key.is_empty() {
         info!(

@@ -81,7 +81,6 @@ pub struct NewSoftwareVendor {
 }
 
 /// This is only used for serialize
-#[tracing::instrument]
 fn is_zero(num: &f32) -> bool {
     *num == 0.0
 }
@@ -228,7 +227,6 @@ impl NewSoftwareVendor {
 }
 
 /// Sync software vendors from Airtable.
-#[tracing::instrument]
 pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Result<()> {
     let gsuite = company.authenticate_google_admin(db).await?;
 
@@ -394,7 +392,6 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
     }
 }
 
-#[tracing::instrument]
 pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Result<()> {
     // Create the Ramp client.
     let r = company.authenticate_ramp(db).await;
@@ -492,7 +489,6 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
     Ok(())
 }
 
-#[tracing::instrument]
 pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Result<()> {
     // Create the Ramp client.
     let r = company.authenticate_ramp(db).await;
@@ -568,7 +564,6 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
 }
 
 // Changes the vendor name to one that matches our existing list.
-#[tracing::instrument]
 fn clean_vendor_name(s: &str) -> String {
     if s == "Clara Labs" {
         "Claralabs".to_string()
@@ -876,7 +871,6 @@ fn clean_vendor_name(s: &str) -> String {
 
 /// Read the Brex transactions from a csv.
 /// We don't run this except locally.
-#[tracing::instrument]
 pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Result<()> {
     let mut path = env::current_dir()?;
     path.push("brex.csv");
@@ -1039,7 +1033,6 @@ pub mod bill_com_date_format {
 }
 
 /// Sync accounts payable.
-#[tracing::instrument]
 pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Result<()> {
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<AccountsPayable>> = company
@@ -1147,7 +1140,6 @@ impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
 
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
-#[tracing::instrument]
 pub async fn refresh_expensify_transactions(db: &Database, company: &Company) -> Result<()> {
     ExpensedItems::get_from_db(db, company.id)
         .await?
@@ -1269,7 +1261,6 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
 
 /// Read the Bill.com payments from a csv.
 /// We don't run this except locally.
-#[tracing::instrument]
 pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> Result<()> {
     let mut path = env::current_dir()?;
     path.push("bill.com.csv");
@@ -1322,7 +1313,6 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
     Ok(())
 }
 
-#[tracing::instrument]
 pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
     // Authenticate QuickBooks.
     let qba = company.authenticate_quickbooks(db).await;
@@ -1446,7 +1436,6 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
     Ok(())
 }
 
-#[tracing::instrument]
 fn clean_merchant_name(s: &str) -> String {
     if s == "Rudys Cant Fail Cafe" {
         "Rudy's Can't Fail Cafe".to_string()
@@ -1487,7 +1476,6 @@ fn clean_merchant_name(s: &str) -> String {
     }
 }
 
-#[tracing::instrument]
 pub async fn refresh_all_finance(db: &Database, company: &Company) -> Result<()> {
     refresh_software_vendors(db, company).await?;
     refresh_ramp_reimbursements(db, company).await?;

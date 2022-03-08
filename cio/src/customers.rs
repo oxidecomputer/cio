@@ -8,7 +8,6 @@ use log::info;
 use crate::{companies::Company, core::CustomerInteraction, utils::get_file_content_from_repo};
 
 /// Sync meeting notes with the content from the notes.
-#[tracing::instrument]
 pub async fn sync_customer_meeting_notes(company: &Company) -> Result<()> {
     // Initialize the Airtable client.
     let airtable = company.authenticate_airtable(&company.airtable_base_id_customer_leads);

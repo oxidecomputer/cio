@@ -299,7 +299,6 @@ impl Meeting {
 }
 
 /// Get the journal club meetings from the papers GitHub repo.
-#[tracing::instrument(skip(github))]
 pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company) -> Result<Vec<Meeting>> {
     let owner = &company.github_org;
     let repo = "papers";
@@ -336,7 +335,6 @@ pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company
 }
 
 // Sync the journal_club_meetings with our database.
-#[tracing::instrument]
 pub async fn refresh_db_journal_club_meetings(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
 

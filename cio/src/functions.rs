@@ -58,7 +58,6 @@ impl UpdateAirtableRecord<Function> for Function {
     }
 }
 
-#[tracing::instrument]
 fn get_color_based_from_status_and_conclusion(status: &str, conclusion: &str) -> String {
     if status == octorust::types::JobStatus::InProgress.to_string() {
         return crate::colors::Colors::Blue.to_string();
@@ -393,7 +392,6 @@ impl Function {
     }
 }
 
-#[tracing::instrument]
 pub async fn refresh_functions() -> Result<()> {
     let db = Database::new().await;
     let company = Company::get_by_id(&db, 1).await?;

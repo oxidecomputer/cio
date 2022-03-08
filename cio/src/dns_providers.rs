@@ -161,7 +161,6 @@ impl DNSProviderOps for CloudflareClient {
 }
 
 /// TODO: remove this stupid function when cloudflare has PartialEq on their types...
-#[tracing::instrument]
 fn content_equals(a: cloudflare::endpoints::dns::DnsContent, b: cloudflare::endpoints::dns::DnsContent) -> bool {
     match a {
         cloudflare::endpoints::dns::DnsContent::A { content } => {
@@ -212,7 +211,6 @@ fn content_equals(a: cloudflare::endpoints::dns::DnsContent, b: cloudflare::endp
     false
 }
 
-#[tracing::instrument(skip(client))]
 async fn get_zone_identifier(client: &CloudflareClient, domain: &str) -> Result<String> {
     // We need the root of the domain not a subdomain.
     let domain_parts: Vec<&str> = domain.split('.').collect();

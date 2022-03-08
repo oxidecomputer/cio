@@ -11,7 +11,6 @@ use log::info;
 
 use crate::server::{Context, FunctionPathParams};
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_get_function_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<FunctionPathParams>,
@@ -31,7 +30,6 @@ pub async fn handle_get_function_by_uuid(
     Ok(result.unwrap())
 }
 
-#[tracing::instrument(skip_all)]
 pub async fn handle_get_function_logs_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<FunctionPathParams>,
@@ -41,7 +39,6 @@ pub async fn handle_get_function_logs_by_uuid(
     Ok(f.logs)
 }
 
-#[tracing::instrument]
 pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str, background: bool) -> Result<uuid::Uuid> {
     let db = &api_context.db;
 
