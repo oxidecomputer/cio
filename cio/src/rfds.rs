@@ -1074,6 +1074,14 @@ impl NewRFD {
         if let Some(existing) = RFD::get_from_db(db, self.number).await {
             // Set the rfd_sections_id so we don't overwrite it.
             self.rfd_sections_id = existing.rfd_sections_id;
+            // Make sure there is not a break in the UI where this would be blank.
+            self.content = existing.content.to_string();
+            self.authors = existing.authors.to_string();
+            self.html = existing.html.to_string();
+            self.commit_date = existing.commit_date;
+            self.sha = existing.sha.to_string();
+            self.pdf_link_github = existing.pdf_link_github.to_string();
+            self.pdf_link_google_drive = existing.pdf_link_google_drive;
         }
 
         let mut new_rfd = self.upsert(db).await?;
