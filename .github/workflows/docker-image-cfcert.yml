@@ -1,26 +1,26 @@
-name: docker-image
+name: docker-image-cfcert
 on:
   pull_request:
     paths:
-      - '**.rs'
-      - '*/Cargo.toml'
+      - 'cfcert/**.rs'
+      - 'cfcert/Cargo.toml'
       - 'Cargo.lock'
-      - .github/workflows/docker-image.yml
+      - .github/workflows/docker-image-cfcert.yml
       - rust-toolchain
-      - '*/Dockerfile'
+      - 'cfcert/Dockerfile'
   push:
     branches: master
     paths:
-      - '**.rs'
-      - '*/Cargo.toml'
+      - 'cfcert/**.rs'
+      - 'cfcert/Cargo.toml'
       - 'Cargo.lock'
-      - .github/workflows/docker-image.yml
+      - .github/workflows/docker-image-cfcert.yml
       - rust-toolchain
-      - '*/Dockerfile'
+      - 'cfcert/Dockerfile'
   workflow_dispatch:
     inputs:
 concurrency:
-  group: docker-image-${{ github.ref }}
+  group: docker-image-cfcert-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   docker-image:
@@ -48,21 +48,5 @@ jobs:
           push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') && ! startsWith(github.ref, 'refs/remotes/pull') }}
           file: ./cfcert/Dockerfile
           tags: ghcr.io/${{ github.repository_owner }}/cio:cfcert
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
-      - name: Build and push - webhooky
-        uses: docker/build-push-action@v2
-        with:
-          push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') && ! startsWith(github.ref, 'refs/remotes/pull') }}
-          file: ./webhooky/Dockerfile
-          tags: ghcr.io/${{ github.repository_owner }}/cio:webhooky
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
-      - name: Build and push - cio
-        uses: docker/build-push-action@v2
-        with:
-          push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') && ! startsWith(github.ref, 'refs/remotes/pull') }}
-          file: ./cio/Dockerfile
-          tags: ghcr.io/${{ github.repository_owner }}/cio:latest
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
