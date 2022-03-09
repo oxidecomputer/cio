@@ -56,7 +56,6 @@ gsuite-api = "^0.2.0"
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "4.2.1"
-html2text = "0.3"
 image = "^0.23.14"
 Inflector = "^0.11.4"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
@@ -106,7 +105,6 @@ tracing = "^0.1"
 #tailscale-api = { path = "../tailscale" }
 tripactions = "^0.2.0"
 #tripactions = { path = "../../third-party-api-clients/tripactions" }
-tar = "^0.4"
 titlecase = "1.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
