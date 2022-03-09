@@ -92,7 +92,11 @@ pub async fn cleanup_old_tailscale_cloudflare_dns(company: &Company) -> Result<(
     let dns_records = cloudflare
         .request(&dns::ListDnsRecords {
             zone_identifier,
-            params: dns::ListDnsRecordsParams { ..Default::default() },
+            params: dns::ListDnsRecordsParams {
+                // From: https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
+                per_page: Some(5000),
+                ..Default::default()
+            },
         })
         .await?
         .result;
@@ -102,23 +106,21 @@ pub async fn cleanup_old_tailscale_cloudflare_dns(company: &Company) -> Result<(
             continue;
         }
 
-        if !dns_record.name.ends_with(".internal") {
+        if !dns_record.name.ends_with(".internal.oxide.computer") {
             continue;
         }
 
-        println!("{:?}", dns_record);
-
-        let name = dns_record.name.replace(".internal", "");
+        let name = dns_record.name.replace(".internal.oxide.computer", "");
 
         // If it does not exist in Tailscale, delete it.
         if !tailscale_devices.contains_key(&name) {
-            info!("deleting dns record {}", dns_record.name);
-            /* cloudflare
-            .request(&dns::DeleteDnsRecord {
-                zone_identifier,
-                identifier: dns_record.id,
-            })
-            .await?;*/
+            info!("deleting dns record {}", name);
+            cloudflare
+                .request(&dns::DeleteDnsRecord {
+                    zone_identifier,
+                    identifier: &dns_record.id,
+                })
+                .await?;
         }
     }
 

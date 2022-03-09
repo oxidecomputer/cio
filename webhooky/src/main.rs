@@ -494,8 +494,8 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
 
             // Iterate over the companies and update.
             for company in companies {
-                cio_api::tailscale::cleanup_old_tailscale_cloudflare_dns(&company).await?;
                 cio_api::tailscale::cleanup_old_tailscale_devices(&company).await?;
+                cio_api::tailscale::cleanup_old_tailscale_cloudflare_dns(&company).await?;
                 if company.name == "Oxide" {
                     cio_api::customers::sync_customer_meeting_notes(&company).await?;
                 }
