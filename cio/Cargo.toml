@@ -113,5 +113,5 @@ uuid = { version = "^0.8", features = ["serde", "v4"] }
 walkdir = "^2.3.2"
 yup-oauth2 = "^6"
 zip = "0.5"
-zoom-api = "^0.2.3"
+zoom-api = "^0.2.5"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }

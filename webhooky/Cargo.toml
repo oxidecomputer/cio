@@ -72,5 +72,5 @@ tracing = "^0.1"
 tracing-subscriber = { version = "^0.3.9", features = ["registry", "std", "fmt", "smallvec", "ansi", "tracing-log", "json"] }
 urlencoding = "2.1.0"
 uuid = { version = "^0.8", features = ["serde", "v4"] }
-zoom-api = "^0.2.1"
+zoom-api = "^0.2.5"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
