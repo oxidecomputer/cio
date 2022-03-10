@@ -270,13 +270,13 @@ pub mod null_date_format {
 
 impl UserConfig {
     /// Sync a user from the config file with the services.
+    #[allow(clippy::too_many_arguments)]
     #[tracing::instrument(skip(github))]
     pub async fn sync(
         &mut self,
         db: &Database,
         company: &Company,
         github: &octorust::Client,
-        user_map: &mut BTreeMap<String, User>,
         gsuite_users_map: &BTreeMap<String, GSuiteUser>,
         okta_users: &HashMap<String, okta::types::User>,
         ramp_users: &HashMap<String, ramp_api::types::User>,
@@ -312,7 +312,7 @@ impl UserConfig {
 
         // Update or create the user in the database.
         if let Some(e) = existing.clone() {
-            self.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
+            self.google_anniversary_event_id = e.google_anniversary_event_id;
         }
 
         // See if we have a gsuite user for the user.
@@ -368,7 +368,7 @@ impl UserConfig {
                     {
                         self.start_date = airtable_record.fields.start_date;
                     }
-                    self.gusto_id = airtable_record.fields.gusto_id.to_string();
+                    self.gusto_id = airtable_record.fields.gusto_id;
                 }
 
                 if !e.gusto_id.is_empty() {
@@ -448,9 +448,6 @@ impl UserConfig {
 
         // Update with any other changes we made to the user.
         new_user.update(db).await?;
-
-        // Remove the user from the BTreeMap.
-        user_map.remove(&self.username);
 
         Ok(())
     }
@@ -1864,22 +1861,54 @@ pub async fn sync_users(
     for u in db_users {
         user_map.insert(u.username.to_string(), u);
     }
+
     // Sync users.
-    for (_, mut user) in users {
-        user.sync(
-            db,
-            company,
-            github,
-            &mut user_map,
-            &gsuite_users_map,
-            &okta_users,
-            &ramp_users,
-            &zoom_users,
-            &zoom_users_pending,
-            &gusto_users,
-            &gusto_users_by_id,
-        )
-        .await?;
+    // Iterate over the users and update.
+    // We should do these concurrently, but limit it to maybe 3 at a time.
+    let mut i = 0;
+    let take = 3;
+    let mut skip = 0;
+    while i < users.clone().len() {
+        let tasks: Vec<_> = users
+            .clone()
+            .into_iter()
+            .skip(skip)
+            .take(take)
+            .map(|(_, mut user)| {
+                tokio::spawn(crate::enclose! { (db, company, github, gsuite_users_map, okta_users, ramp_users, zoom_users, zoom_users_pending, gusto_users, gusto_users_by_id) async move {
+                user.sync(
+                    &db,
+                    &company,
+                    &github,
+                    &gsuite_users_map,
+                    &okta_users,
+                    &ramp_users,
+                    &zoom_users,
+                    &zoom_users_pending,
+                    &gusto_users,
+                    &gusto_users_by_id,
+                )
+                .await
+                }})
+            })
+            .collect();
+
+        let mut results: Vec<Result<()>> = Default::default();
+        for task in tasks {
+            results.push(task.await?);
+        }
+
+        for result in results {
+            result?;
+        }
+
+        i += take;
+        skip += take;
+    }
+
+    for (_, user) in users {
+        // Remove the user from the BTreeMap.
+        user_map.remove(&user.username);
     }
 
     // Remove any users that should no longer be in the database.
