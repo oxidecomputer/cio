@@ -49,6 +49,7 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
 
         // TODO: this is wasteful find another way to do this.
         let departments = self.departments().get_all().await?;
+        // TODO: we need to create the department if it doesn't exist.
 
         if !user.ramp_id.is_empty() {
             // Get the existing ramp user.
