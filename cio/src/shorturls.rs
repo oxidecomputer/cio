@@ -275,7 +275,7 @@ async fn create_dns_records_for_links(company: &Company, shorturls: Vec<ShortUrl
         };
 
         name = format!("{}.{}.{}", name, s.subdomain, company.domain);
-        if let Err(_) = cf
+        if cf
             .ensure_record(
                 &name,
                 dns::DnsContent::A {
@@ -283,6 +283,7 @@ async fn create_dns_records_for_links(company: &Company, shorturls: Vec<ShortUrl
                 },
             )
             .await
+            .is_err()
         {
             // Try it again, it might just have been a time out error.
             if let Err(e) = cf
