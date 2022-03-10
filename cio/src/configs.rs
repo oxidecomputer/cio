@@ -2370,15 +2370,19 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -
     sync_users(db, &github, configs.users, company).await?;
 
     // Sync links.
-    sync_links(db, configs.links, configs.huddles, company).await?;
+    let (links, certs, ghout, ann) = tokio::join!(
+        sync_links(db, configs.links, configs.huddles, company),
+        // Sync certificates.
+        sync_certificates(db, &github, configs.certificates, company),
+        // Sync github outside collaborators.
+        sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company),
+        refresh_anniversary_events(db, company),
+    );
 
-    // Sync certificates.
-    sync_certificates(db, &github, configs.certificates, company).await?;
-
-    // Sync github outside collaborators.
-    sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company).await?;
-
-    refresh_anniversary_events(db, company).await?;
+    links?;
+    certs?;
+    ghout?;
+    ann?;
 
     Ok(())
 }
