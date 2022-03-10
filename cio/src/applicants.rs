@@ -2841,7 +2841,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
             .into_iter()
             .skip(skip)
             .take(take)
-            .map(|(_, mut applicant)| {
+            .map(|mut applicant| {
                 tokio::spawn(enclose! { (db, company, github, configs_issues) async move {
                     applicant.refresh(&db, &company, &github, &configs_issues).await
                 }})

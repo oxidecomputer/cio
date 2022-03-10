@@ -107,7 +107,6 @@ pub struct NewRFD {
 
 impl NewRFD {
     /// Return a NewRFD from a parsed file on a specific GitHub branch.
-    #[tracing::instrument(skip(github))]
     pub async fn new_from_github(
         company: &Company,
         github: &octorust::Client,
@@ -701,7 +700,6 @@ impl RFD {
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    #[tracing::instrument(skip(github))]
     pub async fn expand(&mut self, github: &octorust::Client, company: &Company) -> Result<()> {
         let owner = &company.github_org;
         let repo = "rfd";
