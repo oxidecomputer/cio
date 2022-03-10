@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{companies::Companys, db::Database, github_prs::FromSimpleUser, repos::FromUrl};
+use crate::{companies::Companys, db::Database, github_prs::FromSimpleUser};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Debug, Clone, JsonSchema)]
 pub struct NewCommit {
@@ -81,7 +81,7 @@ impl From<octorust::types::CommitDataType> for NewCommit {
             additions,
             deletions,
             total,
-            url: item.url.to_string(),
+            url: item.url,
         }
     }
 }

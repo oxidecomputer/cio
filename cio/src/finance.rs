@@ -1,5 +1,6 @@
 use std::{collections::HashMap, env, fs::File};
 
+use crate::repos::FromUrl;
 use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
@@ -22,7 +23,6 @@ use crate::{
     core::UpdateAirtableRecord,
     db::Database,
     providers::ProviderOps,
-    repos::FromUrl,
     schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users},
 };
 

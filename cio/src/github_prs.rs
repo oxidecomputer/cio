@@ -2,7 +2,7 @@ use anyhow::Result;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{companies::Companys, db::Database, repos::FromUrl};
+use crate::{companies::Companys, db::Database};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Debug, Clone, JsonSchema)]
 pub struct NewPullRequest {
@@ -198,7 +198,7 @@ pub trait FromVecPullRequestSimpleLabels {
     fn to_vec(&self) -> Vec<String>;
 }
 
-impl FromVecPullRequestSimpleLabels for Vec<octorust::types::PullRequestSimpleLabels> {
+impl FromVecPullRequestSimpleLabels for Vec<octorust::types::LabelsData> {
     #[tracing::instrument(skip(self))]
     fn to_vec(&self) -> Vec<String> {
         let mut labels: Vec<String> = Default::default();

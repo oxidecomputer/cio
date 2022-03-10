@@ -30,7 +30,6 @@ use crate::{
     companies::Company,
     core::{GitHubPullRequest, UpdateAirtableRecord},
     db::Database,
-    repos::FromUrl,
     schema::rfds as r_f_ds,
     schema::rfds,
     utils::{
@@ -1066,7 +1065,9 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
         }
 
         for result in results {
-            result?;
+            if let Err(e) = result {
+                warn!("[rfd] {}", e);
+            }
         }
 
         i += take;

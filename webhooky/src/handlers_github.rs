@@ -8,7 +8,7 @@ use cio_api::{
         get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms,
         sync_github_outside_collaborators, sync_groups, sync_links, sync_users,
     },
-    repos::{FromUrl, NewRepo},
+    repos::NewRepo,
     rfds::{is_image, NewRFD, RFD},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
@@ -623,7 +623,7 @@ pub async fn handle_rfd_push(
                             old_rfd_state,
                             rfd.state,
                             branch,
-                            pull.html_url.to_string()
+                            pull.html_url
                         ));
 
                         has_pull = true;

@@ -5,8 +5,6 @@ use chrono::{naive::NaiveDate, DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::repos::FromUrl;
-
 /// Define the trait for doing logic in updating Airtable.
 #[async_trait]
 pub trait UpdateAirtableRecord<T> {
