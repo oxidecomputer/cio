@@ -459,6 +459,55 @@ impl From<Applicant> for FormattedMessage {
 }
 
 impl Applicant {
+    #[tracing::instrument(skip(github))]
+    pub async fn refresh(
+        &mut self,
+        db: &Database,
+        company: &Company,
+        github: &octorust::Client,
+        configs_issues: &[octorust::types::IssueSimple],
+    ) -> Result<()> {
+        // Initialize the GSuite sheets client.
+        let drive_client = company.authenticate_google_drive(db).await?;
+
+        self.keep_fields_from_airtable(db).await;
+
+        // Expand the application.
+        if let Err(e) = self.expand(db, &drive_client).await {
+            warn!("expanding applicant `{}` failed: {}", self.email, e);
+
+            // Return early.
+            return Ok(());
+        }
+
+        // Update the applicant's status based on other criteria.
+        self.update_status(db, company).await?;
+
+        // Update airtable and the database again, we want to save our status just in
+        // case there is an error.
+        self.update(db).await?;
+
+        // Send the follow up email if we need to, this will also update the database.
+        self.send_email_follow_up_if_necessary(db).await?;
+
+        // Create the GitHub onboarding issue if we need to.
+        self.create_github_onboarding_issue(db, github, configs_issues).await?;
+
+        // Update the interviews start and end time if we have interviews.
+        self.update_interviews_start_end_time(db).await;
+
+        // Update airtable and the database again, we want to save our status just in
+        // case there is an error.
+        self.update(db).await?;
+
+        // Update the reviews for the self.
+        // This function will update the database so we don't have to.
+        self.update_reviews_scoring(db).await?;
+
+        // TODO: we could move docusign stuff here as well, and out of its own function.
+        Ok(())
+    }
+
     #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewApplicant = self.into();
@@ -2745,9 +2794,6 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         return Ok(());
     }
 
-    // Initialize the GSuite sheets client.
-    let drive_client = company.authenticate_google_drive(db).await?;
-
     let github = company.authenticate_github()?;
 
     // Get all the hiring issues on the configs repository.
@@ -2786,41 +2832,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
 
     // Iterate over the applicants and update them.
     for mut applicant in applicants {
-        applicant.keep_fields_from_airtable(db).await;
-
-        // Expand the application.
-        if let Err(e) = applicant.expand(db, &drive_client).await {
-            warn!("expanding applicant `{}` failed: {}", applicant.email, e);
-            continue;
-        }
-
-        // Update the applicant's status based on other criteria.
-        applicant.update_status(db, company).await?;
-
-        // Update airtable and the database again, we want to save our status just in
-        // case there is an error.
-        applicant.update(db).await?;
-
-        // Send the follow up email if we need to, this will also update the database.
-        applicant.send_email_follow_up_if_necessary(db).await?;
-
-        // Create the GitHub onboarding issue if we need to.
-        applicant
-            .create_github_onboarding_issue(db, &github, &configs_issues)
-            .await?;
-
-        // Update the interviews start and end time if we have interviews.
-        applicant.update_interviews_start_end_time(db).await;
-
-        // Update airtable and the database again, we want to save our status just in
-        // case there is an error.
-        applicant.update(db).await?;
-
-        // Update the reviews for the applicant.
-        // This function will update the database so we don't have to.
-        applicant.update_reviews_scoring(db).await?;
-
-        // TODO: we could move docusign stuff here as well, and out of its own function.
+        applicant.refresh(db, company, &github, &configs_issues).await?;
     }
 
     // Update Airtable.
