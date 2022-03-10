@@ -1067,6 +1067,7 @@ impl Company {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_companies() -> Result<()> {
     let db = Database::new().await;
 
@@ -1099,6 +1100,7 @@ pub async fn refresh_companies() -> Result<()> {
     Ok(())
 }
 
+#[tracing::instrument]
 pub fn get_google_scopes() -> Vec<String> {
     vec![
         "https://www.googleapis.com/auth/admin.directory.group".to_string(),
@@ -1113,6 +1115,7 @@ pub fn get_google_scopes() -> Vec<String> {
     ]
 }
 
+#[tracing::instrument]
 pub fn get_shipbob_scopes() -> Vec<String> {
     vec![
         "channels_read".to_string(),

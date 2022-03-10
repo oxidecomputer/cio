@@ -78,6 +78,7 @@ impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
 }
 
 /// Sync interviews.
+#[tracing::instrument]
 pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
@@ -318,6 +319,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
 
 /// Compile interview packets for each interviewee.
 #[allow(clippy::type_complexity)]
+#[tracing::instrument]
 pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
@@ -609,6 +611,7 @@ The Oxide Team
 }
 
 /// Download materials file from Google drive and save it as a pdf under the persons username.
+#[tracing::instrument(skip(drive_client))]
 pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, username: &str) -> Result<()> {
     let id = url.replace("https://drive.google.com/open?id=", "");
 
@@ -719,6 +722,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
 }
 
 /// Combine multiple pdfs into one pdf and return the byte stream of it.
+#[tracing::instrument]
 pub fn combine_pdfs(pdfs: Vec<String>) -> Result<Vec<u8>> {
     // Define a starting max_id (will be used as start index for object_ids)
     let mut max_id = 1;

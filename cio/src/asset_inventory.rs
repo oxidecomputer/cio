@@ -270,6 +270,7 @@ impl AssetItem {
 }
 
 /// Sync asset items from Airtable.
+#[tracing::instrument]
 pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_assets.is_empty() {
         // Return early.

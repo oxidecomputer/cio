@@ -156,6 +156,7 @@ impl ApplicantReview {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.

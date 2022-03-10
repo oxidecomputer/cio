@@ -234,6 +234,7 @@ impl InboundShipment {
     }
 }
 
+#[tracing::instrument]
 fn get_color_based_on_tracking_status(s: &str) -> String {
     let status = s.to_lowercase().trim().to_string();
 
@@ -925,6 +926,7 @@ impl OutboundShipments {
 }
 
 /// Returns the next buisness day in terms of start and end.
+#[tracing::instrument]
 pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
     let now = Utc::now();
     let pacific_time = now.with_timezone(&chrono_tz::US::Pacific);
@@ -1649,6 +1651,7 @@ The Shipping Bot",
 }
 
 // Sync the outbound shipments.
+#[tracing::instrument]
 pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_shipments.is_empty() {
         // Return early.
@@ -1714,6 +1717,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
     Ok(())
 }
 
+#[tracing::instrument]
 pub fn clean_carrier_name(s: &str) -> String {
     let l = s.to_lowercase();
     if l == "ups" || l.starts_with("ups") {
@@ -1729,6 +1733,7 @@ pub fn clean_carrier_name(s: &str) -> String {
     s.to_string()
 }
 
+#[tracing::instrument]
 async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Result<()> {
     // Only do this if the company is Oxide, as it is our account.
     if company.id != 1 {
@@ -1818,6 +1823,7 @@ async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Res
 }
 
 // Sync the inbound shipments.
+#[tracing::instrument]
 pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_shipments.is_empty() {
         // Return early.
@@ -1853,6 +1859,7 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Resu
     Ok(())
 }
 
+#[tracing::instrument]
 pub fn clean_address_string(s: &str) -> String {
     if s == "DE" {
         return "Germany".to_string();

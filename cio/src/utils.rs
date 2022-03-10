@@ -18,6 +18,7 @@ use tokio::io::AsyncWriteExt;
 use crate::companies::Company;
 
 /// Write a file.
+#[tracing::instrument]
 pub async fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
     // create each directory.
     fs::create_dir_all(file.parent().unwrap()).await?;
@@ -33,6 +34,7 @@ pub async fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
 
 /// Create a comment on a commit for a repo.
 /// We use this a lot if a webhook was a success or errored.
+#[tracing::instrument(skip(github))]
 pub async fn add_comment_to_commit(
     github: &GitHub,
     owner: &str,
@@ -60,6 +62,7 @@ pub async fn add_comment_to_commit(
 }
 
 /// Check if a GitHub issue already exists.
+#[tracing::instrument]
 pub fn check_if_github_issue_exists(
     issues: &[octorust::types::IssueSimple],
     search: &str,
@@ -74,6 +77,7 @@ pub fn check_if_github_issue_exists(
 }
 
 /// Return a user's public ssh key's from GitHub by their GitHub handle.
+#[tracing::instrument]
 pub async fn get_github_user_public_ssh_keys(handle: &str) -> Result<Vec<String>> {
     let body = get(&format!("https://github.com/{}.keys", handle))
         .await?
@@ -95,6 +99,7 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Result<Vec<String>
 
 /// Get a files content from a repo.
 /// It returns a tuple of the bytes of the file content and the sha of the file.
+#[tracing::instrument(skip(github))]
 pub async fn get_file_content_from_repo(
     github: &octorust::Client,
     owner: &str,
@@ -166,6 +171,7 @@ pub async fn get_file_content_from_repo(
 /// Create or update a file in a GitHub repository.
 /// If the file does not exist, it will be created.
 /// If the file exists, it will be updated _only if_ the content of the file has changed.
+#[tracing::instrument(skip(github))]
 pub async fn create_or_update_file_in_github_repo(
     github: &octorust::Client,
     owner: &str,
@@ -278,10 +284,12 @@ impl SliceExt for Vec<u8> {
     }
 }
 
+#[tracing::instrument]
 pub fn default_date() -> chrono::naive::NaiveDate {
     chrono::naive::NaiveDate::parse_from_str("1970-01-01", "%Y-%m-%d").unwrap()
 }
 
+#[tracing::instrument]
 pub fn merge_json(a: &mut Value, b: Value) {
     match (a, b) {
         (a @ &mut Value::Object(_), Value::Object(b)) => {
@@ -300,6 +308,7 @@ pub fn merge_json(a: &mut Value, b: Value) {
     }
 }
 
+#[tracing::instrument]
 pub fn truncate(s: &str, max_chars: usize) -> String {
     match s.char_indices().nth(max_chars) {
         None => s.to_string(),
@@ -307,6 +316,7 @@ pub fn truncate(s: &str, max_chars: usize) -> String {
     }
 }
 
+#[tracing::instrument]
 pub fn tail(s: &str, max_chars: usize) -> String {
     if s.len() < max_chars {
         return s.to_string();
@@ -316,6 +326,7 @@ pub fn tail(s: &str, max_chars: usize) -> String {
     s[len - 3000..].to_string()
 }
 
+#[tracing::instrument]
 pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
     let empty: Vec<String> = Default::default();
     let a = map.get(key).unwrap_or(&empty);
@@ -327,17 +338,20 @@ pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
     a.get(0).unwrap().to_string()
 }
 
+#[tracing::instrument]
 pub fn decode_base64(c: &str) -> Vec<u8> {
     let v = c.replace('\n', "");
     let decoded = base64::decode(&v).unwrap();
     decoded.trim().to_vec()
 }
 
+#[tracing::instrument]
 pub fn decode_base64_to_string(c: &str) -> String {
     let decoded = decode_base64(c);
     from_utf8(&decoded).unwrap().trim().to_string()
 }
 
+#[tracing::instrument(skip(github))]
 pub async fn encrypt_github_secrets(
     github: &octorust::Client,
     company: &Company,
@@ -369,6 +383,7 @@ pub async fn encrypt_github_secrets(
 
 /// Generate a random string that we can use as a temporary password for new users
 /// when we set up their account.
+#[tracing::instrument]
 pub fn generate_password() -> String {
     thread_rng()
         .sample_iter(&Alphanumeric)
@@ -377,6 +392,7 @@ pub fn generate_password() -> String {
         .collect()
 }
 
+#[tracing::instrument]
 pub fn setup_logger() {
     // Initialize our logger.
     let mut log_builder = pretty_env_logger::formatted_builder();

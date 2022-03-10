@@ -1572,6 +1572,7 @@ impl HuddleConfig {
     }
 }
 /// Get the configs from the GitHub repository and parse them.
+#[tracing::instrument(skip(github))]
 pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company) -> Result<Config> {
     let owner = &company.github_org;
     let repo = "configs";
@@ -1609,6 +1610,7 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
 }
 
 /// Sync GitHub outside collaborators with our configs.
+#[tracing::instrument(skip(github))]
 pub async fn sync_github_outside_collaborators(
     db: &Database,
     github: &octorust::Client,
@@ -1745,6 +1747,7 @@ pub async fn sync_github_outside_collaborators(
 }
 
 /// Sync our users with our database and then update Airtable from the database.
+#[tracing::instrument(skip(github))]
 pub async fn sync_users(
     db: &Database,
     github: &octorust::Client,
@@ -1979,6 +1982,7 @@ pub async fn sync_users(
 }
 
 /// Sync our buildings with our database and then update Airtable from the database.
+#[tracing::instrument]
 pub async fn sync_buildings(
     db: &Database,
     buildings: BTreeMap<String, BuildingConfig>,
@@ -2105,6 +2109,7 @@ pub async fn sync_buildings(
 }
 
 /// Sync our conference_rooms with our database and then update Airtable from the database.
+#[tracing::instrument]
 pub async fn sync_conference_rooms(
     db: &Database,
     conference_rooms: BTreeMap<String, ResourceConfig>,
@@ -2217,6 +2222,7 @@ pub async fn sync_conference_rooms(
 }
 
 /// Sync our groups with our database and then update Airtable from the database.
+#[tracing::instrument]
 pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, company: &Company) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
@@ -2286,6 +2292,7 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
 }
 
 /// Sync our links with our database and then update Airtable from the database.
+#[tracing::instrument]
 pub async fn sync_links(
     db: &Database,
     links: BTreeMap<String, LinkConfig>,
@@ -2356,6 +2363,7 @@ pub async fn sync_links(
 }
 
 /// Sync our certificates with our database and then update Airtable from the database.
+#[tracing::instrument(skip(github))]
 pub async fn sync_certificates(
     db: &Database,
     github: &octorust::Client,
@@ -2432,6 +2440,7 @@ pub async fn sync_certificates(
     Ok(())
 }
 
+#[tracing::instrument]
 pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
 
@@ -2477,6 +2486,7 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -
     Ok(())
 }
 
+#[tracing::instrument]
 pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Result<()> {
     let gcal = company.authenticate_google_calendar(db).await?;
 

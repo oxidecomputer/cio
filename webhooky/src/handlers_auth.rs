@@ -22,6 +22,7 @@ use zoom_api::Client as Zoom;
 
 use crate::server::{AuthCallback, Context};
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_google_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -92,6 +93,7 @@ pub async fn handle_auth_google_callback(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
     let api_context = rqctx.context();
 
@@ -159,6 +161,7 @@ pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, b
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_mailchimp_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -214,6 +217,7 @@ pub async fn handle_auth_mailchimp_callback(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_gusto_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -273,6 +277,7 @@ pub async fn handle_auth_gusto_callback(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_zoom_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -334,6 +339,7 @@ pub async fn handle_auth_zoom_callback(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_ramp_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -394,6 +400,7 @@ pub async fn handle_auth_ramp_callback(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_slack_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -518,6 +525,7 @@ pub async fn handle_auth_slack_callback(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_quickbooks_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -572,6 +580,7 @@ pub async fn handle_auth_quickbooks_callback(
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub async fn handle_auth_docusign_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,

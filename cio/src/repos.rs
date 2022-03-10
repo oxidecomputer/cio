@@ -509,6 +509,7 @@ impl GithubRepo {
 }
 
 /// List all the GitHub repositories for our org.
+#[tracing::instrument(skip(github))]
 pub async fn list_all_github_repos(github: &octorust::Client, company: &Company) -> Result<Vec<NewRepo>> {
     let github_repos = github
         .repos()
@@ -529,6 +530,7 @@ pub async fn list_all_github_repos(github: &octorust::Client, company: &Company)
 }
 
 /// Sync the repos with our database.
+#[tracing::instrument]
 pub async fn refresh_db_github_repos(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let github_repos = list_all_github_repos(&github, company).await?;
@@ -575,6 +577,7 @@ pub async fn refresh_db_github_repos(db: &Database, company: &Company) -> Result
  * - Adds protection to the default branch to disallow force pushes.
  * - Adds outside collaborators to their specified repositories.
  */
+#[tracing::instrument]
 pub async fn sync_all_repo_settings(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let repos = GithubRepos::get_from_db(db, company.id).await?;

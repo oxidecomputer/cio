@@ -94,6 +94,7 @@ impl UpdateAirtableRecord<Booking> for Booking {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_trip_actions(db: &Database, company: &Company) -> Result<()> {
     // Authenticate with TripActions.
     let tripactions_auth = company.authenticate_tripactions(db).await;

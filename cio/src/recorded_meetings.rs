@@ -209,6 +209,7 @@ impl RecordedMeeting {
 }
 
 /// Sync the recorded meetings from zoom.
+#[tracing::instrument]
 pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
     let zoom_auth = company.authenticate_zoom(db).await;
     if let Err(e) = zoom_auth {
@@ -396,6 +397,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
 }
 
 /// Sync the recorded meetings from Google.
+#[tracing::instrument]
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
     let mut gcal = match company.authenticate_google_calendar_with_service_account("").await {
         Ok(dc) => dc,

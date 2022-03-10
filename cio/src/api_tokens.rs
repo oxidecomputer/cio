@@ -141,6 +141,7 @@ impl APIToken {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_api_tokens(db: &Database, company: &Company) -> Result<()> {
     APITokens::get_from_db(db, company.id)
         .await?

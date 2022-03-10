@@ -91,6 +91,7 @@ impl UpdateAirtableRecord<SwagItem> for SwagItem {
 }
 
 /// Sync swag items from Airtable.
+#[tracing::instrument]
 pub async fn refresh_swag_items(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_swag.is_empty() {
         // Return early.
@@ -401,6 +402,7 @@ impl SwagInventoryItem {
 }
 
 // Get the bytes for a pdf barcode label.
+#[tracing::instrument]
 pub fn generate_pdf_barcode_label(
     image_bytes: &[u8],
     text_line_1: &str,
@@ -618,6 +620,7 @@ impl SwagInventoryItem {
 }
 
 /// Sync swag inventory items from Airtable.
+#[tracing::instrument]
 pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_swag.is_empty() {
         // Return early.
@@ -756,6 +759,7 @@ impl BarcodeScan {
     }
 }
 
+#[tracing::instrument]
 pub async fn refresh_barcode_scans(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_swag.is_empty() {
         // Return early.
