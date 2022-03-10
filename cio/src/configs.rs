@@ -2461,10 +2461,18 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -
         refresh_anniversary_events(db, company),
     );
 
-    links?;
-    certs?;
-    ghout?;
-    ann?;
+    if let Err(e) = links {
+        warn!("error syncing links: {}", e);
+    }
+    if let Err(e) = certs {
+        warn!("error syncing certificates: {}", e);
+    }
+    if let Err(e) = ghout {
+        warn!("error syncing github outside collaborators: {}", e);
+    }
+    if let Err(e) = ann {
+        warn!("error refreshing anniversary events: {}", e);
+    }
 
     Ok(())
 }
