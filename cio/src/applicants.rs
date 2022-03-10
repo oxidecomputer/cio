@@ -2831,8 +2831,34 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
         .await?;
 
     // Iterate over the applicants and update them.
-    for mut applicant in applicants {
-        applicant.refresh(db, company, &github, &configs_issues).await?;
+    // We should do these concurrently, but limit it to maybe 3 at a time.
+    let mut i = 0;
+    let take = 3;
+    let mut skip = 0;
+    while i < applicants.clone().len() {
+        let tasks: Vec<_> = applicants
+            .clone()
+            .into_iter()
+            .skip(skip)
+            .take(take)
+            .map(|(_, mut applicant)| {
+                tokio::spawn(enclose! { (db, company, github, configs_issues) async move {
+                    applicant.refresh(&db, &company, &github, &configs_issues).await
+                }})
+            })
+            .collect();
+
+        let mut results: Vec<Result<()>> = Default::default();
+        for task in tasks {
+            results.push(task.await?);
+        }
+
+        for result in results {
+            result?;
+        }
+
+        i += take;
+        skip += take;
     }
 
     // Update Airtable.
