@@ -26,6 +26,8 @@ use cio_api::{companies::Companys, db::Database};
 use clap::Parser;
 use sentry::IntoDsn;
 use slog::Drain;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::Layer;
 
 lazy_static! {
     // We need a slog::Logger for steno and when we export out the logs from re-exec-ed processes.

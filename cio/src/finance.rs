@@ -1,6 +1,5 @@
 use std::{collections::HashMap, env, fs::File};
 
-use crate::repos::FromUrl;
 use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
