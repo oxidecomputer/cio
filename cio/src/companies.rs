@@ -386,7 +386,6 @@ impl Company {
         let shipbob = shipbob_auth?;
         let shipbob_webhooks_url =
             env::var("SHIPBOB_WEBHOOKS_URL").map_err(|e| anyhow!("expected SHIPBOB_WEBHOOKS_URL to be set: {}", e))?;
-        let subscription_url = url::Url::parse(&shipbob_webhooks_url)?;
 
         let topics = vec![
             shipbob::types::WebhooksTopics::OrderShipped,
@@ -401,11 +400,11 @@ impl Company {
             let webhooks = shipbob.webhooks().get_all(topic.clone()).await?;
             for webhook in webhooks {
                 // Check if we already have the webhooks.
-                if webhook.subscription_url == Some(subscription_url.clone()) {
+                if webhook.subscription_url == shipbob_webhooks_url {
                     exists = true;
                     info!(
                         "shipbob webhook for topic `{}` to url `{}` already exists",
-                        topic, subscription_url
+                        topic, shipbob_webhooks_url
                     );
                     break;
                 }
@@ -419,14 +418,14 @@ impl Company {
             shipbob
                 .webhooks()
                 .post(&shipbob::types::WebhooksCreateWebhookSubscriptionModel {
-                    subscription_url: Some(subscription_url.clone()),
+                    subscription_url: shipbob_webhooks_url.to_string(),
                     topic: topic.clone(),
                 })
                 .await?;
 
             info!(
                 "created shipbob webhook for topic `{}` to url `{}`",
-                topic, subscription_url
+                topic, shipbob_webhooks_url
             );
         }
 

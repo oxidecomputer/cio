@@ -4479,9 +4479,9 @@ checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
 
 [[package]]
 name = "shipbob"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76ef6458806a4248446ee563bd6d5bdea9bde587fd12be7f2f82636ae29b1cfa"
+checksum = "ed15b6517791cf4e081b212b8142cb31b389c6745f01af66c893ba8305feb0ab"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
@@ -6088,9 +6088,9 @@ dependencies = [
 
 [[package]]
 name = "zoom-api"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb935b8603482dfd719a2b9e9353959d6f4f84ed28ca7e08073b279073f9d122"
+checksum = "01a6cea2b4f67aa5e78acf4bfaf0e3bdd11fd08a39efd285d84eb1cdd71eb566"
 dependencies = [
  "anyhow",
  "async-recursion 0.3.2",
