@@ -855,7 +855,11 @@ your email.
 We have both a Riot server and a Slack for chat. Josh (josh@oxidecomputer.com) can get
 
 you set up with an account on the Riot server. You can use SSO to login to the Slack
-at https://oxidecomputer.slack.com.
+at https://oxidecomputer.slack.com. Once you have a matrix chat account, you can
+update your chat handle in the configs repo:
+https://github.com/oxidecomputer/configs/blob/master/configs/users.toml.
+It's pretty self explanatory if you look at the other users and then your user
+where `chat = ''`. If you need help you can ask Josh or Jess.
 
 Lastly, be sure to order yourself some swag: https://swag.oxide.computer
 
