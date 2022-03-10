@@ -397,6 +397,7 @@ pub async fn handle_rfd_push(
     let mut message = String::new();
 
     let mut a = |s: &str| {
+        info!("[rfd] {}", s);
         message.push_str(&format!("[{}] ", Utc::now().format("%+")));
         message.push_str(s);
         message.push('\n');
@@ -818,6 +819,7 @@ pub async fn handle_configs_push(
     let mut message = String::new();
 
     let mut a = |s: &str| {
+        info!("[configs] {}", s);
         message.push_str(&format!("[{}] ", Utc::now().format("%+")));
         message.push_str(s);
         message.push('\n');
