@@ -269,6 +269,192 @@ pub mod null_date_format {
 }
 
 impl UserConfig {
+    /// Sync a user from the config file with the services.
+    #[tracing::instrument(skip(github))]
+    pub async fn sync(
+        &mut self,
+        db: &Database,
+        company: &Company,
+        github: &octorust::Client,
+        user_map: &mut BTreeMap<String, User>,
+        gsuite_users_map: &BTreeMap<String, GSuiteUser>,
+        okta_users: &HashMap<String, okta::types::User>,
+        ramp_users: &HashMap<String, ramp_api::types::User>,
+        zoom_users: &HashMap<String, zoom_api::types::UsersResponse>,
+        zoom_users_pending: &HashMap<String, zoom_api::types::UsersResponse>,
+        gusto_users: &HashMap<String, gusto_api::types::Employee>,
+        gusto_users_by_id: &HashMap<String, gusto_api::types::Employee>,
+    ) -> Result<()> {
+        // Get everything we need to authenticate with GSuite.
+        // Initialize the GSuite client.
+        let gsuite = company.authenticate_google_admin(db).await?;
+
+        // We don't need a base id here since we are only using the enterprise api features.
+        let airtable_auth = company.authenticate_airtable("");
+
+        // Initialize the Gusto client.
+        let gusto_auth = company.authenticate_gusto(db).await;
+
+        // Initialize the Okta client.
+        let okta_auth = company.authenticate_okta();
+
+        // Initialize the Ramp client.
+        let ramp_auth = company.authenticate_ramp(db).await;
+
+        // Initialize the Zoom client.
+        let zoom_auth = company.authenticate_zoom(db).await;
+
+        // Set the user's email.
+        self.email = format!("{}@{}", self.username, company.gsuite_domain);
+
+        // Check if we already have the new user in the database.
+        let existing = User::get_from_db(db, company.id, self.username.to_string()).await;
+
+        // Update or create the user in the database.
+        if let Some(e) = existing.clone() {
+            self.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
+        }
+
+        // See if we have a gsuite user for the user.
+        if let Some(gsuite_user) = gsuite_users_map.get(&self.email) {
+            self.google_id = gsuite_user.id.to_string();
+        }
+
+        // See if we have a okta user for the user.
+        if let Some(okta_user) = okta_users.get(&self.email) {
+            self.okta_id = okta_user.id.to_string();
+        }
+
+        // Check if we have a Ramp user for the user.
+        if let Some(ramp_user) = ramp_users.get(&self.email) {
+            self.ramp_id = ramp_user.id.to_string();
+        }
+
+        // See if we have a zoom user for the user.
+        if let Some(zoom_user) = zoom_users.get(&self.email) {
+            self.zoom_id = zoom_user.id.to_string();
+        } else {
+            // See if we have a pending zoom user for the user.
+            if let Some(zoom_user) = zoom_users_pending.get(&self.email) {
+                if !self.zoom_id.is_empty() {
+                    self.zoom_id = zoom_user.id.to_string();
+                } else if let Some(ref e) = existing.clone() {
+                    // Get it from the database.
+                    self.zoom_id = e.zoom_id.to_string();
+                }
+            }
+        }
+
+        // See if we have a gusto user for the user.
+        // The user's email can either be their personal email or their oxide email.
+        if let Some(gusto_user) = gusto_users.get(&self.email) {
+            self.update_from_gusto(gusto_user);
+        } else if let Some(gusto_user) = gusto_users.get(&self.recovery_email) {
+            self.update_from_gusto(gusto_user);
+        } else {
+            // Grab their date of birth, start date, and address from Airtable.
+            if let Some(e) = existing.clone() {
+                if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
+                    self.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
+                    self.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
+                    self.home_address_city = airtable_record.fields.home_address_city.to_string();
+                    self.home_address_state = airtable_record.fields.home_address_state.to_string();
+                    self.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
+                    self.home_address_country = airtable_record.fields.home_address_country.to_string();
+                    self.birthday = airtable_record.fields.birthday;
+                    // Keep the start date in airtable if we already have one.
+                    if self.start_date == crate::utils::default_date()
+                        && airtable_record.fields.start_date != crate::utils::default_date()
+                    {
+                        self.start_date = airtable_record.fields.start_date;
+                    }
+                    self.gusto_id = airtable_record.fields.gusto_id.to_string();
+                }
+
+                if !e.gusto_id.is_empty() {
+                    if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
+                        self.update_from_gusto(gusto_user);
+                    }
+                } else if let Ok((ref gusto, ref gusto_company_id)) = gusto_auth {
+                    self.populate_home_address().await?;
+                    // Create the user in Gusto if necessary.
+                    self.create_in_gusto_if_needed(gusto, gusto_company_id).await?;
+                }
+            }
+        }
+
+        // Expand the user.
+        self.expand(db, company).await?;
+
+        let mut new_user = self.upsert(db).await?;
+
+        if let Some(ref okta) = okta_auth {
+            // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
+            // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
+            // Ensure the okta user.
+            let okta_id = okta.ensure_user(db, company, &new_user).await?;
+            // Set the GSuite ID for the user.
+            new_user.okta_id = okta_id.to_string();
+            // Update the user in the database.
+            new_user = new_user.update(db).await?;
+        } else {
+            // Update the user in GSuite.
+            // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
+            let gsuite_id = gsuite.ensure_user(db, company, &new_user).await?;
+            // Set the GSuite ID for the user.
+            new_user.google_id = gsuite_id.to_string();
+            // Update the user in the database.
+            new_user = new_user.update(db).await?;
+
+            // Create a zoom account for the user, if we have zoom credentials and
+            // we cannot find the zoom user.
+            // Otherwise update the zoom user.
+            // We only do this if not managed by Okta.
+            if let Ok(ref zoom) = zoom_auth {
+                let zoom_id = zoom.ensure_user(db, company, &new_user).await?;
+                // Set the Zoom ID for the user.
+                new_user.zoom_id = zoom_id.to_string();
+                // Update the user in the database.
+                new_user = new_user.update(db).await?;
+            }
+        }
+
+        // Add the user to their GitHub teams and the org.
+        if !new_user.github.is_empty() {
+            // Add them to the org and any teams they need to be added to.
+            // We don't return an id here.
+            let _id = github.ensure_user(db, company, &new_user).await?;
+        }
+
+        if let Ok(ref ramp) = ramp_auth {
+            match ramp.ensure_user(db, company, &new_user).await {
+                Ok(ramp_id) => {
+                    // Set the Ramp ID for the user.
+                    new_user.ramp_id = ramp_id.to_string();
+                    // Update the user in the database.
+                    new_user = new_user.update(db).await?;
+                }
+                Err(e) => {
+                    warn!("Failed to ensure ramp user `{}`: {}", new_user.email, e);
+                }
+            }
+        }
+
+        // Get the Airtable information for the user.
+        let airtable_id = airtable_auth.ensure_user(db, company, &new_user).await?;
+        new_user.airtable_id = airtable_id.to_string();
+        // Update the user in the database.
+        new_user = new_user.update(db).await?;
+
+        // Update with any other changes we made to the user.
+        new_user.update(db).await?;
+
+        // Remove the user from the BTreeMap.
+        user_map.remove(&self.username);
+
+        Ok(())
+    }
+
     #[tracing::instrument(skip(gusto))]
     pub async fn create_in_gusto_if_needed(&mut self, gusto: &Gusto, gusto_company_id: &str) -> Result<()> {
         // Only do this if we have a start date.
@@ -1680,153 +1866,20 @@ pub async fn sync_users(
     }
     // Sync users.
     for (_, mut user) in users {
-        // Set the user's email.
-        user.email = format!("{}@{}", user.username, company.gsuite_domain);
-
-        // Check if we already have the new user in the database.
-        let existing = User::get_from_db(db, company.id, user.username.to_string()).await;
-
-        // Update or create the user in the database.
-        if let Some(e) = existing.clone() {
-            user.google_anniversary_event_id = e.google_anniversary_event_id.to_string();
-        }
-
-        // See if we have a gsuite user for the user.
-        if let Some(gsuite_user) = gsuite_users_map.get(&user.email) {
-            user.google_id = gsuite_user.id.to_string();
-        }
-
-        // See if we have a okta user for the user.
-        if let Some(okta_user) = okta_users.get(&user.email) {
-            user.okta_id = okta_user.id.to_string();
-        }
-
-        // Check if we have a Ramp user for the user.
-        if let Some(ramp_user) = ramp_users.get(&user.email) {
-            user.ramp_id = ramp_user.id.to_string();
-        }
-
-        // See if we have a zoom user for the user.
-        if let Some(zoom_user) = zoom_users.get(&user.email) {
-            user.zoom_id = zoom_user.id.to_string();
-        } else {
-            // See if we have a pending zoom user for the user.
-            if let Some(zoom_user) = zoom_users_pending.get(&user.email) {
-                if !user.zoom_id.is_empty() {
-                    user.zoom_id = zoom_user.id.to_string();
-                } else if let Some(ref e) = existing.clone() {
-                    // Get it from the database.
-                    user.zoom_id = e.zoom_id.to_string();
-                }
-            }
-        }
-
-        // See if we have a gusto user for the user.
-        // The user's email can either be their personal email or their oxide email.
-        if let Some(gusto_user) = gusto_users.get(&user.email) {
-            user.update_from_gusto(gusto_user);
-        } else if let Some(gusto_user) = gusto_users.get(&user.recovery_email) {
-            user.update_from_gusto(gusto_user);
-        } else {
-            // Grab their date of birth, start date, and address from Airtable.
-            if let Some(e) = existing.clone() {
-                if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
-                    user.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
-                    user.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
-                    user.home_address_city = airtable_record.fields.home_address_city.to_string();
-                    user.home_address_state = airtable_record.fields.home_address_state.to_string();
-                    user.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
-                    user.home_address_country = airtable_record.fields.home_address_country.to_string();
-                    user.birthday = airtable_record.fields.birthday;
-                    // Keep the start date in airtable if we already have one.
-                    if user.start_date == crate::utils::default_date()
-                        && airtable_record.fields.start_date != crate::utils::default_date()
-                    {
-                        user.start_date = airtable_record.fields.start_date;
-                    }
-                    user.gusto_id = airtable_record.fields.gusto_id.to_string();
-                }
-
-                if !e.gusto_id.is_empty() {
-                    if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
-                        user.update_from_gusto(gusto_user);
-                    }
-                } else if let Ok((ref gusto, ref gusto_company_id)) = gusto_auth {
-                    user.populate_home_address().await?;
-                    // Create the user in Gusto if necessary.
-                    user.create_in_gusto_if_needed(gusto, gusto_company_id).await?;
-                }
-            }
-        }
-
-        // Expand the user.
-        user.expand(db, company).await?;
-
-        let mut new_user = user.upsert(db).await?;
-
-        if let Some(ref okta) = okta_auth {
-            // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
-            // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
-            // Ensure the okta user.
-            let okta_id = okta.ensure_user(db, company, &new_user).await?;
-            // Set the GSuite ID for the user.
-            new_user.okta_id = okta_id.to_string();
-            // Update the user in the database.
-            new_user = new_user.update(db).await?;
-        } else {
-            // Update the user in GSuite.
-            // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-            let gsuite_id = gsuite.ensure_user(db, company, &new_user).await?;
-            // Set the GSuite ID for the user.
-            new_user.google_id = gsuite_id.to_string();
-            // Update the user in the database.
-            new_user = new_user.update(db).await?;
-
-            // Create a zoom account for the user, if we have zoom credentials and
-            // we cannot find the zoom user.
-            // Otherwise update the zoom user.
-            // We only do this if not managed by Okta.
-            if let Ok(ref zoom) = zoom_auth {
-                let zoom_id = zoom.ensure_user(db, company, &new_user).await?;
-                // Set the Zoom ID for the user.
-                new_user.zoom_id = zoom_id.to_string();
-                // Update the user in the database.
-                new_user = new_user.update(db).await?;
-            }
-        }
-
-        // Add the user to their GitHub teams and the org.
-        if !new_user.github.is_empty() {
-            // Add them to the org and any teams they need to be added to.
-            // We don't return an id here.
-            let _id = github.ensure_user(db, company, &new_user).await?;
-        }
-
-        if let Ok(ref ramp) = ramp_auth {
-            match ramp.ensure_user(db, company, &new_user).await {
-                Ok(ramp_id) => {
-                    // Set the Ramp ID for the user.
-                    new_user.ramp_id = ramp_id.to_string();
-                    // Update the user in the database.
-                    new_user = new_user.update(db).await?;
-                }
-                Err(e) => {
-                    warn!("Failed to ensure ramp user `{}`: {}", new_user.email, e);
-                }
-            }
-        }
-
-        // Get the Airtable information for the user.
-        let airtable_id = airtable_auth.ensure_user(db, company, &new_user).await?;
-        new_user.airtable_id = airtable_id.to_string();
-        // Update the user in the database.
-        new_user = new_user.update(db).await?;
-
-        // Update with any other changes we made to the user.
-        new_user.update(db).await?;
-
-        // Remove the user from the BTreeMap.
-        user_map.remove(&user.username);
+        user.sync(
+            db,
+            company,
+            github,
+            &mut user_map,
+            &gsuite_users_map,
+            &okta_users,
+            &ramp_users,
+            &zoom_users,
+            &zoom_users_pending,
+            &gusto_users,
+            &gusto_users_by_id,
+        )
+        .await?;
     }
 
     // Remove any users that should no longer be in the database.
