@@ -1045,22 +1045,34 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
     let rfds = get_rfds_from_repo(&github, company).await?;
 
     // Iterate over the rfds and update.
-    let tasks: Vec<_> = rfds
-        .into_iter()
-        .map(|(_, mut rfd)| {
-            tokio::spawn(enclose! { (db, company, github) async move {
-                rfd.sync(&db, &company, &github).await
-            }})
-        })
-        .collect();
+    // We should do these concurrently, but limit it to maybe 3 at a time.
+    let mut i = 0;
+    let take = 3;
+    let mut skip = 0;
+    while i < rfds.clone().len() {
+        let tasks: Vec<_> = rfds
+            .clone()
+            .into_iter()
+            .skip(skip)
+            .take(take)
+            .map(|(_, mut rfd)| {
+                tokio::spawn(enclose! { (db, company, github) async move {
+                    rfd.sync(&db, &company, &github).await
+                }})
+            })
+            .collect();
 
-    let mut results: Vec<Result<()>> = Default::default();
-    for task in tasks {
-        results.push(task.await?);
-    }
+        let mut results: Vec<Result<()>> = Default::default();
+        for task in tasks {
+            results.push(task.await?);
+        }
 
-    for result in results {
-        result?;
+        for result in results {
+            result?;
+        }
+
+        i += take;
+        skip += take;
     }
 
     // Update rfds in airtable.
