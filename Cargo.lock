@@ -4037,7 +4037,7 @@ dependencies = [
  "sentry-contexts 0.24.3",
  "sentry-core 0.24.3",
  "sentry-debug-images 0.24.3",
- "sentry-log",
+ "sentry-log 0.24.3",
  "sentry-panic 0.24.3",
  "sentry-tracing 0.24.3",
  "tokio",
@@ -4055,6 +4055,7 @@ dependencies = [
  "sentry-contexts 0.25.0",
  "sentry-core 0.25.0",
  "sentry-debug-images 0.25.0",
+ "sentry-log 0.25.0",
  "sentry-panic 0.25.0",
  "sentry-tracing 0.25.0",
  "tokio",
@@ -4183,6 +4184,15 @@ checksum = "e3a2a81f0e69b5f3e81dc5150b4a34c3efcbf5d51852ecca15e1800ed6ee6aaf"
 dependencies = [
  "log 0.4.14",
  "sentry-core 0.24.3",
+]
+
+[[package]]
+name = "sentry-log"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd8046f9cc1442489946b82d0a423da"
+dependencies = [
+ "log 0.4.14",
+ "sentry-core 0.25.0",
 ]
 
 [[package]]
