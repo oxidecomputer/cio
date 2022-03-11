@@ -401,7 +401,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             }
 
             for result in results {
-                result?;
+                if let Err(e) = result {
+                    log::warn!("refreshing configs for company failed: {:?}", e);
+                }
             }
         }
         SubCommand::SyncFinance(_) => {
@@ -424,7 +426,9 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
             }
 
             for result in results {
-                result?;
+                if let Err(e) = result {
+                    log::warn!("refreshing finance for company failed: {:?}", e);
+                }
             }
         }
         SubCommand::SyncFunctions(_) => {
