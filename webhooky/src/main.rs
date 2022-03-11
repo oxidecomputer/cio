@@ -231,9 +231,9 @@ async fn main() -> Result<()> {
     };
 
     // Generate events on Errors and Warnings.
-    let sentry_layer = sentry::integrations::tracing::layer().event_filter(|md| match md.level() {
-        &tracing::Level::ERROR => sentry::integrations::tracing::EventFilter::Event,
-        &tracing::Level::WARN => sentry::integrations::tracing::EventFilter::Event,
+    let sentry_layer = sentry::integrations::tracing::layer().event_filter(|md| match *md.level() {
+        tracing::Level::ERROR => sentry::integrations::tracing::EventFilter::Event,
+        tracing::Level::WARN => sentry::integrations::tracing::EventFilter::Event,
         _ => sentry::integrations::tracing::EventFilter::Ignore,
     });
 

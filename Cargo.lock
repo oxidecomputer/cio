@@ -936,7 +936,7 @@ name = "diesel-sentry"
 version = "0.1.0"
 dependencies = [
  "diesel",
- "sentry 0.25.0",
+ "sentry 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
  "serde",
  "tracing",
  "uuid",
@@ -4050,14 +4050,31 @@ source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd
 dependencies = [
  "httpdate",
  "reqwest",
- "sentry-anyhow 0.25.0",
- "sentry-backtrace 0.25.0",
- "sentry-contexts 0.25.0",
- "sentry-core 0.25.0",
- "sentry-debug-images 0.25.0",
+ "sentry-anyhow 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "sentry-backtrace 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "sentry-contexts 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "sentry-debug-images 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "sentry-panic 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "sentry-tracing 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "tokio",
+]
+
+[[package]]
+name = "sentry"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
+dependencies = [
+ "httpdate",
+ "reqwest",
+ "sentry-anyhow 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
+ "sentry-backtrace 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
+ "sentry-contexts 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
+ "sentry-debug-images 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
  "sentry-log 0.25.0",
- "sentry-panic 0.25.0",
- "sentry-tracing 0.25.0",
+ "sentry-panic 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
+ "sentry-tracing 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
  "tokio",
 ]
 
@@ -4078,8 +4095,18 @@ version = "0.25.0"
 source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd8046f9cc1442489946b82d0a423da"
 dependencies = [
  "anyhow",
- "sentry-backtrace 0.25.0",
- "sentry-core 0.25.0",
+ "sentry-backtrace 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+]
+
+[[package]]
+name = "sentry-anyhow"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
+dependencies = [
+ "anyhow",
+ "sentry-backtrace 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
 ]
 
 [[package]]
@@ -4102,7 +4129,18 @@ dependencies = [
  "backtrace",
  "lazy_static",
  "regex",
- "sentry-core 0.25.0",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+]
+
+[[package]]
+name = "sentry-backtrace"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
+dependencies = [
+ "backtrace",
+ "lazy_static",
+ "regex",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
 ]
 
 [[package]]
@@ -4126,7 +4164,19 @@ dependencies = [
  "hostname",
  "libc",
  "rustc_version 0.4.0",
- "sentry-core 0.25.0",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "uname",
+]
+
+[[package]]
+name = "sentry-contexts"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
+dependencies = [
+ "hostname",
+ "libc",
+ "rustc_version 0.4.0",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
  "uname",
 ]
 
@@ -4150,7 +4200,19 @@ source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd
 dependencies = [
  "lazy_static",
  "rand 0.8.5",
- "sentry-types 0.25.0",
+ "sentry-types 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "sentry-core"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
+dependencies = [
+ "lazy_static",
+ "rand 0.8.5",
+ "sentry-types 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
  "serde",
  "serde_json",
 ]
@@ -4173,7 +4235,17 @@ source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd
 dependencies = [
  "findshlibs",
  "lazy_static",
- "sentry-core 0.25.0",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+]
+
+[[package]]
+name = "sentry-debug-images"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
+dependencies = [
+ "findshlibs",
+ "lazy_static",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
 ]
 
 [[package]]
@@ -4189,10 +4261,10 @@ dependencies = [
 [[package]]
 name = "sentry-log"
 version = "0.25.0"
-source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd8046f9cc1442489946b82d0a423da"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
 dependencies = [
  "log 0.4.14",
- "sentry-core 0.25.0",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
 ]
 
 [[package]]
@@ -4210,8 +4282,17 @@ name = "sentry-panic"
 version = "0.25.0"
 source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd8046f9cc1442489946b82d0a423da"
 dependencies = [
- "sentry-backtrace 0.25.0",
- "sentry-core 0.25.0",
+ "sentry-backtrace 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+]
+
+[[package]]
+name = "sentry-panic"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
+dependencies = [
+ "sentry-backtrace 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
 ]
 
 [[package]]
@@ -4230,7 +4311,17 @@ name = "sentry-tracing"
 version = "0.25.0"
 source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd8046f9cc1442489946b82d0a423da"
 dependencies = [
- "sentry-core 0.25.0",
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=request)",
+ "tracing-core",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "sentry-tracing"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
+dependencies = [
+ "sentry-core 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
  "tracing-core",
  "tracing-subscriber",
 ]
@@ -4256,6 +4347,22 @@ dependencies = [
 name = "sentry-types"
 version = "0.25.0"
 source = "git+https://github.com/jessfraz/sentry-rust?branch=request#fb70909f4dd8046f9cc1442489946b82d0a423da"
+dependencies = [
+ "debugid",
+ "getrandom 0.2.5",
+ "hex",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "time 0.3.7",
+ "url 2.2.2",
+ "uuid",
+]
+
+[[package]]
+name = "sentry-types"
+version = "0.25.0"
+source = "git+https://github.com/jessfraz/sentry-rust?branch=set-tags2#594e213f204ef8a8f0a17483146cade7362362e6"
 dependencies = [
  "debugid",
  "getrandom 0.2.5",
@@ -5849,7 +5956,7 @@ dependencies = [
  "regex",
  "reqwest",
  "schemars",
- "sentry 0.25.0",
+ "sentry 0.25.0 (git+https://github.com/jessfraz/sentry-rust?branch=set-tags2)",
  "serde",
  "serde_json",
  "serde_qs 0.9.1",
