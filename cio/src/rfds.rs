@@ -550,6 +550,7 @@ impl RFD {
         // This ensures that
         let old_dir = format!("rfd/{}", self.number_string);
         let images = get_images_in_branch(github, owner, rfd_repo, &old_dir, &branch).await?;
+        let mut image_paths: Vec<String> = Vec::new();
         for image in images {
             // Save the image to our temporary directory.
             let image_path = format!(
@@ -557,6 +558,8 @@ impl RFD {
                 temp_dir_str.trim_end_matches('/'),
                 image.path.replace(&old_dir, "").trim_start_matches('/')
             );
+
+            image_paths.push(image_path.to_string());
 
             write_file(&PathBuf::from(image_path), &decode_base64(&image.content)).await?;
         }
@@ -614,6 +617,14 @@ impl RFD {
         // Delete our temporary file.
         if path.exists() && !path.is_dir() {
             fs::remove_file(path).await?;
+        }
+
+        // Cleanup our images.
+        for image_path in image_paths {
+            // Ignore the error we don't care.
+            // TODO: One thing we are doing on every RFD push is updating these images twoce, once
+            // to parse the asciidoc and again for PDF, should probably combine into one thing.
+            fs::remove_file(PathBuf::from(&image_path)).await.unwrap_or_default();
         }
 
         Ok(())
