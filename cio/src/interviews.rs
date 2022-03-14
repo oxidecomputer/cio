@@ -170,7 +170,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                     // Make sure it is and that we shouldn't just skip it.
                     if let Ok(_a) = applicants::dsl::applicants
                         .filter(applicants::dsl::email.eq(attendee.email.to_string()))
-                        .first_async::<Applicant>(&db.pool())
+                        .first_async::<Applicant>(db.pool())
                         .await
                     {
                         // It must be the person being interviewed.
@@ -201,7 +201,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                                 .and(users::dsl::cio_company_id.eq(company.id)),
                         )
                         .limit(1)
-                        .load_async::<User>(&db.pool())
+                        .load_async::<User>(db.pool())
                         .await
                     {
                         Ok(r) => {
@@ -237,7 +237,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                         )
                         .filter(users::dsl::cio_company_id.eq(company.id))
                         .limit(1)
-                        .load_async::<User>(&db.pool())
+                        .load_async::<User>(db.pool())
                         .await
                     {
                         Ok(r) => {
@@ -266,7 +266,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
 
             if let Ok(mut a) = applicants::dsl::applicants
                 .filter(applicants::dsl::email.eq(interview.email.to_string()))
-                .first_async::<Applicant>(&db.pool())
+                .first_async::<Applicant>(db.pool())
                 .await
             {
                 // Set the applicant to interviewing.
@@ -351,7 +351,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         let mut materials_url = "".to_string();
         if let Ok(a) = applicants::dsl::applicants
             .filter(applicants::dsl::email.eq(employee.recovery_email.to_string()))
-            .first_async::<Applicant>(&db.pool())
+            .first_async::<Applicant>(db.pool())
             .await
         {
             materials_url = a.materials;
@@ -385,7 +385,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         let result = applicants::dsl::applicants
             .filter(applicants::dsl::email.eq(interview.email.to_string()))
             .filter(applicants::dsl::status.eq(crate::applicant_status::Status::Interviewing.to_string()))
-            .first_async::<Applicant>(&db.pool())
+            .first_async::<Applicant>(db.pool())
             .await;
         if result.is_err() {
             // Continue early we couldn't find the applicant.
@@ -410,7 +410,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
                         .or(users::dsl::aliases.contains(vec![username.to_string()])),
                 )
                 .filter(users::dsl::cio_company_id.eq(company.id))
-                .first_async::<User>(&db.pool())
+                .first_async::<User>(db.pool())
                 .await
             {
                 existing.push((
@@ -435,7 +435,7 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
     for (email, itrs) in interviewers {
         if let Ok(applicant) = applicants::dsl::applicants
             .filter(applicants::dsl::email.eq(email.to_string()))
-            .first_async::<Applicant>(&db.pool())
+            .first_async::<Applicant>(db.pool())
             .await
         {
             // Create the cover page.

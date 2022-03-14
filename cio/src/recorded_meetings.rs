@@ -366,7 +366,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
                     .eq(meeting.host_id.to_string())
                     .and(users::dsl::cio_company_id.eq(company.id)),
             )
-            .first_async::<User>(&db.pool())
+            .first_async::<User>(db.pool())
             .await?;
 
         // Create the meeting in the database.

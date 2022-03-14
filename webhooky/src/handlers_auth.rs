@@ -463,13 +463,13 @@ pub async fn handle_auth_slack_callback(
                 .and(api_tokens::dsl::auth_company_id.eq(company.id))
                 .and(api_tokens::dsl::token_type.eq(token.token_type.to_string())),
         )
-        .first_async::<APIToken>(&api_context.db.pool())
+        .first_async::<APIToken>(api_context.db.pool())
         .await
     {
         diesel::update(api_tokens::dsl::api_tokens)
             .filter(api_tokens::dsl::id.eq(existing.id))
             .set(token)
-            .get_result_async::<APIToken>(&api_context.db.pool())
+            .get_result_async::<APIToken>(api_context.db.pool())
             .await?
     } else {
         token.create_in_db(&api_context.db).await?
@@ -508,13 +508,13 @@ pub async fn handle_auth_slack_callback(
                     .and(api_tokens::dsl::auth_company_id.eq(company.id))
                     .and(api_tokens::dsl::token_type.eq(user_token.token_type.to_string())),
             )
-            .first_async::<APIToken>(&api_context.db.pool())
+            .first_async::<APIToken>(api_context.db.pool())
             .await
         {
             diesel::update(api_tokens::dsl::api_tokens)
                 .filter(api_tokens::dsl::id.eq(existing.id))
                 .set(user_token)
-                .get_result_async::<APIToken>(&api_context.db.pool())
+                .get_result_async::<APIToken>(api_context.db.pool())
                 .await?
         } else {
             user_token.create_in_db(&api_context.db).await?

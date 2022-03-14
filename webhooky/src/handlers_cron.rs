@@ -50,7 +50,7 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str, background
         .filter(functions::dsl::name.eq(cmd_name.to_string()))
         .filter(functions::dsl::status.eq(octorust::types::JobStatus::InProgress.to_string()))
         .order_by(functions::dsl::created_at.desc()) // Get the most recent one first.
-        .first_async::<Function>(&db.pool())
+        .first_async::<Function>(db.pool())
         .await
     {
         let u = uuid::Uuid::parse_str(&f.saga_id)?;

@@ -723,7 +723,7 @@ impl BarcodeScan {
         // Firstly, let's make sure we have the barcode in the database.
         match swag_inventory_items::dsl::swag_inventory_items
             .filter(swag_inventory_items::dsl::barcode.eq(barcode.to_string()))
-            .first_async::<SwagInventoryItem>(&db.pool())
+            .first_async::<SwagInventoryItem>(db.pool())
             .await
         {
             Ok(mut swag_inventory_item) => {

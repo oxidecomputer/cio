@@ -819,7 +819,7 @@ impl OutboundShipments {
                     .and(outbound_shipments::dsl::provider.eq("Shippo".to_string()))
                     .and(outbound_shipments::dsl::pickup_date.is_null()),
             )
-            .load_async::<OutboundShipment>(&db.pool())
+            .load_async::<OutboundShipment>(db.pool())
             .await?;
 
         if shipments.is_empty() {

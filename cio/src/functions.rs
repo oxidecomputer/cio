@@ -404,7 +404,7 @@ pub async fn refresh_functions() -> Result<()> {
     let fns = functions::dsl::functions
         .filter(functions::dsl::status.eq(octorust::types::JobStatus::InProgress.to_string()))
         .filter(functions::dsl::created_at.lt(hours_ago))
-        .load_async::<Function>(&db.pool())
+        .load_async::<Function>(db.pool())
         .await?;
 
     for mut f in fns {
@@ -421,7 +421,7 @@ pub async fn refresh_functions() -> Result<()> {
     let fns = functions::dsl::functions
         .filter(functions::dsl::status.eq(octorust::types::JobStatus::Completed.to_string()))
         .filter(functions::dsl::conclusion.eq("".to_string()))
-        .load_async::<Function>(&db.pool())
+        .load_async::<Function>(db.pool())
         .await?;
 
     for mut f in fns {

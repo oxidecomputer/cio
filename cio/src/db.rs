@@ -6,13 +6,15 @@ use async_trait::async_trait;
 use diesel::PgConnection;
 use diesel_sentry::SentryConnection;
 
+pub type DbConnection = SentryConnection<PgConnection>;
+
 #[derive(Debug, Clone)]
 pub struct Database {
     pool: DB,
 }
 
 #[derive(Clone)]
-struct DB(bb8::Pool<ConnectionManager<SentryConnection<diesel::PgConnection>>>);
+struct DB(bb8::Pool<ConnectionManager<DbConnection>>);
 
 // This is a workaround so we can implement Debug for PgConnection.
 impl fmt::Debug for DB {
@@ -27,16 +29,16 @@ impl Database {
     pub async fn new() -> Self {
         let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
 
-        let manager = ConnectionManager::<SentryConnection<PgConnection>>::new(&database_url);
-        let pool = bb8::Pool::builder().max_size(10).build(manager).await.unwrap();
+        let manager = ConnectionManager::<DbConnection>::new(&database_url);
+        let pool = bb8::Builder::new().build_unchecked(manager);
 
         Database { pool: DB(pool) }
     }
 
-    /// Returns a connection from the pool.
+    /// Returns a reference to the underlying pool.
     #[tracing::instrument]
-    pub fn pool(&self) -> bb8::Pool<ConnectionManager<SentryConnection<diesel::PgConnection>>> {
-        self.pool.0.clone()
+    pub fn pool(&self) -> &bb8::Pool<ConnectionManager<DbConnection>> {
+        &self.pool.0
     }
 }
 

@@ -57,7 +57,7 @@ pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> 
                     .eq(company.id)
                     .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
             )
-            .load_async::<Applicant>(&api_context.db.pool())
+            .load_async::<Applicant>(api_context.db.pool())
             .await?;
 
         Ok(CounterResponse {
@@ -200,7 +200,7 @@ pub async fn handle_slack_commands(
             if num > 0 {
                 if let Ok(rfd) = rfds::dsl::rfds
                     .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num)))
-                    .first_async::<RFD>(&db.pool())
+                    .first_async::<RFD>(db.pool())
                     .await
                 {
                     let r: FormattedMessage = rfd.into();
@@ -211,7 +211,7 @@ pub async fn handle_slack_commands(
                             .eq(company.id)
                             .and(rfds::dsl::name.ilike(format!("%{}%", text))),
                     )
-                    .first_async::<RFD>(&db.pool())
+                    .first_async::<RFD>(db.pool())
                     .await
                 {
                     let r: FormattedMessage = rfd.into();
@@ -231,7 +231,7 @@ pub async fn handle_slack_commands(
                         .eq(company.id)
                         .and(rfds::dsl::name.ilike(format!("%{}%", text))),
                 )
-                .first_async::<RFD>(&db.pool())
+                .first_async::<RFD>(db.pool())
                 .await
             {
                 let r: FormattedMessage = rfd.into();
@@ -288,7 +288,7 @@ pub async fn handle_slack_commands(
                         .eq(company.id)
                         .and(applicants::dsl::status.eq(status.to_string())),
                 )
-                .load_async::<Applicant>(&db.pool())
+                .load_async::<Applicant>(db.pool())
                 .await?;
 
             if applicants.len() > 10 {
@@ -337,7 +337,7 @@ pub async fn handle_slack_commands(
                         .eq(company.id)
                         .and(applicants::dsl::name.ilike(format!("%{}%", text))),
                 )
-                .first_async::<Applicant>(&db.pool())
+                .first_async::<Applicant>(db.pool())
                 .await
             {
                 let r: FormattedMessage = applicant.into();
@@ -373,7 +373,7 @@ pub async fn handle_slack_commands(
                                         .ne(cio_api::shipment_status::Status::PickedUp.to_string()),
                                 ),
                         )
-                        .load_async::<OutboundShipment>(&db.pool())
+                        .load_async::<OutboundShipment>(db.pool())
                         .await?
                 } else {
                     Default::default()
@@ -387,7 +387,7 @@ pub async fn handle_slack_commands(
                                 .and(inbound_shipments::dsl::tracking_status.ne("DELIVERED".to_string()))
                                 .and(inbound_shipments::dsl::delivered_time.is_null()),
                         )
-                        .load_async::<InboundShipment>(&db.pool())
+                        .load_async::<InboundShipment>(db.pool())
                         .await?
                 } else {
                     Default::default()
@@ -473,7 +473,7 @@ pub async fn handle_slack_commands(
                         .eq(company.id)
                         .and(journal_club_meetings::dsl::state.eq(state.to_string())),
                 )
-                .load_async::<JournalClubMeeting>(&db.pool())
+                .load_async::<JournalClubMeeting>(db.pool())
                 .await?;
 
             let mut msg: serde_json::Value = Default::default();
@@ -502,7 +502,7 @@ pub async fn handle_slack_commands(
                         .eq(company.id)
                         .and(journal_club_meetings::dsl::title.ilike(format!("%{}%", text))),
                 )
-                .first_async::<JournalClubMeeting>(&db.pool())
+                .first_async::<JournalClubMeeting>(db.pool())
                 .await
             {
                 let r: FormattedMessage = meeting.into();
@@ -1432,7 +1432,7 @@ pub async fn handle_checkr_background_update(
                 .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
         )
         .filter(applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()))
-        .first_async::<Applicant>(&api_context.db.pool())
+        .first_async::<Applicant>(api_context.db.pool())
         .await;
     if result.is_ok() {
         let mut applicant = result?;
@@ -1480,7 +1480,7 @@ pub async fn handle_docusign_envelope_update(
     // Check their offer first.
     let result = applicants::dsl::applicants
         .filter(applicants::dsl::docusign_envelope_id.eq(event.envelope_id.to_string()))
-        .first_async::<Applicant>(&db.pool())
+        .first_async::<Applicant>(db.pool())
         .await;
     match result {
         Ok(mut applicant) => {
@@ -1510,7 +1510,7 @@ pub async fn handle_docusign_envelope_update(
     // Now try to match on PIIA.
     let result = applicants::dsl::applicants
         .filter(applicants::dsl::docusign_piia_envelope_id.eq(event.envelope_id.to_string()))
-        .first_async::<Applicant>(&db.pool())
+        .first_async::<Applicant>(db.pool())
         .await;
     match result {
         Ok(mut applicant) => {

@@ -65,10 +65,10 @@ impl<C: Connection> SimpleConnection for SentryConnection<C> {
         skip(self, query),
     )]
     fn batch_execute(&mut self, query: &str) -> QueryResult<()> {
-        //let mut txn = start_sentry_db_transaction("sql.query", query);
+        let mut txn = start_sentry_db_transaction("sql.query", query);
 
         let result = self.inner.batch_execute(query);
-        //txn.finish();
+        txn.finish();
         result
     }
 }
@@ -99,7 +99,7 @@ where
     fn establish(database_url: &str) -> ConnectionResult<Self> {
         tracing::debug!("establishing postgresql connection");
         let conn_id = Uuid::new_v4();
-        //let mut txn = start_sentry_db_transaction("connection", "establish");
+        let mut txn = start_sentry_db_transaction("connection", "establish");
         let conn = C::establish(database_url);
         let mut inner = conn?;
 
@@ -117,7 +117,7 @@ where
         tracing::debug!("db.version: {}", info.version);
         tracing::debug!("db.user: {}", info.user);
 
-        //txn.finish();
+        txn.finish();
 
         Ok(SentryConnection {
             inner,
@@ -141,9 +141,9 @@ where
         F: FnOnce(&mut Self) -> Result<T, E>,
         E: From<diesel::result::Error>,
     {
-        ////let mut txn = start_sentry_db_transaction("transaction", &self.id.to_string());
+        let mut txn = start_sentry_db_transaction("transaction", &self.id.to_string());
         let result = f(self);
-        //txn.finish();
+        txn.finish();
         result
     }
 
@@ -159,10 +159,10 @@ where
         skip(self),
     )]
     fn execute(&mut self, query: &str) -> QueryResult<usize> {
-        //let mut txn = start_sentry_db_transaction("sql.query", query);
+        let mut txn = start_sentry_db_transaction("sql.query", query);
 
         let result = self.inner.execute(query);
-        //txn.finish();
+        txn.finish();
         result
     }
 
@@ -186,12 +186,12 @@ where
         let q = source.as_query();
         let query = debug_query::<Self::Backend, _>(&q).to_string();
 
-        //let mut txn = start_sentry_db_transaction("sql.query", &query);
+        let mut txn = start_sentry_db_transaction("sql.query", &query);
         let span = tracing::Span::current();
         span.record("db.statement", &query.as_str());
 
         let result = self.inner.load(q);
-        //txn.finish();
+        txn.finish();
         result
     }
 
@@ -211,12 +211,12 @@ where
         T: QueryFragment<Self::Backend> + QueryId,
     {
         let query = debug_query::<Self::Backend, _>(&source).to_string();
-        //let mut txn = start_sentry_db_transaction("sql.query", &query);
+        let mut txn = start_sentry_db_transaction("sql.query", &query);
         let span = tracing::Span::current();
         span.record("db.statement", &query.as_str());
 
         let result = self.inner.execute_returning_count(source);
-        //txn.finish();
+        txn.finish();
         result
     }
 
