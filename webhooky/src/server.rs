@@ -170,12 +170,15 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
      */
     let api_context = Context::new(schema, logger).await;
 
+    // This really only applied for when we are running with `do-cron` but we need the variable
+    // for the scheduler to be in the top level so we can run as async later based on the options.
+    let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
+
     // Copy the Server struct so we can move it into our loop.
     if s.do_cron {
         /*
          * Setup our cron jobs, with our timezone.
          */
-        let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
         scheduler
             .every(1.day())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-analytics")});
@@ -241,15 +244,6 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
             .every(clokwerk::Interval::Monday)
             .at("8:00 am")
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("send-rfd-changelog")});
-
-        tokio::spawn(async move {
-            info!("starting cron job scheduler...");
-
-            loop {
-                scheduler.run_pending().await;
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            }
-        });
     }
 
     /*
@@ -280,7 +274,22 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
         }
     }});
 
-    server.await.unwrap();
+    if s.do_cron {
+        // Trigger the server in the background.
+        tokio::spawn(async move {
+            server.await.unwrap();
+        });
+
+        info!("starting cron job scheduler...");
+
+        // Loop the scheduler.
+        loop {
+            scheduler.run_pending().await;
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+    } else {
+        server.await.unwrap();
+    }
 
     Ok(())
 }
