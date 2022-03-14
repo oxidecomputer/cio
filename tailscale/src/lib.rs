@@ -28,21 +28,36 @@ use chrono::{offset::Utc, DateTime};
 use reqwest::{header, Client, Method, Request, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 
-/// Endpoint for the Tailscale API.
-const ENDPOINT: &str = "https://api.tailscale.com/api/v2/";
+/// URL for the Tailscale API.
+const BASE_URL: &str = "https://api.tailscale.com/api/v2/";
+
+/// Options for requests to API.
+pub struct ApiOpt {
+    base_url: Url,
+    key: String,
+}
 
 /// Entrypoint for interacting with the Tailscale API.
 pub struct Tailscale {
-    key: String,
     domain: String,
-
     client: Arc<Client>,
+    opt: ApiOpt,
 }
 
 impl Tailscale {
-    /// Create a new Tailscale client struct. It takes a type that can convert into
-    /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API key your requests will work.
+    /// Create a new Tailscale client. 
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - Tailscale API authentication 
+    /// * `domain` - Your domain where devices are 
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let client = Tailscale::new("secret", "example.com");
+    /// let client2 = Tailscale::new_from_env();
+    /// ```
     pub fn new<K, D>(key: K, domain: D) -> Self
     where
         K: ToString,
@@ -51,31 +66,41 @@ impl Tailscale {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self {
-                key: key.to_string(),
                 domain: domain.to_string(),
-
                 client: Arc::new(c),
+                opt: ApiOpt {
+                    key: key.to_string(),
+                    base_url: Url::parse(BASE_URL).unwrap(),
+                },
             },
             Err(e) => panic!("creating client failed: {:?}", e),
         }
     }
 
-    /// Create a new Tailscale client struct from environment variables. It
-    /// takes a type that can convert into
-    /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API key and domain and your requests will work.
+    /// Create a new Tailscale client struct from environment variables:
+    /// env::var(TAILSCALE_API_KEY) - used for API authentication header
+    /// env::var(TAILSCALE_DOMAIN) - used in API queries
     pub fn new_from_env() -> Self {
         let key = env::var("TAILSCALE_API_KEY").unwrap();
         let domain = env::var("TAILSCALE_DOMAIN").unwrap();
 
-        Tailscale::new(key, domain)
+        Tailscale::new(
+            key,
+            domain,
+        )
+    }
+
+    /// Set the base url for `Tailscale`
+    pub fn base_url(mut self, base_url: Url) -> Self {
+        self.opt.base_url = base_url;
+        self
     }
 
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(&str, String)>>) -> Request
     where
         B: Serialize,
     {
-        let base = Url::parse(ENDPOINT).unwrap();
+        let base = &self.opt.base_url;
         let url = base.join(path).unwrap();
 
         // Set the default headers.
@@ -89,7 +114,7 @@ impl Tailscale {
             .client
             .request(method.clone(), url)
             .headers(headers)
-            .basic_auth(&self.key, Some(""));
+            .basic_auth(&self.opt.key, Some(""));
 
         match query {
             None => (),
@@ -190,7 +215,7 @@ pub struct APIResponse {
 }
 
 /// The data type for a device.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Device {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub addresses: Vec<String>,
