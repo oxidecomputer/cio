@@ -1794,7 +1794,7 @@ impl Applicant {
         // Since we are an Applicant.
         if !self.airtable_record_id.is_empty() {
             // We could URL-encode the whole thing, but we don't need to, just the + is fine.
-            self.scoring_form_url = format!("https://apply.oxide.computer/review/{}", self.email.replace("+", "%2B"));
+            self.scoring_form_url = format!("https://apply.oxide.computer/review/{}", self.email.replace('+', "%2B"));
         }
 
         // Check if we have sent them an email that we received their application.
