@@ -21,14 +21,11 @@ use uuid::Uuid;
 diesel::sql_function!(fn current_database() -> diesel::sql_types::Text);
 // db.version
 diesel::sql_function!(fn version() -> diesel::sql_types::Text);
-// db.user
-diesel::sql_function!(fn user() -> diesel::sql_types::Text);
 
 #[derive(Queryable, Clone, Debug, PartialEq, Default)]
 struct ConnectionInfo {
     current_database: String,
     version: String,
-    user: String,
 }
 
 /// A [`Connection`] that includes Sentry tracing points.
@@ -58,7 +55,6 @@ impl<C: Connection> SimpleConnection for SentryConnection<C> {
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
-            db.user=%self.info.user,
             db.statement=%query,
             otel.kind="client",
         ),
@@ -91,7 +87,6 @@ where
             db.name=tracing::field::Empty,
             db.system="postgresql",
             db.version=tracing::field::Empty,
-            db.user=tracing::field::Empty,
             otel.kind="client",
         ),
         skip(database_url),
@@ -104,18 +99,16 @@ where
         let mut inner = conn?;
 
         tracing::debug!("querying postgresql connection information");
-        let info: ConnectionInfo = diesel::select((current_database(), version(), user()))
+        let info: ConnectionInfo = diesel::select((current_database(), version()))
             .get_result(&mut inner)
             .map_err(ConnectionError::CouldntSetupConfiguration)?;
 
         let span = tracing::Span::current();
         span.record("db.name", &info.current_database.as_str());
         span.record("db.version", &info.version.as_str());
-        span.record("db.user", &info.user.as_str());
 
         tracing::debug!("db.name: {}", info.current_database);
         tracing::debug!("db.version: {}", info.version);
-        tracing::debug!("db.user: {}", info.user);
 
         txn.finish();
 
@@ -131,7 +124,6 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
-            db.user=%self.info.user,
             otel.kind="client",
         ),
         skip(self, f),
@@ -152,7 +144,6 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
-            db.user=%self.info.user,
             db.statement=%query,
             otel.kind="client",
         ),
@@ -171,7 +162,6 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
-            db.user=%self.info.user,
             db.statement=tracing::field::Empty,
             otel.kind="client",
         ),
@@ -200,7 +190,6 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
-            db.user=%self.info.user,
             db.statement=tracing::field::Empty,
             otel.kind="client",
         ),
@@ -225,7 +214,6 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
-            db.user=%self.info.user,
             otel.kind="client",
         ),
         skip(self),
