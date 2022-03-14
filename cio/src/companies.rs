@@ -222,7 +222,7 @@ impl Company {
                     .eq(team_id.to_string())
                     .and(api_tokens::dsl::product.eq("slack".to_lowercase())),
             )
-            .first_async::<APIToken>(&db.pool())
+            .first_async::<APIToken>(db.pool())
             .await?;
 
         // Now we can get the company.
@@ -237,7 +237,7 @@ impl Company {
                     .eq(org.to_string())
                     .or(companys::dsl::github_org.eq(org.to_lowercase())),
             )
-            .first_async::<Company>(&db.pool())
+            .first_async::<Company>(db.pool())
             .await?)
     }
 
@@ -249,7 +249,7 @@ impl Company {
                     .eq(channel_id.to_string())
                     .and(api_tokens::dsl::product.eq("shipbob".to_string())),
             )
-            .first_async::<APIToken>(&db.pool())
+            .first_async::<APIToken>(db.pool())
             .await?;
 
         Company::get_by_id(db, token.auth_company_id).await
@@ -259,7 +259,7 @@ impl Company {
     pub async fn get_from_mailchimp_list_id(db: &Database, list_id: &str) -> Result<Self> {
         Ok(companys::dsl::companys
             .filter(companys::dsl::mailchimp_list_id.eq(list_id.to_string()))
-            .first_async::<Company>(&db.pool())
+            .first_async::<Company>(db.pool())
             .await?)
     }
 
@@ -271,7 +271,7 @@ impl Company {
                     .eq(domain.to_string())
                     .or(companys::dsl::gsuite_domain.eq(domain.to_string())),
             )
-            .first_async::<Company>(&db.pool())
+            .first_async::<Company>(db.pool())
             .await?)
     }
 
@@ -484,7 +484,7 @@ impl Company {
                     .and(api_tokens::dsl::product.eq("slack".to_string()))
                     .and(api_tokens::dsl::token_type.eq("bot".to_string())),
             )
-            .first_async::<APIToken>(&db.pool())
+            .first_async::<APIToken>(db.pool())
             .await
         {
             if let Ok(user_token) = api_tokens::dsl::api_tokens
@@ -494,7 +494,7 @@ impl Company {
                         .and(api_tokens::dsl::product.eq("slack".to_string()))
                         .and(api_tokens::dsl::token_type.eq("user".to_string())),
                 )
-                .first_async::<APIToken>(&db.pool())
+                .first_async::<APIToken>(db.pool())
                 .await
             {
                 // Initialize the Slack client.

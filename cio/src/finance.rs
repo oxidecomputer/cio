@@ -912,7 +912,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
                     .eq(last_name.to_string())
                     .and(users::dsl::cio_company_id.eq(company.id)),
             )
-            .first_async::<User>(&db.pool())
+            .first_async::<User>(db.pool())
             .await
         {
             Ok(user) => {
@@ -1193,7 +1193,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
                     .or(users::dsl::username.eq(last_name.to_string())),
             )
             .filter(users::dsl::cio_company_id.eq(company.id))
-            .first_async::<User>(&db.pool())
+            .first_async::<User>(db.pool())
             .await
         {
             Ok(user) => {
@@ -1353,7 +1353,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                     .and(accounts_payables::dsl::amount.eq(bill_payment.total_amt))
                     .and(accounts_payables::dsl::date.eq(bill_payment.txn_date)),
             )
-            .first_async::<AccountsPayable>(&db.pool())
+            .first_async::<AccountsPayable>(db.pool())
             .await
         {
             Ok(mut transaction) => {
@@ -1419,7 +1419,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                         .and(credit_card_transactions::dsl::time.ge(DateTime::<Utc>::from_utc(sdt, Utc)))
                         .and(credit_card_transactions::dsl::time.le(DateTime::<Utc>::from_utc(edt, Utc))),
                 )
-                .first_async::<CreditCardTransaction>(&db.pool())
+                .first_async::<CreditCardTransaction>(db.pool())
                 .await
             {
                 Ok(mut transaction) => {

@@ -685,7 +685,7 @@ impl UserConfig {
         if self.start_date == crate::utils::default_date() {
             if let Ok(a) = applicants::dsl::applicants
                 .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
-                .first_async::<Applicant>(&db.pool())
+                .first_async::<Applicant>(db.pool())
                 .await
             {
                 // Get their start date.

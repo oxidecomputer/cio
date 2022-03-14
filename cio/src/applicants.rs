@@ -731,7 +731,7 @@ impl Applicant {
         let data = applicant_interviews::dsl::applicant_interviews
             .filter(applicant_interviews::dsl::applicant.contains(vec![self.airtable_record_id.to_string()]))
             .order_by(applicant_interviews::dsl::start_time.asc())
-            .load_async::<ApplicantInterview>(&db.pool())
+            .load_async::<ApplicantInterview>(db.pool())
             .await
             .unwrap();
         // Probably a better way to do this using first and last, but whatever.
@@ -2470,7 +2470,7 @@ Sincerely,
                     .eq(self.email.to_string())
                     .and(users::dsl::cio_company_id.eq(company.id)),
             )
-            .first_async::<User>(&db.pool())
+            .first_async::<User>(db.pool())
             .await;
         if result.is_ok() {
             let mut employee = result?;
@@ -2836,7 +2836,7 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
     let applicants = applicants::dsl::applicants
         .filter(applicants::dsl::sheet_id.eq("".to_string()))
         .order_by(applicants::dsl::id.asc())
-        .load_async::<Applicant>(&db.pool())
+        .load_async::<Applicant>(db.pool())
         .await?;
 
     // Iterate over the applicants and update them.
@@ -2893,7 +2893,7 @@ mod tests {
         let db = Database::new().await;
         let applicant = applicants::dsl::applicants
             .filter(applicants::dsl::id.eq(318))
-            .first_async::<Applicant>(&db.pool())
+            .first_async::<Applicant>(db.pool())
             .await
             .unwrap();
 

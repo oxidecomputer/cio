@@ -106,7 +106,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             // // TODO: special error here.
             let r = diesel::insert_into(crate::schema::#db_schema::table)
                 .values(self.clone())
-                .get_result_async(&db.pool()).await?;
+                .get_result_async(db.pool()).await?;
 
             Ok(r)
         }
@@ -138,7 +138,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let record = diesel::update(#db_schema::dsl::#db_schema)
                     .filter(#db_schema::dsl::id.eq(r.id))
                     .set(self.clone())
-                    .get_result_async::<#new_struct_name>(&db.pool()).await?;
+                    .get_result_async::<#new_struct_name>(db.pool()).await?;
 
                 return Ok(record);
             }
@@ -198,7 +198,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             let record = diesel::update(#db_schema::dsl::#db_schema)
                 .filter(#db_schema::dsl::id.eq(self.id))
                 .set(self.clone())
-                .get_result_async::<#new_struct_name>(&db.pool()).await?;
+                .get_result_async::<#new_struct_name>(db.pool()).await?;
 
             Ok(record)
         }
@@ -206,7 +206,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         /// Get a record from the database.
         #[tracing::instrument]
         pub async fn get_from_db(db: &crate::db::Database#args) -> Option<Self> {
-            match #db_schema::dsl::#db_schema#filter.first_async::<#new_struct_name>(&db.pool()).await {
+            match #db_schema::dsl::#db_schema#filter.first_async::<#new_struct_name>(db.pool()).await {
                 Ok(r) => {
                     return Some(r);
                 }
@@ -221,7 +221,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         #[tracing::instrument]
         pub async fn get_by_id(db: &crate::db::Database, id: i32) -> anyhow::Result<Self> {
             let record = #db_schema::dsl::#db_schema.find(id)
-                .first_async::<#new_struct_name>(&db.pool()).await?;
+                .first_async::<#new_struct_name>(db.pool()).await?;
 
             Ok(record)
         }
@@ -262,7 +262,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             diesel::delete(
                 crate::schema::#db_schema::dsl::#db_schema.filter(
                     crate::schema::#db_schema::dsl::id.eq(self.id)))
-                    .execute_async(&db.pool()).await?;
+                    .execute_async(db.pool()).await?;
 
             Ok(())
         }
@@ -458,7 +458,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 crate::schema::#db_schema::dsl::#db_schema
                     .filter(crate::schema::#db_schema::dsl::cio_company_id.eq(cio_company_id))
                     .order_by(crate::schema::#db_schema::dsl::id.desc())
-                    .load_async::<#new_struct_name>(&db.pool()).await
+                    .load_async::<#new_struct_name>(db.pool()).await
             {
                 Ok(r) => Ok(#new_struct_name_plural(r)),
                 Err(e) => Err(anyhow::anyhow!("getting `{:?}` from the database for cio_company_id `{}` failed: {}", #new_struct_name_plural(vec![]), cio_company_id, e)),
