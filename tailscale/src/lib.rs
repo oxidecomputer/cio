@@ -45,12 +45,12 @@ pub struct Tailscale {
 }
 
 impl Tailscale {
-    /// Create a new Tailscale client. 
+    /// Create a new Tailscale client.
     ///
     /// # Arguments
     ///
-    /// * `key` - Tailscale API authentication 
-    /// * `domain` - Your domain where devices are 
+    /// * `key` - Tailscale API authentication
+    /// * `domain` - Your domain where devices are
     ///
     /// # Examples
     ///
@@ -84,10 +84,7 @@ impl Tailscale {
         let key = env::var("TAILSCALE_API_KEY").unwrap();
         let domain = env::var("TAILSCALE_DOMAIN").unwrap();
 
-        Tailscale::new(
-            key,
-            domain,
-        )
+        Tailscale::new(key, domain)
     }
 
     /// Set the base url for `Tailscale`
