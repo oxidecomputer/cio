@@ -552,6 +552,15 @@ pub async fn handle_rfd_push(
                 old_rfd_pdf = o.get_pdf_filename();
                 // Set the rfd_sections_id so we don't overwrite it.
                 new_rfd.rfd_sections_id = o.rfd_sections_id;
+
+                // Set the html just so it's not blank momentarily.
+                new_rfd.content = o.content.to_string();
+                new_rfd.authors = o.authors.to_string();
+                new_rfd.html = o.html.to_string();
+                new_rfd.commit_date = o.commit_date;
+                new_rfd.sha = o.sha.to_string();
+                new_rfd.pdf_link_github = o.pdf_link_github.to_string();
+                new_rfd.pdf_link_google_drive = o.pdf_link_google_drive;
             }
 
             // Update the RFD in the database.
