@@ -1,0 +1,27 @@
+#!/bin/bash
+
+HAS_ISSUES=0
+
+print_err () {
+  if [ $HAS_ISSUES -eq 0 ]; then
+    HAS_ISSUES=1
+    printf "The following files need formatting:\n"
+  fi  
+  printf " -> $1\n" 
+}
+
+# Check each changed file if it has formatting issues that need to be resolved
+for file in $(git diff --name-only --staged); do
+  FMT_RESULT="$(rustfmt --check $file 2>/dev/null || true)"
+  if [ "$FMT_RESULT" != "" ]; then
+      print_err $file 
+  fi
+done
+
+if [ $HAS_ISSUES -eq 1 ]; then
+  echo "Try fixing with 'cargo fmt'"
+  exit 1
+fi
+
+# Finish by running clippy
+cargo clippy -- -D warnings

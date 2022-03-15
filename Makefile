@@ -1,3 +1,6 @@
+init:
+	git config core.hooksPath .githooks
+
 install-bitbar:
 	brew cask install bitbar
 	mkdir -p ~/.bitbar
