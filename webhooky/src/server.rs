@@ -2761,8 +2761,8 @@ async fn start_sentry_http_transaction<
 
     let method = raw_req.method().to_string();
     let sentry_req = sentry::protocol::Request {
-        method: Some(method.to_string()),
-        url: url.clone(),
+        method: Some(method),
+        url,
         headers: raw_headers
             .iter()
             .map(|(header, value)| (header.to_string(), value.to_str().unwrap_or_default().into()))
@@ -2793,7 +2793,7 @@ async fn start_sentry_http_transaction<
 
     let mut trx: SentryTransaction = Default::default();
 
-    hub.configure_scope(enclose! { (method, url) |scope| {
+    hub.configure_scope(|scope| {
         let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
         // Set the request data for the transaction.
         transaction.set_request(sentry_req.clone());
@@ -2805,24 +2805,7 @@ async fn start_sentry_http_transaction<
             parent_span,
             hub: Some(hub.clone()),
         };
-
-        // Add a breadcrumb for the request.
-        let breadcrumb = sentry::Breadcrumb {
-            ty: "http".into(),
-            category: Some("http".into()),
-            data: {
-                let mut map = sentry::protocol::Map::new();
-                map.insert("method".into(), method.into());
-                if let Some(url) = url {
-                    map.insert("url".into(), url.to_string().into());
-                }
-                map
-            },
-            ..Default::default()
-        };
-
-        hub.add_breadcrumb(breadcrumb);
-    }});
+    });
 
     trx
 }
@@ -2905,16 +2888,6 @@ fn start_sentry_cron_transaction(job: &str) -> SentryTransaction {
             parent_span,
             hub: Some(hub.clone()),
         };
-
-        // Add a breadcrumb for the job exec.
-        let breadcrumb = sentry::Breadcrumb {
-            ty: "job".into(),
-            category: Some("job".into()),
-            message: Some(job.into()),
-            ..Default::default()
-        };
-
-        hub.add_breadcrumb(breadcrumb);
     });
 
     trx
