@@ -2759,9 +2759,10 @@ async fn start_sentry_http_transaction<
         None
     };
 
+    let method = raw_req.method().to_string();
     let sentry_req = sentry::protocol::Request {
-        method: Some(raw_req.method().to_string()),
-        url,
+        method: Some(method.to_string()),
+        url: url.clone(),
         headers: raw_headers
             .iter()
             .map(|(header, value)| (header.to_string(), value.to_str().unwrap_or_default().into()))
@@ -2792,7 +2793,7 @@ async fn start_sentry_http_transaction<
 
     let mut trx: SentryTransaction = Default::default();
 
-    hub.configure_scope(|scope| {
+    hub.configure_scope(enclose! { (method, url) |scope| {
         let transaction: sentry::TransactionOrSpan = sentry::start_transaction(trx_ctx).into();
         // Set the request data for the transaction.
         transaction.set_request(sentry_req.clone());
@@ -2804,7 +2805,24 @@ async fn start_sentry_http_transaction<
             parent_span,
             hub: Some(hub.clone()),
         };
-    });
+
+        // Add a breadcrumb for the request.
+        let breadcrumb = sentry::Breadcrumb {
+            ty: "http".into(),
+            category: Some("http".into()),
+            data: {
+                let mut map = sentry::protocol::Map::new();
+                map.insert("method".into(), method.into());
+                if let Some(url) = url {
+                    map.insert("url".into(), url.to_string().into());
+                }
+                map
+            },
+            ..Default::default()
+        };
+
+        hub.add_breadcrumb(breadcrumb);
+    }});
 
     trx
 }
@@ -2816,20 +2834,23 @@ impl SentryTransaction {
 
     pub fn finish(&mut self, status: StatusCode) {
         let transaction = self.transaction.as_ref().unwrap();
+
+        let hub = self.hub.as_ref().unwrap();
         if transaction.get_status().is_none() {
             let s = map_http_status(status);
+
             transaction.set_status(s);
         }
         transaction.clone().finish();
 
         if let Some(parent_span) = &self.parent_span {
-            self.hub.as_ref().unwrap().configure_scope(|scope| {
+            hub.configure_scope(|scope| {
                 scope.set_span(Some(parent_span.clone()));
             });
         }
 
         let s = map_session_status(status);
-        self.hub.as_ref().unwrap().end_session_with_status(s);
+        hub.end_session_with_status(s);
     }
 }
 
@@ -2884,6 +2905,16 @@ fn start_sentry_cron_transaction(job: &str) -> SentryTransaction {
             parent_span,
             hub: Some(hub.clone()),
         };
+
+        // Add a breadcrumb for the job exec.
+        let breadcrumb = sentry::Breadcrumb {
+            ty: "job".into(),
+            category: Some("job".into()),
+            message: Some(job.into()),
+            ..Default::default()
+        };
+
+        hub.add_breadcrumb(breadcrumb);
     });
 
     trx

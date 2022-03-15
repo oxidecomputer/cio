@@ -264,6 +264,16 @@ fn start_sentry_db_transaction(op: &str, name: &str) -> SentryTransaction {
             parent_span,
             hub: Some(hub.clone()),
         };
+
+        // Add a breadcrumb for the db call.
+        let breadcrumb = sentry::Breadcrumb {
+            ty: "db".into(),
+            category: Some("db".into()),
+            message: Some(name.into()),
+            ..Default::default()
+        };
+
+        hub.add_breadcrumb(breadcrumb);
     });
 
     trx
