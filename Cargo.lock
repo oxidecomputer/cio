@@ -282,17 +282,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-recursion"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cda8f4bcc10624c4e85bc66b3f452cca98cfa5ca002dc83a16aad2367641bea"
-dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.87",
-]
-
-[[package]]
 name = "async-std"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -740,7 +729,6 @@ dependencies = [
  "airtable-api 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "anyhow",
  "async-bb8-diesel",
- "async-recursion 1.0.0",
  "async-trait",
  "barcoders",
  "base64 0.13.0",
@@ -1937,7 +1925,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7da2e635a675429d8afe27f9214524de64b2dd5bda1699c907ff6ec362621e3"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "base64 0.12.3",
  "bytes",
@@ -1969,7 +1957,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d566304930c5f35b3aaaaa79a9f217dd833253a6d1db2ca811607d8f5b684b4"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "base64 0.12.3",
  "bytes",
@@ -2021,7 +2009,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c05241f6a20057e26a3f1d2dac115b32fe520b068b42d654460e35d602d0d088"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "base64 0.12.3",
  "bytes",
@@ -2053,7 +2041,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dacc2292dcf453b570edd7bf9a032e2e3f7d1b5cbe0a66f4b6ab13cad389adb"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "base64 0.12.3",
  "bytes",
@@ -2085,7 +2073,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcddc0bc031f8bfe092113c1d7125d0305bb52e5867e64dd58fc0db9b4a2649e"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -3164,7 +3152,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "651febc3a6e767032074765f40c2c143be219e1aa8914e611ed03dd16aa6e80c"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "chrono",
  "dirs 3.0.2",
  "http",
@@ -3191,7 +3179,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f1235b6a27c1755c1979dcad14d2b5be92c33513e392c822497a42aea64e33d"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -3881,7 +3869,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "846034baac1a91b8437044a3c0cc5d78cee672112aed338af49d1cafc125ba8f"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -4207,7 +4195,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bdca575f99350fdd42f3fb471af88fb04d91b450b01cb5bd5f91425cf363e2c1"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -4499,7 +4487,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac4a1812c3d6c777321b2eb29f7f1a265cb89b3cda447cad47033530fe8725db"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -4964,7 +4952,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fd8f016202d7cebe8e1284fb40a97cb8bcf5609541e4346d58f7191918c34a5"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "base64 0.12.3",
  "bytes",
@@ -5002,7 +4990,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed15b6517791cf4e081b212b8142cb31b389c6745f01af66c893ba8305feb0ab"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -5108,7 +5096,6 @@ name = "slack-chat-api"
 version = "0.1.46"
 dependencies = [
  "anyhow",
- "async-recursion 1.0.0",
  "chrono",
  "reqwest",
  "schemars",
@@ -5124,7 +5111,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b0fda63848f9645d90a01a22110b261b5d84f26acb555780091ad321084e5c7"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "chrono",
  "reqwest",
  "schemars",
@@ -5942,7 +5929,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b781773df81c36ca486dd0299618a3e4e793df5b8ce409740e9f8f2385c40b3"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -6694,7 +6681,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01a6cea2b4f67aa5e78acf4bfaf0e3bdd11fd08a39efd285d84eb1cdd71eb566"
 dependencies = [
  "anyhow",
- "async-recursion 0.3.2",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
