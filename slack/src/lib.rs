@@ -28,7 +28,6 @@
 use std::{collections::HashMap, env, sync::Arc};
 
 use anyhow::{bail, Result};
-use async_recursion::async_recursion;
 use reqwest::{header, Body, Client, Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -421,9 +420,28 @@ impl Slack {
     }
 
     /// Post message to a channel.
+    /// If the authenticated token is not a member of the channel, it will attempt be added.
     /// FROM: https://api.slack.com/methods/chat.postMessage
-    #[async_recursion]
     pub async fn post_message(&self, body: &FormattedMessage) -> Result<FormattedMessageResponse> {
+        let f = self.post_message_raw(body).await?;
+
+        if !f.ok {
+            if f.error.contains("not_in_channel") {
+                // Join the channel and try again.
+                self.join_channel(&body.channel).await?;
+                return self.post_message_raw(body).await;
+            }
+            bail!(
+                "status code: {}, body: {}",
+                StatusCode::OK,
+                serde_json::json!(f).to_string()
+            );
+        }
+
+        Ok(f)
+    }
+
+    pub async fn post_message_raw(&self, body: &FormattedMessage) -> Result<FormattedMessageResponse> {
         let request = self.request(&self.token, Method::POST, "chat.postMessage", body, None)?;
 
         let resp = self.client.execute(request).await?;
@@ -435,19 +453,6 @@ impl Slack {
         };
 
         let f: FormattedMessageResponse = resp.json().await?;
-
-        if !f.ok {
-            if f.error.contains("not_in_channel") {
-                // Join the channel and try again.
-                self.join_channel(&body.channel).await?;
-                return self.post_message(body).await;
-            }
-            bail!(
-                "status code: {}, body: {}",
-                StatusCode::OK,
-                serde_json::json!(f).to_string()
-            );
-        }
 
         Ok(f)
     }

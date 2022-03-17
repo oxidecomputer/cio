@@ -1660,7 +1660,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
 
     // Let's see if we can get any shipments from ShipBob.
     if let Ok(shipbob) = company.authenticate_shipbob(db).await {
-        let orders = shipbob
+        match shipbob
             .orders()
             .get_all(
                 &[],  // ids
@@ -1673,20 +1673,26 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
                 None,  // last_update_end_date
                 false, // is_tracking_uploaded
             )
-            .await?;
+            .await
+        {
+            Ok(orders) => {
+                // Iterate over the orders and add them as a shipment.
+                for o in orders {
+                    let mut ns: NewOutboundShipment = o.into();
+                    // Be sure to set the company id.
+                    ns.cio_company_id = company.id;
 
-        // Iterate over the orders and add them as a shipment.
-        for o in orders {
-            let mut ns: NewOutboundShipment = o.into();
-            // Be sure to set the company id.
-            ns.cio_company_id = company.id;
+                    // Update the database.
+                    let mut s = ns.upsert(db).await?;
 
-            // Update the database.
-            let mut s = ns.upsert(db).await?;
-
-            // Expand the shipment.
-            // This will also update the database.
-            s.expand(db, company).await?;
+                    // Expand the shipment.
+                    // This will also update the database.
+                    s.expand(db, company).await?;
+                }
+            }
+            Err(e) => {
+                warn!("getting shipbob orders failed: {}", e);
+            }
         }
     }
 

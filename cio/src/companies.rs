@@ -15,7 +15,7 @@ use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
-use log::info;
+use log::{info, warn};
 use macros::db;
 use mailchimp_api::MailChimp;
 use octorust::{
@@ -397,36 +397,47 @@ impl Company {
         for topic in topics {
             // Check if the webhook already exists.
             let mut exists = false;
-            let webhooks = shipbob.webhooks().get_all(topic.clone()).await?;
-            for webhook in webhooks {
-                // Check if we already have the webhooks.
-                if webhook.subscription_url == shipbob_webhooks_url {
-                    exists = true;
-                    info!(
-                        "shipbob webhook for topic `{}` to url `{}` already exists",
-                        topic, shipbob_webhooks_url
-                    );
-                    break;
+            match shipbob.webhooks().get_all(topic.clone()).await {
+                Ok(webhooks) => {
+                    for webhook in webhooks {
+                        // Check if we already have the webhooks.
+                        if webhook.subscription_url == shipbob_webhooks_url {
+                            exists = true;
+                            info!(
+                                "shipbob webhook for topic `{}` to url `{}` already exists",
+                                topic, shipbob_webhooks_url
+                            );
+                            break;
+                        }
+                    }
+
+                    if exists {
+                        continue;
+                    }
+
+                    // Create it if not.
+                    match shipbob
+                        .webhooks()
+                        .post(&shipbob::types::WebhooksCreateWebhookSubscriptionModel {
+                            subscription_url: shipbob_webhooks_url.to_string(),
+                            topic: topic.clone(),
+                        })
+                        .await
+                    {
+                        Ok(_) => info!(
+                            "created shipbob webhook for topic `{}` to url `{}`",
+                            topic, shipbob_webhooks_url
+                        ),
+                        Err(e) => warn!(
+                            "failed to create shipbob webhook for topic `{}` to url `{}`: {}",
+                            topic, shipbob_webhooks_url, e
+                        ),
+                    }
+                }
+                Err(e) => {
+                    warn!("getting shipbob webhooks for topic `{}` failed: {}", topic, e);
                 }
             }
-
-            if exists {
-                continue;
-            }
-
-            // Create it if not.
-            shipbob
-                .webhooks()
-                .post(&shipbob::types::WebhooksCreateWebhookSubscriptionModel {
-                    subscription_url: shipbob_webhooks_url.to_string(),
-                    topic: topic.clone(),
-                })
-                .await?;
-
-            info!(
-                "created shipbob webhook for topic `{}` to url `{}`",
-                topic, shipbob_webhooks_url
-            );
         }
 
         Ok(())

@@ -9,7 +9,6 @@ use std::{
 
 use anyhow::{anyhow, bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
-use async_recursion::async_recursion;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
@@ -890,7 +889,6 @@ pub async fn get_rfd_contents_from_repo(
 
 // Get all the images in a specific directory of a GitHub branch.
 #[tracing::instrument(skip(github))]
-#[async_recursion]
 pub async fn get_images_in_branch(
     github: &octorust::Client,
     owner: &str,
@@ -906,52 +904,28 @@ pub async fn get_images_in_branch(
         if file.type_ == "dir" {
             let path = file.path.trim_end_matches('/');
             // We have a directory. We need to get the file contents recursively.
-            let mut fs = get_images_in_branch(github, owner, repo, path, branch).await?;
-            files.append(&mut fs);
-            continue;
+            // TODO: find a better way to make this recursive without pissing off tokio.
+            let resp2 = github
+                .repos()
+                .get_content_vec_entries(owner, repo, path, branch)
+                .await?;
+            for file2 in resp2 {
+                if file2.type_ == "dir" {
+                    let path = file2.path.trim_end_matches('/');
+                    warn!("skipping directory second level directory for parsing images: {}", path);
+                    continue;
+                }
+
+                if is_image(&file2.name) {
+                    let f = crate::utils::get_github_file(github, owner, repo, branch, &file2).await?;
+                    files.push(f);
+                }
+            }
         }
 
         if is_image(&file.name) {
-            // Get the contents of the image.
-            match github.repos().get_content_file(owner, repo, &file.path, branch).await {
-                Ok(f) => {
-                    // Push the file to our vector.
-                    files.push(f);
-                }
-                Err(e) => {
-                    // TODO: better match on errors
-                    if e.to_string().contains("too large") {
-                        // The file is too big for us to get it's contents through this API.
-                        // The error suggests we use the Git Data API but we need the file sha for
-                        // that.
-                        // We have the sha we can see if the files match using the
-                        // Git Data API.
-                        let blob = github.git().get_blob(owner, repo, &file.sha).await?;
-
-                        // Push the new file.
-                        files.push(octorust::types::ContentFile {
-                            type_: Default::default(),
-                            encoding: Default::default(),
-                            submodule_git_url: Default::default(),
-                            target: Default::default(),
-                            size: blob.size,
-                            name: file.name,
-                            path: file.path,
-                            content: blob.content,
-                            sha: file.sha,
-                            url: file.url,
-                            git_url: file.git_url,
-                            html_url: file.html_url,
-                            download_url: file.download_url,
-                            links: file.links,
-                        });
-
-                        continue;
-                    }
-
-                    bail!("[rfd] getting file contents for {} failed: {}", file.path, e);
-                }
-            }
+            let f = crate::utils::get_github_file(github, owner, repo, branch, &file).await?;
+            files.push(f);
         }
     }
 

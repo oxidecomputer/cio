@@ -439,6 +439,56 @@ pub fn setup_logger() {
     }
 }
 
+// TODO: this is repetitive with some other functions.
+// see `get_file_content_from_repo`
+#[tracing::instrument(skip(github))]
+pub async fn get_github_file(
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    branch: &str,
+    file: &octorust::types::Entries,
+) -> Result<octorust::types::ContentFile> {
+    // Get the contents of the image.
+    match github.repos().get_content_file(owner, repo, &file.path, branch).await {
+        Ok(f) => {
+            // Push the file to our vector.
+            return Ok(f);
+        }
+        Err(e) => {
+            // TODO: better match on errors
+            if e.to_string().contains("too large") {
+                // The file is too big for us to get it's contents through this API.
+                // The error suggests we use the Git Data API but we need the file sha for
+                // that.
+                // We have the sha we can see if the files match using the
+                // Git Data API.
+                let blob = github.git().get_blob(owner, repo, &file.sha).await?;
+
+                // Push the new file.
+                return Ok(octorust::types::ContentFile {
+                    type_: Default::default(),
+                    encoding: Default::default(),
+                    submodule_git_url: Default::default(),
+                    target: Default::default(),
+                    size: blob.size.clone(),
+                    name: file.name.clone(),
+                    path: file.path.clone(),
+                    content: blob.content,
+                    sha: file.sha.clone(),
+                    url: file.url.clone(),
+                    git_url: file.git_url.clone(),
+                    html_url: file.html_url.clone(),
+                    download_url: file.download_url.clone(),
+                    links: file.links.clone(),
+                });
+            }
+
+            bail!("[rfd] getting file contents for {} failed: {}", file.path, e);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeMap;

@@ -18,7 +18,6 @@ airtable-api = "^0.1.33"
 #airtable-api = { path = "../airtable" }
 anyhow = "1"
 async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
-async-recursion = "^1.0.0"
 async-trait = "^0.1.0"
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
 base64 = "^0.13"

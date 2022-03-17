@@ -411,11 +411,17 @@ impl UserConfig {
             // Otherwise update the zoom user.
             // We only do this if not managed by Okta.
             if let Ok(ref zoom) = zoom_auth {
-                let zoom_id = zoom.ensure_user(db, company, &new_user).await?;
-                // Set the Zoom ID for the user.
-                new_user.zoom_id = zoom_id.to_string();
-                // Update the user in the database.
-                new_user = new_user.update(db).await?;
+                match zoom.ensure_user(db, company, &new_user).await {
+                    Ok(zoom_id) => {
+                        // Set the Zoom ID for the user.
+                        new_user.zoom_id = zoom_id.to_string();
+                        // Update the user in the database.
+                        new_user = new_user.update(db).await?;
+                    }
+                    Err(e) => {
+                        warn!("Failed to ensure zoom user `{}`: {}", new_user.email, e);
+                    }
+                }
             }
         }
 
@@ -1577,6 +1583,7 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
     let owner = &company.github_org;
     let repo = "configs";
 
+    log::info!("Getting configs from GitHub");
     let files = github
         .repos()
         .get_content_vec_entries(
@@ -1804,22 +1811,35 @@ pub async fn sync_users(
     let mut zoom_users_pending: HashMap<String, zoom_api::types::UsersResponse> = HashMap::new();
     let zoom_auth = company.authenticate_zoom(db).await;
     if let Ok(ref zoom) = zoom_auth {
-        let active_users = zoom.list_provider_users(company).await?;
-        for r in active_users {
-            zoom_users.insert(r.email.to_string(), r);
+        match zoom.list_provider_users(company).await {
+            Ok(active_users) => {
+                for r in active_users {
+                    zoom_users.insert(r.email.to_string(), r);
+                }
+            }
+            Err(e) => {
+                warn!("getting zoom active users for company {} failed: {}", company.name, e);
+            }
         }
 
         // Get the pending Zoom users.
-        let pending_users = zoom
+        match zoom
             .users()
             .get_all(
                 zoom_api::types::UsersStatus::Pending,
                 "", // role id
                 zoom_api::types::UsersIncludeFields::Noop,
             )
-            .await?;
-        for r in pending_users {
-            zoom_users_pending.insert(r.email.to_string(), r);
+            .await
+        {
+            Ok(pending_users) => {
+                for r in pending_users {
+                    zoom_users_pending.insert(r.email.to_string(), r);
+                }
+            }
+            Err(e) => {
+                warn!("getting zoom pending users for company {} failed: {}", company.name, e);
+            }
         }
     }
 
