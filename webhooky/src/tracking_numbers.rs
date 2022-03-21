@@ -3,7 +3,6 @@ use regex::Regex;
 
 /// This function returns a tracking number and a carrier.
 /// The carrier is first followed by the tracking number.
-#[tracing::instrument]
 pub fn parse_tracking_information(s: &str) -> (String, String) {
     if s.to_lowercase().contains("ups.com") {
         let ups = parse_ups(s);
@@ -38,7 +37,6 @@ pub fn parse_tracking_information(s: &str) -> (String, String) {
     ("".to_string(), "".to_string())
 }
 
-#[tracing::instrument]
 fn parse_ups(s: &str) -> String {
     let mut re = Regex::new(r"(?:1Z)[0-9A-Z]{16}").unwrap();
     for cap in re.captures_iter(s) {
@@ -58,7 +56,6 @@ fn parse_ups(s: &str) -> String {
     "".to_string()
 }
 
-#[tracing::instrument]
 fn parse_usps(s: &str) -> String {
     let mut re = Regex::new(r"(?:94|93|92|94|95)[0-9]{20}").unwrap();
     for cap in re.captures_iter(s) {
@@ -88,7 +85,6 @@ fn parse_usps(s: &str) -> String {
     "".to_string()
 }
 
-#[tracing::instrument]
 fn parse_dhl(s: &str) -> String {
     let re = Regex::new(r"[0-9]{10}").unwrap();
     for cap in re.captures_iter(s) {
@@ -98,7 +94,6 @@ fn parse_dhl(s: &str) -> String {
     "".to_string()
 }
 
-#[tracing::instrument]
 fn parse_fedex(s: &str) -> String {
     let mut re = Regex::new(r"tracknumbers=[0-9]{20}").unwrap();
     for cap in re.captures_iter(s) {

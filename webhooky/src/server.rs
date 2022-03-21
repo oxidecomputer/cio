@@ -364,7 +364,6 @@ pub async fn do_job(ctx: Context, job: String) {
     method = GET,
     path = "/",
 }]
-#[tracing::instrument]
 async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<TypedOrUntypedBody<()>>).await;
     let api_context = txn.run(|| rqctx.context());
@@ -378,7 +377,6 @@ async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespo
     method = GET,
     path = "/ping",
 }]
-#[tracing::instrument]
 async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("pong".to_string()))
 }
@@ -394,7 +392,6 @@ pub struct CounterResponse {
     method = GET,
     path = "/products/sold/count",
 }]
-#[tracing::instrument]
 async fn listen_products_sold_count_requests(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
@@ -419,7 +416,6 @@ async fn listen_products_sold_count_requests(
     method = POST,
     path = "/github",
 }]
-#[tracing::instrument]
 async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<GitHubWebhook>,
@@ -451,7 +447,6 @@ pub struct RFDPathParams {
     method = POST,
     path = "/rfd/{num}",
 }]
-#[tracing::instrument]
 async fn trigger_rfd_update_by_number(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<RFDPathParams>,
@@ -477,7 +472,6 @@ async fn trigger_rfd_update_by_number(
     method = GET,
     path = "/github/ratelimit",
 }]
-#[tracing::instrument]
 async fn github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<TypedOrUntypedBody<()>>).await;
 
@@ -513,7 +507,6 @@ pub struct GitHubRateLimit {
     method = POST,
     path = "/airtable/employees/print_home_address_label",
 }]
-#[tracing::instrument]
 async fn listen_airtable_employees_print_home_address_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -542,7 +535,6 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     method = POST,
     path = "/airtable/certificates/renew",
 }]
-#[tracing::instrument]
 async fn listen_airtable_certificates_renew_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -571,7 +563,6 @@ async fn listen_airtable_certificates_renew_webhooks(
     method = POST,
     path = "/airtable/assets/items/print_barcode_label",
 }]
-#[tracing::instrument]
 async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -600,7 +591,6 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     method = POST,
     path = "/airtable/swag/inventory/items/print_barcode_labels",
 }]
-#[tracing::instrument]
 async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -629,7 +619,6 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     method = POST,
     path = "/airtable/applicants/request_background_check",
 }]
-#[tracing::instrument]
 async fn listen_airtable_applicants_request_background_check_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -659,7 +648,6 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     method = POST,
     path = "/airtable/applicants/update",
 }]
-#[tracing::instrument]
 async fn listen_airtable_applicants_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -689,7 +677,6 @@ async fn listen_airtable_applicants_update_webhooks(
     method = POST,
     path = "/airtable/shipments/outbound/create",
 }]
-#[tracing::instrument]
 async fn listen_airtable_shipments_outbound_create_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -727,7 +714,6 @@ pub struct AirtableRowEvent {
     method = POST,
     path = "/airtable/shipments/outbound/reprint_label",
 }]
-#[tracing::instrument]
 async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -756,7 +742,6 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     method = POST,
     path = "/airtable/shipments/outbound/reprint_receipt",
 }]
-#[tracing::instrument]
 async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -785,7 +770,6 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     method = POST,
     path = "/airtable/shipments/outbound/resend_shipment_status_email_to_recipient",
 }]
-#[tracing::instrument]
 async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -818,7 +802,6 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     method = POST,
     path = "/airtable/shipments/outbound/schedule_pickup",
 }]
-#[tracing::instrument]
 async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -889,7 +872,6 @@ pub struct IncomingEmail {
     method = POST,
     path = "/emails/incoming/sendgrid/parse",
 }]
-#[tracing::instrument]
 async fn listen_emails_incoming_sendgrid_parse_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -920,7 +902,6 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
     method = POST,
     path = "/applicant/review/submit",
 }]
-#[tracing::instrument]
 async fn listen_applicant_review_requests(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
@@ -948,7 +929,6 @@ async fn listen_applicant_review_requests(
     method = POST,
     path = "/application/submit",
 }]
-#[tracing::instrument]
 async fn listen_application_submit_requests(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
@@ -1001,7 +981,6 @@ pub struct ApplicationFileUploadData {
     method = POST,
     path = "/application/files/upload",
 }]
-#[tracing::instrument]
 async fn listen_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<ApplicationFileUploadData>,
@@ -1034,7 +1013,6 @@ async fn listen_application_files_upload_requests(
     method = POST,
     path = "/airtable/shipments/inbound/create",
 }]
-#[tracing::instrument]
 async fn listen_airtable_shipments_inbound_create_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<AirtableRowEvent>,
@@ -1063,7 +1041,6 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     method = POST,
     path = "/store/order",
 }]
-#[tracing::instrument]
 async fn listen_store_order_create(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<Order>,
@@ -1092,7 +1069,6 @@ async fn listen_store_order_create(
     method = POST,
     path = "/easypost/tracking/update",
 }]
-#[tracing::instrument]
 async fn listen_easypost_tracking_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<EasyPostTrackingUpdateEvent>,
@@ -1164,7 +1140,6 @@ pub struct EasyPostTrackingUpdateEvent {
     method = POST,
     path = "/shippo/tracking/update",
 }]
-#[tracing::instrument]
 async fn listen_shippo_tracking_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
@@ -1202,7 +1177,6 @@ pub struct ShippoTrackingUpdateEvent {
     method = POST,
     path = "/checkr/background/update",
 }]
-#[tracing::instrument]
 async fn listen_checkr_background_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<checkr::WebhookEvent>,
@@ -1246,7 +1220,6 @@ pub struct AuthCallback {
     method = GET,
     path = "/auth/google/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_google_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1269,7 +1242,6 @@ async fn listen_auth_google_consent(
     method = GET,
     path = "/auth/google/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_google_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -1295,7 +1267,6 @@ async fn listen_auth_google_callback(
     method = GET,
     path = "/auth/shipbob/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_shipbob_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1319,7 +1290,6 @@ async fn listen_auth_shipbob_consent(
     method = POST,
     path = "/auth/shipbob/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_shipbob_callback(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -1349,7 +1319,6 @@ async fn listen_auth_shipbob_callback(
     method = GET,
     path = "/auth/github/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_github_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1367,7 +1336,6 @@ async fn listen_auth_github_consent(
     method = GET,
     path = "/auth/github/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_github_callback(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
@@ -1391,7 +1359,6 @@ async fn listen_auth_github_callback(
     method = GET,
     path = "/auth/mailchimp/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_mailchimp_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1412,7 +1379,6 @@ async fn listen_auth_mailchimp_consent(
     method = GET,
     path = "/auth/mailchimp/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_mailchimp_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -1438,7 +1404,6 @@ async fn listen_auth_mailchimp_callback(
     method = GET,
     path = "/auth/gusto/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_gusto_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1460,7 +1425,6 @@ async fn listen_auth_gusto_consent(
     method = GET,
     path = "/auth/gusto/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_gusto_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -1486,7 +1450,6 @@ async fn listen_auth_gusto_callback(
     method = GET,
     path = "/auth/zoom/deauthorization",
 }]
-#[tracing::instrument]
 async fn listen_auth_zoom_deauthorization(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
@@ -1510,7 +1473,6 @@ async fn listen_auth_zoom_deauthorization(
     method = GET,
     path = "/auth/zoom/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_zoom_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1531,7 +1493,6 @@ async fn listen_auth_zoom_consent(
     method = GET,
     path = "/auth/zoom/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_zoom_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -1557,7 +1518,6 @@ async fn listen_auth_zoom_callback(
     method = GET,
     path = "/auth/ramp/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_ramp_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1586,7 +1546,6 @@ async fn listen_auth_ramp_consent(
     method = GET,
     path = "/auth/ramp/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_ramp_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -1612,7 +1571,6 @@ async fn listen_auth_ramp_callback(
     method = GET,
     path = "/auth/slack/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_slack_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1633,7 +1591,6 @@ async fn listen_auth_slack_consent(
     method = GET,
     path = "/auth/slack/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_slack_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -1659,7 +1616,6 @@ async fn listen_auth_slack_callback(
     method = GET,
     path = "/auth/quickbooks/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_quickbooks_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1680,7 +1636,6 @@ async fn listen_auth_quickbooks_consent(
     method = GET,
     path = "/auth/quickbooks/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_quickbooks_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -1706,7 +1661,6 @@ async fn listen_auth_quickbooks_callback(
     method = POST,
     path = "/plaid",
 }]
-#[tracing::instrument]
 async fn listen_auth_plaid_callback(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
@@ -1730,7 +1684,6 @@ async fn listen_auth_plaid_callback(
     method = GET,
     path = "/auth/docusign/consent",
 }]
-#[tracing::instrument]
 async fn listen_auth_docusign_consent(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
@@ -1751,7 +1704,6 @@ async fn listen_auth_docusign_consent(
     method = GET,
     path = "/auth/docusign/callback",
 }]
-#[tracing::instrument]
 async fn listen_auth_docusign_callback(
     rqctx: Arc<RequestContext<Context>>,
     query_args: Query<AuthCallback>,
@@ -1777,7 +1729,6 @@ async fn listen_auth_docusign_callback(
     method = POST,
     path = "/docusign/envelope/update",
 }]
-#[tracing::instrument]
 async fn listen_docusign_envelope_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<docusign::Envelope>,
@@ -1804,7 +1755,6 @@ async fn listen_docusign_envelope_update_webhooks(
     method = POST,
     path = "/analytics/page_view",
 }]
-#[tracing::instrument]
 async fn listen_analytics_page_view_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<NewPageView>,
@@ -1831,7 +1781,6 @@ async fn listen_analytics_page_view_webhooks(
     method = GET,
     path = "/mailchimp/mailing_list",
 }]
-#[tracing::instrument]
 async fn ping_mailchimp_mailing_list_webhooks(
     _rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
@@ -1843,7 +1792,6 @@ async fn ping_mailchimp_mailing_list_webhooks(
     method = POST,
     path = "/mailchimp/mailing_list",
 }]
-#[tracing::instrument]
 async fn listen_mailchimp_mailing_list_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -1873,7 +1821,6 @@ async fn listen_mailchimp_mailing_list_webhooks(
     method = GET,
     path = "/mailchimp/rack_line",
 }]
-#[tracing::instrument]
 async fn ping_mailchimp_rack_line_webhooks(
     _rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
@@ -1885,7 +1832,6 @@ async fn ping_mailchimp_rack_line_webhooks(
     method = POST,
     path = "/mailchimp/rack_line",
 }]
-#[tracing::instrument]
 async fn listen_mailchimp_rack_line_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -1915,7 +1861,6 @@ async fn listen_mailchimp_rack_line_webhooks(
     method = POST,
     path = "/slack/commands",
 }]
-#[tracing::instrument]
 async fn listen_slack_commands_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -1948,7 +1893,6 @@ async fn listen_slack_commands_webhooks(
     method = POST,
     path = "/slack/interactive",
 }]
-#[tracing::instrument]
 async fn listen_slack_interactive_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
@@ -1978,7 +1922,6 @@ async fn listen_slack_interactive_webhooks(
     method = POST,
     path = "/shipbob",
 }]
-#[tracing::instrument]
 async fn listen_shipbob_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<serde_json::Value>,
@@ -2007,7 +1950,6 @@ pub struct FunctionPathParams {
     method = GET,
     path = "/functions/{uuid}",
 }]
-#[tracing::instrument]
 async fn listen_get_function_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<FunctionPathParams>,
@@ -2036,7 +1978,6 @@ async fn listen_get_function_by_uuid(
     method = GET,
     path = "/functions/{uuid}/logs",
 }]
-#[tracing::instrument]
 async fn listen_get_function_logs_by_uuid(
     rqctx: Arc<RequestContext<Context>>,
     path_params: Path<FunctionPathParams>,
@@ -2065,7 +2006,6 @@ async fn listen_get_function_logs_by_uuid(
     method = POST,
     path = "/run/sync-repos",
 }]
-#[tracing::instrument]
 async fn trigger_sync_repos_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2093,7 +2033,6 @@ async fn trigger_sync_repos_create(
     method = POST,
     path = "/run/sync-rfds",
 }]
-#[tracing::instrument]
 async fn trigger_sync_rfds_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2121,7 +2060,6 @@ async fn trigger_sync_rfds_create(
     method = POST,
     path = "/run/sync-travel",
 }]
-#[tracing::instrument]
 async fn trigger_sync_travel_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2149,7 +2087,6 @@ async fn trigger_sync_travel_create(
     method = POST,
     path = "/run/sync-functions",
 }]
-#[tracing::instrument]
 async fn trigger_sync_functions_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2177,7 +2114,6 @@ async fn trigger_sync_functions_create(
     method = POST,
     path = "/run/sync-finance",
 }]
-#[tracing::instrument]
 async fn trigger_sync_finance_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2205,7 +2141,6 @@ async fn trigger_sync_finance_create(
     method = POST,
     path = "/run/sync-shipments",
 }]
-#[tracing::instrument]
 async fn trigger_sync_shipments_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2233,7 +2168,6 @@ async fn trigger_sync_shipments_create(
     method = POST,
     path = "/run/sync-shorturls",
 }]
-#[tracing::instrument]
 async fn trigger_sync_shorturls_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2261,7 +2195,6 @@ async fn trigger_sync_shorturls_create(
     method = POST,
     path = "/run/sync-configs",
 }]
-#[tracing::instrument]
 async fn trigger_sync_configs_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2289,7 +2222,6 @@ async fn trigger_sync_configs_create(
     method = POST,
     path = "/run/sync-recorded-meetings",
 }]
-#[tracing::instrument]
 async fn trigger_sync_recorded_meetings_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2317,7 +2249,6 @@ async fn trigger_sync_recorded_meetings_create(
     method = POST,
     path = "/run/sync-asset-inventory",
 }]
-#[tracing::instrument]
 async fn trigger_sync_asset_inventory_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2345,7 +2276,6 @@ async fn trigger_sync_asset_inventory_create(
     method = POST,
     path = "/run/sync-swag-inventory",
 }]
-#[tracing::instrument]
 async fn trigger_sync_swag_inventory_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2373,7 +2303,6 @@ async fn trigger_sync_swag_inventory_create(
     method = POST,
     path = "/run/sync-interviews",
 }]
-#[tracing::instrument]
 async fn trigger_sync_interviews_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2401,7 +2330,6 @@ async fn trigger_sync_interviews_create(
     method = POST,
     path = "/run/sync-applications",
 }]
-#[tracing::instrument]
 async fn trigger_sync_applications_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2429,7 +2357,6 @@ async fn trigger_sync_applications_create(
     method = POST,
     path = "/run/sync-analytics",
 }]
-#[tracing::instrument]
 async fn trigger_sync_analytics_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2457,7 +2384,6 @@ async fn trigger_sync_analytics_create(
     method = POST,
     path = "/run/sync-companies",
 }]
-#[tracing::instrument]
 async fn trigger_sync_companies_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2485,7 +2411,6 @@ async fn trigger_sync_companies_create(
     method = POST,
     path = "/run/sync-other",
 }]
-#[tracing::instrument]
 async fn trigger_sync_other_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2513,7 +2438,6 @@ async fn trigger_sync_other_create(
     method = POST,
     path = "/run/sync-huddles",
 }]
-#[tracing::instrument]
 async fn trigger_sync_huddles_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2541,7 +2465,6 @@ async fn trigger_sync_huddles_create(
     method = POST,
     path = "/run/sync-mailing-lists",
 }]
-#[tracing::instrument]
 async fn trigger_sync_mailing_lists_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2569,7 +2492,6 @@ async fn trigger_sync_mailing_lists_create(
     method = POST,
     path = "/run/sync-journal-clubs",
 }]
-#[tracing::instrument]
 async fn trigger_sync_journal_clubs_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2597,7 +2519,6 @@ async fn trigger_sync_journal_clubs_create(
     method = POST,
     path = "/run/sync-api-tokens",
 }]
-#[tracing::instrument]
 async fn trigger_sync_api_tokens_create(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
@@ -2626,7 +2547,6 @@ async fn trigger_sync_api_tokens_create(
     method = POST,
     path = "/run/cleanup",
 }]
-#[tracing::instrument]
 async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseAccepted<()>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<TypedOrUntypedBody<()>>).await;
 
@@ -2644,7 +2564,6 @@ async fn trigger_cleanup_create(rqctx: Arc<RequestContext<Context>>) -> Result<H
     }
 }
 
-#[tracing::instrument]
 async fn do_cleanup(ctx: &Context) -> Result<()> {
     let sec = &ctx.sec;
     // Get all our sagas.
@@ -2675,7 +2594,6 @@ async fn do_cleanup(ctx: &Context) -> Result<()> {
     Ok(())
 }
 
-#[tracing::instrument]
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     // Send to sentry.
     sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));

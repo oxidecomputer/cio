@@ -42,6 +42,7 @@ log = { version = "0.4", features = ["serde"] }
 mailchimp-api = "^0.1.11"
 mime_guess = "2"
 octorust = { version = "^0.1.35", features = ["httpcache"] }
+#octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
 pretty_env_logger = "0.4"
 quickbooks = "^0.1.12"
 ramp-api = "^0.2.2"
@@ -50,7 +51,7 @@ rand = "^0.8.5"
 regex = "^1.5.5"
 reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
-sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
+sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
 #sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"], path = "../../sentry-rust/sentry"  }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -65,6 +66,8 @@ slack-chat-api = "^0.1.46"
 slog = "2"
 slog-async = "2"
 slog-json = "^2.5.0"
+slog-scope = "4"
+slog-stdlog = "4"
 slog-term = "2"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full", "time"] }

@@ -231,7 +231,6 @@ impl FromVecPullRequestSimpleLinks for octorust::types::PullRequestSimpleLinks {
     }
 }
 
-#[tracing::instrument]
 pub async fn refresh_pulls() -> Result<()> {
     let db = Database::new().await;
 

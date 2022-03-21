@@ -286,6 +286,7 @@ cc @jessfraz"#,
 
     #[tracing::instrument(skip(github))]
     pub async fn create_comment(&self, github: &GitHub, comment: &str) -> Result<()> {
+        log::info!("creating github comment: {}", comment);
         if comment.is_empty() {
             // Return early.
             return Ok(());
@@ -304,6 +305,7 @@ cc @jessfraz"#,
                     return Ok(());
                 }
 
+                log::info!("creating github comment on commit: {}", sha);
                 if let Err(e) = github
                     .repos()
                     .create_commit_comment(
@@ -323,6 +325,8 @@ cc @jessfraz"#,
                 }
             }
         }
+
+        log::info!("DONE");
 
         Ok(())
     }

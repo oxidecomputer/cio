@@ -244,7 +244,6 @@ pub struct NewApplicant {
     pub cio_company_id: i32,
 }
 
-#[tracing::instrument]
 pub fn clean_interested_in(st: &str) -> String {
     let s = st.trim().to_lowercase();
 
@@ -287,7 +286,6 @@ impl NewApplicant {
     }
 }
 
-#[tracing::instrument]
 fn get_color_based_on_status(s: &str) -> String {
     let status = crate::applicant_status::Status::from_str(s).unwrap();
 
@@ -1401,7 +1399,6 @@ The Oxide Team",
     }
 }
 
-#[tracing::instrument]
 fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     if materials_contents.is_empty() {
         Default::default()
@@ -1447,7 +1444,6 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
 }
 
 /// Get the contexts of a file in Google Drive by it's URL as a text string.
-#[tracing::instrument(skip(drive_client))]
 pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<String> {
     let id = url
         .replace("https://drive.google.com/open?id=", "")
@@ -1513,7 +1509,6 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
     Ok(result.trim().to_string())
 }
 
-#[tracing::instrument]
 async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     let mut output = env::temp_dir();
     output.push(&format!("tempfile-{}.txt", name));
@@ -1550,7 +1545,6 @@ async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     Ok(result)
 }
 
-#[tracing::instrument]
 pub async fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>> {
     let users = Users::get_from_db(db, company.id).await?;
 
@@ -1617,7 +1611,6 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
     }
 }
 
-#[tracing::instrument]
 pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
@@ -1655,7 +1648,6 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -
     Ok(())
 }
 
-#[tracing::instrument]
 pub async fn get_docusign_template_id(ds: &DocuSign, name: &str) -> String {
     let templates = ds.list_templates().await.unwrap();
     for template in templates {
@@ -2796,7 +2788,6 @@ Sincerely,
     }
 }
 
-#[tracing::instrument]
 pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.

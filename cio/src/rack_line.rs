@@ -188,7 +188,6 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
 }
 
 /// Sync the rack_line_subscribers from Mailchimp with our database.
-#[tracing::instrument]
 pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) -> Result<()> {
     let mailchimp_auth = company.authenticate_mailchimp(db).await;
     if let Err(e) = mailchimp_auth {
@@ -226,7 +225,6 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
 }
 
 /// Convert to a signup data type.
-#[tracing::instrument]
 pub async fn as_rack_line_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> Result<NewRackLineSubscriber> {
     let mut signup: NewRackLineSubscriber = Default::default();
 

@@ -189,77 +189,6 @@ pub struct SyncTravel {}
 async fn main() -> Result<()> {
     let opts: Opts = Opts::parse();
 
-    let level_filter = if opts.debug {
-        tracing_subscriber::filter::LevelFilter::DEBUG
-    } else {
-        tracing_subscriber::filter::LevelFilter::INFO
-    };
-
-    // Format fields using the provided closure.
-    // We want to make this very consise otherwise the logs are not able to be read by humans.
-    let format = tracing_subscriber::fmt::format::debug_fn(|writer, field, value| {
-        if format!("{}", field) == "message" {
-            write!(writer, "{}: {:?}", field, value)
-        } else {
-            write!(writer, "{}", field)
-        }
-    })
-    // Separate each field with a comma.
-    // This method is provided by an extension trait in the
-    // `tracing-subscriber` prelude.
-    .delimited(", ");
-
-    let (json, plain) = if opts.json {
-        // Cloud run likes json formatted logs if possible.
-        // See: https://cloud.google.com/run/docs/logging
-        // We could probably format these specifically for cloud run if we wanted,
-        // will save that as a TODO: https://cloud.google.com/run/docs/logging#special-fields
-        (
-            Some(tracing_subscriber::fmt::layer().json().with_filter(level_filter)),
-            None,
-        )
-    } else {
-        (
-            None,
-            Some(
-                tracing_subscriber::fmt::layer()
-                    .pretty()
-                    .fmt_fields(format)
-                    .with_filter(level_filter),
-            ),
-        )
-    };
-
-    // Generate events on Errors and Warnings.
-    let sentry_layer = sentry::integrations::tracing::layer().event_filter(|md| match *md.level() {
-        tracing::Level::ERROR => sentry::integrations::tracing::EventFilter::Event,
-        tracing::Level::WARN => sentry::integrations::tracing::EventFilter::Event,
-        _ => sentry::integrations::tracing::EventFilter::Ignore,
-    });
-
-    // Initialize the Sentry tracing.
-    tracing_subscriber::registry()
-        .with(json)
-        .with(plain)
-        .with(sentry_layer)
-        .init();
-
-    let logger = if opts.json {
-        // TODO: the problem is the global logger, LOGGER, is not being changed to use json so
-        // the output from the reexec functions will not be json formatted. This should be
-        // fixed.
-        // Build a JSON slog logger.
-        // This way cloud run can read the logs as JSON.
-        let drain = slog_json::Json::new(std::io::stdout())
-            .add_default_keys()
-            .build()
-            .fuse();
-        let drain = slog_async::Async::new(drain).build().fuse();
-        slog::Logger::root(drain, slog::slog_o!())
-    } else {
-        LOGGER.clone()
-    };
-
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
     let _guard = sentry::init(sentry::ClientOptions {
@@ -286,6 +215,37 @@ async fn main() -> Result<()> {
         session_mode: sentry::SessionMode::Request,
         ..sentry::ClientOptions::default()
     });
+
+    let logger = if opts.json {
+        // TODO: the problem is the global logger, LOGGER, is not being changed to use json so
+        // the output from the reexec functions will not be json formatted. This should be
+        // fixed.
+        // Build a JSON slog logger.
+        // This way cloud run can read the logs as JSON.
+        let drain = slog_json::Json::new(std::io::stdout())
+            .add_default_keys()
+            .build()
+            .fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let drain = sentry::integrations::slog::SentryDrain::new(drain);
+        slog::Logger::root(drain, slog::slog_o!())
+    } else {
+        let decorator = slog_term::TermDecorator::new().build();
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let drain = sentry::integrations::slog::SentryDrain::new(drain);
+        slog::Logger::root(drain, slog::slog_o!())
+    };
+
+    // Initialize our logger.
+    let _scope_guard = slog_scope::set_global_logger(logger.clone());
+
+    // Set the logging level.
+    let mut log_level = log::Level::Info;
+    if opts.debug {
+        log_level = log::Level::Debug;
+    }
+    let _log_guard = slog_stdlog::init_with_level(log_level)?;
 
     if let Err(err) = run_cmd(opts.clone(), logger).await {
         sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));

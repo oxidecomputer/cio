@@ -149,7 +149,6 @@ impl FromTagger for Option<octorust::types::Tagger> {
     }
 }
 
-#[tracing::instrument]
 pub async fn refresh_commits() -> Result<()> {
     let db = Database::new().await;
 

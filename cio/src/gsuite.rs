@@ -21,7 +21,6 @@ use crate::{
 };
 
 /// Update a GSuite user.
-#[tracing::instrument]
 pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: bool, company: &Company) -> GSuiteUser {
     let mut gsuite_user = gu.clone();
 
@@ -201,7 +200,6 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
 }
 
 /// Update a user's aliases in GSuite to match our database.
-#[tracing::instrument(skip(gsuite))]
 pub async fn update_user_aliases(
     gsuite: &GSuite,
     u: &GSuiteUser,
@@ -250,7 +248,6 @@ pub async fn update_user_aliases(
 }
 
 /// Update a user's groups in GSuite to match our database.
-#[tracing::instrument(skip(gsuite))]
 pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, company: &Company) -> Result<()> {
     // Iterate over the groups and add the user as a member to it.
     for group in &user.groups {
@@ -283,7 +280,6 @@ pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, company: &C
 }
 
 /// Update a group's aliases in GSuite to match our configuration files.
-#[tracing::instrument(skip(gsuite))]
 pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) -> Result<()> {
     if g.aliases.is_empty() {
         // return early
@@ -322,7 +318,6 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) -> Result<()
 }
 
 /// Update a group's settings in GSuite to match our configuration files.
-#[tracing::instrument]
 pub async fn update_google_group_settings(db: &Database, group: &Group, company: &Company) -> Result<()> {
     let ggs = company.authenticate_google_groups_settings(db).await?;
 
@@ -370,7 +365,6 @@ pub async fn update_google_group_settings(db: &Database, group: &Group, company:
 }
 
 /// Update a building in GSuite.
-#[tracing::instrument]
 pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str) -> GSuiteBuilding {
     let mut gsuite_building = b.clone();
 
@@ -392,7 +386,6 @@ pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str)
 }
 
 /// Update a calendar resource.
-#[tracing::instrument]
 pub fn update_gsuite_calendar_resource(
     c: &GSuiteCalendarResource,
     resource: &ConferenceRoom,

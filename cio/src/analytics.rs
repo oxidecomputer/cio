@@ -88,7 +88,6 @@ impl NewPageView {
     }
 }
 
-#[tracing::instrument]
 pub async fn refresh_analytics(db: &Database, company: &Company) -> Result<()> {
     PageViews::get_from_db(db, company.id)
         .await?

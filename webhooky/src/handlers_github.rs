@@ -20,7 +20,6 @@ use log::{info, warn};
 use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context};
 
 /// Handle a request to the /github endpoint.
-#[tracing::instrument(skip_all)]
 pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GitHubWebhook>) -> Result<()> {
     let api_context = rqctx.context();
 
@@ -162,6 +161,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
 
                     match handle_configs_push(&github, api_context, event.clone(), &company).await {
                         Ok(message) => {
+                            info!("{}", message);
                             event.create_comment(&github, &message).await?;
                         }
                         Err(e) => {
@@ -186,7 +186,6 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
 }
 
 /// Handle a `pull_request` event for the rfd repo.
-#[tracing::instrument(skip(github))]
 pub async fn handle_rfd_pull_request(
     github: &octorust::Client,
     api_context: &Context,
@@ -351,7 +350,6 @@ pub async fn handle_rfd_pull_request(
 }
 
 /// Handle a `push` event for the rfd repo.
-#[tracing::instrument(skip(github))]
 pub async fn handle_rfd_push(
     github: &octorust::Client,
     api_context: &Context,
@@ -787,7 +785,7 @@ pub async fn handle_rfd_push(
 }
 
 /// Handle a `push` event for the configs repo.
-#[tracing::instrument(skip(github))]
+//#[tracing::instrument(skip(github))]
 pub async fn handle_configs_push(
     github: &octorust::Client,
     api_context: &Context,
@@ -805,6 +803,8 @@ pub async fn handle_configs_push(
         return Ok("".to_string());
     }
 
+    log::info!("configs `push` event");
+
     // Get the commit.
     let mut commit = event.commits.get(0).unwrap().clone();
 
@@ -820,6 +820,7 @@ pub async fn handle_configs_push(
         );
         return Ok("".to_string());
     }
+    log::info!("configs `push` event: after changed files");
 
     // Get the branch name.
     let branch = event.refv.trim_start_matches("refs/heads/");
@@ -838,8 +839,11 @@ pub async fn handle_configs_push(
         message.push('\n');
     };
 
+    log::info!("configs `push` event: after branch check");
     // Get the configs from our repo.
     let configs = get_configs_from_repo(github, company).await?;
+
+    log::info!("configs `push` event: after get_configs_from_repo");
 
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
@@ -906,7 +910,6 @@ pub async fn handle_configs_push(
 }
 
 /// Handle the `repository` event for all repos.
-#[tracing::instrument(skip(github))]
 pub async fn handle_repository_event(
     github: &octorust::Client,
     api_context: &Context,
