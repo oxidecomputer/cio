@@ -32,6 +32,9 @@ jobs:
             pandoc \
             poppler-utils \
             ruby \
+      - name: Install asciidoctor-pdf, asciidoctor-mermaid
+        shell: bash
+        run: |
           sudo gem install asciidoctor-pdf asciidoctor-mermaid rouge
           npm install @mermaid-js/mermaid-cli
           ln -s ./node_modules/.bin/mmdc /usr/local/bin/mmdc
