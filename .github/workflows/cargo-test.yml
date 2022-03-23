@@ -13,6 +13,8 @@ on:
       - 'Cargo.lock'
       - .github/workflows/cargo-test.yml
       - rust-toolchain
+  workflow_dispatch:
+    inputs:
 name: cargo test
 jobs:
   cargotest:
