@@ -1,6 +1,18 @@
 # files added by cargo
-/target
+target
 **/*.rs.bk
+airtable/Cargo.lock
+barcodey/Cargo.lock
+checkr/Cargo.lock
+diesel-sentry/Cargo.lock
+docusign/Cargo.lock
+google-geocode/Cargo.lock
+mailchimp/Cargo.lock
+printy/Cargo.lock
+quickbooks/Cargo.lock
+shippo/Cargo.lock
+slack/Cargo.lock
+tailscale/Cargo.lock
 
 # github cache
 .cache
