@@ -98,3 +98,7 @@ jobs:
           RUST_LOG: trace
           WEBHOOKY_SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}
           SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}
+          GITHUB_ORG: oxidecomputer
+          GH_APP_ID: ${{secrets.GH_APP_ID}}
+          GH_PRIVATE_KEY: ${{secrets.GH_PRIVATE_KEY}}
+          SENTRY_ENV: development
