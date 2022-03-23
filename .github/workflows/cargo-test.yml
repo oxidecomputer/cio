@@ -102,3 +102,4 @@ jobs:
           GH_APP_ID: ${{secrets.GH_APP_ID}}
           GH_PRIVATE_KEY: ${{secrets.GH_PRIVATE_KEY}}
           SENTRY_ENV: development
+          GOOGLE_KEY_ENCODED: ${{ secrets.GOOGLE_CIO_KEY_ENCODED }}
