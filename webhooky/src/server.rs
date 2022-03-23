@@ -29,7 +29,11 @@ use zoom_api::Client as Zoom;
 
 use crate::github_types::GitHubWebhook;
 
-pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Result<()> {
+pub async fn create_server(
+    s: &crate::core::Server,
+    logger: slog::Logger,
+    debug: bool,
+) -> Result<(dropshot::HttpServer<Context>, Context)> {
     /*
      * We must specify a configuration with a bind address.  We'll use 127.0.0.1
      * since it's available and won't expose this server outside the host.  We
@@ -170,6 +174,19 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
      */
     let api_context = Context::new(schema, logger).await;
 
+    /*
+     * Set up the server.
+     */
+    let server = HttpServerStarter::new(&config_dropshot, api, api_context.clone(), &log)
+        .map_err(|error| anyhow!("failed to create server: {}", error))?
+        .start();
+
+    Ok((server, api_context))
+}
+
+pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -> Result<()> {
+    let (server, api_context) = create_server(&s, logger, debug).await?;
+
     // This really only applied for when we are running with `do-cron` but we need the variable
     // for the scheduler to be in the top level so we can run as async later based on the options.
     let mut scheduler = AsyncScheduler::with_tz(chrono_tz::US::Pacific);
@@ -245,13 +262,6 @@ pub async fn server(s: crate::Server, logger: slog::Logger, debug: bool) -> Resu
             .at("8:00 am")
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("send-rfd-changelog")});
     }
-
-    /*
-     * Set up the server.
-     */
-    let server = HttpServerStarter::new(&config_dropshot, api, api_context.clone(), &log)
-        .map_err(|error| anyhow!("failed to create server: {}", error))?
-        .start();
 
     // For Cloud run & ctrl+c, shutdown gracefully.
     // "The main process inside the container will receive SIGTERM, and after a grace period,

@@ -20,6 +20,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - uses: actions/setup-node@v2
+      - name: Install asciidoctor, pandoc, and pdftotext
+        shell: bash
+        run: |
+          sudo apt update -y && sudo apt install -y \
+            asciidoctor \
+            libusb-1.0-0-dev \
+            pandoc \
+            poppler-utils \
+            ruby \
+          sudo gem install asciidoctor-pdf asciidoctor-mermaid rouge
+          npm install @mermaid-js/mermaid-cli
+          ln -s ./node_modules/.bin/mmdc /usr/local/bin/mmdc
       - name: Install latest nightly
         uses: oxidecomputer/actions-rs_toolchain@oxide/master
         with:
@@ -73,7 +86,7 @@ jobs:
                   -credential_file=${{ github.workspace }}/sql_proxy_key &
       - name: Run cargo test
         run: |
-          cargo test
+          cargo test --test-threads=1
         shell: bash
         env:
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}

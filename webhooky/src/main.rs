@@ -1,6 +1,7 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
 #[macro_use]
+mod core;
 mod event_types;
 mod github_types;
 mod handlers;
@@ -27,165 +28,9 @@ use clap::Parser;
 use sentry::IntoDsn;
 use slog::Drain;
 
-lazy_static! {
-    // We need a slog::Logger for steno and when we export out the logs from re-exec-ed processes.
-    static ref LOGGER: slog::Logger = {
-        let decorator = slog_term::TermDecorator::new().build();
-        let drain = slog_term::FullFormat::new(decorator).build().fuse();
-        let drain = slog_async::Async::new(drain).build().fuse();
-        slog::Logger::root(drain, slog::slog_o!())
-    };
-}
-
-/// This doc string acts as a help message when the user runs '--help'
-/// as do all doc strings on fields.
-#[derive(Parser, Debug, Clone)]
-#[clap(version = clap::crate_version!(), author = clap::crate_authors!("\n"))]
-struct Opts {
-    /// Print debug info
-    #[clap(short, long)]
-    debug: bool,
-
-    /// Print logs as json
-    #[clap(short, long)]
-    json: bool,
-
-    #[clap(subcommand)]
-    subcmd: SubCommand,
-}
-
-#[derive(Parser, Debug, Clone)]
-enum SubCommand {
-    Server(Server),
-
-    SendRFDChangelog(SendRFDChangelog),
-    SyncAnalytics(SyncAnalytics),
-    #[clap(name = "sync-api-tokens")]
-    SyncAPITokens(SyncAPITokens),
-    SyncApplications(SyncApplications),
-    SyncAssetInventory(SyncAssetInventory),
-    SyncCompanies(SyncCompanies),
-    SyncConfigs(SyncConfigs),
-    SyncFinance(SyncFinance),
-    SyncFunctions(SyncFunctions),
-    SyncHuddles(SyncHuddles),
-    SyncInterviews(SyncInterviews),
-    SyncJournalClubs(SyncJournalClubs),
-    SyncMailingLists(SyncMailingLists),
-    SyncOther(SyncOther),
-    SyncRecordedMeetings(SyncRecordedMeetings),
-    SyncRepos(SyncRepos),
-    #[clap(name = "sync-rfds")]
-    SyncRFDs(SyncRFDs),
-    SyncShipments(SyncShipments),
-    SyncShorturls(SyncShorturls),
-    SyncSwagInventory(SyncSwagInventory),
-    SyncTravel(SyncTravel),
-}
-
-/// A subcommand for running the server.
-#[derive(Parser, Clone, Debug)]
-pub struct Server {
-    /// IP address and port that the server should listen
-    #[clap(short, long, default_value = "0.0.0.0:8080")]
-    address: String,
-
-    /// Sets an optional output file for the API spec
-    #[clap(short, long, parse(from_os_str), value_hint = clap::ValueHint::FilePath)]
-    spec_file: Option<std::path::PathBuf>,
-
-    /// Sets if the server should run cron jobs in the background
-    #[clap(long)]
-    do_cron: bool,
-}
-
-/// A subcommand for sending the RFD changelog.
-#[derive(Parser, Clone, Debug)]
-pub struct SendRFDChangelog {}
-
-/// A subcommand for running the background job of syncing analytics.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncAnalytics {}
-
-/// A subcommand for running the background job of syncing API tokens.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncAPITokens {}
-
-/// A subcommand for running the background job of syncing applications.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncApplications {}
-
-/// A subcommand for running the background job of syncing asset inventory.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncAssetInventory {}
-
-/// A subcommand for running the background job of syncing companies.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncCompanies {}
-
-/// A subcommand for running the background job of syncing configs.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncConfigs {}
-
-/// A subcommand for running the background job of syncing finance data.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncFinance {}
-
-/// A subcommand for running the background job of syncing functions.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncFunctions {}
-
-/// A subcommand for running the background job of syncing interviews.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncInterviews {}
-
-/// A subcommand for running the background job of syncing huddles.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncHuddles {}
-
-/// A subcommand for running the background job of syncing journal clubs.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncJournalClubs {}
-
-/// A subcommand for running the background job of syncing mailing lists.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncMailingLists {}
-
-/// A subcommand for running the background job of syncing other things.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncOther {}
-
-/// A subcommand for running the background job of syncing recorded_meetings.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncRecordedMeetings {}
-
-/// A subcommand for running the background job of syncing repos.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncRepos {}
-
-/// A subcommand for running the background job of syncing RFDs.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncRFDs {}
-
-/// A subcommand for running the background job of syncing shipments.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncShipments {}
-
-/// A subcommand for running the background job of syncing shorturls.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncShorturls {}
-
-/// A subcommand for running the background job of syncing swag inventory.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncSwagInventory {}
-
-/// A subcommand for running the background job of syncing travel data.
-#[derive(Parser, Debug, Clone)]
-pub struct SyncTravel {}
-
 #[tokio::main]
 async fn main() -> Result<()> {
-    let opts: Opts = Opts::parse();
+    let opts: crate::core::Opts = crate::core::Opts::parse();
 
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
@@ -253,19 +98,19 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
+async fn run_cmd(opts: crate::core::Opts, logger: slog::Logger) -> Result<()> {
     sentry::configure_scope(|scope| {
         scope.set_tag("command", &std::env::args().collect::<Vec<String>>().join(" "));
     });
 
     match opts.subcmd {
-        SubCommand::Server(s) => {
+        crate::core::SubCommand::Server(s) => {
             sentry::configure_scope(|scope| {
                 scope.set_tag("do-cron", s.do_cron.to_string());
             });
             crate::server::server(s, logger, opts.debug).await?;
         }
-        SubCommand::SendRFDChangelog(_) => {
+        crate::core::SubCommand::SendRFDChangelog(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -274,7 +119,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::rfds::send_rfd_changelog(&db, &company).await?;
             }
         }
-        SubCommand::SyncAnalytics(_) => {
+        crate::core::SubCommand::SyncAnalytics(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -297,7 +142,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 result?;
             }
         }
-        SubCommand::SyncAPITokens(_) => {
+        crate::core::SubCommand::SyncAPITokens(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -320,7 +165,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 result?;
             }
         }
-        SubCommand::SyncApplications(_) => {
+        crate::core::SubCommand::SyncApplications(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -334,7 +179,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::applicants::refresh_docusign_for_applicants(&db, &company).await?;
             }
         }
-        SubCommand::SyncAssetInventory(_) => {
+        crate::core::SubCommand::SyncAssetInventory(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -343,10 +188,10 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::asset_inventory::refresh_asset_items(&db, &company).await?;
             }
         }
-        SubCommand::SyncCompanies(_) => {
+        crate::core::SubCommand::SyncCompanies(_) => {
             cio_api::companies::refresh_companies().await?;
         }
-        SubCommand::SyncConfigs(_) => {
+        crate::core::SubCommand::SyncConfigs(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -371,7 +216,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 }
             }
         }
-        SubCommand::SyncFinance(_) => {
+        crate::core::SubCommand::SyncFinance(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -396,10 +241,10 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 }
             }
         }
-        SubCommand::SyncFunctions(_) => {
+        crate::core::SubCommand::SyncFunctions(_) => {
             cio_api::functions::refresh_functions().await?;
         }
-        SubCommand::SyncHuddles(_) => {
+        crate::core::SubCommand::SyncHuddles(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -414,7 +259,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::huddles::sync_huddle_meeting_notes(&company).await?;
             }
         }
-        SubCommand::SyncInterviews(_) => {
+        crate::core::SubCommand::SyncInterviews(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -424,7 +269,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::interviews::compile_packets(&db, &company).await?;
             }
         }
-        SubCommand::SyncJournalClubs(_) => {
+        crate::core::SubCommand::SyncJournalClubs(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -433,7 +278,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await?;
             }
         }
-        SubCommand::SyncMailingLists(_) => {
+        crate::core::SubCommand::SyncMailingLists(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -445,7 +290,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 }
             }
         }
-        SubCommand::SyncRecordedMeetings(_) => {
+        crate::core::SubCommand::SyncRecordedMeetings(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -455,7 +300,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::recorded_meetings::refresh_google_recorded_meetings(&db, &company).await?;
             }
         }
-        SubCommand::SyncRepos(_) => {
+        crate::core::SubCommand::SyncRepos(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -482,7 +327,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cleanup_result?;
             }
         }
-        SubCommand::SyncRFDs(_) => {
+        crate::core::SubCommand::SyncRFDs(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -492,7 +337,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await?;
             }
         }
-        SubCommand::SyncOther(_) => {
+        crate::core::SubCommand::SyncOther(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -505,7 +350,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 }
             }
         }
-        SubCommand::SyncShipments(_) => {
+        crate::core::SubCommand::SyncShipments(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -535,10 +380,10 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 outbound_result?;
             }
         }
-        SubCommand::SyncShorturls(_) => {
+        crate::core::SubCommand::SyncShorturls(_) => {
             cio_api::shorturls::refresh_shorturls().await?;
         }
-        SubCommand::SyncSwagInventory(_) => {
+        crate::core::SubCommand::SyncSwagInventory(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
@@ -549,7 +394,7 @@ async fn run_cmd(opts: Opts, logger: slog::Logger) -> Result<()> {
                 cio_api::swag_inventory::refresh_barcode_scans(&db, &company).await?;
             }
         }
-        SubCommand::SyncTravel(_) => {
+        crate::core::SubCommand::SyncTravel(_) => {
             let db = Database::new().await;
             let companies = Companys::get_from_db(&db, 1).await?;
 
