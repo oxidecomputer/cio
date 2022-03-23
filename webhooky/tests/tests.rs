@@ -19,7 +19,8 @@ lazy_static! {
 }
 
 enum BodyContents {
-    RFD,
+    RFD126,
+    RFD252,
     Configs,
 }
 
@@ -50,8 +51,11 @@ async fn run_github_request(bc: &BodyContents) -> anyhow::Result<()> {
     std::thread::sleep(std::time::Duration::from_secs(5));
 
     let body = match bc {
-        BodyContents::RFD => {
+        BodyContents::RFD126 => {
             include_str!("github_webhook_rfd.json")
+        }
+        BodyContents::RFD252 => {
+            include_str!("github_webhook_rfd_another.json")
         }
         BodyContents::Configs => {
             include_str!("github_webhook_configs.json")
@@ -86,8 +90,13 @@ async fn test_ping() {
 
 #[ignore]
 #[tokio::test]
-async fn test_github_webhook_rfd() {
-    run_github_request(&BodyContents::RFD).await.unwrap();
+async fn test_github_webhook_rfd_126() {
+    run_github_request(&BodyContents::RFD126).await.unwrap();
+}
+
+#[tokio::test]
+async fn test_github_webhook_rfd_252() {
+    run_github_request(&BodyContents::RFD252).await.unwrap();
 }
 
 #[tokio::test]
