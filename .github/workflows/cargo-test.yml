@@ -97,3 +97,4 @@ jobs:
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
           RUST_LOG: trace
           WEBHOOKY_SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}
+          SENTRY_DSN: ${{secrets.WEBHOOKY_SENTRY_DSN}}
