@@ -84,6 +84,7 @@ async fn test_ping() {
     run_ping_request().await.unwrap();
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_github_webhook_rfd() {
     run_github_request(&BodyContents::RFD).await.unwrap();
