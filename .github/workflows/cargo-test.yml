@@ -103,3 +103,7 @@ jobs:
           GH_PRIVATE_KEY: ${{secrets.GH_PRIVATE_KEY}}
           SENTRY_ENV: development
           GOOGLE_KEY_ENCODED: ${{ secrets.GOOGLE_CIO_KEY_ENCODED }}
+          GUSTO_CLIENT_ID: ${{secrets.GUSTO_CLIENT_ID}}
+          GUSTO_CLIENT_SECRET: ${{secrets.GUSTO_CLIENT_SECRET}}
+          GUSTO_REDIRECT_URI: ${{secrets.GUSTO_REDIRECT_URI}}
+          RUST_BACKTRACE: 1
