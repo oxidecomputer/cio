@@ -74,7 +74,7 @@ async fn run_github_request(bc: &BodyContents) -> anyhow::Result<()> {
         .send()
         .await?;
 
-    assert_eq!(response.status(), reqwest::StatusCode::Accepted);
+    assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
     assert_eq!(response.text().await?, "ok");
 
     // Stop the server.
