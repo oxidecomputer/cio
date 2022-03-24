@@ -1,7 +1,7 @@
 {
   "ref": "refs/heads/master",
-  "before": "bc7978600532063ffb96cfce55afd740358266b5",
-  "after": "e238864aed6549698cf2e4ab9cba9338f37a5782",
+  "before": "8955c51a05c51880033447cd85efe595421ea043",
+  "after": "140bd001ea50b6ff9ce52d4e9a31325841ec05b6",
   "repository": {
     "id": 222982321,
     "node_id": "MDEwOlJlcG9zaXRvcnkyMjI5ODIzMjE=",
@@ -152,12 +152,12 @@
   "compare": "https://github.com/oxidecomputer/configs/compare/bc7978600532...e238864aed65",
   "commits": [
     {
-      "id": "e238864aed6549698cf2e4ab9cba9338f37a5782",
+      "id": "8955c51a05c51880033447cd85efe595421ea043",
       "tree_id": "67ce3943afbbf4f3899839d5ee6c339f3ee612ac",
       "distinct": true,
       "message": "test webhook\n\nSigned-off-by: Jess Frazelle <github@jessfraz.com>",
       "timestamp": "2022-03-16T09:18:56-07:00",
-      "url": "https://github.com/oxidecomputer/configs/commit/e238864aed6549698cf2e4ab9cba9338f37a5782",
+      "url": "https://github.com/oxidecomputer/configs/commit/8955c51a05c51880033447cd85efe595421ea043",
       "author": {
         "name": "Jess Frazelle",
         "email": "github@jessfraz.com",
@@ -175,17 +175,17 @@
 
       ],
       "modified": [
-        "configs/users.toml"
+        "configs/github-outside-collaborators.toml"
       ]
     }
   ],
   "head_commit": {
-    "id": "e238864aed6549698cf2e4ab9cba9338f37a5782",
+    "id": "140bd001ea50b6ff9ce52d4e9a31325841ec05b6",
     "tree_id": "67ce3943afbbf4f3899839d5ee6c339f3ee612ac",
     "distinct": true,
     "message": "test webhook\n\nSigned-off-by: Jess Frazelle <github@jessfraz.com>",
     "timestamp": "2022-03-16T09:18:56-07:00",
-    "url": "https://github.com/oxidecomputer/configs/commit/e238864aed6549698cf2e4ab9cba9338f37a5782",
+    "url": "https://github.com/oxidecomputer/configs/commit/140bd001ea50b6ff9ce52d4e9a31325841ec05b6",
     "author": {
       "name": "Jess Frazelle",
       "email": "github@jessfraz.com",
@@ -203,7 +203,7 @@
 
     ],
     "modified": [
-      "configs/users.toml"
+      "configs/github-outside-collaborators.toml"
     ]
   }
 }
