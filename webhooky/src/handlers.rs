@@ -98,6 +98,11 @@ pub async fn handle_rfd_update_by_number(
             // And no worries if it's not merged into master it will just fail again.
             // And won't save it back to the database.
             rfd.state = "published".to_string();
+            // Set the link since thats how we figure out if it's published on master.
+            rfd.link = format!(
+                "https://github.com/oxidecomputer/rfd/tree/master/rfd/{}",
+                rfd.number_string
+            );
             rfd.expand(&github, &oxide).await?;
         } else {
             bail!("failed to expand RFD: {}", e);
