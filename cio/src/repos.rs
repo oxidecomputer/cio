@@ -581,7 +581,12 @@ pub async fn sync_all_repo_settings(db: &Database, company: &Company) -> Result<
 
     // Iterate over the repos and set a number of default settings.
     for r in repos {
-        r.sync_settings(&github, company).await?;
+        match r.sync_settings(&github, company).await {
+            Ok(_) => (),
+            Err(e) => {
+                log::warn!("could not sync settings for repo {}: {}", r.full_name, e);
+            }
+        }
     }
 
     Ok(())
