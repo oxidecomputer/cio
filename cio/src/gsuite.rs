@@ -114,22 +114,40 @@ pub async fn update_gsuite_user(gu: &GSuiteUser, user: &User, change_password: b
     gsuite_user.include_in_global_address_list = true;
 
     if !user.gender.is_empty() {
+        if user.gender == "male"
+            || user.gender
+                == "female
+"
+        {
+            gsuite_user.gender = Some(UserGender {
+                address_me_as: "".to_string(),
+                custom_gender: "".to_string(),
+                type_: user.gender.to_string(),
+            });
+        } else {
+            gsuite_user.gender = Some(UserGender {
+                address_me_as: "".to_string(),
+                custom_gender: user.gender.to_string(),
+                type_: "other".to_string(),
+            });
+        }
+    } else {
         gsuite_user.gender = Some(UserGender {
             address_me_as: "".to_string(),
             custom_gender: "".to_string(),
-            type_: user.gender.to_string(),
+            type_: "unknown".to_string(),
         });
     }
 
     if !user.building.is_empty() {
         gsuite_user.locations = vec![UserLocation {
-            area: "".to_string(),
+            area: user.building.to_string(),
             building_id: user.building.to_string(),
             custom_type: "".to_string(),
             desk_code: "".to_string(),
             floor_name: "1".to_string(),
             floor_section: "".to_string(),
-            type_: "desk".to_string(),
+            type_: "default".to_string(),
         }];
     }
 
