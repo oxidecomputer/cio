@@ -519,7 +519,17 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
                 // Update the user with the settings from the config for the user.
                 let gsuite_user = crate::gsuite::update_gsuite_user(&u, user, false, company).await;
 
-                self.users().update(&gsuite_user.id, &gsuite_user).await?;
+                match self.users().update(&gsuite_user.id, &gsuite_user).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        bail!(
+                            "failed to update user `{}` in gsuite: {}\n{:?}",
+                            user.email,
+                            e,
+                            gsuite_user
+                        );
+                    }
+                };
 
                 crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
 
