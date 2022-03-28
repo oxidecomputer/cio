@@ -336,39 +336,11 @@ impl Company {
     /// Authenticate with ShipBob.
     #[tracing::instrument]
     pub async fn authenticate_shipbob(&self, db: &Database) -> Result<ShipBob> {
-        // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "shipbob".to_string()).await {
-            // Initialize the ShipBob client.
-            let mut shipbob = ShipBob::new_from_env(
-                t.access_token.to_string(),
-                t.refresh_token.to_string(),
-                t.company_id.to_string(),
-            );
-
-            if !t.refresh_token.is_empty() && t.is_expired() {
-                let nt = shipbob.refresh_access_token().await?;
-                if !nt.access_token.is_empty() {
-                    t.access_token = nt.access_token.to_string();
-                }
-                if nt.expires_in > 0 {
-                    t.expires_in = nt.expires_in as i32;
-                }
-                t.last_updated_at = Utc::now();
-                if !nt.refresh_token.is_empty() {
-                    t.refresh_token = nt.refresh_token.to_string();
-                }
-                if nt.refresh_token_expires_in > 0 {
-                    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
-                }
-                t.expand();
-                // Update the token in the database.
-                t.update(db).await?;
-            }
-
-            return Ok(shipbob);
+        if self.shipbob_pat.is_empty() {
+            bail!("no shipbob personal access token");
         }
 
-        bail!("no token");
+        Ok(ShipBob::new(&self.shipbob_pat))
     }
 
     /// Ensure the company has ShipBob webhooks setup.

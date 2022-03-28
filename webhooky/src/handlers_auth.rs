@@ -1,22 +1,21 @@
 use std::sync::Arc;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::Utc;
 use cio_api::{
     api_tokens::{APIToken, NewAPIToken},
-    companies::{Company, Companys},
+    companies::Company,
     schema::api_tokens,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use docusign::DocuSign;
-use dropshot::{Query, RequestContext, UntypedBody};
+use dropshot::{Query, RequestContext};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
-use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
@@ -75,73 +74,6 @@ pub async fn handle_auth_google_callback(
         company_id: metadata.hd.to_string(),
         item_id: "".to_string(),
         user_email: metadata.email.to_string(),
-        last_updated_at: Utc::now(),
-        expires_date: None,
-        refresh_token_expires_date: None,
-        endpoint: "".to_string(),
-        auth_company_id: company.id,
-        company: Default::default(),
-        // THIS SHOULD ALWAYS BE OXIDE, NO 1.
-        cio_company_id: 1,
-    };
-    token.expand();
-
-    // Update it in the database.
-    token.upsert(&api_context.db).await?;
-
-    Ok(())
-}
-
-pub async fn handle_auth_shipbob_callback(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
-    let api_context = rqctx.context();
-
-    // Initialize the Google client.
-    // You can use any of the libs here, they all use the same endpoint
-    // for tokens and we will send all the scopes.
-    let mut g = ShipBob::new_from_env("", "", "");
-
-    let event: AuthCallback = serde_urlencoded::from_bytes(body_param.as_bytes())?;
-
-    // Let's get the token from the code.
-    let t = g.get_access_token(&event.code, &event.state).await?;
-
-    // Let's get the channel information.
-    let channels = g.channels().get_page().await?;
-
-    // Get all our domains so we can match on that if we have multiple installations.
-    let mut domains: Vec<String> = Default::default();
-    let companies = Companys::get_from_db(&api_context.db, 1).await?;
-    for c in companies {
-        domains.push(c.domain.to_string());
-    }
-
-    let mut domain = "".to_string();
-    let mut channel_id = "".to_string();
-    for channel in &channels {
-        if channel.application_name == "Automated CIO Bot" && domains.contains(&channel.name) {
-            channel_id = channel.id.to_string();
-            domain = channel.name.to_string();
-            break;
-        }
-    }
-
-    if domain.is_empty() || channel_id.is_empty() {
-        bail!("could not find matching channel in channels: {:?}", channels);
-    }
-
-    let company = Company::get_from_domain(&api_context.db, &domain).await?;
-
-    // Save the token to the database.
-    let mut token = NewAPIToken {
-        product: "shipbob".to_string(),
-        token_type: t.token_type.to_string(),
-        access_token: t.access_token.to_string(),
-        expires_in: t.expires_in as i32,
-        refresh_token: t.refresh_token.to_string(),
-        refresh_token_expires_in: t.refresh_token_expires_in as i32,
-        company_id: channel_id.to_string(),
-        item_id: "".to_string(),
-        user_email: "".to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,

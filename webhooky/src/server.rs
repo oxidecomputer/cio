@@ -19,7 +19,6 @@ use ramp_api::Client as Ramp;
 use schemars::JsonSchema;
 use sentry::{protocol, Hub};
 use serde::{Deserialize, Serialize};
-use shipbob::Client as ShipBob;
 use signal_hook::{
     consts::{SIGINT, SIGTERM},
     iterator::Signals,
@@ -103,8 +102,6 @@ pub async fn create_server(
     api.register(listen_auth_plaid_callback).unwrap();
     api.register(listen_auth_ramp_callback).unwrap();
     api.register(listen_auth_ramp_consent).unwrap();
-    api.register(listen_auth_shipbob_callback).unwrap();
-    api.register(listen_auth_shipbob_consent).unwrap();
     api.register(listen_auth_zoom_callback).unwrap();
     api.register(listen_auth_zoom_consent).unwrap();
     api.register(listen_auth_zoom_deauthorization).unwrap();
@@ -1260,58 +1257,6 @@ async fn listen_auth_google_callback(
 
     if let Err(e) = txn
         .run(|| crate::handlers_auth::handle_auth_google_callback(rqctx, query_args))
-        .await
-    {
-        // Send the error to sentry.
-        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-        return Err(handle_anyhow_err_as_http_err(e));
-    }
-
-    txn.finish(http::StatusCode::ACCEPTED);
-
-    Ok(HttpResponseAccepted("ok".to_string()))
-}
-
-/** Get the consent URL for shipbob auth. */
-#[endpoint {
-    method = GET,
-    path = "/auth/shipbob/consent",
-}]
-async fn listen_auth_shipbob_consent(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<TypedOrUntypedBody<()>>).await;
-
-    // Initialize the shipbob client.
-    // You can use any of the libs here, they all use the same endpoint
-    // for tokens and we will send all the scopes.
-    let g = txn.run(|| ShipBob::new_from_env("", "", ""));
-
-    txn.finish(http::StatusCode::OK);
-
-    Ok(HttpResponseOk(UserConsentURL {
-        // We want to get the response as a form.
-        url: g.user_consent_url(&cio_api::companies::get_shipbob_scopes()) + "&response_mode=form_post",
-    }))
-}
-
-/** Listen for callbacks to shipbob auth. */
-#[endpoint {
-    method = POST,
-    path = "/auth/shipbob/callback",
-}]
-async fn listen_auth_shipbob_callback(
-    rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(
-        rqctx.clone(),
-        Some(TypedOrUntypedBody::<()>::UntypedBody(body_param.clone())),
-    )
-    .await;
-
-    if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_shipbob_callback(rqctx, body_param))
         .await
     {
         // Send the error to sentry.
