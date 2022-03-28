@@ -544,7 +544,12 @@ pub async fn refresh_db_github_repos(db: &Database, company: &Company) -> Result
 
     // Sync github_repos.
     for github_repo in github_repos {
-        github_repo.upsert(db).await?;
+        match github_repo.upsert(db).await {
+            Ok(_) => (),
+            Err(e) => {
+                log::warn!("could not upsert repo {}: {}", github_repo.full_name, e);
+            }
+        }
 
         // Remove the repo from the map.
         repo_map.remove(&github_repo.name);

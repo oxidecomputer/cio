@@ -436,7 +436,7 @@ pub async fn get_github_file(
     match github.repos().get_content_file(owner, repo, &file.path, branch).await {
         Ok(f) => {
             // Push the file to our vector.
-            return Ok(f);
+            Ok(f)
         }
         Err(e) => {
             // TODO: better match on errors
@@ -454,7 +454,7 @@ pub async fn get_github_file(
                     encoding: Default::default(),
                     submodule_git_url: Default::default(),
                     target: Default::default(),
-                    size: blob.size.clone(),
+                    size: blob.size,
                     name: file.name.clone(),
                     path: file.path.clone(),
                     content: blob.content,
