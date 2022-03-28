@@ -89,6 +89,8 @@ pub struct NewCompany {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tailscale_api_key: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub shipbob_pat: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tripactions_client_id: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub tripactions_client_secret: String,

@@ -360,6 +360,7 @@ table! {
         checkr_api_key -> Varchar,
         printer_url -> Varchar,
         tailscale_api_key -> Varchar,
+        shipbob_pat -> Varchar,
         tripactions_client_id -> Varchar,
         tripactions_client_secret -> Varchar,
         airtable_api_key -> Varchar,
