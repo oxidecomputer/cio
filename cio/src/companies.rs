@@ -348,7 +348,7 @@ impl Company {
     pub async fn ensure_shipbob_webhooks(&self, db: &Database) -> Result<()> {
         let shipbob_auth = self.authenticate_shipbob(db).await;
         if let Err(e) = shipbob_auth {
-            if e.to_string().contains("no token") {
+            if e.to_string().contains("no shipbob personal access token") {
                 // Return early, they don't use ShipBob.
                 return Ok(());
             }
