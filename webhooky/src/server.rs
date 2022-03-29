@@ -317,7 +317,6 @@ impl Context {
     /**
      * Return a new Context.
      */
-    #[tracing::instrument]
     pub async fn new(schema: serde_json::Value, logger: slog::Logger) -> Context {
         let db = Database::new().await;
 
@@ -331,7 +330,6 @@ impl Context {
         }
     }
 
-    #[tracing::instrument]
     pub fn create_do_job_fn(&self, job: &str) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         Box::pin(do_job(self.clone(), job.to_string()))
     }

@@ -155,7 +155,6 @@ pub struct GitHubWebhook {
 
 impl GitHubWebhook {
     // Returns the check_run id so we can update it later.
-    #[tracing::instrument(skip(github))]
     pub async fn create_check_run(&self, github: &octorust::Client) -> Result<i64> {
         let sha = if self.pull_request.head.sha.is_empty() {
             self.pull_request.head.id.to_string()
@@ -197,7 +196,6 @@ impl GitHubWebhook {
         Ok(0)
     }
 
-    #[tracing::instrument]
     pub fn get_error_string(&self, msg: &str, e: anyhow::Error) -> String {
         let err = format!(
             r#"{} failed:
@@ -228,7 +226,6 @@ cc @jessfraz"#,
     }
 
     // Updates the check run after it has completed.
-    #[tracing::instrument(skip(github))]
     pub async fn update_check_run(
         &self,
         github: &octorust::Client,
@@ -284,7 +281,6 @@ cc @jessfraz"#,
         Ok(())
     }
 
-    #[tracing::instrument(skip(github))]
     pub async fn create_comment(&self, github: &GitHub, comment: &str) -> Result<()> {
         log::info!("creating github comment: {}", comment);
         if comment.is_empty() {
@@ -333,7 +329,6 @@ cc @jessfraz"#,
 }
 
 impl From<GitHubWebhook> for BTreeMap<String, serde_json::Value> {
-    #[tracing::instrument]
     fn from(from: GitHubWebhook) -> Self {
         let mut map: BTreeMap<String, serde_json::Value> = Default::default();
         map.insert("action".to_string(), json!(from.action));

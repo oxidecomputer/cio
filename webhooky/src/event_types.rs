@@ -172,7 +172,6 @@ pub enum EventType {
 
 impl EventType {
     /// Returns a static string for the event name.
-    #[tracing::instrument]
     pub fn name(self) -> &'static str {
         match self {
             EventType::Wildcard => "*",
@@ -227,7 +226,6 @@ impl EventType {
 impl FromStr for EventType {
     type Err = &'static str;
 
-    #[tracing::instrument]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "*" => Ok(EventType::Wildcard),

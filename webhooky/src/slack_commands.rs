@@ -21,7 +21,6 @@ pub enum SlackCommand {
 
 impl SlackCommand {
     /// Returns a static string for the command.
-    #[tracing::instrument]
     pub fn name(self) -> &'static str {
         match self {
             SlackCommand::RFD => "/rfd",
@@ -38,7 +37,6 @@ impl SlackCommand {
 impl FromStr for SlackCommand {
     type Err = String;
 
-    #[tracing::instrument]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "/rfd" => Ok(SlackCommand::RFD),

@@ -13,7 +13,6 @@ pub enum Repo {
 
 impl Repo {
     /// Returns a static string for the repo name.
-    #[tracing::instrument]
     pub fn name(self) -> &'static str {
         match self {
             Repo::Wildcard => "*",
@@ -26,7 +25,6 @@ impl Repo {
 impl FromStr for Repo {
     type Err = &'static str;
 
-    #[tracing::instrument]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "*" => Ok(Repo::Wildcard),
