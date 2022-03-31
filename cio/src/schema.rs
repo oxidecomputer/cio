@@ -931,7 +931,40 @@ table! {
     }
 }
 
+joinable!(accounts_payables -> companys (cio_company_id));
+joinable!(applicant_interviews -> companys (cio_company_id));
+joinable!(applicant_reviewers -> companys (cio_company_id));
+joinable!(applicant_reviews -> companys (cio_company_id));
+joinable!(applicants -> companys (cio_company_id));
+joinable!(asset_items -> companys (cio_company_id));
+joinable!(auth_user_logins -> companys (cio_company_id));
+joinable!(auth_users -> companys (cio_company_id));
+joinable!(barcode_scans -> companys (cio_company_id));
+joinable!(bookings -> companys (cio_company_id));
+joinable!(buildings -> companys (cio_company_id));
+joinable!(certificates -> companys (cio_company_id));
+joinable!(conference_rooms -> companys (cio_company_id));
+joinable!(credit_card_transactions -> companys (cio_company_id));
+joinable!(expensed_items -> companys (cio_company_id));
+joinable!(functions -> companys (cio_company_id));
+joinable!(github_repos -> companys (cio_company_id));
+joinable!(groups -> companys (cio_company_id));
+joinable!(inbound_shipments -> companys (cio_company_id));
+joinable!(journal_club_meetings -> companys (cio_company_id));
+joinable!(journal_club_papers -> companys (cio_company_id));
+joinable!(links -> companys (cio_company_id));
+joinable!(mailing_list_subscribers -> companys (cio_company_id));
+joinable!(outbound_shipments -> companys (cio_company_id));
+joinable!(package_pickups -> companys (cio_company_id));
+joinable!(page_views -> companys (cio_company_id));
+joinable!(rack_line_subscribers -> companys (cio_company_id));
+joinable!(recorded_meetings -> companys (cio_company_id));
 joinable!(rfd_sections -> rfds (rfds_id));
+joinable!(rfds -> companys (cio_company_id));
+joinable!(software_vendors -> companys (cio_company_id));
+joinable!(swag_inventory_items -> companys (cio_company_id));
+joinable!(swag_items -> companys (cio_company_id));
+joinable!(users -> companys (cio_company_id));
 
 allow_tables_to_appear_in_same_query!(
     accounts_payables,
