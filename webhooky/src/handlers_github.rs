@@ -548,8 +548,6 @@ pub async fn handle_rfd_push(
             if let Some(o) = old_rfd {
                 old_rfd_state = o.state.to_string();
                 old_rfd_pdf = o.get_pdf_filename();
-                // Set the rfd_sections_id so we don't overwrite it.
-                new_rfd.rfd_sections_id = o.rfd_sections_id;
 
                 // Set the html just so it's not blank momentarily.
                 new_rfd.content = o.content.to_string();
