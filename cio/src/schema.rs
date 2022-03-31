@@ -931,6 +931,7 @@ table! {
 }
 
 joinable!(accounts_payables -> companys (cio_company_id));
+joinable!(api_tokens -> companys (auth_company_id));
 joinable!(applicant_interviews -> companys (cio_company_id));
 joinable!(applicant_reviewers -> companys (cio_company_id));
 joinable!(applicant_reviews -> companys (cio_company_id));
@@ -958,7 +959,6 @@ joinable!(package_pickups -> companys (cio_company_id));
 joinable!(page_views -> companys (cio_company_id));
 joinable!(rack_line_subscribers -> companys (cio_company_id));
 joinable!(recorded_meetings -> companys (cio_company_id));
-joinable!(rfd_sections -> rfds (rfds_id));
 joinable!(rfds -> companys (cio_company_id));
 joinable!(software_vendors -> companys (cio_company_id));
 joinable!(swag_inventory_items -> companys (cio_company_id));
@@ -996,7 +996,6 @@ allow_tables_to_appear_in_same_query!(
     page_views,
     rack_line_subscribers,
     recorded_meetings,
-    rfd_sections,
     rfds,
     software_vendors,
     swag_inventory_items,
