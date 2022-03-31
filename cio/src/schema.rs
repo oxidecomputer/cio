@@ -776,16 +776,6 @@ table! {
 }
 
 table! {
-    rfd_sections (id) {
-        id -> Int4,
-        anchor -> Text,
-        content -> Text,
-        name -> Text,
-        rfds_id -> Int4,
-    }
-}
-
-table! {
     rfds (id) {
         id -> Int4,
         number -> Int4,
