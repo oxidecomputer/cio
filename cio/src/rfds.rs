@@ -95,9 +95,6 @@ pub struct NewRFD {
     pub pdf_link_github: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub pdf_link_google_drive: String,
-    /// The section IDs of the RFD. This is set elsewhere.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub rfd_sections_id: Vec<i32>,
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
@@ -162,7 +159,6 @@ impl NewRFD {
             relevant_components: Default::default(),
             pdf_link_github: Default::default(),
             pdf_link_google_drive: Default::default(),
-            rfd_sections_id: Default::default(),
             cio_company_id: company.id,
         })
     }
@@ -783,8 +779,6 @@ impl UpdateAirtableRecord<RFD> for RFD {
         // https://community.airtable.com/t/what-is-the-long-text-character-limit/1780
         self.content = truncate(&self.content, 100000);
         self.html = truncate(&self.html, 100000);
-        // Ignore the rfd_sections_id as this won't parse in Airtable.
-        self.rfd_sections_id = vec![];
 
         Ok(())
     }
@@ -1070,8 +1064,6 @@ impl NewRFD {
     async fn sync(&mut self, db: &Database, company: &Company, github: &octorust::Client) -> Result<()> {
         // Check if we already have an existing RFD.
         if let Some(existing) = RFD::get_from_db(db, self.number).await {
-            // Set the rfd_sections_id so we don't overwrite it.
-            self.rfd_sections_id = existing.rfd_sections_id;
             // Make sure there is not a break in the UI where this would be blank.
             self.content = existing.content.to_string();
             self.authors = existing.authors.to_string();
