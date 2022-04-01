@@ -2875,27 +2875,35 @@ mod tests {
     use diesel::prelude::*;
     use serde_json::json;
 
-    use crate::{applicants::Applicant, db::Database, schema::applicants};
+    use crate::{
+        applicants::{Applicant, Applicants},
+        db::Database,
+        schema::applicants,
+    };
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_serialize_deserialize_applicants() {
         crate::utils::setup_logger();
 
         let db = Database::new().await;
-        let applicant = applicants::dsl::applicants
-            .filter(applicants::dsl::id.eq(318))
-            .first_async::<Applicant>(db.pool())
-            .await
-            .unwrap();
+        // Make sure we even have applicants.
+        let apps = Applicants::get_from_db(&db, 1).await.unwrap();
+        if apps.into_iter().len() > 0 {
+            let applicant = applicants::dsl::applicants
+                .filter(applicants::dsl::id.eq(318))
+                .first_async::<Applicant>(db.pool())
+                .await
+                .unwrap();
 
-        // Let's test that serializing this is going to give us an array of Airtable users.
-        let scorers = json!(applicant).to_string();
-        // Let's assert in the string are the scorers formatted as Airtable users.
-        assert!(scorers.contains("\"scorers\":[{\"email\":\""));
+            // Let's test that serializing this is going to give us an array of Airtable users.
+            let scorers = json!(applicant).to_string();
+            // Let's assert in the string are the scorers formatted as Airtable users.
+            assert!(scorers.contains("\"scorers\":[{\"email\":\""));
 
-        // Let's test that deserializing a string will give us the same applicant we had
-        // originally.
-        let a: Applicant = serde_json::from_str(&scorers).unwrap();
-        assert_eq!(applicant, a);
+            // Let's test that deserializing a string will give us the same applicant we had
+            // originally.
+            let a: Applicant = serde_json::from_str(&scorers).unwrap();
+            assert_eq!(applicant, a);
+        }
     }
 }
