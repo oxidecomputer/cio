@@ -1622,7 +1622,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
     }
 
     // Let's see if we can get any shipments from ShipBob.
-    if let Ok(shipbob) = company.authenticate_shipbob(db).await {
+    if let Ok(shipbob) = company.authenticate_shipbob().await {
         match shipbob
             .orders()
             .get_all(

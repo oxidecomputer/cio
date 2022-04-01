@@ -361,7 +361,7 @@ async fn run_cmd(opts: crate::core::Opts, logger: slog::Logger) -> Result<()> {
                     tokio::spawn(enclose! { (db) async move {
                         // Ensure we have the webhooks set up for shipbob, if applicable.
                         tokio::join!(
-                            company.ensure_shipbob_webhooks(&db),
+                            company.ensure_shipbob_webhooks(),
                             cio_api::shipments::refresh_inbound_shipments(&db, &company),
                             cio_api::shipments::refresh_outbound_shipments(&db, &company)
                         )

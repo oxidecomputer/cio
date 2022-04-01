@@ -259,14 +259,27 @@ impl Company {
     }
 
     pub async fn get_from_domain(db: &Database, domain: &str) -> Result<Self> {
-        Ok(companys::dsl::companys
+        let result = companys::dsl::companys
             .filter(
                 companys::dsl::domain
                     .eq(domain.to_string())
                     .or(companys::dsl::gsuite_domain.eq(domain.to_string())),
             )
             .first_async::<Company>(db.pool())
-            .await?)
+            .await;
+        if let Ok(company) = result {
+            return Ok(company);
+        }
+
+        // We could not find the company by domain.
+        // Check if we only have one company in the database, if so just return that,
+        // otherwise return an error.
+        let count = Companys::get_from_db(db, 1).await?.into_iter().len();
+        if count == 1 {
+            return Ok(companys::dsl::companys.first_async::<Company>(db.pool()).await?);
+        }
+
+        bail!("could not find company with domain `{}`", domain);
     }
 
     /// Authenticate with Cloudflare.
@@ -321,7 +334,7 @@ impl Company {
     }
 
     /// Authenticate with ShipBob.
-    pub async fn authenticate_shipbob(&self, db: &Database) -> Result<ShipBob> {
+    pub async fn authenticate_shipbob(&self) -> Result<ShipBob> {
         if self.shipbob_pat.is_empty() {
             bail!("no shipbob personal access token");
         }
@@ -330,8 +343,8 @@ impl Company {
     }
 
     /// Ensure the company has ShipBob webhooks setup.
-    pub async fn ensure_shipbob_webhooks(&self, db: &Database) -> Result<()> {
-        let shipbob_auth = self.authenticate_shipbob(db).await;
+    pub async fn ensure_shipbob_webhooks(&self) -> Result<()> {
+        let shipbob_auth = self.authenticate_shipbob().await;
         if let Err(e) = shipbob_auth {
             if e.to_string().contains("no shipbob personal access token") {
                 // Return early, they don't use ShipBob.

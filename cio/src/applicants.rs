@@ -1266,6 +1266,46 @@ Notes:
     }
 
     /// Send an email to the applicant that we love them but they are too junior.
+    pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) -> Result<()> {
+        let company = self.company(db).await?;
+        // Initialize the SendGrid client.
+        let sendgrid_client = SendGrid::new_from_env();
+
+        // Send the message.
+        sendgrid_client
+            .mail_send()
+            .send_plain_text(
+                &format!("Thank you for your application, {}", self.name),
+                &format!(
+                    "Dear {},
+
+Thank you for your application to join Oxide Computer Company. At this point
+in time, we are focusing on hiring engineers with professional experience,
+who have a track record of self-directed contributions to a team.
+
+We are grateful you took the time to apply and put so much thought into
+your candidate materials, we loved reading them. Although engineers at the
+early stages of their career are unlikely to be a fit for us right now, we
+are growing, and encourage you to consider re-applying in the future.
+
+We would absolutely love to work with you in the future and cannot wait for
+that stage of the company!
+
+All the best,
+The Oxide Team",
+                    self.name
+                ),
+                &[self.email.to_string()],
+                &[format!("careers@{}", company.gsuite_domain)],
+                &[],
+                &format!("careers@{}", company.gsuite_domain),
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    /// Send an email to the applicant that they did not provide materials.
     pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
         // Initialize the SendGrid client.

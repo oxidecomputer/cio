@@ -470,6 +470,8 @@ pub async fn handle_auth_quickbooks_callback(
     // Get the company info.
     let company_info = qb.company_info(&event.realm_id).await?;
 
+    log::info!("company info: {:?}", company_info);
+
     // Let's get the domain from the email.
     let split = company_info.email.address.split('@');
     let vec: Vec<&str> = split.collect();

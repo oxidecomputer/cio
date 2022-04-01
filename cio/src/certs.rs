@@ -148,6 +148,14 @@ impl From<NewCertificate> for FormattedMessage {
 }
 
 impl From<Certificate> for FormattedMessage {
+    fn from(item: Certificate) -> Self {
+        let new: NewCertificate = item.into();
+        new.into()
+    }
+}
+
+impl NewCertificate {
+    // Send a slack notification to the channels in the object.
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
 
