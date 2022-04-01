@@ -20,7 +20,7 @@ checksum = "292ac9d513052341a7f5bdae61f31c4dc93c1dce2598508f52709df08cecc8b0"
 dependencies = [
  "base64 0.13.0",
  "lazy_static",
- "log 0.4.14",
+ "log 0.4.15",
  "openssl",
  "serde",
  "serde_json",
@@ -228,7 +228,7 @@ dependencies = [
  "concurrent-queue",
  "futures-lite",
  "libc",
- "log 0.4.14",
+ "log 0.4.15",
  "once_cell",
  "parking",
  "polling",
@@ -311,7 +311,7 @@ dependencies = [
  "futures-lite",
  "gloo-timers",
  "kv-log-macro",
- "log 0.4.14",
+ "log 0.4.15",
  "memchr",
  "num_cpus",
  "once_cell",
@@ -413,7 +413,7 @@ dependencies = [
  "cio-api",
  "hidapi",
  "keycode",
- "log 0.4.14",
+ "log 0.4.15",
  "pretty_env_logger",
  "sentry 0.24.3",
  "tokio",
@@ -787,7 +787,7 @@ dependencies = [
  "gusto-api",
  "handlebars",
  "image 0.23.14",
- "log 0.4.14",
+ "log 0.4.15",
  "lopdf 0.27.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
  "macros",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -985,7 +985,7 @@ checksum = "3818dfca4b0cb5211a659bbcbb94225b7127407b2b135e650d717bfb78ab10d3"
 dependencies = [
  "cookie",
  "idna 0.2.3",
- "log 0.4.14",
+ "log 0.4.15",
  "publicsuffix",
  "serde",
  "serde_json",
@@ -1604,7 +1604,7 @@ version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7402b94a93c24e742487327a7cd839dc9d36fec9de9fb25b09f2dae459f36c3"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
 ]
 
 [[package]]
@@ -1694,7 +1694,7 @@ checksum = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
 dependencies = [
  "atty",
  "humantime",
- "log 0.4.14",
+ "log 0.4.15",
  "regex",
  "termcolor",
 ]
@@ -1815,7 +1815,7 @@ dependencies = [
  "encoding",
  "httparse",
  "hyper 0.10.16",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.2.6",
  "mime_multipart",
  "textnonce",
@@ -2025,7 +2025,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -2057,7 +2057,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -2109,7 +2109,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -2141,7 +2141,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -2172,7 +2172,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -2213,7 +2213,7 @@ version = "4.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d6a30320f094710245150395bc763ad23128d6a1ebbad7594dc4164b62c56b"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
  "pest",
  "pest_derive",
  "quick-error 2.0.1",
@@ -2340,7 +2340,7 @@ dependencies = [
  "isahc",
  "lazy_static",
  "levenshtein",
- "log 0.4.14",
+ "log 0.4.15",
  "regex",
  "serde",
  "serde_json",
@@ -2411,7 +2411,7 @@ dependencies = [
  "ct-logs",
  "futures-util",
  "hyper 0.14.17",
- "log 0.4.14",
+ "log 0.4.15",
  "rustls 0.19.1",
  "rustls-native-certs",
  "tokio",
@@ -2562,7 +2562,7 @@ dependencies = [
  "event-listener",
  "futures-lite",
  "http",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "once_cell",
  "polling",
@@ -2675,7 +2675,7 @@ version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0de8b303297635ad57c9f5059fd9cee7a47f8e8daa09df0fcd07dd39fb22977f"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
 ]
 
 [[package]]
@@ -2823,14 +2823,14 @@ version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
 ]
 
 [[package]]
 name = "log"
-version = "0.4.14"
+version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
+checksum = "1c4dcd960cc540667f619483fc99102f88d6118b87730e24e8fbe8054b7445e4"
 dependencies = [
  "cfg-if 1.0.0",
  "serde",
@@ -2849,7 +2849,7 @@ dependencies = [
  "itoa 0.4.8",
  "lazy_static",
  "linked-hash-map",
- "log 0.4.14",
+ "log 0.4.15",
  "pom",
  "time 0.2.27",
  "weezl",
@@ -2867,7 +2867,7 @@ dependencies = [
  "itoa 1.0.1",
  "lazy_static",
  "linked-hash-map",
- "log 0.4.14",
+ "log 0.4.15",
  "pom",
  "time 0.2.27",
  "weezl",
@@ -2997,7 +2997,7 @@ dependencies = [
  "encoding",
  "httparse",
  "hyper 0.10.16",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.2.6",
  "tempdir",
  "textnonce",
@@ -3029,7 +3029,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52da4364ffb0e4fe33a9841a98a3f3014fb964045ce4f7a45a398243c8d6b0c9"
 dependencies = [
  "libc",
- "log 0.4.14",
+ "log 0.4.15",
  "miow",
  "ntapi",
  "wasi 0.11.0+wasi-snapshot-preview1",
@@ -3063,7 +3063,7 @@ checksum = "48ba9f7719b5a0f42f338907614285fb5fd70e53858141f69898a1fb7203b24d"
 dependencies = [
  "lazy_static",
  "libc",
- "log 0.4.14",
+ "log 0.4.15",
  "openssl",
  "openssl-probe",
  "openssl-sys",
@@ -3248,7 +3248,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -3276,7 +3276,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -3777,7 +3777,7 @@ checksum = "685404d509889fade3e86fe3a5803bca2ec09b0c0778d5ada6ec8bf7a8de5259"
 dependencies = [
  "cfg-if 1.0.0",
  "libc",
- "log 0.4.14",
+ "log 0.4.15",
  "wepoll-ffi",
  "winapi",
 ]
@@ -3828,7 +3828,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
 dependencies = [
  "env_logger",
- "log 0.4.14",
+ "log 0.4.15",
 ]
 
 [[package]]
@@ -3851,7 +3851,7 @@ dependencies = [
  "cio-api",
  "dropshot 0.5.1",
  "http",
- "log 0.4.14",
+ "log 0.4.15",
  "pretty_env_logger",
  "reqwest",
  "sentry 0.24.3",
@@ -3997,7 +3997,7 @@ version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "545c5bc2b880973c9c10e4067418407a0ccaa3091781d1671d46eb35107cb26f"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
  "parking_lot 0.11.2",
  "scheduled-thread-pool",
 ]
@@ -4016,7 +4016,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -4248,7 +4248,7 @@ dependencies = [
  "ipnet",
  "js-sys",
  "lazy_static",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "mime_guess",
  "native-tls",
@@ -4343,7 +4343,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -4414,7 +4414,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35edb675feee39aec9c99fa5ff985081995a06d594114ae14cbe797ad7b7a6d7"
 dependencies = [
  "base64 0.13.0",
- "log 0.4.14",
+ "log 0.4.15",
  "ring",
  "sct 0.6.1",
  "webpki 0.21.4",
@@ -4426,7 +4426,7 @@ version = "0.20.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fbfeb8d0ddb84706bc597a5574ab8912817c52a397f819e5b614e2265206921"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
  "ring",
  "sct 0.7.0",
  "webpki 0.22.0",
@@ -4629,7 +4629,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -4804,7 +4804,7 @@ version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a2a81f0e69b5f3e81dc5150b4a34c3efcbf5d51852ecca15e1800ed6ee6aaf"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
  "sentry-core 0.24.3",
 ]
 
@@ -4813,7 +4813,7 @@ name = "sentry-log"
 version = "0.25.0"
 source = "git+https://github.com/jessfraz/sentry-rust?rev=ddcbd07f75c6973ee7096e490a54745db73817b7#ddcbd07f75c6973ee7096e490a54745db73817b7"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
  "sentry-core 0.25.0",
 ]
 
@@ -5128,7 +5128,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -5165,7 +5165,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -5350,7 +5350,7 @@ version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8228ab7302adbf4fcb37e66f3cda78003feb521e7fd9e3847ec117a7784d0f5a"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
  "slog",
  "slog-scope",
 ]
@@ -5931,7 +5931,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
- "log 0.4.14",
+ "log 0.4.15",
  "pin-project-lite",
  "tokio",
 ]
@@ -5958,7 +5958,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a1bdf54a7c28a2bbf701e1d2233f6c77f473486b94bee4f9678da5a148dca7f"
 dependencies = [
  "cfg-if 1.0.0",
- "log 0.4.14",
+ "log 0.4.15",
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",
@@ -6002,7 +6002,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6923477a48e41c1951f1999ef8bb5a3023eb723ceadafe78ffb65dc366761e3"
 dependencies = [
  "lazy_static",
- "log 0.4.14",
+ "log 0.4.15",
  "tracing-core",
 ]
 
@@ -6066,7 +6066,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -6231,7 +6231,7 @@ dependencies = [
  "chunked_transfer",
  "cookie",
  "cookie_store",
- "log 0.4.14",
+ "log 0.4.15",
  "once_cell",
  "qstring",
  "rustls 0.19.1",
@@ -6416,7 +6416,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ce8a968cb1cd110d136ff8b819a556d6fb6d919363c61534f6860c7eb172ba0"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.15",
  "try-lock",
 ]
 
@@ -6456,7 +6456,7 @@ checksum = "8b21c0df030f5a177f3cba22e9bc4322695ec43e7257d865302900290bcdedca"
 dependencies = [
  "bumpalo",
  "lazy_static",
- "log 0.4.14",
+ "log 0.4.15",
  "proc-macro2 1.0.36",
  "quote 1.0.17",
  "syn 1.0.90",
@@ -6538,7 +6538,7 @@ dependencies = [
  "http",
  "hyper 0.10.16",
  "lazy_static",
- "log 0.4.14",
+ "log 0.4.15",
  "mailchimp-api 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess",
  "octorust",
@@ -6738,7 +6738,7 @@ dependencies = [
  "http",
  "hyper 0.14.17",
  "hyper-rustls",
- "log 0.4.14",
+ "log 0.4.15",
  "percent-encoding 2.1.0",
  "rustls 0.19.1",
  "seahash",
@@ -6762,7 +6762,7 @@ dependencies = [
  "hyper 0.14.17",
  "hyper-rustls",
  "itertools 0.10.3",
- "log 0.4.14",
+ "log 0.4.15",
  "percent-encoding 2.1.0",
  "rustls 0.19.1",
  "seahash",
@@ -6827,7 +6827,7 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log 0.4.14",
+ "log 0.4.15",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
