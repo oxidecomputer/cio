@@ -338,6 +338,7 @@ pub async fn handle_auth_slack_callback(
 
     // Let's get the token from the code.
     let t = s.get_access_token(&event.code).await?;
+    log::info!("token: {:?}", t);
 
     // Get the current user.
     let current_user = s.current_user().await?;
