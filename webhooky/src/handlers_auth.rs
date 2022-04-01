@@ -350,6 +350,7 @@ pub async fn handle_auth_slack_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
+    log::info!("current user: {:?}", current_user);
     log::info!("domain: {}", domain);
 
     let company = Company::get_from_domain(&api_context.db, &domain).await?;
