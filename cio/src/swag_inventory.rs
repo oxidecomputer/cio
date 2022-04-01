@@ -77,7 +77,6 @@ pub struct NewSwagItem {
 /// Implement updating the Airtable record for a SwagItem.
 #[async_trait]
 impl UpdateAirtableRecord<SwagItem> for SwagItem {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: SwagItem) -> Result<()> {
         if !record.link_to_inventory.is_empty() {
             self.link_to_inventory = record.link_to_inventory;
@@ -182,7 +181,6 @@ pub struct NewSwagInventoryItem {
 /// Implement updating the Airtable record for a SwagInventoryItem.
 #[async_trait]
 impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: SwagInventoryItem) -> Result<()> {
         if !record.link_to_item.is_empty() {
             self.link_to_item = record.link_to_item;
@@ -199,7 +197,6 @@ impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
 }
 
 impl NewSwagInventoryItem {
-    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
         // Set the channel.
@@ -210,7 +207,6 @@ impl NewSwagInventoryItem {
         Ok(())
     }
 
-    #[tracing::instrument]
     pub fn generate_barcode(&mut self) {
         let mut barcode = self
             .name
@@ -264,7 +260,6 @@ impl NewSwagInventoryItem {
         self.barcode = barcode;
     }
 
-    #[tracing::instrument(skip(drive_client))]
     pub async fn generate_barcode_images(
         &mut self,
         drive_client: &GoogleDrive,
@@ -323,7 +318,6 @@ impl NewSwagInventoryItem {
         Ok(self.barcode_pdf_label.to_string())
     }
 
-    #[tracing::instrument(skip(drive_client))]
     pub async fn expand(&mut self, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) -> Result<String> {
         self.generate_barcode();
         self.generate_barcode_images(drive_client, drive_id, parent_id).await
@@ -332,7 +326,6 @@ impl NewSwagInventoryItem {
 
 /// Convert the swag inventory item into a Slack message.
 impl From<NewSwagInventoryItem> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: NewSwagInventoryItem) -> Self {
         let text = format!("*{}*\n | current stock: {}", item.name, item.current_stock);
 
@@ -385,7 +378,6 @@ impl From<NewSwagInventoryItem> for FormattedMessage {
 }
 
 impl From<SwagInventoryItem> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: SwagInventoryItem) -> Self {
         let new: NewSwagInventoryItem = item.into();
         new.into()
@@ -393,7 +385,6 @@ impl From<SwagInventoryItem> for FormattedMessage {
 }
 
 impl SwagInventoryItem {
-    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewSwagInventoryItem = self.into();
         n.send_slack_notification(db, company).await
@@ -506,7 +497,6 @@ pub struct PrintRequest {
 
 impl SwagInventoryItem {
     /// Send the label to our printer.
-    #[tracing::instrument]
     pub async fn print_label(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
 
@@ -558,12 +548,10 @@ impl SwagInventoryItem {
         Ok(())
     }
 
-    #[tracing::instrument]
     pub async fn get_item(&self, db: &Database) -> Option<SwagItem> {
         SwagItem::get_from_db(db, self.item.to_string()).await
     }
 
-    #[tracing::instrument]
     pub async fn send_slack_notification_if_inventory_changed(
         &mut self,
         db: &Database,
@@ -698,7 +686,6 @@ pub struct NewBarcodeScan {
 /// Implement updating the Airtable record for a BarcodeScan.
 #[async_trait]
 impl UpdateAirtableRecord<BarcodeScan> for BarcodeScan {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: BarcodeScan) -> Result<()> {
         Ok(())
     }
@@ -707,7 +694,6 @@ impl UpdateAirtableRecord<BarcodeScan> for BarcodeScan {
 impl BarcodeScan {
     // Takes a scanned barcode and updates the inventory count for the item
     // as well as adds the scan to the barcodes_scan table for tracking.
-    #[tracing::instrument]
     pub async fn scan(b: String) -> Result<()> {
         let time = Utc::now();
 

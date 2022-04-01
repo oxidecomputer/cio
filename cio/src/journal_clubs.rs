@@ -60,7 +60,6 @@ pub struct NewJournalClubMeeting {
 
 /// Convert the journal club meeting into Slack message.
 impl From<NewJournalClubMeeting> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: NewJournalClubMeeting) -> Self {
         let mut objects = vec![MessageBlock {
             block_type: MessageBlockType::Section,
@@ -140,7 +139,6 @@ impl From<NewJournalClubMeeting> for FormattedMessage {
 }
 
 impl From<JournalClubMeeting> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: JournalClubMeeting) -> Self {
         let new: NewJournalClubMeeting = item.into();
         new.into()
@@ -150,7 +148,6 @@ impl From<JournalClubMeeting> for FormattedMessage {
 /// Implement updating the Airtable record for a JournalClubMeeting.
 #[async_trait]
 impl UpdateAirtableRecord<JournalClubMeeting> for JournalClubMeeting {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: JournalClubMeeting) -> Result<()> {
         // Set the papers field, since it is pre-populated as table links.
         self.papers = record.papers;
@@ -187,7 +184,6 @@ pub struct NewJournalClubPaper {
 /// Implement updating the Airtable record for a JournalClubPaper.
 #[async_trait]
 impl UpdateAirtableRecord<JournalClubPaper> for JournalClubPaper {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: JournalClubPaper) -> Result<()> {
         // Get the current journal club meetings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -275,7 +271,6 @@ pub mod meeting_date_format {
 }
 
 impl Meeting {
-    #[tracing::instrument]
     pub fn to_model(&self, company: &Company) -> NewJournalClubMeeting {
         let mut papers: Vec<String> = Default::default();
         for mut p in self.papers.clone() {

@@ -87,7 +87,6 @@ fn is_zero(num: &f32) -> bool {
 /// Implement updating the Airtable record for a SoftwareVendor.
 #[async_trait]
 impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: SoftwareVendor) -> Result<()> {
         // This is a function so we can't change it through the API.
         self.total_cost_per_month = 0.0;
@@ -104,7 +103,6 @@ impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
 
 /// Convert the vendor into a Slack message.
 impl From<NewSoftwareVendor> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: NewSoftwareVendor) -> Self {
         FormattedMessage {
             channel: Default::default(),
@@ -155,7 +153,6 @@ impl From<NewSoftwareVendor> for FormattedMessage {
 }
 
 impl From<SoftwareVendor> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: SoftwareVendor) -> Self {
         let new: NewSoftwareVendor = item.into();
         new.into()
@@ -163,7 +160,6 @@ impl From<SoftwareVendor> for FormattedMessage {
 }
 
 impl NewSoftwareVendor {
-    #[tracing::instrument]
     pub async fn send_slack_notification_if_price_changed(
         &mut self,
         db: &Database,
@@ -385,7 +381,6 @@ pub struct NewCreditCardTransaction {
 /// Implement updating the Airtable record for a CreditCardTransaction.
 #[async_trait]
 impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: CreditCardTransaction) -> Result<()> {
         Ok(())
     }
@@ -1003,7 +998,6 @@ pub struct NewAccountsPayable {
 /// Implement updating the Airtable record for a AccountsPayable.
 #[async_trait]
 impl UpdateAirtableRecord<AccountsPayable> for AccountsPayable {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: AccountsPayable) -> Result<()> {
         Ok(())
     }
@@ -1131,7 +1125,6 @@ pub struct NewExpensedItem {
 /// Implement updating the Airtable record for a ExpensedItem.
 #[async_trait]
 impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: ExpensedItem) -> Result<()> {
         Ok(())
     }

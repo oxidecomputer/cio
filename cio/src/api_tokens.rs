@@ -72,7 +72,6 @@ pub struct NewAPIToken {
 /// Implement updating the Airtable record for a APIToken.
 #[async_trait]
 impl UpdateAirtableRecord<APIToken> for APIToken {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: APIToken) -> Result<()> {
         // Link to the correct company.
         let db = Database::new().await;
@@ -84,7 +83,6 @@ impl UpdateAirtableRecord<APIToken> for APIToken {
 }
 
 impl NewAPIToken {
-    #[tracing::instrument]
     pub fn expand(&mut self) {
         if self.expires_in > 0 {
             // Set the time the tokens expire.
@@ -106,7 +104,6 @@ impl NewAPIToken {
 }
 
 impl APIToken {
-    #[tracing::instrument]
     pub fn expand(&mut self) {
         if self.expires_in > 0 {
             // Set the time the tokens expire.
@@ -127,7 +124,6 @@ impl APIToken {
     }
 
     /// Returns if the token is expired.
-    #[tracing::instrument]
     pub fn is_expired(&self) -> bool {
         //if let Some(d) = self.expires_date {
         // To be safe, let's subtract a few hours, since that might be

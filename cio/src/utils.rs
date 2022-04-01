@@ -256,7 +256,6 @@ trait SliceExt {
 }
 
 impl SliceExt for Vec<u8> {
-    #[tracing::instrument]
     fn trim(&self) -> Vec<u8> {
         fn is_whitespace(c: &u8) -> bool {
             c == &b'\t' || c == &b' '

@@ -85,7 +85,6 @@ pub struct NewCertificate {
 
 /// Convert the certificate into a Slack message.
 impl From<NewCertificate> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: NewCertificate) -> Self {
         let dur = item.expiration_date - Utc::now().date().naive_utc();
         let human_date = HumanTime::from(dur);
@@ -149,16 +148,6 @@ impl From<NewCertificate> for FormattedMessage {
 }
 
 impl From<Certificate> for FormattedMessage {
-    #[tracing::instrument]
-    fn from(item: Certificate) -> Self {
-        let new: NewCertificate = item.into();
-        new.into()
-    }
-}
-
-impl NewCertificate {
-    // Send a slack notification to the channels in the object.
-    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
 
@@ -174,7 +163,6 @@ impl NewCertificate {
 
     /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
     /// The DNS Challenge TXT record is added to Cloudflare automatically.
-    #[tracing::instrument]
     pub async fn create_cert(&mut self, company: &Company) -> Result<()> {
         let api_client = company.authenticate_cloudflare()?;
 
@@ -268,7 +256,6 @@ impl NewCertificate {
     /// For a certificate struct, populate the certificate fields for the domain.
     /// This will create the cert from Let's Encrypt and update Cloudflare TXT records for the
     /// verification.
-    #[tracing::instrument]
     pub async fn populate(&mut self, company: &Company) -> Result<()> {
         self.create_cert(company).await?;
 
@@ -281,7 +268,6 @@ impl NewCertificate {
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// GitHub, then fill in the rest.
-    #[tracing::instrument(skip(github))]
     pub async fn populate_from_github(&mut self, github: &octorust::Client, company: &Company) -> Result<()> {
         let owner = &company.github_org;
         let repo = "configs";
@@ -323,7 +309,6 @@ impl NewCertificate {
 
     /// For a certificate struct, populate the certificate and private_key fields from
     /// disk, then fill in the rest.
-    #[tracing::instrument]
     pub async fn populate_from_disk(&mut self, dir: &str) {
         let path = self.get_path(dir);
 
@@ -337,18 +322,15 @@ impl NewCertificate {
         }
     }
 
-    #[tracing::instrument]
     fn get_path(&self, dir: &str) -> PathBuf {
         Path::new(dir).join(self.domain.replace("*.", "wildcard."))
     }
 
-    #[tracing::instrument]
     fn get_github_path(&self, file: &str) -> String {
         format!("/nginx/ssl/{}/{}", self.domain.replace("*.", "wildcard."), file)
     }
 
     /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
-    #[tracing::instrument]
     pub async fn save_to_directory(&self, dir: &str) -> Result<()> {
         if self.certificate.is_empty() {
             // Return early.
@@ -368,7 +350,6 @@ impl NewCertificate {
     }
 
     /// Saves the fullchain certificate and privkey to the configs github repo.
-    #[tracing::instrument(skip(github))]
     pub async fn save_to_github_repo(&self, github: &octorust::Client, company: &Company) -> Result<()> {
         if self.certificate.is_empty() {
             // Return early.
@@ -403,7 +384,6 @@ impl NewCertificate {
     }
 
     /// For the repos given, update the GitHub actions secrets with the new cert and key.
-    #[tracing::instrument(skip(github))]
     pub async fn update_github_action_secrets(&self, github: &octorust::Client, company: &Company) -> Result<()> {
         if self.repos.is_empty()
             || self.certificate_github_actions_secret_name.is_empty()
@@ -455,7 +435,6 @@ impl NewCertificate {
     /// issued cert, since it counts _whole_ days.
     ///
     /// It is possible to get negative days for an expired certificate.
-    #[tracing::instrument]
     pub fn valid_days_left(&self) -> i32 {
         let expires = self.expiration_date();
         let dur = expires - Utc::now();
@@ -464,7 +443,6 @@ impl NewCertificate {
     }
 
     /// Inspect the certificate to get the expiration_date.
-    #[tracing::instrument]
     pub fn expiration_date(&self) -> DateTime<Utc> {
         if self.certificate.is_empty() {
             return Utc::now();
@@ -485,20 +463,17 @@ impl NewCertificate {
 /// Implement updating the Airtable record for a Certificate.
 #[async_trait]
 impl UpdateAirtableRecord<Certificate> for Certificate {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: Certificate) -> Result<()> {
         Ok(())
     }
 }
 
 impl Certificate {
-    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewCertificate = self.into();
         n.send_slack_notification(db, company).await
     }
 
-    #[tracing::instrument(skip(github))]
     pub async fn renew(&self, db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
         let mut cert: NewCertificate = self.into();
 

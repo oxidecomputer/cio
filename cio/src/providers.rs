@@ -35,7 +35,6 @@ pub trait ProviderOps<U, G> {
 
 #[async_trait]
 impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
-    #[tracing::instrument(skip(self))]
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
         // Only do this if the user is full time.
         if !user.is_full_time() {
@@ -146,30 +145,25 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
     }
 
     // Ramp does not have groups so this is a no-op.
-    #[tracing::instrument(skip(self))]
     async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
 
     // Ramp does not have groups so this is a no-op.
-    #[tracing::instrument(skip(self))]
     async fn check_user_is_member_of_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<bool> {
         Ok(false)
     }
 
     // Ramp does not have groups so this is a no-op.
-    #[tracing::instrument(skip(self))]
     async fn add_user_to_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
         Ok(())
     }
 
     // Ramp does not have groups so this is a no-op.
-    #[tracing::instrument(skip(self))]
     async fn remove_user_from_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<ramp_api::types::User>> {
         self.users()
             .get_all(
@@ -180,19 +174,16 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
     }
 
     // Ramp does not have groups so this is a no-op.
-    #[tracing::instrument(skip(self))]
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
         Ok(vec![])
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_user(&self, _db: &Database, _company: &Company, _user: &User) -> Result<()> {
         // TODO: Suspend the user from Ramp.
         Ok(())
     }
 
     // Ramp does not have groups so this is a no-op.
-    #[tracing::instrument(skip(self))]
     async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
@@ -200,7 +191,6 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
 
 #[async_trait]
 impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorust::Client {
-    #[tracing::instrument(skip(self))]
     async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
         if user.github.is_empty() {
             // Return early, this user doesn't have a github handle.
@@ -301,7 +291,6 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         Ok(String::new())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn ensure_group(&self, _db: &Database, company: &Company, group: &Group) -> Result<()> {
         // Check if the team exists.
         match self.teams().get_by_name(&company.github_org, &group.name).await {
@@ -359,7 +348,6 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn check_user_is_member_of_group(&self, company: &Company, user: &User, group: &str) -> Result<bool> {
         if user.github.is_empty() {
             // Return early.
@@ -404,7 +392,6 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         Ok(false)
     }
 
-    #[tracing::instrument(skip(self))]
     async fn add_user_to_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
         if user.github.is_empty() {
             // User does not have a github handle, return early.
@@ -437,7 +424,6 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn remove_user_from_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
         if user.github.is_empty() {
             // User does not have a github handle, return early.
@@ -453,7 +439,6 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_users(&self, company: &Company) -> Result<Vec<octorust::types::SimpleUser>> {
         // List all the users in the GitHub organization.
         self.orgs()
@@ -465,13 +450,11 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
             .await
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_groups(&self, company: &Company) -> Result<Vec<octorust::types::Team>> {
         // List all the teams in the GitHub organization.
         self.teams().list_all(&company.github_org).await
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_user(&self, _db: &Database, company: &Company, user: &User) -> Result<()> {
         if user.github.is_empty() {
             // Return early.
@@ -491,7 +474,6 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_group(&self, company: &Company, group: &Group) -> Result<()> {
         self.teams().delete_in_org(&company.github_org, &group.name).await?;
 
@@ -503,7 +485,6 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
 
 #[async_trait]
 impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_api::Client {
-    #[tracing::instrument(skip(self))]
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
         // First get the user from gsuite.
         match self
@@ -572,7 +553,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         Ok(new_gsuite_user.id)
     }
 
-    #[tracing::instrument(skip(self))]
     async fn ensure_group(&self, db: &Database, company: &Company, group: &Group) -> Result<()> {
         match self
             .groups()
@@ -639,7 +619,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn check_user_is_member_of_group(&self, company: &Company, user: &User, group: &str) -> Result<bool> {
         let role = if user.is_group_admin {
             "OWNER".to_string()
@@ -678,7 +657,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         Ok(false)
     }
 
-    #[tracing::instrument(skip(self))]
     async fn add_user_to_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
         let role = if user.is_group_admin {
             "OWNER".to_string()
@@ -745,7 +723,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn remove_user_from_group(&self, company: &Company, user: &User, group: &str) -> Result<()> {
         self.members()
             .delete(&format!("{}@{}", group, company.gsuite_domain), &user.email)
@@ -755,7 +732,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_users(&self, company: &Company) -> Result<Vec<gsuite_api::types::User>> {
         self.users()
             .list_all(
@@ -772,7 +748,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
             .await
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_groups(&self, company: &Company) -> Result<Vec<gsuite_api::types::Group>> {
         self.groups()
             .list_all(
@@ -786,7 +761,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
             .await
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_user(&self, _db: &Database, _company: &Company, user: &User) -> Result<()> {
         // First get the user from gsuite.
         let mut gsuite_user = self
@@ -810,7 +784,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_group(&self, company: &Company, group: &Group) -> Result<()> {
         self.groups()
             .delete(&format!("{}@{}", &group.name, &company.gsuite_domain))
@@ -824,7 +797,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
 
 #[async_trait]
 impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
-    #[tracing::instrument(skip(self))]
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
         let mut user = user.clone();
 
@@ -978,7 +950,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         Ok(user_id)
     }
 
-    #[tracing::instrument(skip(self))]
     async fn ensure_group(&self, _db: &Database, _company: &Company, group: &Group) -> Result<()> {
         if group.name == "Everyone" {
             // Return early we can't modify this group.
@@ -1039,7 +1010,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn check_user_is_member_of_group(&self, _company: &Company, user: &User, group: &str) -> Result<bool> {
         if group == "Everyone" {
             // Return early we can't modify this group.
@@ -1072,7 +1042,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         Ok(false)
     }
 
-    #[tracing::instrument(skip(self))]
     async fn add_user_to_group(&self, _company: &Company, user: &User, group: &str) -> Result<()> {
         if group == "Everyone" {
             // Return early we can't modify this group.
@@ -1104,7 +1073,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn remove_user_from_group(&self, _company: &Company, user: &User, group: &str) -> Result<()> {
         if group == "Everyone" {
             // Return early we can't modify this group.
@@ -1136,7 +1104,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<okta::types::User>> {
         self.users()
             .list_all(
@@ -1149,7 +1116,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             .await
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<okta::types::Group>> {
         self.groups()
             .list_all(
@@ -1160,7 +1126,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
             .await
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_user(&self, _db: &Database, _company: &Company, user: &User) -> Result<()> {
         if user.okta_id.is_empty() {
             // Return early.
@@ -1178,7 +1143,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_group(&self, _company: &Company, group: &Group) -> Result<()> {
         if group.name == "Everyone" {
             // Return early we can't modify this group.
@@ -1210,7 +1174,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
 
 #[async_trait]
 impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
-    #[tracing::instrument(skip(self))]
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
         // Only do this if the user is full time.
         if !user.is_full_time() {
@@ -1339,27 +1302,22 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
         Ok(zoom_user.id)
     }
 
-    #[tracing::instrument(skip(self))]
     async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn check_user_is_member_of_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<bool> {
         Ok(false)
     }
 
-    #[tracing::instrument(skip(self))]
     async fn add_user_to_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn remove_user_from_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<zoom_api::types::UsersResponse>> {
         self.users()
             .get_all(
@@ -1370,12 +1328,10 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
             .await
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
         Ok(vec![])
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_user(&self, db: &Database, _company: &Company, user: &User) -> Result<()> {
         if user.zoom_id.is_empty() {
             // Return early.
@@ -1398,7 +1354,6 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
@@ -1406,7 +1361,6 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
 
 #[async_trait]
 impl ProviderOps<(), ()> for airtable_api::Airtable {
-    #[tracing::instrument(skip(self))]
     async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
         if company.airtable_enterprise_account_id.is_empty() {
             // We don't have an enterprise account, we can't perform this function.
@@ -1473,37 +1427,30 @@ impl ProviderOps<(), ()> for airtable_api::Airtable {
         Ok(String::new())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn check_user_is_member_of_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<bool> {
         Ok(false)
     }
 
-    #[tracing::instrument(skip(self))]
     async fn add_user_to_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn remove_user_from_group(&self, _company: &Company, _user: &User, _group: &str) -> Result<()> {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<()>> {
         Ok(vec![])
     }
 
-    #[tracing::instrument(skip(self))]
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
         Ok(vec![])
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_user(&self, _db: &Database, company: &Company, user: &User) -> Result<()> {
         if company.airtable_enterprise_account_id.is_empty() {
             // We don't have an enterprise account, we can't perform this function.
@@ -1520,7 +1467,6 @@ impl ProviderOps<(), ()> for airtable_api::Airtable {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {
         Ok(())
     }

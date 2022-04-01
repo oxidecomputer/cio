@@ -71,7 +71,6 @@ pub struct NewApplicantInterview {
 /// Implement updating the Airtable record for a ApplicantInterview.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: ApplicantInterview) -> Result<()> {
         Ok(())
     }

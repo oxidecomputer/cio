@@ -21,14 +21,12 @@ pub enum Status {
 }
 
 impl Default for Status {
-    #[tracing::instrument]
     fn default() -> Self {
         Status::Queued
     }
 }
 
 impl ToString for Status {
-    #[tracing::instrument]
     fn to_string(&self) -> String {
         match self {
             Status::LabelCreated => "Label created".to_string(),

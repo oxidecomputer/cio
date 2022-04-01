@@ -88,7 +88,6 @@ pub struct NewBooking {
 /// Implement updating the Airtable record for a Booking.
 #[async_trait]
 impl UpdateAirtableRecord<Booking> for Booking {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: Booking) -> Result<()> {
         Ok(())
     }

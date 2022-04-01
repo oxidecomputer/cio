@@ -271,7 +271,6 @@ pub mod null_date_format {
 impl UserConfig {
     /// Sync a user from the config file with the services.
     #[allow(clippy::too_many_arguments)]
-    #[tracing::instrument(skip(github))]
     pub async fn sync(
         &mut self,
         db: &Database,
@@ -458,7 +457,6 @@ impl UserConfig {
         Ok(())
     }
 
-    #[tracing::instrument(skip(gusto))]
     pub async fn create_in_gusto_if_needed(&mut self, gusto: &Gusto, gusto_company_id: &str) -> Result<()> {
         // Only do this if we have a start date.
         if self.start_date == crate::utils::default_date() {
@@ -531,7 +529,6 @@ impl UserConfig {
         Ok(())
     }
 
-    #[tracing::instrument]
     fn update_from_gusto(&mut self, gusto_user: &gusto_api::types::Employee) {
         self.gusto_id = gusto_user.id.to_string();
 
@@ -569,7 +566,6 @@ impl UserConfig {
         }
     }
 
-    #[tracing::instrument]
     async fn populate_ssh_keys(&mut self) -> Result<()> {
         if self.github.is_empty() {
             // Return early if we don't know their github handle.
@@ -581,7 +577,6 @@ impl UserConfig {
         Ok(())
     }
 
-    #[tracing::instrument]
     async fn populate_home_address(&mut self) -> Result<()> {
         let mut street_address = self.home_address_street_1.to_string();
         if !self.home_address_street_2.is_empty() {
@@ -624,7 +619,6 @@ impl UserConfig {
         Ok(())
     }
 
-    #[tracing::instrument]
     async fn populate_work_address(&mut self, db: &Database) {
         // Populate the address based on the user's location.
         if !self.building.is_empty() {
@@ -685,7 +679,6 @@ impl UserConfig {
         self.work_address_formatted = self.work_address_formatted.replace('\n', "\\n");
     }
 
-    #[tracing::instrument]
     pub async fn populate_start_date(&mut self, db: &Database) {
         // Only populate the start date, if we could not update it from Gusto.
         if self.start_date == crate::utils::default_date() {
@@ -702,7 +695,6 @@ impl UserConfig {
         }
     }
 
-    #[tracing::instrument]
     pub fn populate_type(&mut self) {
         // TODO: make this an enum.
         self.typev = "full-time".to_string();
@@ -713,7 +705,6 @@ impl UserConfig {
         }
     }
 
-    #[tracing::instrument]
     pub fn is_full_time(&mut self) -> bool {
         if self.typev.is_empty() {
             self.populate_type();
@@ -722,7 +713,6 @@ impl UserConfig {
         self.typev == "full-time"
     }
 
-    #[tracing::instrument]
     pub fn ensure_all_aliases(&mut self) {
         if !self.github.is_empty() && !self.aliases.contains(&self.github) {
             self.aliases.push(self.github.to_string());
@@ -742,7 +732,6 @@ impl UserConfig {
         }
     }
 
-    #[tracing::instrument]
     pub fn ensure_all_groups(&mut self) {
         let mut department_group = self.department.to_lowercase().trim().to_string();
         if department_group == "engineering" {
@@ -753,7 +742,6 @@ impl UserConfig {
         }
     }
 
-    #[tracing::instrument]
     pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
         self.cio_company_id = company.id;
 
@@ -786,7 +774,6 @@ impl UserConfig {
 
 impl User {
     /// Get the user's manager, if they have one, otherwise return Jess.
-    #[tracing::instrument]
     pub async fn manager(&self, db: &Database) -> User {
         let mut manager = self.manager.to_string();
         if manager.is_empty() {
@@ -797,22 +784,18 @@ impl User {
     }
 
     /// Generate and return the full name for the user.
-    #[tracing::instrument]
     pub fn full_name(&self) -> String {
         format!("{} {}", self.first_name, self.last_name)
     }
 
-    #[tracing::instrument]
     pub fn is_system_account(&self) -> bool {
         self.typev == "system account"
     }
 
-    #[tracing::instrument]
     pub fn is_consultant(&self) -> bool {
         self.typev == "consultant"
     }
 
-    #[tracing::instrument]
     pub fn is_full_time(&self) -> bool {
         self.typev == "full-time"
     }
@@ -823,7 +806,6 @@ impl User {
     /// - Create a record in outgoing shipments.
     /// - Generate the shippo label.
     /// - Print said shippo label.
-    #[tracing::instrument]
     pub async fn create_shipment_to_home_address(&self, db: &Database) -> Result<()> {
         // First let's check if the user even has an address.
         // If not we can return early.
@@ -848,7 +830,6 @@ impl User {
     }
 
     /// Send an email to the new consultant about their account.
-    #[tracing::instrument]
     pub async fn send_email_new_consultant(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
 
@@ -901,7 +882,6 @@ xoxo,
     }
 
     /// Send an email to the GSuite user about their account.
-    #[tracing::instrument]
     pub async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) -> Result<()> {
         let company = self.company(db).await?;
 
@@ -964,7 +944,6 @@ xoxo,
     }
 
     /// Send an email to the new user about their account.
-    #[tracing::instrument]
     pub async fn send_email_new_user(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
         // Initialize the SendGrid client.
@@ -1076,7 +1055,6 @@ xoxo,
         Ok(())
     }
 
-    #[tracing::instrument(skip(zoom))]
     pub async fn update_zoom_vanity_name(
         &self,
         db: &Database,
@@ -1143,7 +1121,6 @@ xoxo,
 /// Implement updating the Airtable record for a User.
 #[async_trait]
 impl UpdateAirtableRecord<User> for User {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: User) -> Result<()> {
         // Get the current groups in Airtable so we can link to them.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -1344,7 +1321,6 @@ pub struct GroupConfig {
 }
 
 impl GroupConfig {
-    #[tracing::instrument]
     pub fn get_link(&self, company: &Company) -> String {
         format!(
             "https://groups.google.com/a/{}/forum/#!forum/{}",
@@ -1352,7 +1328,6 @@ impl GroupConfig {
         )
     }
 
-    #[tracing::instrument]
     pub fn expand(&mut self, company: &Company) {
         self.link = self.get_link(company);
 
@@ -1363,7 +1338,6 @@ impl GroupConfig {
 /// Implement updating the Airtable record for a Group.
 #[async_trait]
 impl UpdateAirtableRecord<Group> for Group {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: Group) -> Result<()> {
         // Make sure we don't mess with the members since that is populated by the Users table.
         self.members = record.members;
@@ -1418,7 +1392,6 @@ pub struct BuildingConfig {
 }
 
 impl BuildingConfig {
-    #[tracing::instrument]
     pub fn expand(&mut self, company: &Company) {
         self.address_formatted = format!(
             "{}\n{}, {} {}, {}",
@@ -1432,7 +1405,6 @@ impl BuildingConfig {
 /// Implement updating the Airtable record for a Building.
 #[async_trait]
 impl UpdateAirtableRecord<Building> for Building {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: Building) -> Result<()> {
         // Make sure we don't mess with the employees since that is populated by the Users table.
         self.employees = record.employees.clone();
@@ -1481,7 +1453,6 @@ pub struct ResourceConfig {
 /// Implement updating the Airtable record for a ConferenceRoom.
 #[async_trait]
 impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: ConferenceRoom) -> Result<()> {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
@@ -1533,7 +1504,6 @@ pub struct LinkConfig {
 /// Implement updating the Airtable record for a Link.
 #[async_trait]
 impl UpdateAirtableRecord<Link> for Link {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: Link) -> Result<()> {
         Ok(())
     }
@@ -1572,7 +1542,6 @@ pub struct HuddleConfig {
 
 impl HuddleConfig {
     // Return the full domain id for the calendar.
-    #[tracing::instrument]
     pub fn calendar_id(&self, company: &Company) -> String {
         format!("{}@{}", self.calendar_owner, company.gsuite_domain)
     }

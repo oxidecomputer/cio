@@ -81,7 +81,6 @@ pub struct NewMailingListSubscriber {
 }
 
 impl NewMailingListSubscriber {
-    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
         // Set the channel.
@@ -92,7 +91,6 @@ impl NewMailingListSubscriber {
         Ok(())
     }
 
-    #[tracing::instrument]
     fn populate_formatted_address(&mut self) {
         let mut street_address = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -109,7 +107,6 @@ impl NewMailingListSubscriber {
     }
 
     /// Get the human duration of time since the signup was fired.
-    #[tracing::instrument]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.date_added - Utc::now();
         if dur.num_seconds() > 0 {
@@ -121,7 +118,6 @@ impl NewMailingListSubscriber {
 }
 
 impl MailingListSubscriber {
-    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewMailingListSubscriber = self.into();
         n.send_slack_notification(db, company).await
@@ -130,7 +126,6 @@ impl MailingListSubscriber {
 
 /// Convert the mailing list signup into a Slack message.
 impl From<NewMailingListSubscriber> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: NewMailingListSubscriber) -> Self {
         let time = item.human_duration();
 
@@ -218,7 +213,6 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
 }
 
 impl Default for NewMailingListSubscriber {
-    #[tracing::instrument]
     fn default() -> Self {
         NewMailingListSubscriber {
             email: String::new(),
@@ -254,7 +248,6 @@ impl Default for NewMailingListSubscriber {
 /// Implement updating the Airtable record for a MailingListSubscriber.
 #[async_trait]
 impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: MailingListSubscriber) -> Result<()> {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
@@ -350,7 +343,6 @@ pub async fn as_mailing_list_subscriber(
 }
 
 impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
-    #[tracing::instrument]
     fn into(self) -> NewMailingListSubscriber {
         let default_bool = false;
 

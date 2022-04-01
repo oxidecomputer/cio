@@ -100,14 +100,12 @@ pub struct NewAssetItem {
 /// Implement updating the Airtable record for a AssetItem.
 #[async_trait]
 impl UpdateAirtableRecord<AssetItem> for AssetItem {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: AssetItem) -> Result<()> {
         Ok(())
     }
 }
 
 impl NewAssetItem {
-    #[tracing::instrument]
     pub fn generate_barcode(&mut self) {
         let mut barcode = self
             .name
@@ -141,7 +139,6 @@ impl NewAssetItem {
         self.barcode = barcode;
     }
 
-    #[tracing::instrument(skip(drive_client))]
     pub async fn generate_barcode_images(
         &mut self,
         drive_client: &GoogleDrive,
@@ -205,7 +202,6 @@ impl NewAssetItem {
         Ok(self.barcode_pdf_label.to_string())
     }
 
-    #[tracing::instrument(skip(drive_client))]
     pub async fn expand(&mut self, drive_client: &GoogleDrive, drive_id: &str, parent_id: &str) -> Result<String> {
         self.generate_barcode();
         self.generate_barcode_images(drive_client, drive_id, parent_id).await
@@ -223,7 +219,6 @@ pub struct PrintLabelsRequest {
 
 impl AssetItem {
     /// Send the label to our printer.
-    #[tracing::instrument]
     pub async fn print_label(&self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
 

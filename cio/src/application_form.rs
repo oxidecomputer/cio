@@ -39,7 +39,6 @@ pub struct ApplicationForm {
 }
 
 impl ApplicationForm {
-    #[tracing::instrument]
     pub async fn do_form(&self, db: &Database) -> Result<()> {
         // If their email is empty return early.
         if self.email.is_empty()
@@ -78,7 +77,6 @@ impl ApplicationForm {
 }
 
 impl From<ApplicationForm> for NewApplicant {
-    #[tracing::instrument]
     fn from(form: ApplicationForm) -> Self {
         NewApplicant {
             submitted_time: Utc::now(),

@@ -783,7 +783,6 @@ pub async fn handle_rfd_push(
 }
 
 /// Handle a `push` event for the configs repo.
-//#[tracing::instrument(skip(github))]
 pub async fn handle_configs_push(
     github: &octorust::Client,
     api_context: &Context,

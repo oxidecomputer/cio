@@ -18,7 +18,6 @@ pub trait DNSProviderOps {
 
 #[async_trait]
 impl DNSProviderOps for CloudflareClient {
-    #[tracing::instrument(skip(self))]
     async fn ensure_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
         let domain = &domain.to_lowercase();
         let zone_identifier = &get_zone_identifier(self, domain).await?;
@@ -124,7 +123,6 @@ impl DNSProviderOps for CloudflareClient {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn delete_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
         let domain = &domain.to_lowercase();
         let zone_identifier = &get_zone_identifier(self, domain).await?;

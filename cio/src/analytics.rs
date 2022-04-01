@@ -45,7 +45,6 @@ pub struct NewPageView {
 /// Implement updating the Airtable record for a PageView.
 #[async_trait]
 impl UpdateAirtableRecord<PageView> for PageView {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: PageView) -> Result<()> {
         // Get the current auth users in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -67,13 +66,11 @@ impl UpdateAirtableRecord<PageView> for PageView {
 }
 
 impl NewPageView {
-    #[tracing::instrument]
     pub fn set_page_link(&mut self) {
         // Set the link.
         self.page_link = format!("https://{}/{}", self.domain, self.path.trim_start_matches('/'));
     }
 
-    #[tracing::instrument]
     pub async fn set_company_id(&mut self, db: &Database) -> Result<()> {
         // Match the company ID with the link.
         // All the companies are owned by Oxide.

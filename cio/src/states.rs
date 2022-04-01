@@ -5,7 +5,6 @@ pub struct StatesMap {
     states: HashMap<String, String>,
 }
 impl StatesMap {
-    #[tracing::instrument]
     fn populate(&mut self) {
         let mut map = HashMap::new();
         map.insert("AL".to_string(), "Alabama".to_string());
@@ -67,7 +66,6 @@ impl StatesMap {
         self.states = map;
     }
 
-    #[tracing::instrument]
     fn new() -> Self {
         let mut sm = StatesMap {
             states: Default::default(),
@@ -78,7 +76,6 @@ impl StatesMap {
         sm
     }
 
-    #[tracing::instrument]
     pub fn shorthand(long: &str) -> String {
         let sm = StatesMap::new();
         for (key, value) in sm.states {
@@ -93,7 +90,6 @@ impl StatesMap {
     /// This function will try to match the full name for a state from an abreeviation,
     /// if one was given. Otherwise, it will return the existing string.
     /// This function is helpful when populating addresses.
-    #[tracing::instrument]
     pub fn match_abreev_or_return_existing(s: &str) -> String {
         let sm = StatesMap::new();
 

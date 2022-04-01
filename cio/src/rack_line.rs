@@ -54,7 +54,6 @@ pub struct NewRackLineSubscriber {
 
 impl NewRackLineSubscriber {
     /// Get the human duration of time since the signup was fired.
-    #[tracing::instrument]
     pub fn human_duration(&self) -> HumanTime {
         let mut dur = self.date_added - Utc::now();
         if dur.num_seconds() > 0 {
@@ -64,7 +63,6 @@ impl NewRackLineSubscriber {
         HumanTime::from(dur)
     }
 
-    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let mut msg: FormattedMessage = self.clone().into();
         // Set the channel.
@@ -77,7 +75,6 @@ impl NewRackLineSubscriber {
 }
 
 impl RackLineSubscriber {
-    #[tracing::instrument]
     pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
         let n: NewRackLineSubscriber = self.into();
         n.send_slack_notification(db, company).await
@@ -86,7 +83,6 @@ impl RackLineSubscriber {
 
 /// Convert the mailing list signup into Slack message.
 impl From<NewRackLineSubscriber> for FormattedMessage {
-    #[tracing::instrument]
     fn from(item: NewRackLineSubscriber) -> Self {
         let time = item.human_duration();
 
@@ -156,7 +152,6 @@ impl From<NewRackLineSubscriber> for FormattedMessage {
 }
 
 impl Default for NewRackLineSubscriber {
-    #[tracing::instrument]
     fn default() -> Self {
         NewRackLineSubscriber {
             email: String::new(),
@@ -178,7 +173,6 @@ impl Default for NewRackLineSubscriber {
 /// Implement updating the Airtable record for a RackLineSubscriber.
 #[async_trait]
 impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, record: RackLineSubscriber) -> Result<()> {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
@@ -266,7 +260,6 @@ pub async fn as_rack_line_subscriber(webhook: mailchimp_api::Webhook, db: &Datab
 }
 
 impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
-    #[tracing::instrument]
     fn into(self) -> NewRackLineSubscriber {
         let mut tags: Vec<String> = Default::default();
         for t in &self.tags {

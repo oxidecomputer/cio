@@ -107,7 +107,6 @@ pub struct NewApplicantReview {
 /// Implement updating the Airtable record for a ApplicantReview.
 #[async_trait]
 impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: ApplicantReview) -> Result<()> {
         // Set name to empty since it is a function we cannot update it.
         self.name = "".to_string();
@@ -117,7 +116,6 @@ impl UpdateAirtableRecord<ApplicantReview> for ApplicantReview {
 }
 
 impl ApplicantReview {
-    #[tracing::instrument]
     pub async fn expand(&mut self, db: &Database) -> Result<()> {
         let company = self.company(db).await?;
 

@@ -214,14 +214,12 @@ pub struct NewRepo {
 /// Implement updating the Airtable record for a GithubRepo.
 #[async_trait]
 impl UpdateAirtableRecord<GithubRepo> for GithubRepo {
-    #[tracing::instrument]
     async fn update_airtable_record(&mut self, _record: GithubRepo) -> Result<()> {
         Ok(())
     }
 }
 
 impl NewRepo {
-    #[tracing::instrument]
     pub fn new_from_full(r: octorust::types::FullRepository, cio_company_id: i32) -> Self {
         NewRepo {
             github_id: r.id.to_string(),
@@ -294,7 +292,6 @@ impl NewRepo {
         }
     }
 
-    #[tracing::instrument]
     pub fn new(r: octorust::types::MinimalRepository, cio_company_id: i32) -> Self {
         NewRepo {
             github_id: r.id.to_string(),
@@ -379,7 +376,6 @@ impl GithubRepo {
      * - Adds protection to the default branch to disallow force pushes.
      * - Adds outside collaborators to their specified repositories.
      */
-    #[tracing::instrument(skip(github))]
     pub async fn sync_settings(&self, github: &octorust::Client, company: &Company) -> Result<()> {
         // Skip archived repositories.
         if self.archived {
@@ -602,7 +598,6 @@ pub trait FromUrl {
 }
 
 impl FromUrl for Option<url::Url> {
-    #[tracing::instrument]
     fn to_string(&self) -> String {
         if let Some(i) = self {
             i.to_string()
