@@ -292,7 +292,7 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
         // Loop the scheduler.
         loop {
             scheduler.run_pending().await;
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
     } else {
         server.await.unwrap();
