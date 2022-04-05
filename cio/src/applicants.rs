@@ -2636,23 +2636,31 @@ Sincerely,
     pub async fn keep_fields_from_airtable(&mut self, db: &Database) {
         // Let's get the existing record from Airtable, so we can use it as the source
         // of truth for various things.
-        let existing = self.get_existing_airtable_record(db).await.unwrap().fields;
-        // We keep the scorers from Airtable in case someone assigned someone from the UI.
-        self.scorers = existing.scorers.clone();
-        // Keep the interviewers from Airtable since they are updated out of bound by Airtable.
-        self.interviews = existing.interviews.clone();
-        // Keep the reviews, since these are updated out of band by Airtable.
-        self.link_to_reviews = existing.link_to_reviews;
+        if let Some(ex) = self.get_existing_airtable_record(db).await {
+            let existing = ex.fields;
+            // We keep the scorers from Airtable in case someone assigned someone from the UI.
+            self.scorers = existing.scorers.clone();
+            // Keep the interviewers from Airtable since they are updated out of bound by Airtable.
+            self.interviews = existing.interviews.clone();
+            // Keep the reviews, since these are updated out of band by Airtable.
+            self.link_to_reviews = existing.link_to_reviews;
 
-        // We want to keep the status and status raw since we might have modified
-        // it to move a candidate along in the process.
-        self.status = existing.status.to_string();
-        self.raw_status = existing.raw_status.to_string();
+            // We want to keep the status and status raw since we might have modified
+            // it to move a candidate along in the process.
+            self.status = existing.status.to_string();
+            self.raw_status = existing.raw_status.to_string();
 
-        // Mostly the start date will populate from docusign, but just in case they
-        // are someone who worked remotely, we might have to manually set it.
-        // If docusign is incorrect, make sure Airtable always has the source of truth.
-        self.start_date = existing.start_date;
+            // Mostly the start date will populate from docusign, but just in case they
+            // are someone who worked remotely, we might have to manually set it.
+            // If docusign is incorrect, make sure Airtable always has the source of truth.
+            self.start_date = existing.start_date;
+        } else {
+            log::warn!(
+                "Could not find existing Airtable record for email -> {}, id -> {}",
+                self.email,
+                self.id
+            );
+        }
     }
 
     pub async fn update_applicant_from_docusign_piia_envelope(
