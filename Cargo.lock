@@ -828,7 +828,7 @@ dependencies = [
  "url 2.2.2",
  "uuid",
  "walkdir",
- "yup-oauth2 6.4.0",
+ "yup-oauth2 6.5.1",
  "zip",
  "zoom-api",
 ]
@@ -6751,9 +6751,9 @@ dependencies = [
 
 [[package]]
 name = "yup-oauth2"
-version = "6.4.0"
+version = "6.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60f4735745047b40de5b982ed1645b9c7b0508d12439302e596774ac4ba9f4c0"
+checksum = "740d9620e23c820121089ae8ad480b2cc92aa2d266f59a95a2d9971bf3472932"
 dependencies = [
  "anyhow",
  "async-trait",
