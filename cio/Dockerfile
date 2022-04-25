@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # App Base Stage
 # ------------------------------------------------------------------------------
-FROM ubuntu:latest AS app-base
+FROM debian:bullseye AS app-base
 
 ENV DEBIAN_FRONTEND=noninteractive
 
