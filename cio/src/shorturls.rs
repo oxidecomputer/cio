@@ -82,7 +82,7 @@ pub async fn generate_shorturls_for_rfds(
             discussion: rfd.discussion,
         };
 
-        if !link.discussion.starts_with("https://") {
+        if !link.discussion.starts_with("https://") && !link.discussion.is_empty() {
             log::warn!("RFD {} has bad discussion URL: {}", rfd.number, link.discussion);
             continue;
         }
