@@ -6815,6 +6815,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "zoho-api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "zoom-api"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
