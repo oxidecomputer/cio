@@ -2,22 +2,21 @@
 use std::{fmt, str::FromStr};
 
 /// GitHub repos.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum Repo {
-    /// (Special repo.) Any repo.
-    Wildcard,
-
     Configs,
     RFD,
+    /// Any repo non-predefined repo
+    Other(String)
 }
 
 impl Repo {
-    /// Returns a static string for the repo name.
-    pub fn name(self) -> &'static str {
+    /// Returns a string for the repo name.
+    pub fn name(&self) -> &str {
         match self {
-            Repo::Wildcard => "*",
             Repo::Configs => "configs",
             Repo::RFD => "rfd",
+            Repo::Other(repo_name) => repo_name.as_str()
         }
     }
 }
@@ -27,12 +26,11 @@ impl FromStr for Repo {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "*" => Ok(Repo::Wildcard),
             "configs" => Ok(Repo::Configs),
             "rfd" => Ok(Repo::RFD),
             _ => {
                 println!("invalid GitHub repo: `{}`", s);
-                Ok(Repo::Wildcard)
+                Ok(Repo::Other(s.to_string()))
             }
         }
     }
