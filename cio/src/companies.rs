@@ -34,6 +34,7 @@ use tailscale_api::Tailscale;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tripactions::Client as TripActions;
+use zoho_api::Zoho;
 use zoom_api::Client as Zoom;
 
 use crate::{
@@ -557,6 +558,39 @@ impl Company {
             }
 
             return Ok(zoom);
+        }
+
+        bail!("no token");
+    }
+
+    /// Authenticate with Zoho.
+    pub async fn authenticate_zoho(&self, db: &Database) -> Result<Zoho> {
+        // Get the APIToken from the database.
+        if let Some(mut t) = APIToken::get_from_db(db, self.id, "zoho".to_string()).await {
+            // Initialize the Zoho client.
+            let zoho = Zoho::new_with_keys_from_env(&t.access_token, Some(&t.refresh_token));
+
+            if t.is_expired() {
+                // Update the token if it is expired. In theory the refresh token never expires
+                let nt = zoho.refresh_access_token().await?;
+
+                if !nt.access_token.is_empty() {
+                    t.access_token = nt.access_token.to_string();
+                }
+
+                if nt.expires_in > 0 {
+                    t.expires_in = nt.expires_in as i32;
+                }
+
+                t.last_updated_at = Utc::now();
+
+                t.expand();
+
+                // Update the token in the database.
+                t.update(db).await?;
+            }
+
+            return Ok(zoho);
         }
 
         bail!("no token");
