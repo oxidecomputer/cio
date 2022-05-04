@@ -309,22 +309,21 @@ async fn run_cmd(opts: crate::core::Opts, logger: slog::Logger) -> Result<()> {
                 .into_iter()
                 .map(|company| {
                     tokio::spawn(enclose! { (db) async move {
-                        tokio::join!(
-                            cio_api::repos::sync_all_repo_settings(&db, &company),
-                            cio_api::repos::refresh_db_github_repos(&db, &company),
-                        )
+                        cio_api::repos::refresh_db_github_repos(&db, &company).await?;
+                        cio_api::repos::sync_all_repo_settings(&db, &company).await?;
+
+                        Ok(())
                     }})
                 })
                 .collect();
 
-            let mut results: Vec<(Result<()>, Result<()>)> = Default::default();
+            let mut results: Vec<Result<()>> = Default::default();
             for task in tasks {
                 results.push(task.await?);
             }
 
-            for (refresh_result, cleanup_result) in results {
-                refresh_result?;
-                cleanup_result?;
+            for result in results {
+                result?
             }
         }
         crate::core::SubCommand::SyncRFDs(_) => {
