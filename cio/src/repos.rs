@@ -285,9 +285,9 @@ impl NewRepo {
             has_pages: r.has_pages,
             has_downloads: r.has_downloads,
             archived: r.archived,
-            pushed_at: r.pushed_at.unwrap(),
-            created_at: r.created_at.unwrap(),
-            updated_at: r.updated_at.unwrap(),
+            pushed_at: r.pushed_at.unwrap_or_else(Utc::now),
+            created_at: r.created_at.unwrap_or_else(Utc::now),
+            updated_at: r.updated_at.unwrap_or_else(Utc::now),
             cio_company_id,
         }
     }
@@ -357,9 +357,9 @@ impl NewRepo {
             has_pages: r.has_pages,
             has_downloads: r.has_downloads,
             archived: r.archived,
-            pushed_at: r.pushed_at.unwrap(),
-            created_at: r.created_at.unwrap(),
-            updated_at: r.updated_at.unwrap(),
+            pushed_at: r.pushed_at.unwrap_or_else(Utc::now),
+            created_at: r.created_at.unwrap_or_else(Utc::now),
+            updated_at: r.updated_at.unwrap_or_else(Utc::now),
             cio_company_id,
         }
     }
