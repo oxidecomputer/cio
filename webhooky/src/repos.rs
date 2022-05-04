@@ -6,7 +6,7 @@ use std::{fmt, str::FromStr};
 pub enum Repo {
     Configs,
     RFD,
-    /// Any repo non-predefined repo
+    /// Any non-predefined repo
     Other(String)
 }
 
