@@ -42,7 +42,10 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
     let event_type =
         EventType::from_str(&event_type_string).expect("Event type from GitHub does not match a known event type");
 
-    info!("Processing incoming {} webhook event", event_type);
+    info!(
+        "Processing incoming {} webhook event on {}",
+        event_type, event.repository.name
+    );
 
     // Filter by event type any actions we can rule out for all repos.
     match event_type {
