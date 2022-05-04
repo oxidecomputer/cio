@@ -7,7 +7,7 @@ pub enum Repo {
     Configs,
     RFD,
     /// Any non-predefined repo
-    Other(String)
+    Other(String),
 }
 
 impl Repo {
@@ -16,7 +16,7 @@ impl Repo {
         match self {
             Repo::Configs => "configs",
             Repo::RFD => "rfd",
-            Repo::Other(repo_name) => repo_name.as_str()
+            Repo::Other(repo_name) => repo_name.as_str(),
         }
     }
 }
