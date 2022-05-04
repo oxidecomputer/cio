@@ -39,7 +39,8 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
             .to_string()
     };
 
-    let event_type = EventType::from_str(&event_type_string).expect("Event type from GitHub does not match a known event type");
+    let event_type =
+        EventType::from_str(&event_type_string).expect("Event type from GitHub does not match a known event type");
 
     info!("Processing incoming {} webhook event", event_type);
 
