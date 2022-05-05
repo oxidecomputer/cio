@@ -102,7 +102,7 @@ steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tailscale-api = "^0.1.2"
 tracing = "^0.1"
 #tailscale-api = { path = "../tailscale" }
-tripactions = "^0.2.0"
+tripactions = "0.2.3"
 #tripactions = { path = "../../third-party-api-clients/tripactions" }
 titlecase = "1.0"
 tokio = { version = "1", features = ["full"] }
