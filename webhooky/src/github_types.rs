@@ -150,7 +150,7 @@ pub struct GitHubWebhook {
     ///
     /// The check run itself.
     #[serde(default)]
-    pub check_run: GitHubCheckRun,
+    pub check_run: Option<GitHubCheckRun>,
 }
 
 impl GitHubWebhook {
