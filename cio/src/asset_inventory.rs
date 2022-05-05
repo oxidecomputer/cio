@@ -272,7 +272,7 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()>
     }
 
     // Initialize the Google Drive client.
-    let drive_client = company.authenticate_google_drive(db).await?;
+    let mut drive_client = company.authenticate_google_drive(db).await?;
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
@@ -293,7 +293,23 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()>
         if item.name.is_empty() {
             item.name = generator.next().unwrap();
         }
-        item.expand(&drive_client, &drive_id, &parent_id).await?;
+
+        // Iterating through and processing all of the asset items can take over an hour. This
+        // exceeds the time limit that Google Drive allots for a single token. Therefore we may
+        // need to refresh the access token mid processing if an item expansion fails
+        match item.expand(&drive_client, &drive_id, &parent_id).await {
+            Ok(_) => (),
+            Err(err) => {
+                log::info!("Handling drive error. This is likely to be an authentication error. Further work is needed to differentiate. {:?}", err);
+                log::info!("Reauthenticating with Google Drive");
+                drive_client = company.authenticate_google_drive(db).await?;
+
+                // Now using a client with fresh credentials, we can retry the expansion. If this
+                // again, it is unlikely due to an authentication error
+                item.expand(&drive_client, &drive_id, &parent_id).await?;
+            }
+        }
+
         item.cio_company_id = company.id;
 
         let mut db_item = item.upsert_in_db(db).await?;
