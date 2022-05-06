@@ -25,17 +25,27 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
 
     let event = body_param.into_inner();
 
-    // Parse the `X-GitHub-Event` header.
+    // Parse the `X-GitHub-Event` header. Ensure the request lock is dropped once the
+    // event_type has been extracted.
     // TODO: make this nicer when supported as a first class method in dropshot.
-    let req = rqctx.request.lock().await;
-    let req_headers = req.headers();
-    let event_type_string = req_headers
-        .get("X-GitHub-Event")
-        .unwrap_or(&http::header::HeaderValue::from_str("")?)
-        .to_str()
-        .unwrap()
-        .to_string();
-    let event_type = EventType::from_str(&event_type_string).unwrap();
+    let event_type_string = {
+        let req = rqctx.request.lock().await;
+        let req_headers = req.headers();
+        req_headers
+            .get("X-GitHub-Event")
+            .unwrap_or(&http::header::HeaderValue::from_str("")?)
+            .to_str()
+            .unwrap()
+            .to_string()
+    };
+
+    let event_type =
+        EventType::from_str(&event_type_string).expect("Event type from GitHub does not match a known event type");
+
+    info!(
+        "Processing incoming {} webhook event on {}",
+        event_type, event.repository.name
+    );
 
     // Filter by event type any actions we can rule out for all repos.
     match event_type {
