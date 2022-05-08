@@ -520,6 +520,8 @@ pub async fn handle_rfd_push(
                 NewRFD::new_from_github(company, github, owner, &repo, branch, &file, commit.timestamp.unwrap())
                     .await?;
 
+            info!("Generated RFD for branch {} from GitHub", branch);
+
             // If the branch does not equal exactly the number string,
             // exit early since we have an update to an existing RFD not an explicit
             // RFD itself. This usually happens when the branch name can parse as a
@@ -553,6 +555,12 @@ pub async fn handle_rfd_push(
             // DO THIS BEFORE UPDATING THE RFD.
             // We will need this later to check if the RFD's state changed.
             let old_rfd = RFD::get_from_db(db, new_rfd.number).await;
+
+            info!(
+                "Checking for existing RFD in database {:?}",
+                old_rfd.as_ref().map(|o| o.id)
+            );
+
             let mut old_rfd_state = "".to_string();
             let mut old_rfd_pdf = "".to_string();
             if let Some(o) = old_rfd {
@@ -571,6 +579,12 @@ pub async fn handle_rfd_push(
 
             // Update the RFD in the database.
             let mut rfd = new_rfd.upsert(db).await?;
+
+            info!(
+                "Upserted new rfd into database. Id: {} AirtableId: {}",
+                rfd.id, rfd.airtable_record_id
+            );
+
             // Update all the fields for the RFD.
             rfd.expand(github, company).await?;
             rfd.update(db).await?;
