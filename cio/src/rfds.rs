@@ -865,9 +865,14 @@ pub async fn get_rfd_contents_from_repo(
     dir: &str,
     company: &Company,
 ) -> Result<(String, bool, String)> {
+    info!("[rfd.contents] Enter {} / {}", _repo, branch);
+
     let owner = &company.github_org;
     let repo = "rfd";
     let r = github.repos().get(owner, repo).await?;
+
+    info!("[rfd.contents] Fetched full repo {} / {}", repo, branch);
+
     let mut is_markdown = false;
     let decoded: String;
     let sha: String;
