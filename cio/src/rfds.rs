@@ -862,7 +862,7 @@ pub async fn get_rfd_contents_from_repo(
     _owner: &str,
     _repo: &str,
     branch: &str,
-    dir: &str, // /rfd/{}
+    dir: &str,
     company: &Company,
 ) -> Result<(String, bool, String)> {
     let owner = &company.github_org;
