@@ -25,7 +25,10 @@ use std::env;
 use anyhow::{bail, Result};
 use cio_api::{companies::Companys, db::Database};
 use clap::Parser;
-use sentry::IntoDsn;
+use sentry::{
+    protocol::{Context, Event},
+    IntoDsn,
+};
 use slog::Drain;
 
 #[tokio::main]
@@ -38,10 +41,23 @@ async fn main() -> Result<()> {
         debug: opts.debug,
         dsn: sentry_dsn.clone().into_dsn()?,
 
-        // Send 100% of all transactions to Sentry.
-        // This is for testing purposes only, after a bit of testing set this to be like 20%.
-        // Or we can keep it at 100% if it is not messing with performance.
-        traces_sample_rate: 1.0,
+        // Send 10% of all transactions to Sentry.
+        // This can be increased as we figure out what volume looks like at
+        traces_sample_rate: 0.1,
+
+        // Define custom rate limiting for database query events. Without aggressive rate limiting
+        // these will far exceed any transactions limits we are allowed.
+        before_send: Some(std::sync::Arc::new(|event: Event<'static>| {
+            if let Some(Context::Trace(trace_ctx)) = event.contexts.get("trace") {
+                if let Some(ref op) = trace_ctx.op {
+                    if op == "db.sql.query" && rand::random::<f32>() > 0.001 {
+                        return None;
+                    }
+                }
+            }
+
+            Some(event)
+        })),
 
         release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
         environment: Some(
