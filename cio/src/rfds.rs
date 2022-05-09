@@ -874,9 +874,19 @@ pub async fn get_rfd_contents_from_repo(
 
     // Get the contents of the file.
     let path = format!("{}/README.adoc", dir);
-    match github.repos().get_content_file(owner, repo, &path, branch).await {
+
+    let content_file = github.repos().get_content_file(owner, repo, &path, branch).await;
+
+    info!(
+        "[rfd.contents] Retrieved asciidoc README from GitHub {} / {}",
+        repo, branch
+    );
+
+    match content_file {
         Ok(f) => {
             decoded = decode_base64_to_string(&f.content);
+            info!("[rfd.contents] Decoded asciidoc README {} / {}", repo, branch);
+
             sha = f.sha;
         }
         Err(e) => {
@@ -897,10 +907,20 @@ pub async fn get_rfd_contents_from_repo(
         }
     }
 
+    info!("[rfd.contents] Getting images from branch {} / {}", repo, branch);
+
     // Get all the images in the branch and make sure they are in the images directory on master.
     let images = get_images_in_branch(github, owner, repo, dir, branch).await?;
+
+    info!("[rfd.contents] Updating images in branch {} / {}", repo, branch);
+
     for image in images {
         let new_path = image.path.replace("rfd/", "src/public/static/images/");
+
+        info!(
+            "[rfd.contents] Copy {} to {} {} / {}",
+            image.path, new_path, repo, branch
+        );
 
         // Make sure we have this file in the static images dir on the master branch.
         create_or_update_file_in_github_repo(
@@ -914,7 +934,23 @@ pub async fn get_rfd_contents_from_repo(
         .await?;
     }
 
-    Ok((deunicode::deunicode(&decoded), is_markdown, sha))
+    info!(
+        "[rfd.contents] Transforming from unicode to ascii (length: {}) {} / {}",
+        decoded.len(),
+        repo,
+        branch
+    );
+
+    let transliterated = deunicode::deunicode(&decoded);
+
+    info!(
+        "[rfd.contents] Ascii version length: {} {} / {}",
+        transliterated.len(),
+        repo,
+        branch
+    );
+
+    Ok((transliterated, is_markdown, sha))
 }
 
 // Get all the images in a specific directory of a GitHub branch.
@@ -929,7 +965,13 @@ pub async fn get_images_in_branch(
 
     // Get all the images in the branch and make sure they are in the images directory on master.
     let resp = github.repos().get_content_vec_entries(owner, repo, dir, branch).await?;
+
     for file in resp {
+        info!(
+            "[rfd.get_images] Processing file {} ({}) {} / {}",
+            file.path, file.type_, repo, branch
+        );
+
         if file.type_ == "dir" {
             let path = file.path.trim_end_matches('/');
             // We have a directory. We need to get the file contents recursively.
@@ -939,6 +981,11 @@ pub async fn get_images_in_branch(
                 .get_content_vec_entries(owner, repo, path, branch)
                 .await?;
             for file2 in resp2 {
+                info!(
+                    "[rfd.get_images] Processing inner file {} ({}) {} / {}",
+                    file.path, file.type_, repo, branch
+                );
+
                 if file2.type_ == "dir" {
                     let path = file2.path.trim_end_matches('/');
                     warn!("skipping directory second level directory for parsing images: {}", path);
