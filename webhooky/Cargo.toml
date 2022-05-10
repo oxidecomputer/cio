@@ -20,7 +20,7 @@ chrono-humanize = "0.2.1"
 chrono-tz = { version = "0.6", features = ["serde"] }
 #cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "acc1c2365d81ef8be38b61db75fee5886b7fe6a6" }
 cio-api = { path = "../cio" }
-clap = { version = "^3.1.7", features = ["cargo", "derive", "env", "unicode"] }
+clap = { version = "^3.1.18", features = ["cargo", "derive", "env", "unicode"] }
 clokwerk = "0.4.0-rc1"
 # Tracking pending 2.0 version.
 diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
@@ -76,6 +76,7 @@ tracing-subscriber = { version = "^0.3.9", features = ["registry", "std", "fmt",
 urlencoding = "2.1.0"
 uuid = { version = "^0.8", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"
+stacker = "0.1.14"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]
