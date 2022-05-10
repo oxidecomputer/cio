@@ -6590,6 +6590,7 @@ dependencies = [
  "slog-scope",
  "slog-stdlog",
  "slog-term",
+ "stacker",
  "steno",
  "tokio",
  "tracing",

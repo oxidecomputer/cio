@@ -366,6 +366,8 @@ pub async fn handle_rfd_push(
     event: GitHubWebhook,
     company: &Company,
 ) -> Result<String> {
+    info!("[rfd.push] Remaining stack size: {:?}", stacker::remaining_stack(),);
+
     let db = &api_context.db;
 
     // Initialize the Google Drive client.
