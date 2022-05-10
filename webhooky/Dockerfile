@@ -82,13 +82,13 @@ COPY diesel-sentry ../diesel-sentry
 
 RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
-RUN cargo build --bin webhooky
+RUN cargo build --bin webhooky --release
 
 RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
 COPY webhooky/src ./src
 
-RUN cargo build --bin webhooky
+RUN cargo build --bin webhooky --release
 
 # ------------------------------------------------------------------------------
 # Final Stage

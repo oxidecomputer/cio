@@ -51,13 +51,13 @@ COPY diesel-sentry ../diesel-sentry
 
 RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
-RUN cargo build --bin cio-api
+RUN cargo build --bin cio-api --release
 
 RUN sed -i 's#dummy.rs#main.rs#' ./Cargo.toml
 
 COPY cio/src src
 
-RUN cargo build --bin cio-api
+RUN cargo build --bin cio-api --release
 
 # ------------------------------------------------------------------------------
 # Final Stage
