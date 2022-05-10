@@ -867,6 +867,16 @@ pub async fn get_rfd_contents_from_repo(
 ) -> Result<(String, bool, String)> {
     info!("[rfd.contents] Enter {} / {}", _repo, branch);
 
+    #[cfg(debug_assertions)]
+    {
+        info!(
+            "[rfd.contents] Remaining stack size: {:?} {} / {}",
+            stacker::remaining_stack(),
+            _repo,
+            branch
+        );
+    }
+
     let owner = &company.github_org;
     let repo = "rfd";
     let r = github.repos().get(owner, repo).await?;

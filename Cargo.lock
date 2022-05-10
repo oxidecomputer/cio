@@ -818,6 +818,7 @@ dependencies = [
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
  "sodiumoxide",
+ "stacker",
  "steno",
  "tailscale-api 0.1.5",
  "titlecase",
@@ -3909,6 +3910,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "psm"
+version = "0.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "871372391786ccec00d3c5d3d6608905b3d4db263639cfe075d3b60a736d115a"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "publicsuffix"
 version = "1.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5413,6 +5423,19 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "stacker"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90939d5171a4420b3ff5fbc8954d641e7377335454c259dcb80786f3f21dc9b4"
+dependencies = [
+ "cc",
+ "cfg-if 1.0.0",
+ "libc",
+ "psm",
+ "winapi",
+]
 
 [[package]]
 name = "standback"
