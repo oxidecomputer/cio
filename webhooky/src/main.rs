@@ -36,9 +36,7 @@ fn main() -> Result<()> {
         .enable_all()
         .thread_stack_size(4 * 1024 * 1024)
         .build()?
-        .block_on(async {
-            tokio_main().await
-        })
+        .block_on(async { tokio_main().await })
 }
 
 async fn tokio_main() -> Result<()> {
