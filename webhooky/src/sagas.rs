@@ -90,6 +90,8 @@ pub async fn on_saga_complete(
     result: &steno::SagaResult,
     cmd_name: &str,
 ) -> Result<()> {
+    log::info!("Unused code path check: on_saga_complete");
+
     // Get the function.
     let mut f = Function::get_from_db(db, saga_id.to_string()).await.unwrap();
 
