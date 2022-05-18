@@ -1,0 +1,94 @@
+# RFD Push Webhook
+
+Roughly illustrates the steps taken by `cio` when handling a commit to the `rfd` repo 
+
+```mermaid
+graph
+  A[Handle RFD Commit] --> B[Authenticate Google Drive]
+  B --> C[Find Automated Documents directory]
+  C --> D{Has commits}
+  D -->|Yes| E(Get first commit)
+  E --> F[Filter for changes in /rfd]
+  F --> G{Has changed files}
+  G -->|Yes| H(Get branch name)
+  H --> I{Has deleted images}
+  I -->|Yes| J(Delete images from default branch)
+  I -->|No| K(Iterate over added and changed files)
+  J --> K
+  K -->|Has file to process| L{File is image}
+  K -->|No more files| ZZZ{Done}
+  L -->|Yes| M(Write file to default branch)
+  L -->|No| N{Is .md or .adoc}
+  N -->|Yes| O(Construct RFD)
+  N -->|No| K
+  O --> P[Get file contents from GitHub]
+  P --> Q[Parse RFD number from file path]
+  Q --> R[Get tite, state, discussion url from contents]
+  R --> S{Check for exact branch name}
+  S -->|Good| T[Verify branch exists]
+  S -->|Bad| K
+  T --> U{Lookup RFD in Postgres}
+  U -->|Found| V[Copy fields from existing RFD record]
+  U -->|Not Found| W[Upsert in Postgres<br/>Upsert in Airtable<br/>Record Airtable id]
+  V --> W
+  W --> X[Get RFD repo metadata]
+  X --> Y[Generate fields base on RFD number]
+  Y --> Z[Get full RFD repo metadata]
+  Z --> AA{Get .adoc contents}
+  AA --> |Success| CC[base64 decode contents]
+  AA --> |Failed| BB(Get .md contents)
+  BB --> CC
+  CC --> DD[Find images and fetch contents<br/>in top to levels of rfd]
+  DD --> EE[Create / update images on default branch]
+  EE --> FF[Translate content from unicode to ascii]
+  FF --> GG[Get latest commit date on branch]
+  GG --> HH[Write contens to file in temp dir]
+  HH --> II{Content contains inline images}
+  II --> |Yes| JJ[Get images in branch]
+  II --> |No| LL[Shell to asciidoctor]
+  JJ --> KK[Write images to temp dir]
+  KK --> LL
+  LL --> MM[Parse output]
+  MM --> NN[Delete temp dir]
+  NN --> OO[Clean image, anchor, RFD links in content]
+  OO --> PP[Extract authors from content]
+  PP --> QQ[Generate PDF links]
+  QQ --> RR[Update in Postgres<br/>Upsert in Airtable</br>Record Airtable id]
+  RR --> SS[Request search index update]
+  SS --> TT[Fetch all RFDs from Postgres]
+  TT --> UU[Generate links for RFDs]
+  UU --> VV[Generate NGINX config and write to configs repo]
+  VV --> WW[Authenticate with CloudFlare]
+  WW --> XX[Ensure all RFD DNS records exist]
+  XX --> YY[Authenticate Google Drive]
+  YY --> ZZ[Get full RFD repo metadata]
+  ZZ --> AAA[Write contents to file in temp dir]
+  AAA --> BBB[Get images in branch]
+  BBB --> CCC[WRite images to temp dir]
+  CCC --> DDD[Shell to asciidoctor-pdf]
+  DDD --> EEE[Write PDF to default branch]
+  EEE --> FFF[Create or open Google Drive folder]
+  FFF --> GGG[Write PDF to Google Drive]
+  GGG --> HHH[Copy drive link to RFD]
+  HHH --> III[Update in Postgres<br/>Upsert in Airtable<br/>Record Airtable id]
+  III --> JJJ{Has state changed}
+  JJJ --> |Yes| LLL{State is discussion}
+  LLL --> |Yes| MMM{Commit is not on default branch}
+  MMM --> |Yes| NNN{Pull request exists}
+  NNN --> |No| OOO[Create pull request to default branch]
+  JJJ --> |No| PPP{Is default branch}
+  LLL --> |No| PPP
+  MMM --> |No| PPP
+  NNN --> |Yes| PPP
+  PPP --> |Yes| OOO{State is published}
+  OOO --> |No| QQQ[Update state in content to published]
+  QQQ --> RRR[Update in Postgres<br/>Upsert in Airtable<br/>Record Airtable id]
+  RRR --> SSS[Push updated content to GitHub]
+  SSS --> TTT{Has PDF filename changed}
+  PPP --> |No| TTT
+  OOO --> |Yes| TTT
+  TTT --> |Yes| UUU[Delete old PDF from GitHub]
+  UUU --> VVV[Delete old PDF from Google Drive]
+  VVV --> K
+  TTT --> |No| K
+```

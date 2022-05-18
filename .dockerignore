@@ -9,3 +9,4 @@ Makefile
 .git
 rustfmt.toml
 rfds.1s.sh
+.docs
