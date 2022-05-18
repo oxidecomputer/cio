@@ -457,6 +457,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         /// Update Airtable records in a table from a vector.
         pub async fn update_airtable(&self, db: &crate::db::Database) -> anyhow::Result<()> {
+            use anyhow::Context;
+
             if self.0.is_empty() {
                 // Return early.
                 return Ok(());
@@ -475,7 +477,12 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                             let mut record = r.clone();
 
                             // Update the record in Airtable.
-                            vec_record.update_in_airtable(db, &mut record).await?;
+                            vec_record.update_in_airtable(db, &mut record).await.with_context(|| {
+                                format!(
+                                    "Attempting to update already persisted Airtable record (internal record: {} Airtable record: {})",
+                                    vec_record.id, record.id
+                                )
+                            })?;
 
                             // Remove it from the map.
                             records.remove(&vec_record.id);
