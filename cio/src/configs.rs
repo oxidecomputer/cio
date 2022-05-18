@@ -428,7 +428,13 @@ impl UserConfig {
         if !new_user.github.is_empty() {
             // Add them to the org and any teams they need to be added to.
             // We don't return an id here.
-            let _id = github.ensure_user(db, company, &new_user).await?;
+            match github.ensure_user(db, company, &new_user).await {
+                Ok(id) => Ok(id),
+                Err(err) => {
+                    warn!("Failed to ensure GitHub user `{}`: {}", new_user.email, err);
+                    Err(err)
+                }
+            }?;
         }
 
         if let Ok(ref ramp) = ramp_auth {
