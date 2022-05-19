@@ -477,12 +477,17 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                             let mut record = r.clone();
 
                             // Update the record in Airtable.
-                            vec_record.update_in_airtable(db, &mut record).await.with_context(|| {
-                                format!(
-                                    "Attempting to update already persisted Airtable record (internal record: {} Airtable record: {})",
-                                    vec_record.id, record.id
-                                )
-                            })?;
+                            match vec_record.update_in_airtable(db, &mut record).await {
+                                // We do not need to do anything else with the record once it is updated
+                                Ok(_record) => (),
+                                Err(err) => {
+                                    // We need to log the error so that we can address the underlying issue, but
+                                    // we do not want to abandon all of the rest of the record updates when a
+                                    // single record fails to be written
+                                    log::error!("Failed to update already persisted Airtable record (internal record: {} Airtable record: {})", vec_record.id, record.id);
+                                    log::error!("Failed to update a record in airtable: {}", err);
+                                }
+                            };
 
                             // Remove it from the map.
                             records.remove(&vec_record.id);
