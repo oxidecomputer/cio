@@ -360,6 +360,8 @@ impl Function {
                     // Get the logs.
                     nf.logs = string.trim().to_string();
                     nf.completed_at = Some(Utc::now());
+                } else {
+                    log::warn!("Saga reach success state with a null value. It will be left incomplete. saga_id: {}", event.saga_id);
                 }
             }
             steno::SagaNodeEventType::Failed(err) => {
