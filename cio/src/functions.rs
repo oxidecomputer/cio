@@ -52,7 +52,8 @@ pub struct NewFunction {
 #[async_trait]
 impl UpdateAirtableRecord<Function> for Function {
     async fn update_airtable_record(&mut self, _record: Function) -> Result<()> {
-        self.logs = truncate(&self.logs, 100000);
+        // Provide leeway in case this is causing log updates to fail
+        self.logs = truncate(&self.logs, 90_000);
         Ok(())
     }
 }
@@ -361,7 +362,10 @@ impl Function {
                     nf.logs = string.trim().to_string();
                     nf.completed_at = Some(Utc::now());
                 } else {
-                    log::warn!("Saga reach success state with a null value. It will be left incomplete. saga_id: {}", event.saga_id);
+                    log::warn!(
+                        "Saga reach success state with a null value. It will be left incomplete. saga_id: {}",
+                        event.saga_id
+                    );
                 }
             }
             steno::SagaNodeEventType::Failed(err) => {
