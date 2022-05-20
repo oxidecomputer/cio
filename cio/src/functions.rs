@@ -427,7 +427,11 @@ pub async fn refresh_functions() -> Result<()> {
         new.send_slack_notification(&db, &company).await?;
     }
 
-    Functions::get_from_db(&db, 1).await?.update_airtable(&db).await?;
+    // AM: Disabling the bulk function updates. There are too many to actually update this way.
+    // If we want to continue this process we should first build a work plan that pairs down
+    // what data actually needs to be updated, and then running through that plan (ensuring it is)
+    // still relevant. This does not fully avoid race conditions, but could help.
+    // Functions::get_from_db(&db, 1).await?.update_airtable(&db).await?;
 
     Ok(())
 }
