@@ -177,6 +177,7 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
 
     let child = duct::cmd!(exe, cmd);
     let reader = child.stderr_to_stdout().reader()?;
+    let child_pids = reader.pids();
 
     let mut output = String::new();
 
@@ -201,7 +202,7 @@ async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String
                 output.push_str(&l);
                 output.push('\n');
 
-                slog::info!(crate::core::LOGGER, "{}", l;"cmd" => cmd.to_string(), "saga_id" => saga_id.to_string());
+                slog::info!(crate::core::LOGGER, "{}", l;"cmd" => cmd.to_string(), "saga_id" => saga_id.to_string(), "pids" => ?child_pids);
 
                 // Only save the logs when we have time, just do it async and don't
                 // wait on it, else we will be waiting forever.
