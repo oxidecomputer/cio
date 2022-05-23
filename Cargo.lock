@@ -2013,9 +2013,7 @@ dependencies = [
 
 [[package]]
 name = "google-calendar"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d75d6cc3571b435a4925323486d5fb9bf980aa64819add7f50f4fee5c49b4bc"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2045,9 +2043,7 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c749c89b97f0fef7dd830850881a838aa4e4c8a4de797f49f34b03ddd346efe1"
+version = "0.2.10"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2097,9 +2093,7 @@ dependencies = [
 
 [[package]]
 name = "google-groups-settings"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7730d69ffb9fe736ad6e59d347d0dc000bbd60032769f8006592bf75499fb558"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2129,9 +2123,7 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b71107437f56579257844bdabddfbc1fd676c39483556c9b74f4fde6cca6edab"
+version = "0.2.6"
 dependencies = [
  "anyhow",
  "async-recursion",
