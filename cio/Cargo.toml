@@ -48,7 +48,7 @@ google-drive = "^0.2.10"
 #google-drive = { path = "../../third-party-api-clients/google/drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
-google-groups-settings = "^0.2.4"
+google-groups-settings = "^0.1.6"
 #google-groups-settings = { path = "../../third-party-api-clients/google/groups-settings" }
 gsuite-api = "^0.2.6"
 #gsuite-api = { path = "../../third-party-api-clients/google/admin" }
@@ -90,7 +90,7 @@ sendgrid-api = "^0.2.0"
 sentry = { version = "^0.24.3", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sheets = "^0.2.0"
+sheets = "^0.2.4"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
 shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
