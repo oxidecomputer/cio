@@ -106,7 +106,7 @@ impl UpdateAirtableRecord<AssetItem> for AssetItem {
 }
 
 impl NewAssetItem {
-    pub fn generate_barcode(&mut self) -> String {
+    pub fn generate_barcode(&self) -> String {
         let mut barcode = self
             .name
             .to_uppercase()
