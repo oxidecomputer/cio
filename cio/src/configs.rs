@@ -418,7 +418,7 @@ impl UserConfig {
                         new_user = new_user.update(db).await?;
                     }
                     Err(e) => {
-                        warn!("Failed to ensure zoom user `{}`: {}", new_user.email, e);
+                        warn!("Failed to ensure zoom user `{}`: {}", new_user.id, e);
                     }
                 }
             }
@@ -431,7 +431,7 @@ impl UserConfig {
             match github.ensure_user(db, company, &new_user).await {
                 Ok(id) => Ok(id),
                 Err(err) => {
-                    warn!("Failed to ensure GitHub user `{}`: {}", new_user.email, err);
+                    warn!("Failed to ensure GitHub user `{}`: {}", new_user.id, err);
                     Err(err)
                 }
             }?;
@@ -446,7 +446,7 @@ impl UserConfig {
                     new_user = new_user.update(db).await?;
                 }
                 Err(e) => {
-                    warn!("Failed to ensure ramp user `{}`: {}", new_user.email, e);
+                    warn!("Failed to ensure ramp user `{}`: {}", new_user.id, e);
                 }
             }
         }

@@ -213,7 +213,7 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
                 if membership.role.to_string() == role.to_string() {
                     info!(
                         "user `{}` is already a member of the github org `{}` with role `{}`",
-                        user.github, company.github_org, role
+                        user.id, company.github_org, role
                     );
 
                     true
@@ -227,7 +227,7 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
                     // Otherwise bail.
                     bail!(
                         "checking if user `{}` is a member of the github org `{}` failed: {}",
-                        user.github,
+                        user.id,
                         company.github_org,
                         e
                     );
@@ -252,14 +252,14 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
             {
                 warn!(
                     "Failed to add user / update role {} @ {} on {} : {}",
-                    user.github, role, company.github_org, err
+                    user.id, role, company.github_org, err
                 );
                 return Err(err);
             };
 
             info!(
                 "updated user `{}` as a member of the github org `{}` with role `{}`",
-                user.github, company.github_org, role
+                user.id, company.github_org, role
             );
         }
 
