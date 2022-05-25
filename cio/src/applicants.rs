@@ -799,7 +799,11 @@ impl Applicant {
 
                     // Delete it.
                     r.delete(db).await?;
+
+                    log::info!("Deleted review record {} {}", self.id, record_id);
                 }
+
+                log::info!("Resetting score values to 0 {}", self.id);
 
                 // We already zero-ed out the values for the scores, now we return early.
                 // We don't want people who join to know their scores.
@@ -898,6 +902,8 @@ impl Applicant {
                     self.scorers.remove(index);
                 }
             }
+
+            log::info!("Updating scores for applicant {}", self.id);
 
             // Update the record.
             self.update(db).await?;
