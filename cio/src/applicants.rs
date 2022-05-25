@@ -765,7 +765,7 @@ impl Applicant {
         if self.status == crate::applicant_status::Status::Onboarding.to_string()
             || self.status == crate::applicant_status::Status::Hired.to_string()
         {
-            // There are two cases in which we need to perform and update on a hired employee:
+            // There are two cases in which we need to perform an update on a hired employee:
             //   1. There are links to reviews that need to be deleted
             //   2. There exist lingering scores that have not been zeroed
             if !self.link_to_reviews.is_empty() || previous_scoring_evaluations_count > 0 {
@@ -810,7 +810,7 @@ impl Applicant {
         }
 
         // We have now handled people that are either in the process of onboarding or hired.
-        // For everyone else we only have work to do if they actual have reviews
+        // For everyone else we only have work to do if they actually have reviews
         if !self.link_to_reviews.is_empty() {
             for record_id in &self.link_to_reviews {
                 // Get the record.
