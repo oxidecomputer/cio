@@ -742,11 +742,13 @@ impl Applicant {
     pub async fn update_reviews_scoring(&mut self, db: &Database) -> Result<()> {
         self.keep_fields_from_airtable(db).await;
 
-        // If they have no reviews, eff it.
-        if self.link_to_reviews.is_empty() {
-            // Return early.
-            return Ok(());
-        }
+        // Create the Airtable client.
+        let company = Company::get_by_id(db, self.cio_company_id).await?;
+        let airtable = company.authenticate_airtable(&company.airtable_base_id_hiring);
+
+        // We need to capture the existing score count prior to mutations to ensure that
+        // we can properly detect when we need to zero out onboarding and hired employees
+        let previous_scoring_evaluations_count = self.scoring_evaluations_count;
 
         // Zero out the values for the scores.
         self.scoring_evaluations_count = 0;
@@ -760,20 +762,63 @@ impl Applicant {
         self.scoring_job_function_yet_needed_count = 0;
         self.scoring_underwhelming_materials_count = 0;
 
-        // Create the Airtable client.
-        let company = Company::get_by_id(db, self.cio_company_id).await?;
-        let airtable = company.authenticate_airtable(&company.airtable_base_id_hiring);
-
         if self.status == crate::applicant_status::Status::Onboarding.to_string()
             || self.status == crate::applicant_status::Status::Hired.to_string()
         {
-            // Let's iterate over the reviews.
+            // There are two cases in which we need to perform and update on a hired employee:
+            //   1. There are links to reviews that need to be deleted
+            //   2. There exist lingering scores that have not been zeroed
+            if !self.link_to_reviews.is_empty() || previous_scoring_evaluations_count > 0 {
+                // Let's iterate over the reviews.
+                for record_id in &self.link_to_reviews {
+                    // Get the record.
+                    // TODO: get these from the database.
+                    let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> = airtable
+                        .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
+                        .await?;
+
+                    // Set the values if they are not empty.
+                    // TODO: actually do the majority if they differ in value but for now YOLO.
+                    if !record.fields.value_reflected.is_empty() {
+                        self.value_reflected = record.fields.value_reflected.to_string();
+                    }
+                    if !record.fields.value_violated.is_empty() {
+                        self.value_violated = record.fields.value_violated.to_string();
+                    }
+                    if !record.fields.values_in_tension.is_empty() {
+                        self.values_in_tension = record.fields.values_in_tension.clone();
+                    }
+
+                    // Delete the record from the reviews Airtable.
+                    airtable
+                        .delete_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
+                        .await?;
+
+                    // Delete the record if it exists in the Database.
+                    let r = ApplicantReview::get_by_id(db, record.fields.id).await?;
+
+                    // Delete it.
+                    r.delete(db).await?;
+                }
+
+                // We already zero-ed out the values for the scores, now we return early.
+                // We don't want people who join to know their scores.
+                self.update(db).await?;
+            }
+
+            return Ok(());
+        }
+
+        // We have now handled people that are either in the process of onboarding or hired.
+        // For everyone else we only have work to do if they actual have reviews
+        if !self.link_to_reviews.is_empty() {
             for record_id in &self.link_to_reviews {
                 // Get the record.
                 // TODO: get these from the database.
                 let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> = airtable
                     .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
-                    .await?;
+                    .await
+                    .unwrap();
 
                 // Set the values if they are not empty.
                 // TODO: actually do the majority if they differ in value but for now YOLO.
@@ -787,113 +832,76 @@ impl Applicant {
                     self.values_in_tension = record.fields.values_in_tension.clone();
                 }
 
-                // Delete the record from the reviews Airtable.
-                airtable
-                    .delete_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
-                    .await?;
+                // Add the scoring count.
+                self.scoring_evaluations_count += 1;
 
-                // Delete the record if it exists in the Database.
-                let r = ApplicantReview::get_by_id(db, record.fields.id).await?;
-                // Delete it.
-                r.delete(db).await?;
+                // Up the scores for the relevant evaluations.
+                if record.fields.evaluation.to_lowercase().starts_with("emphatic yes:") {
+                    self.scoring_enthusiastic_yes_count += 1;
+                }
+                if record.fields.evaluation.to_lowercase().starts_with("yes:") {
+                    self.scoring_yes_count += 1;
+                }
+                if record.fields.evaluation.to_lowercase().starts_with("pass:") {
+                    self.scoring_pass_count += 1;
+                }
+                if record.fields.evaluation.to_lowercase().starts_with("no:") {
+                    self.scoring_no_count += 1;
+                }
+                if record.fields.evaluation.to_lowercase().starts_with("n/a:") {
+                    self.scoring_not_applicable_count += 1;
+                }
+
+                // Add in the rationale.
+                if record
+                    .fields
+                    .evaluation
+                    .to_lowercase()
+                    .starts_with("insufficient experience")
+                {
+                    self.scoring_insufficient_experience_count += 1;
+                }
+                if record
+                    .fields
+                    .evaluation
+                    .to_lowercase()
+                    .starts_with("inapplicable experience")
+                {
+                    self.scoring_inapplicable_experience_count += 1;
+                }
+                if record
+                    .fields
+                    .evaluation
+                    .to_lowercase()
+                    .starts_with("job function not yet needed")
+                {
+                    self.scoring_job_function_yet_needed_count += 1;
+                }
+                if record
+                    .fields
+                    .evaluation
+                    .to_lowercase()
+                    .starts_with("underwhelming materials")
+                {
+                    self.scoring_underwhelming_materials_count += 1;
+                }
+
+                // If we don't already have the review in reviewers completed,
+                // add them.
+                if !self.scorers_completed.contains(&record.fields.reviewer) {
+                    self.scorers_completed.push(record.fields.reviewer.to_string());
+                }
+
+                // If this reviewer was assigned, remove them since they completed scoring.
+                if self.scorers.contains(&record.fields.reviewer) {
+                    let index = self.scorers.iter().position(|r| *r == record.fields.reviewer).unwrap();
+                    self.scorers.remove(index);
+                }
             }
 
-            // We already zero-ed out the values for the scores, now we return early.
-            // We don't want people who join to know their scores.
+            // Update the record.
             self.update(db).await?;
-            return Ok(());
         }
-
-        // Let's iterate over the reviews.
-        for record_id in &self.link_to_reviews {
-            // Get the record.
-            // TODO: get these from the database.
-            let record: airtable_api::Record<crate::applicant_reviews::ApplicantReview> = airtable
-                .get_record(crate::airtable::AIRTABLE_REVIEWS_TABLE, record_id)
-                .await
-                .unwrap();
-
-            // Set the values if they are not empty.
-            // TODO: actually do the majority if they differ in value but for now YOLO.
-            if !record.fields.value_reflected.is_empty() {
-                self.value_reflected = record.fields.value_reflected.to_string();
-            }
-            if !record.fields.value_violated.is_empty() {
-                self.value_violated = record.fields.value_violated.to_string();
-            }
-            if !record.fields.values_in_tension.is_empty() {
-                self.values_in_tension = record.fields.values_in_tension.clone();
-            }
-
-            // Add the scoring count.
-            self.scoring_evaluations_count += 1;
-
-            // Up the scores for the relevant evaluations.
-            if record.fields.evaluation.to_lowercase().starts_with("emphatic yes:") {
-                self.scoring_enthusiastic_yes_count += 1;
-            }
-            if record.fields.evaluation.to_lowercase().starts_with("yes:") {
-                self.scoring_yes_count += 1;
-            }
-            if record.fields.evaluation.to_lowercase().starts_with("pass:") {
-                self.scoring_pass_count += 1;
-            }
-            if record.fields.evaluation.to_lowercase().starts_with("no:") {
-                self.scoring_no_count += 1;
-            }
-            if record.fields.evaluation.to_lowercase().starts_with("n/a:") {
-                self.scoring_not_applicable_count += 1;
-            }
-
-            // Add in the rationale.
-            if record
-                .fields
-                .evaluation
-                .to_lowercase()
-                .starts_with("insufficient experience")
-            {
-                self.scoring_insufficient_experience_count += 1;
-            }
-            if record
-                .fields
-                .evaluation
-                .to_lowercase()
-                .starts_with("inapplicable experience")
-            {
-                self.scoring_inapplicable_experience_count += 1;
-            }
-            if record
-                .fields
-                .evaluation
-                .to_lowercase()
-                .starts_with("job function not yet needed")
-            {
-                self.scoring_job_function_yet_needed_count += 1;
-            }
-            if record
-                .fields
-                .evaluation
-                .to_lowercase()
-                .starts_with("underwhelming materials")
-            {
-                self.scoring_underwhelming_materials_count += 1;
-            }
-
-            // If we don't already have the review in reviewers completed,
-            // add them.
-            if !self.scorers_completed.contains(&record.fields.reviewer) {
-                self.scorers_completed.push(record.fields.reviewer.to_string());
-            }
-
-            // If this reviewer was assigned, remove them since they completed scoring.
-            if self.scorers.contains(&record.fields.reviewer) {
-                let index = self.scorers.iter().position(|r| *r == record.fields.reviewer).unwrap();
-                self.scorers.remove(index);
-            }
-        }
-
-        // Update the record.
-        self.update(db).await?;
 
         Ok(())
     }
