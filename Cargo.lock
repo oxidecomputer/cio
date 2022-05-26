@@ -2013,9 +2013,9 @@ dependencies = [
 
 [[package]]
 name = "google-calendar"
-version = "0.1.6"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21fdc8bdc237bba3c483794253b1347b04c1cfe06982d64ace9e7257440afb38"
+checksum = "537bf2e9d81a60b6418250b7814f21105e485aff5cf78f4470a57d2e7c338811"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2037,6 +2037,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "tokio",
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
@@ -2046,6 +2047,8 @@ dependencies = [
 [[package]]
 name = "google-drive"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5df8c7d4b9c4a4f9ea39447813eea0a6280d18e63a0db1e39469bf8c77efba7"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2096,9 +2099,9 @@ dependencies = [
 
 [[package]]
 name = "google-groups-settings"
-version = "0.1.6"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f7d1fd6d55601f693a82b921388b2fdf4aeced3909d04ea9bac0d7d6e645975"
+checksum = "8c1e4821f672da542c6a54d564d7f73c1bf33b189663b2c7ae7008ec446ca101"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2120,6 +2123,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "tokio",
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
@@ -2128,9 +2132,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.2.6"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb5171260ab68c7d05ef8a0fc5786c2d5112a886b1f3545693951305344a6a5b"
+checksum = "8d8e95df6c8b50e4bb0e87833ff83de402e4ac8a5b56c794cdc92bb93b07dcb2"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2152,6 +2156,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "tokio",
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
