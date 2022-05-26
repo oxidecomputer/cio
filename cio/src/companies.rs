@@ -833,6 +833,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
