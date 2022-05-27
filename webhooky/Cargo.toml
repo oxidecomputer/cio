@@ -31,8 +31,8 @@ duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
 formdata = "^0.13.0"
 futures-util = "0.3"
-google-drive = "^0.2.10"
-#google-drive = { path = "../../third-party-api-clients/google/drive" }
+google-drive = "^0.3.0"
+# google-drive = { path = "../../third-party-api-clients/google/drive" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 http = "0.2.6"
@@ -57,7 +57,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.9"
 serde_urlencoded = "^0.7.0"
-sheets = "^0.2.4"
+sheets = "^0.3.0"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
 shipbob = "^0.1.4"
 shippo = "^0.1.12"

@@ -755,6 +755,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleAdmin::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -789,6 +790,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleCalendar::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -833,6 +835,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -914,6 +917,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleSheets::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -949,6 +953,8 @@ impl Company {
             // Initialize the client.
             let mut g =
                 GoogleGroupsSettings::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
+
             if t.is_expired() {
                 // Only refresh the token if it is expired.
                 let nt = g.refresh_access_token().await?;
