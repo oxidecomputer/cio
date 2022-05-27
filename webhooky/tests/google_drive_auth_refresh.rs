@@ -1,3 +1,4 @@
+#[ignore]
 #[tokio::test]
 async fn test_google_drive_reauth() {
     let db = cio_api::db::Database::new().await;
