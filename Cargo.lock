@@ -2047,8 +2047,6 @@ dependencies = [
 [[package]]
 name = "google-drive"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5df8c7d4b9c4a4f9ea39447813eea0a6280d18e63a0db1e39469bf8c77efba7"
 dependencies = [
  "anyhow",
  "async-recursion",
