@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-// #[ignore]
+#[ignore]
 #[tokio::test]
 async fn test_google_drive_reauth() {
     let db = cio_api::db::Database::new().await;
@@ -54,4 +54,27 @@ async fn test_google_drive_reauth() {
     assert!(!drive.is_expired().await.unwrap());
 
     assert!(Instant::now() < drive.expires_at().await.unwrap());
+}
+
+#[ignore]
+#[tokio::test]
+async fn test_google_drive_reauth_invalid_expires_in() {
+    let db = cio_api::db::Database::new().await;
+    let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
+        .await
+        .unwrap();
+    let mut drive = company.authenticate_google_drive(&db).await.unwrap();
+
+    // Refresh the access token, getting a new token and expiration time
+    drive.refresh_access_token().await.unwrap();
+
+    drive.set_expires_in(-2000).await;
+
+    let expires_at = drive.expires_at().await;
+
+    assert!(expires_at.is_some());
+
+    // If a negative expires in is set, then the expiration time should
+    // be at least as old as now
+    assert!(expires_at.unwrap() <= Instant::now());
 }
