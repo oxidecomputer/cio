@@ -54,10 +54,4 @@ async fn test_google_drive_reauth() {
     assert!(!drive.is_expired().await.unwrap());
 
     assert!(Instant::now() < drive.expires_at().await.unwrap());
-
-    panic!("print");
 }
-
-// https://drive.google.com/file/d/1tOTrmYOvxP3vepj00s2W0vCH36n1_h4s/view?usp=sharing
-
-// https://drive.google.com/file/d/1tOTrmYOvxP3vepj00s2W0vCH36n1_h4s/view?usp=sharing
