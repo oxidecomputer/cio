@@ -42,15 +42,15 @@ dropshot = { git = "https://github.com/oxidecomputer/dropshot", branch = "main" 
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
-google-calendar = "^0.2.0"
+google-calendar = "^0.2.1"
 #google-calendar = { path = "../../third-party-api-clients/google/calendar" }
-google-drive = "^0.3.0"
+google-drive = "^0.3.1"
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
-google-groups-settings = "^0.2.0"
+google-groups-settings = "^0.2.1"
 #google-groups-settings = { path = "../../third-party-api-clients/google/groups-settings" }
-gsuite-api = "^0.3.0"
+gsuite-api = "^0.3.1"
 #gsuite-api = { path = "../../third-party-api-clients/google/admin" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
@@ -90,7 +90,7 @@ sendgrid-api = "^0.2.0"
 sentry = { version = "^0.24.3", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sheets = "^0.3.0"
+sheets = "^0.3.1"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
 shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
