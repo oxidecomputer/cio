@@ -213,7 +213,7 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
                 if membership.role.to_string() == role.to_string() {
                     info!(
                         "user `{}` is already a member of the github org `{}` with role `{}`",
-                        user.github, company.github_org, role
+                        user.id, company.github_org, role
                     );
 
                     true
@@ -227,7 +227,7 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
                     // Otherwise bail.
                     bail!(
                         "checking if user `{}` is a member of the github org `{}` failed: {}",
-                        user.github,
+                        user.id,
                         company.github_org,
                         e
                     );
@@ -239,7 +239,8 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
 
         if !user_exists {
             // We need to add the user to the org or update their role, do it now.
-            self.orgs()
+            if let Err(err) = self
+                .orgs()
                 .set_membership_for_user(
                     &company.github_org,
                     &user.github,
@@ -247,11 +248,18 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
                         role: Some(role.clone()),
                     },
                 )
-                .await?;
+                .await
+            {
+                warn!(
+                    "Failed to add user / update role {} @ {} on {} : {}",
+                    user.id, role, company.github_org, err
+                );
+                return Err(err);
+            };
 
             info!(
                 "updated user `{}` as a member of the github org `{}` with role `{}`",
-                user.github, company.github_org, role
+                user.id, company.github_org, role
             );
         }
 

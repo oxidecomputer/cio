@@ -440,6 +440,52 @@ impl Airtable {
         Ok(())
     }
 
+    /// Returns basic information on the workspace. Does not include deleted collaborators
+    /// and only include outstanding invites.
+    /// FROM: https://airtable.com/api/enterprise#enterpriseWorkspaceGetInformation
+    pub async fn get_enterprise_workspace<const N: usize>(
+        &self,
+        workspace_id: &str,
+        includes: Option<[WorkspaceIncludes; N]>,
+    ) -> Result<Workspace> {
+        if self.enterprise_account_id.is_empty() {
+            // Return an error early.
+            bail!("An enterprise account id is required.");
+        }
+
+        // Build the request.
+        let request = self.request(
+            Method::GET,
+            format!("v0/meta/workspaces/{}?", workspace_id),
+            (),
+            includes.map(|includes| {
+                includes
+                    .map(|include| {
+                        (
+                            "include",
+                            match include {
+                                WorkspaceIncludes::Collaborators => "collaborators".to_string(),
+                                WorkspaceIncludes::InviteLinks => "inviteLinks".to_string(),
+                            },
+                        )
+                    })
+                    .to_vec()
+            }),
+        )?;
+
+        let resp = self.client.execute(request).await?;
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                bail!("status code: {}, body: {}", s, resp.text().await?);
+            }
+        };
+
+        let r: Workspace = resp.json().await?;
+
+        Ok(r)
+    }
+
     /// Delete internal user by email.
     /// This is for an enterprise admin to do only.
     /// The user must be an internal user, meaning they have an email with the company domain.
@@ -811,6 +857,105 @@ pub struct Collaboration {
         rename = "workspaceId"
     )]
     pub workspace_id: String,
+}
+
+/// Optional include flags that can be passed to [get_enterprise_workspace] to control
+/// fields are returned
+pub enum WorkspaceIncludes {
+    Collaborators,
+    InviteLinks,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Workspace {
+    pub id: String,
+    pub name: String,
+    pub created_time: Option<DateTime<Utc>>,
+    #[serde(rename = "baseIds")]
+    pub base_ids: Vec<String>,
+    #[serde(rename = "individualCollaborators")]
+    pub individual_collaborators: Option<WorkspaceCollaborators>,
+    #[serde(rename = "baseCollaborators")]
+    pub group_collaborators: Option<WorkspaceCollaborators>,
+    pub invite_links: Option<InviteLinks>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceCollaborators {
+    #[serde(rename = "workspaceCollaborators")]
+    pub workspace_collaborators: Vec<WorkspaceCollaborator>,
+    #[serde(rename = "baseCollaborators")]
+    pub base_collaborators: Vec<BaseCollaborator>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceCollaborator {
+    #[serde(rename = "userId")]
+    pub user_id: String,
+    pub email: String,
+    #[serde(rename = "permissionLevel")]
+    pub permission_level: String,
+    #[serde(rename = "createdTime")]
+    pub created_time: Option<DateTime<Utc>>,
+    #[serde(rename = "grantedByUserId")]
+    pub granted_by_user_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BaseCollaborator {
+    #[serde(rename = "baseId")]
+    pub base_id: String,
+    #[serde(rename = "userId")]
+    pub user_id: String,
+    pub email: String,
+    #[serde(rename = "permissionLevel")]
+    pub permission_level: String,
+    #[serde(rename = "createdTime")]
+    pub created_time: Option<DateTime<Utc>>,
+    #[serde(rename = "grantedByUserId")]
+    pub granted_by_user_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InviteLinks {
+    pub workspace_invite_links: Vec<WorkspaceInviteLink>,
+    pub base_invite_links: Vec<BaseInviteLink>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceInviteLink {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub _type: String,
+    #[serde(rename = "invitedEmail")]
+    pub invited_email: String,
+    #[serde(rename = "restrictedToEmailDomains")]
+    pub restricted_to_email_domains: Vec<String>,
+    #[serde(rename = "createdTime")]
+    pub created_time: Option<DateTime<Utc>>,
+    #[serde(rename = "permissionLevel")]
+    pub permission_level: String,
+    #[serde(rename = "referredByUserId")]
+    pub referred_by_user_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BaseInviteLink {
+    pub id: String,
+    #[serde(rename = "baseId")]
+    pub base_id: String,
+    #[serde(rename = "type")]
+    pub _type: String,
+    #[serde(rename = "invitedEmail")]
+    pub invited_email: String,
+    #[serde(rename = "restrictedToEmailDomains")]
+    pub restricted_to_email_domains: Vec<String>,
+    #[serde(rename = "createdTime")]
+    pub created_time: Option<DateTime<Utc>>,
+    #[serde(rename = "permissionLevel")]
+    pub permission_level: String,
+    #[serde(rename = "referredByUserId")]
+    pub referred_by_user_id: String,
 }
 
 struct AttachmentsVisitor;

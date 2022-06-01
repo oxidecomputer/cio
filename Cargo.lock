@@ -818,6 +818,7 @@ dependencies = [
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
  "sodiumoxide",
+ "stacker",
  "steno",
  "tailscale-api 0.1.5",
  "titlecase",
@@ -2013,9 +2014,9 @@ dependencies = [
 
 [[package]]
 name = "google-calendar"
-version = "0.1.4"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d75d6cc3571b435a4925323486d5fb9bf980aa64819add7f50f4fee5c49b4bc"
+checksum = "0c57ad403ccacd7101e307297c446dbfc54123a0cfd0be7e7e2e87cb20cc78e2"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2037,6 +2038,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "tokio",
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
@@ -2045,9 +2047,9 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.2.8"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c749c89b97f0fef7dd830850881a838aa4e4c8a4de797f49f34b03ddd346efe1"
+checksum = "50648eebc0293698930e7fbf646971e1997827c463ce9ff912b33f5903bc0343"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2069,6 +2071,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "tokio",
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
@@ -2097,9 +2100,9 @@ dependencies = [
 
 [[package]]
 name = "google-groups-settings"
-version = "0.1.4"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7730d69ffb9fe736ad6e59d347d0dc000bbd60032769f8006592bf75499fb558"
+checksum = "0f748c10ccc98c17279b502c0cc98d885ae9858aca9268a047ac39d64777f72d"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2121,6 +2124,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "tokio",
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
@@ -2129,9 +2133,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.2.4"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b71107437f56579257844bdabddfbc1fd676c39483556c9b74f4fde6cca6edab"
+checksum = "b02a0bf38da804e012b6934532593ffa733aff985554ae9680c241c88fc31f2e"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2153,6 +2157,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "tokio",
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
@@ -3910,6 +3915,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "psm"
+version = "0.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "871372391786ccec00d3c5d3d6608905b3d4db263639cfe075d3b60a736d115a"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "publicsuffix"
 version = "1.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5117,9 +5131,9 @@ dependencies = [
 
 [[package]]
 name = "sheets"
-version = "0.2.2"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fd8f016202d7cebe8e1284fb40a97cb8bcf5609541e4346d58f7191918c34a5"
+checksum = "962ede02bb96cd5169fa9eccccb3eddd662f18050d617f0589d1808428988205"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -5141,6 +5155,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
+ "tokio",
  "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid",
@@ -5414,6 +5429,19 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "stacker"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90939d5171a4420b3ff5fbc8954d641e7377335454c259dcb80786f3f21dc9b4"
+dependencies = [
+ "cc",
+ "cfg-if 1.0.0",
+ "libc",
+ "psm",
+ "winapi",
+]
 
 [[package]]
 name = "standback"
@@ -6056,9 +6084,9 @@ checksum = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
 
 [[package]]
 name = "tripactions"
-version = "0.2.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b781773df81c36ca486dd0299618a3e4e793df5b8ce409740e9f8f2385c40b3"
+checksum = "5d56c05a59116596f9319a25d17fd90633ef3c9de70c1461cb73d9121ce03d77"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -6568,6 +6596,7 @@ dependencies = [
  "slog-scope",
  "slog-stdlog",
  "slog-term",
+ "stacker",
  "steno",
  "tokio",
  "tracing",
@@ -6798,15 +6827,16 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "0.6.0"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6fa4aa90e99fb8d701bda16fb040d8ed2f9c7176fb44de750e880a74b580315"
+checksum = "bf225bcf73bb52cbb496e70475c7bd7a3f769df699c0020f6c7bd9a96dcf0b8d"
 dependencies = [
  "aes",
  "byteorder",
  "bzip2",
  "constant_time_eq",
  "crc32fast",
+ "crossbeam-utils",
  "flate2",
  "hmac",
  "pbkdf2",

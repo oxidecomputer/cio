@@ -332,7 +332,11 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<(
 
                 // Format the email template.
                 // Initialize handlebars.
-                let handlebars = Handlebars::new();
+                let mut handlebars = Handlebars::new();
+
+                // We are sending plain text emails so we need to disable HTML escaping
+                handlebars.register_escape_fn(handlebars::no_escape);
+
                 // Render the email template.
                 let template = &handlebars.render_template(EMAIL_TEMPLATE, &email_data)?;
 

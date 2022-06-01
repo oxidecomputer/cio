@@ -31,8 +31,6 @@ use sheets::Client as GoogleSheets;
 use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
 use tripactions::Client as TripActions;
 use zoho_api::Zoho;
 use zoom_api::Client as Zoom;
@@ -791,6 +789,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleAdmin::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -825,6 +824,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleCalendar::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -869,6 +869,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleDrive::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -912,24 +913,13 @@ impl Company {
             bail!("no service account");
         }
 
-        // Save the service account to a tmp file.
-        let mut file_path = env::temp_dir();
-        file_path.push(&format!("{}-google_service_account.json", self.name));
-
-        // Create the file and write to it.
-        let mut file = fs::File::create(file_path.clone()).await?;
-        file.write_all(self.google_service_account.as_bytes()).await?;
-
-        // Set the GSuite credential file to the temp path.
-        let google_service_account_file = file_path.to_str().unwrap().to_string();
-
         let subject = if as_user.is_empty() {
             self.gsuite_subject.to_string()
         } else {
             as_user.to_string()
         };
 
-        let client_secret = yup_oauth2::read_service_account_key(&google_service_account_file).await?;
+        let client_secret = yup_oauth2::parse_service_account_key(&self.google_service_account)?;
         let auth = yup_oauth2::ServiceAccountAuthenticator::builder(client_secret)
             .subject(subject)
             .build()
@@ -961,6 +951,7 @@ impl Company {
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "google".to_string()).await {
             // Initialize the client.
             let mut g = GoogleSheets::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -996,6 +987,8 @@ impl Company {
             // Initialize the client.
             let mut g =
                 GoogleGroupsSettings::new_from_env(t.access_token.to_string(), t.refresh_token.to_string()).await;
+            g.set_auto_access_token_refresh(true);
+
             if t.is_expired() {
                 // Only refresh the token if it is expired.
                 let nt = g.refresh_access_token().await?;

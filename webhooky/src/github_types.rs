@@ -150,7 +150,7 @@ pub struct GitHubWebhook {
     ///
     /// The check run itself.
     #[serde(default)]
-    pub check_run: GitHubCheckRun,
+    pub check_run: Option<GitHubCheckRun>,
 }
 
 impl GitHubWebhook {
@@ -428,7 +428,7 @@ pub struct GitHubIssue {
     //#[serde(default, skip_serializing_if = "Vec::is_empty")]
     //pub labels: Vec<GitHubLabel>,
     #[serde(default)]
-    pub assignee: GitHubUser,
+    pub assignee: Option<GitHubUser>,
     #[serde(default)]
     pub locked: bool,
     #[serde(default)]

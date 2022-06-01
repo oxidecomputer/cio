@@ -268,15 +268,16 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
 
     tokio::spawn(enclose! { (api_context) async move {
         for sig in signals.forever() {
-            info!("received signal: {:?}", sig);
-            info!("triggering cleanup...");
+            let pid = std::process::id();
+            info!("received signal: {:?} pid: {}", sig, pid);
+            info!("triggering cleanup... {}", pid);
 
             // Run the cleanup job.
             if let Err(e) = do_cleanup(&api_context).await {
                 sentry::integrations::anyhow::capture_anyhow(&e);
             }
             // Exit the process.
-            info!("all clean, exiting!");
+            info!("all clean, exiting! pid: {}", pid);
             std::process::exit(0);
         }
     }});

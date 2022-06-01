@@ -25,17 +25,27 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
 
     let event = body_param.into_inner();
 
-    // Parse the `X-GitHub-Event` header.
+    // Parse the `X-GitHub-Event` header. Ensure the request lock is dropped once the
+    // event_type has been extracted.
     // TODO: make this nicer when supported as a first class method in dropshot.
-    let req = rqctx.request.lock().await;
-    let req_headers = req.headers();
-    let event_type_string = req_headers
-        .get("X-GitHub-Event")
-        .unwrap_or(&http::header::HeaderValue::from_str("")?)
-        .to_str()
-        .unwrap()
-        .to_string();
-    let event_type = EventType::from_str(&event_type_string).unwrap();
+    let event_type_string = {
+        let req = rqctx.request.lock().await;
+        let req_headers = req.headers();
+        req_headers
+            .get("X-GitHub-Event")
+            .unwrap_or(&http::header::HeaderValue::from_str("")?)
+            .to_str()
+            .unwrap()
+            .to_string()
+    };
+
+    let event_type =
+        EventType::from_str(&event_type_string).expect("Event type from GitHub does not match a known event type");
+
+    info!(
+        "Processing incoming {} webhook event on {}",
+        event_type, event.repository.name
+    );
 
     // Filter by event type any actions we can rule out for all repos.
     match event_type {
@@ -356,6 +366,8 @@ pub async fn handle_rfd_push(
     event: GitHubWebhook,
     company: &Company,
 ) -> Result<String> {
+    info!("[rfd.push] Remaining stack size: {:?}", stacker::remaining_stack());
+
     let db = &api_context.db;
 
     // Initialize the Google Drive client.
@@ -510,6 +522,8 @@ pub async fn handle_rfd_push(
                 NewRFD::new_from_github(company, github, owner, &repo, branch, &file, commit.timestamp.unwrap())
                     .await?;
 
+            info!("Generated RFD for branch {} from GitHub", branch);
+
             // If the branch does not equal exactly the number string,
             // exit early since we have an update to an existing RFD not an explicit
             // RFD itself. This usually happens when the branch name can parse as a
@@ -543,6 +557,12 @@ pub async fn handle_rfd_push(
             // DO THIS BEFORE UPDATING THE RFD.
             // We will need this later to check if the RFD's state changed.
             let old_rfd = RFD::get_from_db(db, new_rfd.number).await;
+
+            info!(
+                "Checking for existing RFD in database {:?}",
+                old_rfd.as_ref().map(|o| o.id)
+            );
+
             let mut old_rfd_state = "".to_string();
             let mut old_rfd_pdf = "".to_string();
             if let Some(o) = old_rfd {
@@ -561,6 +581,12 @@ pub async fn handle_rfd_push(
 
             // Update the RFD in the database.
             let mut rfd = new_rfd.upsert(db).await?;
+
+            info!(
+                "Upserted new rfd into database. Id: {} AirtableId: {}",
+                rfd.id, rfd.airtable_record_id
+            );
+
             // Update all the fields for the RFD.
             rfd.expand(github, company).await?;
             rfd.update(db).await?;
