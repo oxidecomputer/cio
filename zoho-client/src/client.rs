@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use reqwest::{header, Client, Method, Request, StatusCode, Url};
+use reqwest::{header, Client, Method, Request, StatusCode, Url, Response};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 const TOKEN_ENDPOINT: &str = "https://accounts.zoho.com";
@@ -241,6 +241,20 @@ impl ZohoClient {
             ))
         }
     }
+
+    async fn execute(&self, request: Request) -> Result<Response> {
+        let response = self.client.execute(request).await?;
+
+        match response.status() {
+            status => {
+                if status != StatusCode::OK {
+                    tracing::debug!(?status, "Zoho request failed");
+                }
+
+                Ok(response)
+            },
+        }
+    }
 }
 
 /// Refreshed access tokens last for one hour
@@ -334,7 +348,7 @@ where
             .client
             .request(CRM_ENDPOINT, &Method::GET, path, &(), Some(params.into()));
 
-        let response = self.client.client.execute(request).await?;
+        let response = self.client.execute(request).await?;
 
         match response.status() {
             StatusCode::OK => Ok(response.json().await?),
@@ -363,7 +377,7 @@ where
             .client
             .request(CRM_ENDPOINT, &Method::GET, path, &(), Some(params.into()));
 
-        let response = self.client.client.execute(request).await?;
+        let response = self.client.execute(request).await?;
 
         match response.status() {
             StatusCode::OK => {
@@ -387,7 +401,7 @@ where
             None,
         );
 
-        let response = self.client.client.execute(request).await?;
+        let response = self.client.execute(request).await?;
         let data: ModuleUpdateResponse = response.json().await?;
 
         Ok(data)
@@ -404,7 +418,7 @@ where
             None,
         );
 
-        let response = self.client.client.execute(request).await?;
+        let response = self.client.execute(request).await?;
         let data: ModuleUpdateResponse = response.json().await?;
 
         Ok(data)
@@ -430,21 +444,21 @@ where
             None,
         );
 
-        let response = self.client.client.execute(request).await?;
+        let response = self.client.execute(request).await?;
         let data: ModuleUpdateResponse = response.json().await?;
 
         Ok(data)
     }
 
     /// https://www.zoho.com/crm/developer/docs/api/v2/delete-records.html
-    pub async fn delete(&self, ids: Vec<String>, wf_trigger: bool) -> Result<ModuleDeleteResponse> {
+    pub async fn delete<S>(&self, ids: Vec<S>, wf_trigger: bool) -> Result<ModuleDeleteResponse> where S: AsRef<str> {
         let path = M::api_path();
-        let params = vec![("ids", ids.join(",")), ("wf_trigger", wf_trigger.to_string())];
+        let params = vec![("ids", ids.iter().map(|s| s.as_ref()).collect::<Vec<&str>>().join(",")), ("wf_trigger", wf_trigger.to_string())];
         let request = self
             .client
             .request(CRM_ENDPOINT, &Method::DELETE, path, &(), Some(params));
 
-        let response = self.client.client.execute(request).await?;
+        let response = self.client.execute(request).await?;
         let data: ModuleDeleteResponse = response.json().await?;
 
         Ok(data)
@@ -608,21 +622,22 @@ pub struct ModuleUpdateResponse {
 pub struct ModuleUpdateResponseEntry {
     pub code: String,
     pub details: ModuleUpdateResponseEntryDetails,
+    pub message: String,
+    pub status: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ModuleUpdateResponseEntryDetails {
     #[serde(alias = "Modified_Time")]
-    pub modifiend_time: String,
+    pub modifiend_time: Option<String>,
     #[serde(alias = "Modified_Time")]
-    pub modified_by: ModuleUpdateResponseEntryModified,
+    pub modified_by: Option<ModuleUpdateResponseEntryModified>,
     #[serde(alias = "Created_Time")]
-    pub created_time: String,
+    pub created_time: Option<String>,
     pub id: String,
     #[serde(alias = "Created_By")]
-    pub created_by: ModuleUpdateResponseEntryModified,
-    pub message: String,
-    pub status: String,
+    pub created_by: Option<ModuleUpdateResponseEntryModified>,
+    pub api_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

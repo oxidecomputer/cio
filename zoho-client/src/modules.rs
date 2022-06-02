@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 use crate::client::RecordsModule;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Leads {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -89,6 +89,8 @@ pub struct Leads {
     pub country: Option<String>,
     #[serde(alias = "Description")]
     pub description: Option<String>,
+    #[serde(alias = "Submitted_Interest")]
+    pub submitted_interest: Option<String>,
     #[serde(alias = "Record_Image")]
     pub record_image: Option<String>,
 }
@@ -100,7 +102,7 @@ impl RecordsModule for Leads {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct LeadsInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -182,12 +184,14 @@ pub struct LeadsInput {
     pub country: Option<String>,
     #[serde(rename = "Description", skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(rename = "Submitted_Interest", skip_serializing_if = "Option::is_none")]
+    pub submitted_interest: Option<String>,
     #[serde(rename = "Record_Image", skip_serializing_if = "Option::is_none")]
     pub record_image: Option<String>,
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Contacts {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -295,7 +299,7 @@ impl RecordsModule for Contacts {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct ContactsInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -396,7 +400,7 @@ pub struct ContactsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Accounts {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -522,7 +526,7 @@ impl RecordsModule for Accounts {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct AccountsInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -641,7 +645,7 @@ pub struct AccountsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Deals {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -707,7 +711,7 @@ impl RecordsModule for Deals {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct DealsInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -766,7 +770,7 @@ pub struct DealsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Activities {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -868,7 +872,7 @@ impl RecordsModule for Activities {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct ActivitiesInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -963,7 +967,7 @@ pub struct ActivitiesInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Tasks {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -1009,7 +1013,7 @@ impl RecordsModule for Tasks {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct TasksInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -1048,7 +1052,7 @@ pub struct TasksInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Events {
     pub id: String,
     #[serde(alias = "Event_Title")]
@@ -1118,7 +1122,7 @@ impl RecordsModule for Events {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct EventsInput {
     #[serde(rename = "Event_Title")]
     pub event_title: String,
@@ -1181,7 +1185,7 @@ pub struct EventsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Products {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -1249,7 +1253,7 @@ impl RecordsModule for Products {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct ProductsInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -1310,7 +1314,7 @@ pub struct ProductsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Quotes {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -1392,7 +1396,7 @@ impl RecordsModule for Quotes {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct QuotesInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -1467,7 +1471,7 @@ pub struct QuotesInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct SalesOrders {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -1559,7 +1563,7 @@ impl RecordsModule for SalesOrders {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct SalesOrdersInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -1644,7 +1648,7 @@ pub struct SalesOrdersInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PurchaseOrders {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -1732,7 +1736,7 @@ impl RecordsModule for PurchaseOrders {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct PurchaseOrdersInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -1813,7 +1817,7 @@ pub struct PurchaseOrdersInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Calls {
     pub id: String,
     #[serde(alias = "Who_Id")]
@@ -1869,7 +1873,7 @@ impl RecordsModule for Calls {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct CallsInput {
     #[serde(rename = "Who_Id", skip_serializing_if = "Option::is_none")]
     pub who_id: Option<serde_json::Value>,
@@ -1918,7 +1922,7 @@ pub struct CallsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Invoices {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -2004,7 +2008,7 @@ impl RecordsModule for Invoices {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct InvoicesInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -2083,7 +2087,7 @@ pub struct InvoicesInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Campaigns {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -2135,7 +2139,7 @@ impl RecordsModule for Campaigns {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct CampaignsInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -2180,7 +2184,7 @@ pub struct CampaignsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Vendors {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -2230,7 +2234,7 @@ impl RecordsModule for Vendors {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct VendorsInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -2273,7 +2277,7 @@ pub struct VendorsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct PriceBooks {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -2307,7 +2311,7 @@ impl RecordsModule for PriceBooks {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct PriceBooksInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -2334,7 +2338,7 @@ pub struct PriceBooksInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Cases {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -2398,7 +2402,7 @@ impl RecordsModule for Cases {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct CasesInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -2455,7 +2459,7 @@ pub struct CasesInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Solutions {
     pub id: String,
     #[serde(alias = "Solution_Number")]
@@ -2499,7 +2503,7 @@ impl RecordsModule for Solutions {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct SolutionsInput {
     #[serde(rename = "Solution_Number", skip_serializing_if = "Option::is_none")]
     pub solution_number: Option<String>,
@@ -2536,7 +2540,7 @@ pub struct SolutionsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Visits {
     pub id: String,
 }
@@ -2548,12 +2552,12 @@ impl RecordsModule for Visits {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct VisitsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Notes {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -2581,7 +2585,7 @@ impl RecordsModule for Notes {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct NotesInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -2602,7 +2606,7 @@ pub struct NotesInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Approvals {
     pub id: String,
 }
@@ -2614,12 +2618,12 @@ impl RecordsModule for Approvals {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct ApprovalsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Attachments {
     pub id: String,
     #[serde(alias = "Owner")]
@@ -2647,7 +2651,7 @@ impl RecordsModule for Attachments {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct AttachmentsInput {
     #[serde(rename = "Owner", skip_serializing_if = "Option::is_none")]
     pub owner: Option<serde_json::Value>,
@@ -2668,7 +2672,7 @@ pub struct AttachmentsInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ActionsPerformed {
     pub id: String,
 }
@@ -2680,12 +2684,12 @@ impl RecordsModule for ActionsPerformed {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct ActionsPerformedInput {
 
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AccountStatusHistory {
     pub id: String,
     #[serde(alias = "Account_Status")]
@@ -2713,7 +2717,7 @@ impl RecordsModule for AccountStatusHistory {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct AccountStatusHistoryInput {
     #[serde(rename = "Account_Status")]
     pub account_status: String,

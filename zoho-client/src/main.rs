@@ -92,7 +92,7 @@ use crate::client::RecordsModule;
 
                 out.push_str(&format!(
                     r#"
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct {} {{
 {}
 }}
@@ -104,7 +104,7 @@ impl RecordsModule for {} {{
     }}
 }}
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct {}Input {{
 {}
 }}

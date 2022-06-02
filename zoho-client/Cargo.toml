@@ -9,7 +9,7 @@ repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/zoho-api"
 
 [[bin]]
-name = "zoho-generator"
+name = "generator"
 path = "src/main.rs"
 
 [dependencies]
@@ -18,3 +18,7 @@ reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full", "time"] }
+tracing = "0.1.29"
+
+[dev-dependencies]
+tracing-subscriber = "0.3.3"
