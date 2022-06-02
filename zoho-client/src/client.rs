@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use reqwest::{header, Client, Method, Request, StatusCode, Url, Response};
+use reqwest::{header, Client, Method, Request, Response, StatusCode, Url};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 const TOKEN_ENDPOINT: &str = "https://accounts.zoho.com";
@@ -252,7 +252,7 @@ impl ZohoClient {
                 }
 
                 Ok(response)
-            },
+            }
         }
     }
 }
@@ -294,7 +294,7 @@ pub struct GetFieldsResponse {
 pub struct Field {
     pub api_name: String,
     pub json_type: String,
-    pub system_mandatory: bool
+    pub system_mandatory: bool,
 }
 
 /// Attempts to parse the Zoho provided type for an object in to a "stringy" Rust type
@@ -380,12 +380,8 @@ where
         let response = self.client.execute(request).await?;
 
         match response.status() {
-            StatusCode::OK => {
-                Ok(response.json().await?)
-            },
-            StatusCode::NO_CONTENT => Ok(GetModuleRecordResponse {
-                data: vec![],
-            }),
+            StatusCode::OK => Ok(response.json().await?),
+            StatusCode::NO_CONTENT => Ok(GetModuleRecordResponse { data: vec![] }),
             s => Err(anyhow!("status code: {}, body: {}", s, response.text().await?)),
         }
     }
@@ -451,9 +447,15 @@ where
     }
 
     /// https://www.zoho.com/crm/developer/docs/api/v2/delete-records.html
-    pub async fn delete<S>(&self, ids: Vec<S>, wf_trigger: bool) -> Result<ModuleDeleteResponse> where S: AsRef<str> {
+    pub async fn delete<S>(&self, ids: Vec<S>, wf_trigger: bool) -> Result<ModuleDeleteResponse>
+    where
+        S: AsRef<str>,
+    {
         let path = M::api_path();
-        let params = vec![("ids", ids.iter().map(|s| s.as_ref()).collect::<Vec<&str>>().join(",")), ("wf_trigger", wf_trigger.to_string())];
+        let params = vec![
+            ("ids", ids.iter().map(|s| s.as_ref()).collect::<Vec<&str>>().join(",")),
+            ("wf_trigger", wf_trigger.to_string()),
+        ];
         let request = self
             .client
             .request(CRM_ENDPOINT, &Method::DELETE, path, &(), Some(params));

@@ -17,7 +17,7 @@ async fn test_create_lead() {
         .expect("Failed to refresh access token");
 
     let leads = client.module_client::<modules::Leads>();
-    
+
     let mut input = modules::LeadsInput::default();
 
     input.first_name = Some("Test".to_string());
@@ -39,7 +39,10 @@ async fn test_create_lead() {
 
     let record_id = &insert.data[0].details.id;
 
-    let get = leads.get(record_id, client::GetModuleRecordsParams::default()).await.unwrap();
+    let get = leads
+        .get(record_id, client::GetModuleRecordsParams::default())
+        .await
+        .unwrap();
 
     assert_eq!(1, get.data.len());
     assert_eq!(record_id, &get.data[0].id);

@@ -7,7 +7,6 @@ pub mod modules;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-
     // This map contains known necessary field overrides where the field type returned
     // from the settings API does not match up against the type of actual values
     let mut overrides: HashMap<(&str, &str), &str> = HashMap::new();
@@ -73,17 +72,15 @@ use crate::client::RecordsModule;
                         struct_fields.push_str(&format!("    pub {}: Option<{}>,\n", &field_name, field_type));
 
                         if field.system_mandatory {
-                            input_struct_fields.push_str(&format!(
-                                "    #[serde(rename = \"{}\")]\n",
-                                field.api_name
-                            ));
+                            input_struct_fields.push_str(&format!("    #[serde(rename = \"{}\")]\n", field.api_name));
                             input_struct_fields.push_str(&format!("    pub {}: {},\n", &field_name, field_type));
                         } else {
                             input_struct_fields.push_str(&format!(
                                 "    #[serde(rename = \"{}\", skip_serializing_if = \"Option::is_none\")]\n",
                                 field.api_name
                             ));
-                            input_struct_fields.push_str(&format!("    pub {}: Option<{}>,\n", &field_name, field_type));
+                            input_struct_fields
+                                .push_str(&format!("    pub {}: Option<{}>,\n", &field_name, field_type));
                         }
 
                         seen_fields.insert(field_name, field_type.to_string());

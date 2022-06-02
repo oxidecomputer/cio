@@ -3,17 +3,11 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::{Duration, Utc};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use regex::Regex;
-use zoho_api::{modules::{Leads, LeadsInput}};
+use zoho_api::modules::{Leads, LeadsInput};
 
-use crate::{
-    companies::Company,
-    db::Database,
-    rack_line::RackLineSubscriber,
-    schema::rack_line_subscribers,
-};
+use crate::{companies::Company, db::Database, rack_line::RackLineSubscriber, schema::rack_line_subscribers};
 
 pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
-
     // Subscribers are only sent to Zoho once. After that their data is owned by Zoho. If they are
     // removed from the system, we do not re-create
     let not_yet_processed = rack_line_subscribers::dsl::zoho_lead_id.eq("".to_string());
@@ -24,15 +18,13 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
     // Only consider subscribers that signed up over 5 minutes ago. While Zoho should prevent the
     // submission of duplicate records with the same external AirTable record id, we do not need
     // to do work for subscribers that may already be being processed by a hook handler
-    let five_min_ago = Utc::now().checked_sub_signed(Duration::minutes(5)).expect("Failed to rack line time window. Is the clock broken?");
+    let five_min_ago = Utc::now()
+        .checked_sub_signed(Duration::minutes(5))
+        .expect("Failed to rack line time window. Is the clock broken?");
     let outside_webhook_time_window = rack_line_subscribers::dsl::date_added.le(five_min_ago);
 
     let mut subscribers_to_process = rack_line_subscribers::dsl::rack_line_subscribers
-        .filter(
-            not_yet_processed
-                .and(not_excluded)
-                .and(outside_webhook_time_window)
-        )
+        .filter(not_yet_processed.and(not_excluded).and(outside_webhook_time_window))
         .limit(25)
         .load_async::<RackLineSubscriber>(db.pool())
         .await?;
@@ -40,7 +32,11 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
     push_new_rack_line_subscribers_to_zoho(subscribers_to_process.iter_mut().collect(), db, company).await
 }
 
-pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<&mut RackLineSubscriber>, db: &Database, company: &Company) -> Result<()> {
+pub async fn push_new_rack_line_subscribers_to_zoho(
+    subscribers_to_process: Vec<&mut RackLineSubscriber>,
+    db: &Database,
+    company: &Company,
+) -> Result<()> {
     if !subscribers_to_process.is_empty() {
         let initial_req_count = subscribers_to_process.len();
 
@@ -78,11 +74,18 @@ pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<
         // If we have filtered out all of the passed subscribers (due to having insufficient data
         // to store), we can return early. Emit a warning though as this could block other work
         if subscribers.is_empty() {
-            log::warn!("{} subscribers were requested for processing, but none of them for sufficient for lead creation", initial_req_count);
+            log::warn!(
+                "{} subscribers were requested for processing, but none of them for sufficient for lead creation",
+                initial_req_count
+            );
 
-            return Ok(())
+            return Ok(());
         } else {
-            log::info!("{} subscribers were requested for processing, of them {} are being submitted as leads", initial_req_count, leads.len());
+            log::info!(
+                "{} subscribers were requested for processing, of them {} are being submitted as leads",
+                initial_req_count,
+                leads.len()
+            );
         }
 
         let client = zoho.module_client::<Leads>();
@@ -91,23 +94,36 @@ pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<
 
         // Each lead entry may succeed for fail independently, and we only write back to the database
         // the records that where successfully persisted
-        let updates: Vec<&mut RackLineSubscriber> = subscribers.into_iter().zip(results.data.into_iter()).filter_map(|(mut subscriber, lead_result)| {
-            match lead_result.status.as_str() {
+        let updates: Vec<&mut RackLineSubscriber> = subscribers
+            .into_iter()
+            .zip(results.data.into_iter())
+            .filter_map(|(mut subscriber, lead_result)| match lead_result.status.as_str() {
                 "success" => {
                     subscriber.zoho_lead_id = lead_result.details.id;
                     Some(subscriber)
                 }
                 status => {
-                    log::warn!("Failed to write lead to Zoho. id: {} airtable_record_id: {} message: {} status: {}", subscriber.id, subscriber.airtable_record_id, lead_result.message, status);
+                    log::warn!(
+                        "Failed to write lead to Zoho. id: {} airtable_record_id: {} message: {} status: {}",
+                        subscriber.id,
+                        subscriber.airtable_record_id,
+                        lead_result.message,
+                        status
+                    );
                     None
                 }
-            }
-        }).collect();
+            })
+            .collect();
 
         // TODO: This should be a bulk update of the db, which then async updates AirTable.
         for update in updates {
             if let Err(err) = update.update(&db).await {
-                log::error!("Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} err: {:?}", update.id, update.airtable_record_id, err);
+                log::error!(
+                    "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} err: {:?}",
+                    update.id,
+                    update.airtable_record_id,
+                    err
+                );
             }
         }
     }
