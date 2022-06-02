@@ -42,6 +42,8 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
 
 pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<&mut RackLineSubscriber>, db: &Database, company: &Company) -> Result<()> {
     if !subscribers_to_process.is_empty() {
+        let initial_req_count = subscribers_to_process.len();
+
         let zoho = company.authenticate_zoho(db).await?;
 
         let no_employees_cleaner = Regex::new(r"[A-Za-z ~.,+<>]").expect("Failed to build employee number regex");
@@ -76,11 +78,11 @@ pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<
         // If we have filtered out all of the passed subscribers (due to having insufficient data
         // to store), we can return early. Emit a warning though as this could block other work
         if subscribers.is_empty() {
-            log::warn!("{} subscribers were requested for processing, but none of them for sufficient for lead creation", subscribers_to_process.len());
+            log::warn!("{} subscribers were requested for processing, but none of them for sufficient for lead creation", initial_req_count);
 
             return Ok(())
         } else {
-            log::info!("{} subscribers were requested for processing, of them {} are being submitted as leads", subscribers_to_process.len(), leads.len());
+            log::info!("{} subscribers were requested for processing, of them {} are being submitted as leads", initial_req_count, leads.len());
         }
 
         let client = zoho.module_client::<Leads>();
