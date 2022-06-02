@@ -749,6 +749,8 @@ table! {
         tags -> Array<Text>,
         link_to_people -> Array<Text>,
         cio_company_id -> Int4,
+        zoho_lead_id -> Varchar,
+        zoho_lead_exclude -> Bool,
         airtable_record_id -> Varchar,
     }
 }

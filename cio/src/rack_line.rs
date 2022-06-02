@@ -50,6 +50,10 @@ pub struct NewRackLineSubscriber {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub zoho_lead_id: String,
+    #[serde(default)]
+    pub zoho_lead_exclude: bool,
 }
 
 impl NewRackLineSubscriber {
@@ -166,6 +170,8 @@ impl Default for NewRackLineSubscriber {
             tags: Default::default(),
             link_to_people: Default::default(),
             cio_company_id: Default::default(),
+            zoho_lead_id: Default::default(),
+            zoho_lead_exclude: false,
         }
     }
 }
@@ -287,6 +293,8 @@ impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
             tags,
             link_to_people: Default::default(),
             cio_company_id: Default::default(),
+            zoho_lead_id: Default::default(),
+            zoho_lead_exclude: false,
         }
     }
 }
