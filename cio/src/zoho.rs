@@ -27,7 +27,7 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
     let five_min_ago = Utc::now().checked_sub_signed(Duration::minutes(5)).expect("Failed to rack line time window. Is the clock broken?");
     let outside_webhook_time_window = rack_line_subscribers::dsl::date_added.le(five_min_ago);
 
-    let subscribers_to_process = rack_line_subscribers::dsl::rack_line_subscribers
+    let mut subscribers_to_process = rack_line_subscribers::dsl::rack_line_subscribers
         .filter(
             not_yet_processed
                 .and(not_excluded)
@@ -36,17 +36,17 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
         .load_async::<RackLineSubscriber>(db.pool())
         .await?;
 
-    push_new_rack_line_subscribers_to_zoho(subscribers_to_process, db, company).await
+    push_new_rack_line_subscribers_to_zoho(subscribers_to_process.iter_mut().collect(), db, company).await
 }
 
-pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<RackLineSubscriber>, db: &Database, company: &Company) -> Result<()> {
+pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<&mut RackLineSubscriber>, db: &Database, company: &Company) -> Result<()> {
     if !subscribers_to_process.is_empty() {
         let zoho = company.authenticate_zoho(db).await?;
 
         let no_employees_cleaner = Regex::new(r"[A-Za-z ~.,+<>]").expect("Failed to build employee number regex");
 
         // Batch up all of the records that need to be created to be able to submit at once
-        let (subscribers, leads): (Vec<RackLineSubscriber>, Vec<LeadsInput>) = subscribers_to_process.into_iter().filter_map(|subscriber| {
+        let (subscribers, leads): (Vec<&mut RackLineSubscriber>, Vec<LeadsInput>) = subscribers_to_process.into_iter().filter_map(|subscriber| {
             let mut input = LeadsInput::default();
 
             let mut name_parts = subscriber.name.rsplitn(2, ' ').peekable();
@@ -78,7 +78,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<
 
         // Each lead entry may succeed for fail independently, and we only write back to the database
         // the records that where successfully persisted
-        let updates: Vec<RackLineSubscriber> = subscribers.into_iter().zip(results.data.into_iter()).filter_map(|(mut subscriber, lead_result)| {
+        let updates: Vec<&mut RackLineSubscriber> = subscribers.into_iter().zip(results.data.into_iter()).filter_map(|(mut subscriber, lead_result)| {
             match lead_result.status.as_str() {
                 "success" => {
                     subscriber.zoho_lead_id = lead_result.details.id;
