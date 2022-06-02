@@ -55,6 +55,7 @@ pub enum SubCommand {
     SyncShorturls(SyncShorturls),
     SyncSwagInventory(SyncSwagInventory),
     SyncTravel(SyncTravel),
+    SyncZoho(SyncZoho),
 }
 
 /// A subcommand for running the server.
@@ -156,3 +157,7 @@ pub struct SyncSwagInventory {}
 /// A subcommand for running the background job of syncing travel data.
 #[derive(Parser, Debug, Clone)]
 pub struct SyncTravel {}
+
+/// A subcommand for running the background job of syncing Zoho leads.
+#[derive(Parser, Debug, Clone)]
+pub struct SyncZoho {}
