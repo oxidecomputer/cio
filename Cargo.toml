@@ -16,7 +16,7 @@ members = [
 	"slack",
 	"tailscale",
 	"webhooky",
-	"zoho",
+	"zoho-client",
 ]
 
 [profile.release]

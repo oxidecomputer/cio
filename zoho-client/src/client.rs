@@ -280,6 +280,7 @@ pub struct GetFieldsResponse {
 pub struct Field {
     pub api_name: String,
     pub json_type: String,
+    pub system_mandatory: bool
 }
 
 /// Attempts to parse the Zoho provided type for an object in to a "stringy" Rust type
@@ -296,6 +297,7 @@ impl Field {
             "jsonarray" => "Vec<serde_json::Value>",
             _ => {
                 // Unknown types are mapped to serde_json::Value so they can at be deserialized
+                println!("Mapping unknown {} to Value", self.json_type);
                 "serde_json::Value"
             }
         }
@@ -352,7 +354,7 @@ where
     }
 
     /// https://www.zoho.com/crm/developer/docs/api/v2/get-records.html
-    pub async fn get<S>(&self, id: S, params: GetModuleRecordsParams) -> Result<GetModuleRecordsResponse<M>>
+    pub async fn get<S>(&self, id: S, params: GetModuleRecordsParams) -> Result<GetModuleRecordResponse<M>>
     where
         S: AsRef<str>,
     {
@@ -364,17 +366,11 @@ where
         let response = self.client.client.execute(request).await?;
 
         match response.status() {
-            StatusCode::OK => Ok(response.json().await?),
-            StatusCode::NO_CONTENT => Ok(GetModuleRecordsResponse {
+            StatusCode::OK => {
+                Ok(response.json().await?)
+            },
+            StatusCode::NO_CONTENT => Ok(GetModuleRecordResponse {
                 data: vec![],
-                info: ModuleRecordsPagination {
-                    call: None,
-                    per_page: 0,
-                    count: 0,
-                    page: 1,
-                    email: None,
-                    more_records: false,
-                },
             }),
             s => Err(anyhow!("status code: {}, body: {}", s, response.text().await?)),
         }
@@ -573,6 +569,11 @@ impl From<GetModuleRecordsParams> for Vec<(&str, String)> {
 
         params
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetModuleRecordResponse<M> {
+    pub data: Vec<M>,
 }
 
 #[derive(Debug, Deserialize)]

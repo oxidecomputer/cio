@@ -7,6 +7,12 @@ pub mod modules;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+
+    // This map contains known necessary field overrides where the field type returned
+    // from the settings API does not match up against the type of actual values
+    let mut overrides: HashMap<(&str, &str), &str> = HashMap::new();
+    overrides.insert(("Accounts", "layout"), "serde_json::Value");
+
     let client = crate::client::Zoho::new_from_env();
     client
         .refresh_access_token()
@@ -36,6 +42,9 @@ use crate::client::RecordsModule;
                 let mut struct_fields = String::new();
                 let mut input_struct_fields = String::new();
 
+                // All modules start with an id field
+                struct_fields.push_str(&format!("    pub {}: {},\n", "id", "String"));
+
                 let mut seen_fields = HashMap::new();
 
                 for field in fields.fields {
@@ -46,7 +55,11 @@ use crate::client::RecordsModule;
                         field_name = "_type".to_string();
                     }
 
-                    let field_type = field.json_type();
+                    let field_type = if let Some(o) = overrides.get(&(struct_name.as_str(), field_name.as_str())) {
+                        o
+                    } else {
+                        field.json_type()
+                    };
 
                     if let Some(previous_field_type) = seen_fields.get(&field_name) {
                         if previous_field_type != field_type {
@@ -57,13 +70,21 @@ use crate::client::RecordsModule;
                         }
                     } else {
                         struct_fields.push_str(&format!("    #[serde(alias = \"{}\")]\n", field.api_name));
-                        struct_fields.push_str(&format!("    pub {}: {},\n", &field_name, field_type));
+                        struct_fields.push_str(&format!("    pub {}: Option<{}>,\n", &field_name, field_type));
 
-                        input_struct_fields.push_str(&format!(
-                            "    #[serde(rename = \"{}\", skip_serializing_if = \"Option::is_none\")]\n",
-                            field.api_name
-                        ));
-                        input_struct_fields.push_str(&format!("    pub {}: Option<{}>,\n", &field_name, field_type));
+                        if field.system_mandatory {
+                            input_struct_fields.push_str(&format!(
+                                "    #[serde(rename = \"{}\")]\n",
+                                field.api_name
+                            ));
+                            input_struct_fields.push_str(&format!("    pub {}: {},\n", &field_name, field_type));
+                        } else {
+                            input_struct_fields.push_str(&format!(
+                                "    #[serde(rename = \"{}\", skip_serializing_if = \"Option::is_none\")]\n",
+                                field.api_name
+                            ));
+                            input_struct_fields.push_str(&format!("    pub {}: Option<{}>,\n", &field_name, field_type));
+                        }
 
                         seen_fields.insert(field_name, field_type.to_string());
                     }
