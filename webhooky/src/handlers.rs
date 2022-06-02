@@ -1603,7 +1603,7 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
 
         info!("subscriber {} posted to Slack", subscriber.id);
 
-        cio_api::zoho::push_new_rack_line_subscribers_to_zoho(vec![&mut subscriber], &db, &company).await?;
+        cio_api::zoho::push_new_rack_line_subscribers_to_zoho(vec![&mut subscriber], db, &company).await?;
 
         info!("subscriber {} created successfully", subscriber.id);
     } else {

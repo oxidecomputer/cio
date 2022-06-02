@@ -117,7 +117,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
 
         // TODO: This should be a bulk update of the db, which then async updates AirTable.
         for update in updates {
-            if let Err(err) = update.update(&db).await {
+            if let Err(err) = update.update(db).await {
                 log::error!(
                     "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} err: {:?}",
                     update.id,

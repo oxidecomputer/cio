@@ -245,15 +245,11 @@ impl ZohoClient {
     async fn execute(&self, request: Request) -> Result<Response> {
         let response = self.client.execute(request).await?;
 
-        match response.status() {
-            status => {
-                if status != StatusCode::OK {
-                    tracing::debug!(?status, "Zoho request failed");
-                }
-
-                Ok(response)
-            }
+        if response.status() != StatusCode::OK {
+            tracing::debug!(status = ?response.status(), "Zoho request failed");
         }
+
+        Ok(response)
     }
 }
 
