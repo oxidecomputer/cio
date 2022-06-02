@@ -33,6 +33,7 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
                 .and(not_excluded)
                 .and(outside_webhook_time_window)
         )
+        .limit(25)
         .load_async::<RackLineSubscriber>(db.pool())
         .await?;
 
@@ -71,6 +72,16 @@ pub async fn push_new_rack_line_subscribers_to_zoho(subscribers_to_process: Vec<
                 None
             }
         }).unzip();
+
+        // If we have filtered out all of the passed subscribers (due to having insufficient data
+        // to store), we can return early. Emit a warning though as this could block other work
+        if subscribers.is_empty() {
+            log::warn!("{} subscribers were requested for processing, but none of them for sufficient for lead creation", subscribers_to_process.len());
+
+            return Ok(())
+        } else {
+            log::info!("{} subscribers were requested for processing, of them {} are being submitted as leads", subscribers_to_process.len(), leads.len());
+        }
 
         let client = zoho.module_client::<Leads>();
 
