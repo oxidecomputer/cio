@@ -12,6 +12,7 @@ pub mod application_form;
 pub mod asset_inventory;
 pub mod auth_logins;
 pub mod certs;
+pub mod cloudflare;
 pub mod colors;
 pub mod companies;
 pub mod configs;
