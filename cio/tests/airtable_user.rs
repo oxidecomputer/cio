@@ -1,3 +1,4 @@
+#[ignore]
 #[tokio::test]
 async fn test_get_enterprise_user() {
     let db = cio_api::db::Database::new().await;
