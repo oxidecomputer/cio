@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 acme-lib = "^0.8.0"
-airtable-api = "^0.1.33"
+airtable-api = "^0.1.36"
 #airtable-api = { path = "../airtable" }
 anyhow = "1"
 async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
