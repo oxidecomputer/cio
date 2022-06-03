@@ -87,10 +87,7 @@ impl CloudFlareClient {
             expires_at: Instant::now().checked_add(Duration::from_secs(60 * 60)).unwrap(),
         };
 
-        self.zone_cache.write().unwrap().insert(
-            root_domain,
-            entry.clone(),
-        );
+        self.zone_cache.write().unwrap().insert(root_domain, entry.clone());
 
         // Our zone identifier should be the first record's ID.
         Ok(entry)
