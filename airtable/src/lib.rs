@@ -381,6 +381,7 @@ impl Airtable {
         )?;
 
         let resp = self.client.execute(request).await?;
+
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -802,7 +803,12 @@ pub struct EnterpriseUser {
         deserialize_with = "deserialize_null_string::deserialize"
     )]
     pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none", rename = "lastActivityTime")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "lastActivityTime",
+        deserialize_with = "deserialize_missing_timezone::deserialize"
+    )]
     pub last_activity_time: Option<DateTime<Utc>>,
     #[serde(
         default,
@@ -1316,5 +1322,39 @@ pub mod deserialize_null_string {
         let s = String::deserialize(deserializer).unwrap_or_default();
 
         Ok(s)
+    }
+}
+
+// The Airtable API started returning EnterpriseUser results with timestamps that do
+// not specify a timezone. We assume these to be Utc
+pub mod deserialize_missing_timezone {
+    use chrono::{DateTime, Utc};
+    use serde::{self, de::Error, Deserialize, Deserializer};
+
+    // The signature of a deserialize_with function must follow the pattern:
+    //
+    //    fn deserialize<'de, D>(D) -> Result<T, D::Error>
+    //    where
+    //        D: Deserializer<'de>
+    //
+    // although it may also be generic over the output types T.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Airtable can have issues with timezones, so try to deserialize to a
+        // string instead for parsing
+        let mut s = String::deserialize(deserializer).unwrap_or_default();
+
+        DateTime::parse_from_rfc3339(s.as_str())
+            .or_else(|_| {
+                // The initial parse failed, so instead we can try to fix the incoming
+                // string representation and parse again. If this constructs yet another
+                // invalid timestamp, then deserialization will fail
+                s += "Z";
+                DateTime::parse_from_rfc3339(s.as_str())
+            })
+            .map(|fixed_offset| Some(fixed_offset.with_timezone(&Utc)))
+            .map_err(D::Error::custom)
     }
 }
