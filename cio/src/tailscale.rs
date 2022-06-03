@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use anyhow::Result;
 use chrono::{Duration, Utc};
 use cloudflare::endpoints::dns;
-use cloudflare::framework::async_api::ApiClient;
 use log::info;
 
 use crate::companies::Company;
@@ -88,10 +87,10 @@ pub async fn cleanup_old_tailscale_cloudflare_dns(company: &Company) -> Result<(
 
     // List the DNS records.
     let domain = "oxide.computer";
-    let zone_identifier = &crate::dns_providers::get_zone_identifier(&cloudflare, domain).await?;
+    let zone_identifier = cloudflare.get_zone_identifier(domain).await?.id;
     let dns_records = cloudflare
         .request(&dns::ListDnsRecords {
-            zone_identifier,
+            zone_identifier: &zone_identifier,
             params: dns::ListDnsRecordsParams {
                 // From: https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
                 per_page: Some(5000),
@@ -117,7 +116,7 @@ pub async fn cleanup_old_tailscale_cloudflare_dns(company: &Company) -> Result<(
             info!("deleting dns record {}", name);
             cloudflare
                 .request(&dns::DeleteDnsRecord {
-                    zone_identifier,
+                    zone_identifier: &zone_identifier,
                     identifier: &dns_record.id,
                 })
                 .await?;

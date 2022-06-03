@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use checkr::Checkr;
 use chrono::Utc;
 use cloudflare::framework::{
-    async_api::Client as CloudflareClient, auth::Credentials as CloudflareCredentials, Environment, HttpApiClientConfig,
+    async_api::Client as Cloudflare, auth::Credentials as CloudflareCredentials, Environment, HttpApiClientConfig,
 };
 use docusign::DocuSign;
 use google_calendar::Client as GoogleCalendar;
@@ -37,6 +37,7 @@ use zoom_api::Client as Zoom;
 use crate::{
     airtable::{AIRTABLE_COMPANIES_TABLE, AIRTABLE_GRID_VIEW},
     api_tokens::{APIToken, NewAPIToken},
+    cloudflare::CloudFlareClient,
     configs::{Building, Buildings},
     core::UpdateAirtableRecord,
     db::Database,
@@ -281,7 +282,7 @@ impl Company {
     }
 
     /// Authenticate with Cloudflare.
-    pub fn authenticate_cloudflare(&self) -> Result<CloudflareClient> {
+    pub fn authenticate_cloudflare(&self) -> Result<CloudFlareClient> {
         if self.cloudflare_api_key.is_empty() || self.gsuite_subject.is_empty() {
             // Return early.
             bail!("no token");
@@ -292,8 +293,8 @@ impl Company {
             email: self.gsuite_subject.to_string(),
             key: self.cloudflare_api_key.to_string(),
         };
-        let api_client = CloudflareClient::new(cf_creds, HttpApiClientConfig::default(), Environment::Production)?;
-        Ok(api_client)
+        let api_client = Cloudflare::new(cf_creds, HttpApiClientConfig::default(), Environment::Production)?;
+        Ok(api_client.into())
     }
 
     /// Authenticate with Checkr.
