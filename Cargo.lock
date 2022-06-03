@@ -73,6 +73,8 @@ dependencies = [
 [[package]]
 name = "airtable-api"
 version = "0.1.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03324d21985cc009826845b648d1668c6b36bfc72d27e2054e307c87bcb9add6"
 dependencies = [
  "anyhow",
  "chrono",
@@ -87,9 +89,7 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.35"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03324d21985cc009826845b648d1668c6b36bfc72d27e2054e307c87bcb9add6"
+version = "0.1.36"
 dependencies = [
  "anyhow",
  "chrono",
@@ -756,7 +756,7 @@ version = "0.2.0"
 dependencies = [
  "Inflector",
  "acme-lib",
- "airtable-api 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
+ "airtable-api 0.1.35",
  "anyhow",
  "async-bb8-diesel",
  "async-trait",
