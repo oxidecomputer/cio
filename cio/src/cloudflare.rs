@@ -17,9 +17,10 @@ use std::time::{Duration, Instant};
 
 use crate::dns_providers::DNSProviderOps;
 
+#[derive(Debug, Clone)]
 pub struct ZoneEntry {
-    id: String,
-    expires_at: Instant,
+    pub id: String,
+    pub expires_at: Instant,
 }
 
 pub struct CloudFlareClient {
@@ -49,7 +50,7 @@ impl CloudFlareClient {
         self.client.request_handle(endpoint).await
     }
 
-    pub async fn get_zone_identifier(&self, domain: &str) -> Result<String> {
+    pub async fn get_zone_identifier(&self, domain: &str) -> Result<ZoneEntry> {
         // We need the root of the domain not a subdomain.
         let domain_parts: Vec<&str> = domain.split('.').collect();
         let root_domain = if domain_parts.len() > 2 {
@@ -65,7 +66,7 @@ impl CloudFlareClient {
 
         if let Some(cached) = self.zone_cache.read().unwrap().get(&root_domain) {
             if cached.expires_at > Instant::now() {
-                return Ok(cached.id.clone());
+                return Ok(cached.clone());
             }
         }
 
@@ -81,16 +82,18 @@ impl CloudFlareClient {
             .await?
             .result;
 
+        let entry = ZoneEntry {
+            id: zones[0].id.to_string(),
+            expires_at: Instant::now().checked_add(Duration::from_secs(60 * 60)).unwrap(),
+        };
+
         self.zone_cache.write().unwrap().insert(
             root_domain,
-            ZoneEntry {
-                id: zones[0].id.to_string(),
-                expires_at: Instant::now().checked_add(Duration::from_secs(60 * 60)).unwrap(),
-            },
+            entry.clone(),
         );
 
         // Our zone identifier should be the first record's ID.
-        Ok(zones[0].id.to_string())
+        Ok(entry)
     }
 }
 
@@ -98,7 +101,7 @@ impl CloudFlareClient {
 impl DNSProviderOps for CloudFlareClient {
     async fn ensure_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
         let domain = &domain.to_lowercase();
-        let zone_identifier = self.get_zone_identifier(domain).await?;
+        let zone_identifier = self.get_zone_identifier(domain).await?.id;
 
         // Check if we already have a record and we need to update it.
         let dns_records = self
@@ -203,7 +206,7 @@ impl DNSProviderOps for CloudFlareClient {
 
     async fn delete_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
         let domain = &domain.to_lowercase();
-        let zone_identifier = self.get_zone_identifier(domain).await?;
+        let zone_identifier = self.get_zone_identifier(domain).await?.id;
 
         // Check if we already have a record and we need to update it.
         let dns_records = self
