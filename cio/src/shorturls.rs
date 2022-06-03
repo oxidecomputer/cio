@@ -19,6 +19,7 @@ pub async fn generate_shorturls_for_repos(
     company: &Company,
     repo: &str,
 ) -> Result<()> {
+    let cf = company.authenticate_cloudflare()?;
     let owner = &company.github_org;
     let subdomain = "git";
     // Initialize the array of links.
@@ -47,7 +48,7 @@ pub async fn generate_shorturls_for_repos(
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
 
-    create_dns_records_for_links(company, links).await?;
+    create_dns_records_for_links(&cf, company, links).await?;
 
     Ok(())
 }
@@ -59,6 +60,7 @@ pub async fn generate_shorturls_for_rfds(
     company: &Company,
     repo: &str,
 ) -> Result<()> {
+    let cf = company.authenticate_cloudflare()?;
     let owner = &company.github_org;
     let subdomain = "rfd";
     // Initialize the array of links.
@@ -98,7 +100,7 @@ pub async fn generate_shorturls_for_rfds(
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
 
-    create_dns_records_for_links(company, links).await?;
+    create_dns_records_for_links(&cf, company, links).await?;
 
     Ok(())
 }
@@ -110,6 +112,7 @@ pub async fn generate_shorturls_for_configs_links(
     company: &Company,
     repo: &str,
 ) -> Result<()> {
+    let cf = company.authenticate_cloudflare()?;
     let owner = &company.github_org;
     let subdomain = "corp";
     // Initialize the array of links.
@@ -152,13 +155,14 @@ pub async fn generate_shorturls_for_configs_links(
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
 
-    create_dns_records_for_links(company, links).await?;
+    create_dns_records_for_links(&cf, company, links).await?;
 
     Ok(())
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
 pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()> {
+    let cf = company.authenticate_cloudflare()?;
     let subdomain = "internal";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -222,7 +226,7 @@ pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()>
         }
     }
 
-    create_dns_records_for_links(company, links).await?;
+    create_dns_records_for_links(&cf, company, links).await?;
 
     Ok(())
 }
@@ -269,8 +273,10 @@ pub struct ShortUrl {
     pub discussion: String,
 }
 
-async fn create_dns_records_for_links(company: &Company, shorturls: Vec<ShortUrl>) -> Result<()> {
-    let cf = company.authenticate_cloudflare()?;
+async fn create_dns_records_for_links<C>(dns_client: &C, company: &Company, shorturls: Vec<ShortUrl>) -> Result<()>
+where
+    C: DNSProviderOps,
+{
     for s in shorturls {
         // Make sure the name does not start with a dot ".".
         let mut name = if s.name.starts_with('.') {
@@ -280,7 +286,7 @@ async fn create_dns_records_for_links(company: &Company, shorturls: Vec<ShortUrl
         };
 
         name = format!("{}.{}.{}", name, s.subdomain, company.domain);
-        if cf
+        if dns_client
             .ensure_record(
                 &name,
                 dns::DnsContent::A {
@@ -291,7 +297,7 @@ async fn create_dns_records_for_links(company: &Company, shorturls: Vec<ShortUrl
             .is_err()
         {
             // Try it again, it might just have been a time out error.
-            if let Err(e) = cf
+            if let Err(e) = dns_client
                 .ensure_record(
                     &name,
                     dns::DnsContent::A {
