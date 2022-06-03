@@ -80,6 +80,8 @@ COPY macros ../macros
 
 COPY diesel-sentry ../diesel-sentry
 
+COPY zoho-client ../zoho-client
+
 RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
 
 RUN cargo build --bin webhooky
