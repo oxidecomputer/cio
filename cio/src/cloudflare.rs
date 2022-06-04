@@ -168,7 +168,7 @@ impl CloudFlareClient {
         let guard = self.zones.read().unwrap();
         let zone = guard.get(zone_identifier).unwrap();
 
-        f(zone)
+        Ok(f(zone))
     }
 }
 

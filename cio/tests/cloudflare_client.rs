@@ -64,3 +64,27 @@ async fn test_populates_zone_cache() {
 
     assert_eq!(1, records_found);
 }
+
+#[tokio::test]
+async fn test_auto_populates_zone_cache() {
+    let db = cio_api::db::Database::new().await;
+    let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
+        .await
+        .expect("Failed to find company");
+    let cf = company.authenticate_cloudflare().unwrap();
+
+    let zone_req = cf.get_zone_identifier("oxide.computer").await.unwrap();
+
+    assert_eq!(0, cf.cache_size(&zone_req.id));
+
+    let records_found = cf
+        .with_zone(&zone_req.id, |zone| {
+            zone.get_records_for_domain("rfd.shared.oxide.computer").len()
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(1, records_found);
+
+    assert!(cf.cache_size(&zone_req.id) > 0);
+}
