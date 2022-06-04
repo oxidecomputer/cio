@@ -13,13 +13,14 @@ use crate::{
 };
 
 /// Generate the files for the GitHub repository short URLs.
-pub async fn generate_shorturls_for_repos(
+pub async fn generate_shorturls_for_repos<C>(
     db: &Database,
     github: &octorust::Client,
     company: &Company,
+    dns: &C,
     repo: &str,
-) -> Result<()> {
-    let cf = company.authenticate_cloudflare()?;
+) -> Result<()> where
+C: DNSProviderOps, {
     let owner = &company.github_org;
     let subdomain = "git";
     // Initialize the array of links.
@@ -48,19 +49,20 @@ pub async fn generate_shorturls_for_repos(
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
 
-    create_dns_records_for_links(&cf, company, links).await?;
+    create_dns_records_for_links(dns, company, links).await?;
 
     Ok(())
 }
 
 /// Generate the files for the RFD short URLs.
-pub async fn generate_shorturls_for_rfds(
+pub async fn generate_shorturls_for_rfds<C>(
     db: &Database,
     github: &octorust::Client,
     company: &Company,
+    dns: &C,
     repo: &str,
-) -> Result<()> {
-    let cf = company.authenticate_cloudflare()?;
+) -> Result<()>where
+C: DNSProviderOps, {
     let owner = &company.github_org;
     let subdomain = "rfd";
     // Initialize the array of links.
@@ -100,19 +102,20 @@ pub async fn generate_shorturls_for_rfds(
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
 
-    create_dns_records_for_links(&cf, company, links).await?;
+    create_dns_records_for_links(dns, company, links).await?;
 
     Ok(())
 }
 
 /// Generate the files for the configs links.
-pub async fn generate_shorturls_for_configs_links(
+pub async fn generate_shorturls_for_configs_links<C>(
     db: &Database,
     github: &octorust::Client,
     company: &Company,
+    dns: &C,
     repo: &str,
-) -> Result<()> {
-    let cf = company.authenticate_cloudflare()?;
+) -> Result<()>where
+C: DNSProviderOps, {
     let owner = &company.github_org;
     let subdomain = "corp";
     // Initialize the array of links.
@@ -155,14 +158,14 @@ pub async fn generate_shorturls_for_configs_links(
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
 
-    create_dns_records_for_links(&cf, company, links).await?;
+    create_dns_records_for_links(dns, company, links).await?;
 
     Ok(())
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
-pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()> {
-    let cf = company.authenticate_cloudflare()?;
+pub async fn generate_dns_for_tailscale_devices<C>(company: &Company, dns: &C) -> Result<()>where
+C: DNSProviderOps, {
     let subdomain = "internal";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();
@@ -226,7 +229,7 @@ pub async fn generate_dns_for_tailscale_devices(company: &Company) -> Result<()>
         }
     }
 
-    create_dns_records_for_links(&cf, company, links).await?;
+    create_dns_records_for_links(dns, company, links).await?;
 
     Ok(())
 }
@@ -240,13 +243,15 @@ pub async fn refresh_shorturls() -> Result<()> {
     // Iterate over the companies and update.
     for company in companies {
         let github = company.authenticate_github()?;
-        generate_shorturls_for_repos(&db, &github, &company, "configs").await?;
-        generate_shorturls_for_rfds(&db, &github, &company, "configs").await?;
-        generate_shorturls_for_configs_links(&db, &github, &company, "configs").await?;
+        let cloudflare = company.authenticate_cloudflare()?;
+
+        generate_shorturls_for_repos(&db, &github, &company, &cloudflare, "configs").await?;
+        generate_shorturls_for_rfds(&db, &github, &company, &cloudflare, "configs").await?;
+        generate_shorturls_for_configs_links(&db, &github, &company, &cloudflare, "configs").await?;
 
         // Only do this if we can auth with Tailscale.
         if !company.tailscale_api_key.is_empty() {
-            generate_dns_for_tailscale_devices(&company).await?;
+            generate_dns_for_tailscale_devices(&company, &cloudflare).await?;
         }
     }
 
