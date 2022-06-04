@@ -19,8 +19,10 @@ pub async fn generate_shorturls_for_repos<C>(
     company: &Company,
     dns: &C,
     repo: &str,
-) -> Result<()> where
-C: DNSProviderOps, {
+) -> Result<()>
+where
+    C: DNSProviderOps,
+{
     let owner = &company.github_org;
     let subdomain = "git";
     // Initialize the array of links.
@@ -61,8 +63,10 @@ pub async fn generate_shorturls_for_rfds<C>(
     company: &Company,
     dns: &C,
     repo: &str,
-) -> Result<()>where
-C: DNSProviderOps, {
+) -> Result<()>
+where
+    C: DNSProviderOps,
+{
     let owner = &company.github_org;
     let subdomain = "rfd";
     // Initialize the array of links.
@@ -114,8 +118,10 @@ pub async fn generate_shorturls_for_configs_links<C>(
     company: &Company,
     dns: &C,
     repo: &str,
-) -> Result<()>where
-C: DNSProviderOps, {
+) -> Result<()>
+where
+    C: DNSProviderOps,
+{
     let owner = &company.github_org;
     let subdomain = "corp";
     // Initialize the array of links.
@@ -164,8 +170,10 @@ C: DNSProviderOps, {
 }
 
 /// Generate the cloudflare terraform files for the tailscale devices.
-pub async fn generate_dns_for_tailscale_devices<C>(company: &Company, dns: &C) -> Result<()>where
-C: DNSProviderOps, {
+pub async fn generate_dns_for_tailscale_devices<C>(company: &Company, dns: &C) -> Result<()>
+where
+    C: DNSProviderOps,
+{
     let subdomain = "internal";
     // Initialize the array of links.
     let mut links: Vec<ShortUrl> = Default::default();

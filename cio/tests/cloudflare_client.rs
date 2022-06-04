@@ -48,16 +48,18 @@ async fn test_populates_zone_cache() {
     let cf = company.authenticate_cloudflare().unwrap();
 
     let zone_req = cf.get_zone_identifier("oxide.computer").await.unwrap();
-    
+
     assert_eq!(0, cf.cache_size(&zone_req.id));
 
     cf.populate_zone_cache(&zone_req.id).await.unwrap();
 
     assert!(cf.cache_size(&zone_req.id) > 0);
 
-    let records_found = cf.with_zone(&zone_req.id, |zone| {
-        zone.get_records_for_domain("rfd.shared.oxide.computer").len()
-    }).await;
+    let records_found = cf
+        .with_zone(&zone_req.id, |zone| {
+            zone.get_records_for_domain("rfd.shared.oxide.computer").len()
+        })
+        .await;
 
     assert_eq!(1, records_found);
 }

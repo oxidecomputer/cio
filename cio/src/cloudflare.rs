@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use cloudflare::{
-    endpoints::{dns, zone, dns::DnsRecord},
+    endpoints::{dns, dns::DnsRecord, zone},
     framework::{
         async_api::{ApiClient, Client},
         endpoint::Endpoint,
@@ -96,8 +96,8 @@ impl CloudFlareClient {
     }
 
     async fn get_dns_records_in_zone(&self, zone_identifier: &str, page: u32) -> ApiResponse<Vec<DnsRecord>> {
-        self.client.request_handle(
-            &dns::ListDnsRecords {
+        self.client
+            .request_handle(&dns::ListDnsRecords {
                 zone_identifier,
                 params: dns::ListDnsRecordsParams {
                     // From: https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
@@ -111,7 +111,10 @@ impl CloudFlareClient {
 
     pub async fn populate_zone_cache(&self, zone_identifier: &str) -> Result<()> {
         if self.zones.read().unwrap().get(zone_identifier).is_none() {
-            self.zones.write().unwrap().insert(zone_identifier.to_string(), Zone::new(zone_identifier));
+            self.zones
+                .write()
+                .unwrap()
+                .insert(zone_identifier.to_string(), Zone::new(zone_identifier));
         }
 
         // Because we initialize the zone entry above (if it did not already exist), we can be
@@ -124,13 +127,9 @@ impl CloudFlareClient {
                 let mut response = self.get_dns_records_in_zone(zone_identifier, page).await?;
                 records.append(&mut response.result);
 
-                let total_pages = response.result_info
-                    .and_then(|info| {
-                        info.get("total_pages")
-                            .and_then(|total_pages| {
-                                total_pages.as_u64()
-                            })
-                    })
+                let total_pages = response
+                    .result_info
+                    .and_then(|info| info.get("total_pages").and_then(|total_pages| total_pages.as_u64()))
                     .unwrap_or(0);
 
                 if (page as u64) < total_pages {
@@ -140,17 +139,30 @@ impl CloudFlareClient {
                 }
             }
 
-            self.zones.write().unwrap().get_mut(zone_identifier).unwrap().populate(records);
+            self.zones
+                .write()
+                .unwrap()
+                .get_mut(zone_identifier)
+                .unwrap()
+                .populate(records);
         }
 
         Ok(())
     }
 
     pub fn cache_size(&self, zone_identifier: &str) -> usize {
-        self.zones.read().unwrap().get(zone_identifier).map(|zone| zone.dns_cache.dns_records.len()).unwrap_or(0)
+        self.zones
+            .read()
+            .unwrap()
+            .get(zone_identifier)
+            .map(|zone| zone.dns_cache.dns_records.len())
+            .unwrap_or(0)
     }
 
-    pub async fn with_zone<F, R>(&self, zone_identifier: &str, f: F) -> R where F: FnOnce(&Zone) -> R {
+    pub async fn with_zone<F, R>(&self, zone_identifier: &str, f: F) -> R
+    where
+        F: FnOnce(&Zone) -> R,
+    {
         self.populate_zone_cache(zone_identifier).await;
 
         let guard = self.zones.read().unwrap();
@@ -167,8 +179,7 @@ pub struct DnsCache {
     expires_at: Instant,
 }
 
-impl DnsCache {
-}
+impl DnsCache {}
 
 #[derive(Debug)]
 pub struct Zone {
@@ -183,8 +194,8 @@ impl Zone {
             dns_cache: DnsCache {
                 domain_to_ids: HashMap::new(),
                 dns_records: HashMap::new(),
-                expires_at: Instant::now()
-            }
+                expires_at: Instant::now(),
+            },
         }
     }
 
@@ -201,14 +212,10 @@ impl Zone {
     }
 
     pub fn get_records_for_domain(&self, domain: &str) -> Vec<&DnsRecord> {
-        self.dns_cache.domain_to_ids
+        self.dns_cache
+            .domain_to_ids
             .get(domain)
-            .map(|ids| {
-                ids
-                    .iter()
-                    .filter_map(|id| self.get_record_for_id(id))
-                    .collect()
-            })
+            .map(|ids| ids.iter().filter_map(|id| self.get_record_for_id(id)).collect())
             .unwrap_or_else(|| vec![])
     }
 
@@ -217,7 +224,9 @@ impl Zone {
             if let Some(ids) = self.dns_cache.domain_to_ids.get_mut(&record.name) {
                 ids.push(record.id.clone());
             } else {
-                self.dns_cache.domain_to_ids.insert(record.name.clone(), vec![record.id.clone()]);
+                self.dns_cache
+                    .domain_to_ids
+                    .insert(record.name.clone(), vec![record.id.clone()]);
             }
 
             self.dns_cache.dns_records.insert(record.id.clone(), record);
@@ -237,7 +246,6 @@ impl DNSProviderOps for CloudFlareClient {
         self.populate_zone_cache(&zone_identifier).await?;
 
         let (found_records, found_id) = {
-
             // `populate_zone_cache` guarantees that the `zones` has at worst an empty zone set
             let guard = self.zones.read().unwrap();
             let zone = guard.get(&zone_identifier).unwrap();
@@ -261,7 +269,6 @@ impl DNSProviderOps for CloudFlareClient {
 
         // If do not have a DNS record create it.
         if !found_records {
-
             // Create the DNS record.
             let _dns_record = self
                 .request(&dns::CreateDnsRecord {
