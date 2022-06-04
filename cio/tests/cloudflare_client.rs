@@ -59,7 +59,8 @@ async fn test_populates_zone_cache() {
         .with_zone(&zone_req.id, |zone| {
             zone.get_records_for_domain("rfd.shared.oxide.computer").len()
         })
-        .await;
+        .await
+        .unwrap();
 
     assert_eq!(1, records_found);
 }

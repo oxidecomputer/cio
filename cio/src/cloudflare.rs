@@ -159,11 +159,11 @@ impl CloudFlareClient {
             .unwrap_or(0)
     }
 
-    pub async fn with_zone<F, R>(&self, zone_identifier: &str, f: F) -> R
+    pub async fn with_zone<F, R>(&self, zone_identifier: &str, f: F) -> Result<R>
     where
         F: FnOnce(&Zone) -> R,
     {
-        self.populate_zone_cache(zone_identifier).await;
+        self.populate_zone_cache(zone_identifier).await?;
 
         let guard = self.zones.read().unwrap();
         let zone = guard.get(zone_identifier).unwrap();
@@ -216,7 +216,7 @@ impl Zone {
             .domain_to_ids
             .get(domain)
             .map(|ids| ids.iter().filter_map(|id| self.get_record_for_id(id)).collect())
-            .unwrap_or_else(|| vec![])
+            .unwrap_or_else(Vec::new)
     }
 
     pub fn populate(&mut self, records: Vec<DnsRecord>) {
