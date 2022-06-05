@@ -1,5 +1,18 @@
+use std::sync::Once;
+
+static INIT: Once = Once::new();
+
+/// Setup function that is only run once, even if called multiple times.
+fn setup() {
+    INIT.call_once(|| {
+        pretty_env_logger::init();
+    });
+}
+
 #[tokio::test]
 async fn test_inner_client_call() {
+    setup();
+
     let db = cio_api::db::Database::new().await;
     let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
         .await
@@ -26,6 +39,8 @@ async fn test_inner_client_call() {
 
 #[tokio::test]
 async fn test_zone_identifier_lookup_uses_cache() {
+    setup();
+
     let db = cio_api::db::Database::new().await;
     let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
         .await
@@ -41,6 +56,8 @@ async fn test_zone_identifier_lookup_uses_cache() {
 
 #[tokio::test]
 async fn test_populates_zone_cache() {
+    setup();
+
     let db = cio_api::db::Database::new().await;
     let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
         .await
@@ -67,6 +84,8 @@ async fn test_populates_zone_cache() {
 
 #[tokio::test]
 async fn test_auto_populates_zone_cache() {
+    setup();
+
     let db = cio_api::db::Database::new().await;
     let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
         .await
@@ -87,4 +106,40 @@ async fn test_auto_populates_zone_cache() {
     assert_eq!(1, records_found);
 
     assert!(cf.cache_size(&zone_req.id) > 0);
+}
+
+#[tokio::test]
+async fn test_uses_new_cache_after_expiration() {
+    setup();
+
+    let db = cio_api::db::Database::new().await;
+    let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
+        .await
+        .expect("Failed to find company");
+    let mut cf = company.authenticate_cloudflare().unwrap();
+    cf.set_dns_cache_ttl(5);
+
+    let zone_req = cf.get_zone_identifier("oxide.computer").await.unwrap();
+
+    let records_found = cf
+        .with_zone(&zone_req.id, |zone| {
+            zone.get_records_for_domain("rfd.shared.oxide.computer").len()
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(1, records_found);
+
+    std::thread::sleep(std::time::Duration::from_secs(10));
+
+    let zone_req = cf.get_zone_identifier("oxide.computer").await.unwrap();
+
+    let records_found = cf
+        .with_zone(&zone_req.id, |zone| {
+            zone.get_records_for_domain("rfd.shared.oxide.computer").len()
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(1, records_found);
 }

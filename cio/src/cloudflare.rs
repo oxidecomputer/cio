@@ -25,6 +25,7 @@ pub struct ZoneEntry {
 
 pub struct CloudFlareClient {
     client: Client,
+    zones_ttl: u64,
     zones: Arc<RwLock<HashMap<String, Zone>>>,
     zone_cache: Arc<RwLock<HashMap<String, ZoneEntry>>>,
 }
@@ -33,6 +34,7 @@ impl From<Client> for CloudFlareClient {
     fn from(client: Client) -> Self {
         Self {
             client,
+            zones_ttl: 60,
             zones: Arc::new(RwLock::new(HashMap::new())),
             zone_cache: Arc::new(RwLock::new(HashMap::new())),
         }
@@ -69,8 +71,17 @@ impl CloudFlareClient {
 
         if let Some(cached) = self.zone_cache.read().unwrap().get(&root_domain) {
             if cached.expires_at > Instant::now() {
+                log::info!("Cache hit looking up zone identifier for {}", root_domain);
+
                 return Ok(cached.clone());
+            } else {
+                log::info!(
+                    "Cache hit looking up zone identifier for {} but it is expired",
+                    root_domain
+                );
             }
+        } else {
+            log::info!("Cache miss looking up zone identifier for {}", root_domain);
         }
 
         // Get the zone ID for the domain.
@@ -110,8 +121,14 @@ impl CloudFlareClient {
             .await
     }
 
+    pub fn set_dns_cache_ttl(&mut self, ttl: u64) {
+        self.zones_ttl = ttl;
+    }
+
     pub async fn populate_zone_cache(&self, zone_identifier: &str) -> Result<()> {
         if self.zones.read().unwrap().get(zone_identifier).is_none() {
+            log::info!("Initializing zone cache for {}", zone_identifier);
+
             self.zones
                 .write()
                 .unwrap()
@@ -121,6 +138,8 @@ impl CloudFlareClient {
         // Because we initialize the zone entry above (if it did not already exist), we can be
         // assured that it is safe to unwrap here
         if self.zones.read().unwrap().get(zone_identifier).unwrap().is_expired() {
+            log::info!("CloudFlare DNS cache has expired, refreshing");
+
             let mut records = vec![];
             let mut page = 1;
 
@@ -145,7 +164,7 @@ impl CloudFlareClient {
                 .unwrap()
                 .get_mut(zone_identifier)
                 .unwrap()
-                .populate(records);
+                .populate(records, self.zones_ttl);
         }
 
         Ok(())
@@ -220,7 +239,10 @@ impl Zone {
             .unwrap_or_else(Vec::new)
     }
 
-    pub fn populate(&mut self, records: Vec<DnsRecord>) {
+    pub fn populate(&mut self, records: Vec<DnsRecord>, ttl: u64) {
+        self.dns_cache.domain_to_ids = HashMap::new();
+        self.dns_cache.dns_records = HashMap::new();
+
         for record in records.into_iter() {
             if let Some(ids) = self.dns_cache.domain_to_ids.get_mut(&record.name) {
                 ids.push(record.id.clone());
@@ -233,7 +255,7 @@ impl Zone {
             self.dns_cache.dns_records.insert(record.id.clone(), record);
         }
 
-        self.dns_cache.expires_at = Instant::now().checked_add(Duration::from_secs(60)).unwrap();
+        self.dns_cache.expires_at = Instant::now().checked_add(Duration::from_secs(ttl)).unwrap();
     }
 }
 
