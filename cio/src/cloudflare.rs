@@ -268,7 +268,12 @@ impl DNSProviderOps for CloudFlareClient {
             (found_records, found_id)
         };
 
-        log::debug!("Ensuring  {:?}. Found records count: {} First id found: {}", content, found_records, found_id);
+        log::debug!(
+            "Ensuring  {:?}. Found records count: {} First id found: {}",
+            content,
+            found_records,
+            found_id
+        );
 
         // If do not have a DNS record create it.
         if !found_records {
