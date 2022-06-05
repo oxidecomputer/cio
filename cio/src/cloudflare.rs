@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use cloudflare::{
-    endpoints::{dns, zone},
+    endpoints::{dns, dns::DnsRecord, zone},
     framework::{
         async_api::{ApiClient, Client},
         endpoint::Endpoint,
@@ -25,6 +25,7 @@ pub struct ZoneEntry {
 
 pub struct CloudFlareClient {
     client: Client,
+    zones: Arc<RwLock<HashMap<String, Zone>>>,
     zone_cache: Arc<RwLock<HashMap<String, ZoneEntry>>>,
 }
 
@@ -32,6 +33,7 @@ impl From<Client> for CloudFlareClient {
     fn from(client: Client) -> Self {
         Self {
             client,
+            zones: Arc::new(RwLock::new(HashMap::new())),
             zone_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
@@ -47,6 +49,7 @@ impl CloudFlareClient {
         QueryType: Serialize,
         BodyType: Serialize,
     {
+        log::debug!("Sending req to CloudFlare {:?}", endpoint.path());
         self.client.request_handle(endpoint).await
     }
 
@@ -92,6 +95,146 @@ impl CloudFlareClient {
         // Our zone identifier should be the first record's ID.
         Ok(entry)
     }
+
+    async fn get_dns_records_in_zone(&self, zone_identifier: &str, page: u32) -> ApiResponse<Vec<DnsRecord>> {
+        self.client
+            .request_handle(&dns::ListDnsRecords {
+                zone_identifier,
+                params: dns::ListDnsRecordsParams {
+                    // From: https://api.cloudflare.com/#dns-records-for-a-zone-list-dns-records
+                    per_page: Some(5000),
+                    page: Some(page),
+                    ..Default::default()
+                },
+            })
+            .await
+    }
+
+    pub async fn populate_zone_cache(&self, zone_identifier: &str) -> Result<()> {
+        if self.zones.read().unwrap().get(zone_identifier).is_none() {
+            self.zones
+                .write()
+                .unwrap()
+                .insert(zone_identifier.to_string(), Zone::new(zone_identifier));
+        }
+
+        // Because we initialize the zone entry above (if it did not already exist), we can be
+        // assured that it is safe to unwrap here
+        if self.zones.read().unwrap().get(zone_identifier).unwrap().is_expired() {
+            let mut records = vec![];
+            let mut page = 1;
+
+            loop {
+                let mut response = self.get_dns_records_in_zone(zone_identifier, page).await?;
+                records.append(&mut response.result);
+
+                let total_pages = response
+                    .result_info
+                    .and_then(|info| info.get("total_pages").and_then(|total_pages| total_pages.as_u64()))
+                    .unwrap_or(0);
+
+                if (page as u64) < total_pages {
+                    page += 1;
+                } else {
+                    break;
+                }
+            }
+
+            self.zones
+                .write()
+                .unwrap()
+                .get_mut(zone_identifier)
+                .unwrap()
+                .populate(records);
+        }
+
+        Ok(())
+    }
+
+    pub fn cache_size(&self, zone_identifier: &str) -> usize {
+        self.zones
+            .read()
+            .unwrap()
+            .get(zone_identifier)
+            .map(|zone| zone.dns_cache.dns_records.len())
+            .unwrap_or(0)
+    }
+
+    pub async fn with_zone<F, R>(&self, zone_identifier: &str, f: F) -> Result<R>
+    where
+        F: FnOnce(&Zone) -> R,
+    {
+        self.populate_zone_cache(zone_identifier).await?;
+
+        let guard = self.zones.read().unwrap();
+        let zone = guard.get(zone_identifier).unwrap();
+
+        Ok(f(zone))
+    }
+}
+
+#[derive(Debug)]
+pub struct DnsCache {
+    domain_to_ids: HashMap<String, Vec<String>>,
+    dns_records: HashMap<String, DnsRecord>,
+    expires_at: Instant,
+}
+
+impl DnsCache {}
+
+#[derive(Debug)]
+pub struct Zone {
+    identifier: String,
+    dns_cache: DnsCache,
+}
+
+impl Zone {
+    pub fn new(identifier: &str) -> Self {
+        Self {
+            identifier: identifier.to_string(),
+            dns_cache: DnsCache {
+                domain_to_ids: HashMap::new(),
+                dns_records: HashMap::new(),
+                expires_at: Instant::now(),
+            },
+        }
+    }
+
+    pub fn is_expired(&self) -> bool {
+        self.dns_cache.expires_at <= Instant::now()
+    }
+
+    pub fn get_record_for_id(&self, id: &str) -> Option<&DnsRecord> {
+        if !self.is_expired() {
+            self.dns_cache.dns_records.get(id)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_records_for_domain(&self, domain: &str) -> Vec<&DnsRecord> {
+        self.dns_cache
+            .domain_to_ids
+            .get(domain)
+            .map(|ids| ids.iter().filter_map(|id| self.get_record_for_id(id)).collect())
+            .unwrap_or_else(Vec::new)
+    }
+
+    pub fn populate(&mut self, records: Vec<DnsRecord>) {
+        for record in records.into_iter() {
+            if let Some(ids) = self.dns_cache.domain_to_ids.get_mut(&record.name) {
+                ids.push(record.id.clone());
+            } else {
+                self.dns_cache
+                    .domain_to_ids
+                    .insert(record.name.clone(), vec![record.id.clone()]);
+            }
+
+            self.dns_cache.dns_records.insert(record.id.clone(), record);
+        }
+
+        self.dns_cache.expires_at = Instant::now().checked_add(Duration::from_secs(60)).unwrap();
+    }
 }
 
 #[async_trait]
@@ -100,20 +243,35 @@ impl DNSProviderOps for CloudFlareClient {
         let domain = &domain.to_lowercase();
         let zone_identifier = self.get_zone_identifier(domain).await?.id;
 
-        // Check if we already have a record and we need to update it.
-        let dns_records = self
-            .request(&dns::ListDnsRecords {
-                zone_identifier: &zone_identifier,
-                params: dns::ListDnsRecordsParams {
-                    name: Some(domain.to_string()),
-                    ..Default::default()
-                },
-            })
-            .await?
-            .result;
+        // Populate the zone cache for this zone if needed
+        self.populate_zone_cache(&zone_identifier).await?;
 
-        // If we have a dns record already, update it. If not, create it.
-        if dns_records.is_empty() {
+        let (found_records, found_id) = {
+            // `populate_zone_cache` guarantees that the `zones` has at worst an empty zone set
+            let guard = self.zones.read().unwrap();
+            let zone = guard.get(&zone_identifier).unwrap();
+
+            let dns_records = zone.get_records_for_domain(domain);
+
+            // If any of the records found for the domain actually match, then return early
+            for record in &dns_records {
+                if record.name == *domain && content_equals(record.content.clone(), content.clone()) {
+                    info!("dns record for domain `{}` already exists: {:?}", domain, content);
+
+                    return Ok(());
+                }
+            }
+
+            let found_records = !dns_records.is_empty();
+            let found_id = dns_records[0].id.clone();
+
+            (found_records, found_id)
+        };
+
+        log::debug!("Ensuring  {:?}. Found records count: {} First id found: {}", content, found_records, found_id);
+
+        // If do not have a DNS record create it.
+        if !found_records {
             // Create the DNS record.
             let _dns_record = self
                 .request(&dns::CreateDnsRecord {
@@ -135,28 +293,17 @@ impl DNSProviderOps for CloudFlareClient {
             return Ok(());
         }
 
-        for record in &dns_records {
-            if record.name == *domain && content_equals(record.content.clone(), content.clone()) {
-                info!("dns record for domain `{}` already exists: {:?}", domain, content);
-
-                return Ok(());
-            }
-        }
-
         let is_a_record = matches!(content, cloudflare::endpoints::dns::DnsContent::A { content: _ });
-
         let is_aaaa_record = matches!(content, cloudflare::endpoints::dns::DnsContent::AAAA { content: _ });
-
         let is_cname_record = matches!(content, cloudflare::endpoints::dns::DnsContent::CNAME { content: _ });
 
         if domain.starts_with("_acme-challenge.") || is_a_record || is_aaaa_record || is_cname_record {
-            if dns_records.len() > 1 {
+            if found_records {
                 // TODO: handle this better, match on the record type.
                 bail!(
-                    "we don't know which DNS record to update for domain `{}`: {:?}\nexisting records: {:?}",
+                    "we don't know which DNS record to update for domain `{}`: {:?}",
                     domain,
-                    content,
-                    dns_records
+                    content
                 );
             }
 
@@ -164,7 +311,7 @@ impl DNSProviderOps for CloudFlareClient {
             let _dns_record = self
                 .request(&dns::UpdateDnsRecord {
                     zone_identifier: &zone_identifier,
-                    identifier: &dns_records[0].id,
+                    identifier: &found_id,
                     params: dns::UpdateDnsRecordParams {
                         name: domain,
                         content: content.clone(),

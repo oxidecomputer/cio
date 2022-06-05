@@ -605,7 +605,7 @@ pub async fn handle_rfd_push(
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
-            generate_shorturls_for_rfds(db, github, company, "configs").await?;
+            generate_shorturls_for_rfds(db, github, company, &company.authenticate_cloudflare()?, "configs").await?;
             a("[SUCCESS]: updated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
@@ -875,7 +875,14 @@ pub async fn handle_configs_push(
         a("[SUCCESS]: links");
 
         // We need to update the short URLs for the links.
-        generate_shorturls_for_configs_links(&api_context.db, github, company, &repo).await?;
+        generate_shorturls_for_configs_links(
+            &api_context.db,
+            github,
+            company,
+            &company.authenticate_cloudflare()?,
+            &repo,
+        )
+        .await?;
         a("[SUCCESS]: links shorturls");
     }
 
@@ -958,7 +965,14 @@ pub async fn handle_repository_event(
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
-    generate_shorturls_for_repos(&api_context.db, github, company, "configs").await?;
+    generate_shorturls_for_repos(
+        &api_context.db,
+        github,
+        company,
+        &company.authenticate_cloudflare()?,
+        "configs",
+    )
+    .await?;
     a("[SUCCESS]: generated short urls");
 
     // Sync the settings for this repo.
