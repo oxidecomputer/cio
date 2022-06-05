@@ -49,6 +49,7 @@ impl CloudFlareClient {
         QueryType: Serialize,
         BodyType: Serialize,
     {
+        log::debug!("Sending req to CloudFlare {:?}", endpoint.path());
         self.client.request_handle(endpoint).await
     }
 
@@ -266,6 +267,8 @@ impl DNSProviderOps for CloudFlareClient {
 
             (found_records, found_id)
         };
+
+        log::debug!("Ensuring  {:?}. Found records count: {} First id found: {}", content, found_records, found_id);
 
         // If do not have a DNS record create it.
         if !found_records {

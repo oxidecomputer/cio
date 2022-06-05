@@ -48,6 +48,8 @@ where
         links.push(link.clone());
     }
 
+    log::info!("Collected {} repo links to check", links.len());
+
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
 
@@ -102,6 +104,8 @@ where
         link.name = rfd.number_string.to_string();
         links.push(link.clone());
     }
+
+    log::info!("Collected {} rfd links to check", links.len());
 
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
@@ -160,6 +164,8 @@ where
             links.push(l.clone());
         }
     }
+
+    log::info!("Collected {} config links to check", links.len());
 
     // Generate the files for the links.
     generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
