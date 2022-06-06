@@ -183,6 +183,10 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
 
+        // Note and tags are only written to Airtable and are not synced down
+        self.notes = record.notes;
+        self.tags = record.tags;
+
         Ok(())
     }
 }
@@ -220,6 +224,18 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
         .await?
         .update_airtable(db)
         .await?;
+
+    // Pull down any tags and notes stored remotely, and ensure they are persisted locally
+    let airtable_records = RackLineSubscribers::get_from_airtable(db, company.id).await?;
+
+    for (id, record) in airtable_records {
+
+        // Airtable records carry with them the most up to date tags and notes data, so we
+        // can easily save them here. Ideally this could be a bulk update
+        if let Err(err) = record.fields.update_in_db(&db).await {
+            log::error!("Failed to store tags and notes from remote for {}. {:?}", id, err);
+        }
+    }
 
     Ok(())
 }
