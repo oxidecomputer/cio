@@ -29,11 +29,11 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
         .load_async::<RackLineSubscriber>(db.pool())
         .await?;
 
-    push_new_rack_line_subscribers_to_zoho(subscribers_to_process.iter_mut().collect(), db, company).await
+    push_new_rack_line_subscribers_to_zoho(&mut subscribers_to_process, db, company).await
 }
 
 pub async fn push_new_rack_line_subscribers_to_zoho(
-    subscribers_to_process: Vec<&mut RackLineSubscriber>,
+    subscribers_to_process: &mut [RackLineSubscriber],
     db: &Database,
     company: &Company,
 ) -> Result<()> {
@@ -45,7 +45,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
         let no_employees_cleaner = Regex::new(r"[A-Za-z ~.,+<>]").expect("Failed to build employee number regex");
 
         // Batch up all of the records that need to be created to be able to submit at once
-        let (subscribers, leads): (Vec<&mut RackLineSubscriber>, Vec<LeadsInput>) = subscribers_to_process.into_iter().filter_map(|subscriber| {
+        let (subscribers, leads): (Vec<&mut RackLineSubscriber>, Vec<LeadsInput>) = subscribers_to_process.iter_mut().filter_map(|subscriber| {
             let mut input = LeadsInput::default();
 
             let mut name_parts = subscriber.name.rsplitn(2, ' ').peekable();

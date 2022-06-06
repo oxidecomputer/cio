@@ -1594,18 +1594,20 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string()).await;
     if existing.is_none() {
         // Update the subscriber in the database.
-        let mut subscriber = new_subscriber.upsert(db).await?;
+        let subscriber = new_subscriber.upsert(db).await?;
 
         // Parse the signup into a slack message.
         // Send the message to the slack channel.
         let company = Company::get_by_id(db, new_subscriber.cio_company_id).await?;
         subscriber.send_slack_notification(db, &company).await?;
 
-        info!("subscriber {} posted to Slack", subscriber.id);
+        let mut subscribers = vec![subscriber];
 
-        cio_api::zoho::push_new_rack_line_subscribers_to_zoho(vec![&mut subscriber], db, &company).await?;
+        info!("subscriber {} posted to Slack", subscribers[0].id);
 
-        info!("subscriber {} created successfully", subscriber.id);
+        cio_api::zoho::push_new_rack_line_subscribers_to_zoho(&mut subscribers, db, &company).await?;
+
+        info!("subscriber {} created successfully", subscribers[0].id);
     } else {
         info!("subscriber already exists");
     }
