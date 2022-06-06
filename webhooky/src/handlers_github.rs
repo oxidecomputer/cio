@@ -265,7 +265,7 @@ pub async fn handle_rfd_pull_request(
             );
 
             a(&format!(
-                "[ERROR]: update pull request title and labels: {} cc @jessfraz",
+                "[ERROR]: update pull request title and labels: {} cc @jessfraz @augustuswm",
                 e
             ));
 
@@ -674,7 +674,7 @@ pub async fn handle_rfd_push(
                                 );
 
                                 a(&format!(
-                                    "[ERROR]: update pull request title and labels: {} cc @jessfraz",
+                                    "[ERROR]: update pull request title and labels: {} cc @jessfraz @augustuswm",
                                     e
                                 ));
                             }
