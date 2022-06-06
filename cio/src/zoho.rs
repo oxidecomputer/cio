@@ -20,7 +20,7 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
     // to do work for subscribers that may already be being processed by a hook handler
     let five_min_ago = Utc::now()
         .checked_sub_signed(Duration::minutes(5))
-        .expect("Failed to rack line time window. Is the clock broken?");
+        .expect("Failed to create rack line time window. Is the clock broken?");
     let outside_webhook_time_window = rack_line_subscribers::dsl::date_added.le(five_min_ago);
 
     let mut subscribers_to_process = rack_line_subscribers::dsl::rack_line_subscribers
