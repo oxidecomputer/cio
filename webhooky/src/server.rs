@@ -147,6 +147,7 @@ pub async fn create_server(
     api.register(trigger_sync_shorturls_create).unwrap();
     api.register(trigger_sync_swag_inventory_create).unwrap();
     api.register(trigger_sync_travel_create).unwrap();
+    api.register(trigger_sync_zoho_create).unwrap();
 
     api.register(listen_get_function_by_uuid).unwrap();
     api.register(listen_get_function_logs_by_uuid).unwrap();
@@ -253,6 +254,10 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
         scheduler
             .every(5.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-travel")});
+        // scheduler
+        //     .every(30.minutes())
+        //     .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-zoho")});
+
         // Run the RFD changelog.
         scheduler
             .every(clokwerk::Interval::Monday)
@@ -2021,6 +2026,33 @@ async fn trigger_sync_travel_create(
 
     match txn
         .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel", true))
+        .await
+    {
+        Ok(r) => {
+            txn.finish(http::StatusCode::ACCEPTED);
+
+            Ok(HttpResponseAccepted(r))
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
+}
+
+/** Listen for triggering a function run of sync zoho. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-zoho",
+}]
+async fn trigger_sync_zoho_create(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<TypedOrUntypedBody<()>>).await;
+
+    match txn
+        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-zoho", true))
         .await
     {
         Ok(r) => {

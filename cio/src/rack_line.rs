@@ -50,6 +50,10 @@ pub struct NewRackLineSubscriber {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub zoho_lead_id: String,
+    #[serde(default)]
+    pub zoho_lead_exclude: bool,
 }
 
 impl NewRackLineSubscriber {
@@ -166,6 +170,8 @@ impl Default for NewRackLineSubscriber {
             tags: Default::default(),
             link_to_people: Default::default(),
             cio_company_id: Default::default(),
+            zoho_lead_id: Default::default(),
+            zoho_lead_exclude: false,
         }
     }
 }
@@ -176,6 +182,10 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
     async fn update_airtable_record(&mut self, record: RackLineSubscriber) -> Result<()> {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
+
+        // Notes and tags are owned by Airtable
+        self.notes = record.notes;
+        self.tags = record.tags;
 
         Ok(())
     }
@@ -214,6 +224,17 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
         .await?
         .update_airtable(db)
         .await?;
+
+    // Pull down any tags and notes stored remotely, and ensure they are persisted locally
+    let airtable_records = RackLineSubscribers::get_from_airtable(db, company.id).await?;
+
+    for (id, record) in airtable_records {
+        // Airtable records carry with them the most up to date tags and notes data, so we
+        // can easily save them here. Ideally this could be a bulk update
+        if let Err(err) = record.fields.update_in_db(&db).await {
+            log::error!("Failed to store tags and notes from remote for {}. {:?}", id, err);
+        }
+    }
 
     Ok(())
 }
@@ -287,6 +308,8 @@ impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
             tags,
             link_to_people: Default::default(),
             cio_company_id: Default::default(),
+            zoho_lead_id: Default::default(),
+            zoho_lead_exclude: false,
         }
     }
 }

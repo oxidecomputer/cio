@@ -1600,11 +1600,16 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
         // Send the message to the slack channel.
         let company = Company::get_by_id(db, new_subscriber.cio_company_id).await?;
         subscriber.send_slack_notification(db, &company).await?;
-        info!("subscriber {} posted to Slack", subscriber.email);
 
-        info!("subscriber {} created successfully", subscriber.email);
+        let mut subscribers = vec![subscriber];
+
+        info!("subscriber {} posted to Slack", subscribers[0].id);
+
+        cio_api::zoho::push_new_rack_line_subscribers_to_zoho(&mut subscribers, db, &company).await?;
+
+        info!("subscriber {} created successfully", subscribers[0].id);
     } else {
-        info!("subscriber {} already exists", new_subscriber.email);
+        info!("subscriber already exists");
     }
 
     Ok(())

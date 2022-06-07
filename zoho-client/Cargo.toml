@@ -1,0 +1,24 @@
+[package]
+name = "zoho-api"
+description = "An API client for Zoho"
+version = "0.1.0"
+authors = ["Augustus Mayo <augustus@oxide.computer>"]
+edition = "2018"
+license = "Apache-2.0"
+repository = "https://github.com/oxidecomputer/cio"
+documentation = "https://docs.rs/zoho-api"
+
+[[bin]]
+name = "generator"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full", "time"] }
+tracing = "0.1.29"
+
+[dev-dependencies]
+tracing-subscriber = "0.3.3"

@@ -440,6 +440,29 @@ async fn run_cmd(opts: crate::core::Opts, logger: slog::Logger) -> Result<()> {
                 result?;
             }
         }
+        crate::core::SubCommand::SyncZoho(_) => {
+            let db = Database::new().await;
+            let companies = Companys::get_from_db(&db, 1).await?;
+
+            // Iterate over the companies and update.
+            let tasks: Vec<_> = companies
+                .into_iter()
+                .map(|company| {
+                    tokio::spawn(enclose! { (db) async move {
+                        cio_api::zoho::refresh_leads(&db, &company).await
+                    }})
+                })
+                .collect();
+
+            let mut results: Vec<Result<()>> = Default::default();
+            for task in tasks {
+                results.push(task.await?);
+            }
+
+            for result in results {
+                result?;
+            }
+        }
     }
 
     Ok(())

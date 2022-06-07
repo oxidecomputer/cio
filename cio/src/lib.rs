@@ -47,6 +47,7 @@ pub mod tailscale;
 pub mod templates;
 pub mod travel;
 pub mod utils;
+pub mod zoho;
 
 #[macro_use]
 extern crate diesel;
