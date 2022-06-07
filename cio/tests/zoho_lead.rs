@@ -1,7 +1,4 @@
-use cio_api::{
-    rack_line::RackLineSubscriber,
-    zoho::push_new_rack_line_subscribers_to_zoho
-};
+use cio_api::{rack_line::RackLineSubscriber, zoho::push_new_rack_line_subscribers_to_zoho};
 
 #[ignore]
 #[tokio::test]
