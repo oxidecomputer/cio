@@ -183,7 +183,7 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
         // Set the link_to_people from the original so it stays intact.
         self.link_to_people = record.link_to_people;
 
-        // Note and tags are only written to Airtable and are not synced down
+        // Notes and tags are owned by Airtable
         self.notes = record.notes;
         self.tags = record.tags;
 
