@@ -825,6 +825,7 @@ dependencies = [
  "tokio",
  "toml",
  "tracing",
+ "tracing-subscriber",
  "tripactions",
  "url 2.2.2",
  "uuid",

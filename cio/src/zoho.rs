@@ -149,17 +149,20 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
             })
             .collect();
 
-        let notes_results = notes_client.insert(notes, None).await?;
+        // Only do work if there are notes to insert
+        if !notes.is_empty() {
+            let notes_results = notes_client.insert(notes, None).await?;
 
-        for note_result in notes_results.data {
-            match note_result.status.as_str() {
-                "status" => (),
-                status => {
-                    log::warn!(
-                        "Failed to write note to Zoho. message: {} status: {}",
-                        note_result.message,
-                        status
-                    )
+            for note_result in notes_results.data {
+                match note_result.status.as_str() {
+                    "status" => (),
+                    status => {
+                        log::warn!(
+                            "Failed to write note to Zoho. message: {} status: {}",
+                            note_result.message,
+                            status
+                        )
+                    }
                 }
             }
         }
