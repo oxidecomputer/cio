@@ -229,7 +229,6 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
     let airtable_records = RackLineSubscribers::get_from_airtable(db, company.id).await?;
 
     for (id, record) in airtable_records {
-
         // Airtable records carry with them the most up to date tags and notes data, so we
         // can easily save them here. Ideally this could be a bulk update
         if let Err(err) = record.fields.update_in_db(&db).await {
