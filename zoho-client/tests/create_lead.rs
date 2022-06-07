@@ -1,3 +1,4 @@
+use serde_json::json;
 use zoho_api::{client, modules};
 
 // This test requires manual intervention to run. Permanently deleting a lead from Zoho requires
@@ -5,6 +6,7 @@ use zoho_api::{client, modules};
 // performed, any test run after the first will fail with a "duplicate data" error. This could be
 // changed to generate a random value for the AirTable record id per run, but given that this
 // requires write credentials to run as-is, it is left to the operator to perform the deletes.
+
 #[ignore]
 #[tokio::test]
 async fn test_create_lead() {
@@ -17,6 +19,7 @@ async fn test_create_lead() {
         .expect("Failed to refresh access token");
 
     let leads = client.module_client::<modules::Leads>();
+    let notes = client.module_client::<modules::Notes>();
 
     let mut input = modules::LeadsInput::default();
 
@@ -28,6 +31,12 @@ async fn test_create_lead() {
     input.lead_source = Some("Automated Tests".to_string());
     input.submitted_interest = Some("Style!".to_string());
     input.airtable_lead_record_id = Some("12345".to_string());
+
+    let tag = json!({
+        "name": "Test Tag"
+    });
+
+    input.tag = Some(vec![tag]);
 
     let insert = leads.insert(vec![input.clone(), input], Some(vec![])).await.unwrap();
 
@@ -46,6 +55,24 @@ async fn test_create_lead() {
 
     assert_eq!(1, get.data.len());
     assert_eq!(record_id, &get.data[0].id);
+
+    let mut note_input = modules::NotesInput::default();
+    note_input.note_content = Some("Test attached notes".to_string());
+    note_input.parent_id = serde_json::Value::String(record_id.to_string());
+    note_input.se_module = "Leads".to_string();
+
+    let inserted_note = notes.insert(vec![note_input], Some(vec![])).await.unwrap();
+
+    assert_eq!("record added", inserted_note.data[0].message);
+    assert_eq!("success", inserted_note.data[0].status);
+
+    let note_id = &inserted_note.data[0].details.id;
+
+    let delete_note = notes.delete(vec![note_id], false).await.unwrap();
+
+    assert_eq!("record deleted", delete_note.data[0].message);
+    assert_eq!("success", delete_note.data[0].status);
+    assert_eq!(note_id, &delete_note.data[0].details.id);
 
     let delete = leads.delete(vec![record_id], false).await.unwrap();
 

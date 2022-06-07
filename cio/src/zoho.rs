@@ -3,7 +3,8 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::{Duration, Utc};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use regex::Regex;
-use zoho_api::modules::{Leads, LeadsInput};
+use serde_json::json;
+use zoho_api::modules::{Leads, LeadsInput, Notes, NotesInput};
 
 use crate::{companies::Company, db::Database, rack_line::RackLineSubscriber, schema::rack_line_subscribers};
 
@@ -63,6 +64,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
                 input.lead_source = Some("Rack Line Waitlist".to_string());
                 input.submitted_interest = Some(subscriber.interest.clone());
                 input.airtable_lead_record_id = Some(subscriber.airtable_record_id.clone());
+                input.tag = Some(subscriber.tags.iter().map(|tag| json!({ "name": tag })).collect());
 
                 Some((subscriber, input))
             } else {
@@ -88,9 +90,9 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
             );
         }
 
-        let client = zoho.module_client::<Leads>();
+        let leads_client = zoho.module_client::<Leads>();
 
-        let results = client.insert(leads, None).await?;
+        let results = leads_client.insert(leads, None).await?;
 
         // Each lead entry may succeed for fail independently, and we only write back to the database
         // the records that where successfully persisted
@@ -116,7 +118,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
             .collect();
 
         // TODO: This should be a bulk update of the db, which then async updates AirTable.
-        for update in updates {
+        for update in updates.iter() {
             if let Err(err) = update.update(db).await {
                 log::error!(
                     "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} err: {:?}",
@@ -124,6 +126,41 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
                     update.airtable_record_id,
                     err
                 );
+            }
+        }
+
+        let notes_client = zoho.module_client::<Notes>();
+
+        let notes: Vec<NotesInput> = updates
+            .iter()
+            .filter_map(|subscriber_update| {
+                // For each subscriber, attempt to also send their note data (if they have any)
+                if !subscriber_update.notes.is_empty() {
+                    let mut note_input = NotesInput::default();
+
+                    note_input.note_content = Some(subscriber_update.notes.clone());
+                    note_input.parent_id = serde_json::Value::String(subscriber_update.zoho_lead_id.clone());
+                    note_input.se_module = "Leads".to_string();
+
+                    Some(note_input)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let notes_results = notes_client.insert(notes, None).await?;
+
+        for note_result in notes_results.data {
+            match note_result.status.as_str() {
+                "status" => (),
+                status => {
+                    log::warn!(
+                        "Failed to write note to Zoho. message: {} status: {}",
+                        note_result.message,
+                        status
+                    )
+                }
             }
         }
     }

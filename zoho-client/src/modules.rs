@@ -2572,6 +2572,7 @@ pub struct NotesInput {
     pub note_content: Option<String>,
     #[serde(rename = "Parent_Id")]
     pub parent_id: serde_json::Value,
+    pub se_module: String,
     #[serde(rename = "Created_By", skip_serializing_if = "Option::is_none")]
     pub created_by: Option<serde_json::Value>,
     #[serde(rename = "Modified_By", skip_serializing_if = "Option::is_none")]
