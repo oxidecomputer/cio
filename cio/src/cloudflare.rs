@@ -259,6 +259,11 @@ impl Zone {
     }
 }
 
+struct LookupResult {
+    first_non_match_id: Option<String>,
+    response_count: usize,
+}
+
 #[async_trait]
 impl DNSProviderOps for CloudFlareClient {
     async fn ensure_record(&self, domain: &str, content: cloudflare::endpoints::dns::DnsContent) -> Result<()> {
@@ -268,7 +273,7 @@ impl DNSProviderOps for CloudFlareClient {
         // Populate the zone cache for this zone if needed
         self.populate_zone_cache(&zone_identifier).await?;
 
-        let (found_records, found_id) = {
+        let lookup_result = {
             // `populate_zone_cache` guarantees that the `zones` has at worst an empty zone set
             let guard = self.zones.read().unwrap();
             let zone = guard.get(&zone_identifier).unwrap();
@@ -284,76 +289,78 @@ impl DNSProviderOps for CloudFlareClient {
                 }
             }
 
-            let found_records = !dns_records.is_empty();
-            let found_id = dns_records[0].id.clone();
-
-            (found_records, found_id)
+            LookupResult {
+                first_non_match_id: if !dns_records.is_empty() {
+                    Some(dns_records[0].id.clone())
+                } else {
+                    None
+                },
+                response_count: dns_records.len(),
+            }
         };
 
         log::debug!(
-            "Ensuring  {:?}. Found records count: {} First id found: {}",
+            "Ensuring  {:?}. Found records count: {} First id found: {:?}",
             content,
-            found_records,
-            found_id
+            lookup_result.response_count,
+            lookup_result.first_non_match_id
         );
 
-        // If do not have a DNS record create it.
-        if !found_records {
-            // Create the DNS record.
-            let _dns_record = self
-                .request(&dns::CreateDnsRecord {
-                    zone_identifier: &zone_identifier,
-                    params: dns::CreateDnsRecordParams {
-                        name: domain,
-                        content: content.clone(),
-                        // This is the min.
-                        ttl: Some(120),
-                        proxied: None,
-                        priority: None,
-                    },
-                })
-                .await?
-                .result;
+        if let Some(first_non_match_id) = &lookup_result.first_non_match_id {
+            let is_a_record = matches!(content, cloudflare::endpoints::dns::DnsContent::A { content: _ });
+            let is_aaaa_record = matches!(content, cloudflare::endpoints::dns::DnsContent::AAAA { content: _ });
+            let is_cname_record = matches!(content, cloudflare::endpoints::dns::DnsContent::CNAME { content: _ });
 
-            info!("created dns record for domain `{}`: {:?}", domain, content);
+            if domain.starts_with("_acme-challenge.") || is_a_record || is_aaaa_record || is_cname_record {
+                if lookup_result.response_count > 1 {
+                    // TODO: handle this better, match on the record type.
+                    bail!(
+                        "we don't know which DNS record to update for domain `{}`: {:?}",
+                        domain,
+                        content
+                    );
+                }
 
-            return Ok(());
-        }
+                // Update the record.
+                let _dns_record = self
+                    .request(&dns::UpdateDnsRecord {
+                        zone_identifier: &zone_identifier,
+                        identifier: first_non_match_id,
+                        params: dns::UpdateDnsRecordParams {
+                            name: domain,
+                            content: content.clone(),
+                            // This is the min.
+                            ttl: Some(120),
+                            proxied: None,
+                        },
+                    })
+                    .await?
+                    .result;
 
-        let is_a_record = matches!(content, cloudflare::endpoints::dns::DnsContent::A { content: _ });
-        let is_aaaa_record = matches!(content, cloudflare::endpoints::dns::DnsContent::AAAA { content: _ });
-        let is_cname_record = matches!(content, cloudflare::endpoints::dns::DnsContent::CNAME { content: _ });
+                info!("updated dns record for domain `{}`: {:?}", domain, content);
+            } else {
+                // Create the DNS record.
+                // We likely want many of these if we got here.
+                let _dns_record = self
+                    .request(&dns::CreateDnsRecord {
+                        zone_identifier: &zone_identifier,
+                        params: dns::CreateDnsRecordParams {
+                            name: domain,
+                            content: content.clone(),
+                            // This is the min.
+                            ttl: Some(120),
+                            proxied: None,
+                            priority: None,
+                        },
+                    })
+                    .await?
+                    .result;
 
-        if domain.starts_with("_acme-challenge.") || is_a_record || is_aaaa_record || is_cname_record {
-            if found_records {
-                // TODO: handle this better, match on the record type.
-                bail!(
-                    "we don't know which DNS record to update for domain `{}`: {:?}",
-                    domain,
-                    content
-                );
+                info!("created dns record for existing domain `{}`: {:?}", domain, content);
             }
-
-            // Update the record.
-            let _dns_record = self
-                .request(&dns::UpdateDnsRecord {
-                    zone_identifier: &zone_identifier,
-                    identifier: &found_id,
-                    params: dns::UpdateDnsRecordParams {
-                        name: domain,
-                        content: content.clone(),
-                        // This is the min.
-                        ttl: Some(120),
-                        proxied: None,
-                    },
-                })
-                .await?
-                .result;
-
-            info!("updated dns record for domain `{}`: {:?}", domain, content);
         } else {
+            // If do not have a DNS record create it.
             // Create the DNS record.
-            // We likely want many of these if we got here.
             let _dns_record = self
                 .request(&dns::CreateDnsRecord {
                     zone_identifier: &zone_identifier,
