@@ -118,4 +118,4 @@ stacker = "0.1.14"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]
-tracing-subscriber = "0.3.3"
+tracing-subscriber = "0.3.11"
