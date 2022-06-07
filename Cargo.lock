@@ -830,7 +830,7 @@ dependencies = [
  "url 2.2.2",
  "uuid",
  "walkdir",
- "yup-oauth2 6.4.0",
+ "yup-oauth2 7.0.0",
  "zip",
  "zoho-api",
  "zoom-api",
@@ -1459,7 +1459,7 @@ dependencies = [
  "percent-encoding 2.1.0",
  "proc-macro2 1.0.36",
  "rustls 0.20.4",
- "rustls-pemfile",
+ "rustls-pemfile 0.3.0",
  "schemars",
  "serde",
  "serde_json",
@@ -1497,7 +1497,7 @@ dependencies = [
  "percent-encoding 2.1.0",
  "proc-macro2 1.0.36",
  "rustls 0.20.4",
- "rustls-pemfile",
+ "rustls-pemfile 0.3.0",
  "schemars",
  "serde",
  "serde_json",
@@ -2420,10 +2420,25 @@ dependencies = [
  "hyper 0.14.18",
  "log 0.4.16",
  "rustls 0.19.1",
- "rustls-native-certs",
+ "rustls-native-certs 0.5.0",
  "tokio",
  "tokio-rustls 0.22.0",
  "webpki 0.21.4",
+]
+
+[[package]]
+name = "hyper-rustls"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d87c48c02e0dc5e3b849a2041db3029fd066650f8f717c07bf8ed78ccb895cac"
+dependencies = [
+ "http",
+ "hyper 0.14.18",
+ "log 0.4.16",
+ "rustls 0.20.4",
+ "rustls-native-certs 0.6.2",
+ "tokio",
+ "tokio-rustls 0.23.3",
 ]
 
 [[package]]
@@ -4462,10 +4477,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-native-certs"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0167bac7a9f490495f3c33013e7722b53cb087ecbe082fb0c6387c96f634ea50"
+dependencies = [
+ "openssl-probe",
+ "rustls-pemfile 1.0.0",
+ "schannel",
+ "security-framework",
+]
+
+[[package]]
 name = "rustls-pemfile"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ee86d63972a7c661d1536fefe8c3c8407321c3df668891286de28abcd087360"
+dependencies = [
+ "base64 0.13.0",
+]
+
+[[package]]
+name = "rustls-pemfile"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7522c9de787ff061458fe9a829dc790a3f5b22dc571694fc5883f448b94d9a9"
 dependencies = [
  "base64 0.13.0",
 ]
@@ -6769,7 +6805,7 @@ dependencies = [
  "futures",
  "http",
  "hyper 0.14.18",
- "hyper-rustls",
+ "hyper-rustls 0.22.1",
  "log 0.4.16",
  "percent-encoding 2.1.0",
  "rustls 0.19.1",
@@ -6782,9 +6818,9 @@ dependencies = [
 
 [[package]]
 name = "yup-oauth2"
-version = "6.4.0"
+version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60f4735745047b40de5b982ed1645b9c7b0508d12439302e596774ac4ba9f4c0"
+checksum = "c366bdabfb970344057848d4e8045b03038dc9275bd6e630e5310fa6d0e2f986"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6792,16 +6828,18 @@ dependencies = [
  "futures",
  "http",
  "hyper 0.14.18",
- "hyper-rustls",
+ "hyper-rustls 0.23.0",
  "itertools 0.10.3",
  "log 0.4.16",
  "percent-encoding 2.1.0",
- "rustls 0.19.1",
+ "rustls 0.20.4",
+ "rustls-pemfile 0.3.0",
  "seahash",
  "serde",
  "serde_json",
  "time 0.3.9",
  "tokio",
+ "tower-service",
  "url 2.2.2",
 ]
 

@@ -110,7 +110,7 @@ toml = "0.5"
 url = "2"
 uuid = { version = "^0.8", features = ["serde", "v4"] }
 walkdir = "^2.3.2"
-yup-oauth2 = "^6"
+yup-oauth2 = "^7"
 zip = "0.6.2"
 zoho-api = { path = "../zoho-client" }
 zoom-api = "^0.2.3"
