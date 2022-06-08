@@ -10,6 +10,7 @@ on:
       - '.github/workflows/cloud-run-crons.yml'
       - 'macros/**'
       - 'diesel-sentry/**'
+      - 'zoho-client/**'
   workflow_dispatch:
     inputs:
 
