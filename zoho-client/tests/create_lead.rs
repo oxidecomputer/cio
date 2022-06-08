@@ -1,5 +1,5 @@
 use serde_json::json;
-use zoho_api::{client, modules};
+use zoho_api::{client, client::ModuleUpdateResponseEntryDetails, modules};
 
 // This test requires manual intervention to run. Permanently deleting a lead from Zoho requires
 // an admin to delete the lead from the Zoho Recycling Bin (via the web ui). Until this delete is
@@ -46,7 +46,10 @@ async fn test_create_lead() {
     assert_eq!("duplicate data", insert.data[1].message);
     assert_eq!("error", insert.data[1].status);
 
-    let record_id = &insert.data[0].details.id;
+    let record_id = match &insert.data[0].details {
+        ModuleUpdateResponseEntryDetails::Success(details) => &details.id,
+        _ => panic!("Failed to get a success response back for lead")
+    };
 
     let get = leads
         .get(record_id, client::GetModuleRecordsParams::default())
@@ -66,7 +69,10 @@ async fn test_create_lead() {
     assert_eq!("record added", inserted_note.data[0].message);
     assert_eq!("success", inserted_note.data[0].status);
 
-    let note_id = &inserted_note.data[0].details.id;
+    let note_id = match &inserted_note.data[0].details {
+        ModuleUpdateResponseEntryDetails::Success(details) => &details.id,
+        _ => panic!("Failed to get a success response back for note")
+    };
 
     let delete_note = notes.delete(vec![note_id], false).await.unwrap();
 
