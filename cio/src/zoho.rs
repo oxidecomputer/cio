@@ -4,7 +4,7 @@ use chrono::{Duration, Utc};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use regex::Regex;
 use serde_json::json;
-use zoho_api::modules::{Leads, LeadsInput, Notes, NotesInput};
+use zoho_api::{client::ModuleUpdateResponseEntryDetails, modules::{Leads, LeadsInput, Notes, NotesInput}};
 
 use crate::{companies::Company, db::Database, rack_line::RackLineSubscriber, schema::rack_line_subscribers};
 
@@ -53,20 +53,28 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
 
             if name_parts.peek().is_some() {
                 let last_name = name_parts.next().map(String::from).expect("Iter unwrap failed after checking that it had at least one element");
-                let first_name = name_parts.next().map(String::from);
 
-                input.first_name = first_name;
-                input.last_name = last_name;
+                // We can not submit a lead with an empty last name
+                if !last_name.is_empty() {
+                    let first_name = name_parts.next().map(String::from);
 
-                input.email = Some(subscriber.email.clone());
-                input.company = Some(subscriber.company.clone());
-                input.no_of_employees = no_employees_cleaner.replace_all(&subscriber.company_size, "").parse::<i64>().ok();
-                input.lead_source = Some("Rack Line Waitlist".to_string());
-                input.submitted_interest = Some(subscriber.interest.clone());
-                input.airtable_lead_record_id = Some(subscriber.airtable_record_id.clone());
-                input.tag = Some(subscriber.tags.iter().map(|tag| json!({ "name": tag })).collect());
+                    input.first_name = first_name;
+                    input.last_name = last_name;
 
-                Some((subscriber, input))
+                    input.email = Some(subscriber.email.clone());
+                    input.company = Some(subscriber.company.clone());
+                    input.no_of_employees = no_employees_cleaner.replace_all(&subscriber.company_size, "").parse::<i64>().ok();
+                    input.lead_source = Some("Rack Line Waitlist".to_string());
+                    input.submitted_interest = Some(subscriber.interest.clone());
+                    input.airtable_lead_record_id = Some(subscriber.airtable_record_id.clone());
+                    input.tag = Some(subscriber.tags.iter().map(|tag| json!({ "name": tag })).collect());
+
+                    Some((subscriber, input))
+                } else {
+                    log::info!("Dropping rack line subscriber that would have an empty last name. This is necessary for pushing to Zoho. id: {} airtable_record_id: {}", subscriber.id, subscriber.airtable_record_id);
+
+                    None
+                }
             } else {
                 log::info!("Unable to compute a last name for rack line subscriber. This is necessary for pushing to Zoho. id: {} airtable_record_id: {}", subscriber.id, subscriber.airtable_record_id);
                 None
@@ -96,23 +104,76 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
 
         // Each lead entry may succeed for fail independently, and we only write back to the database
         // the records that where successfully persisted
+
+        // TODO: Refactor this as we better understand how Zoho responses can actually be shaped
         let updates: Vec<&mut RackLineSubscriber> = subscribers
             .into_iter()
             .zip(results.data.into_iter())
             .filter_map(|(mut subscriber, lead_result)| match lead_result.status.as_str() {
                 "success" => {
-                    subscriber.zoho_lead_id = lead_result.details.id;
-                    Some(subscriber)
+                    match lead_result.details {
+                        ModuleUpdateResponseEntryDetails::Success(details) => {
+                            subscriber.zoho_lead_id = details.id;
+                            Some(subscriber)
+                        },
+                        failure => {
+                            log::warn!(
+                                "Zoho returned success but did not include success response details. id: {} airtable_record_id: {} message: {} details: {:?}",
+                                subscriber.id,
+                                subscriber.airtable_record_id,
+                                lead_result.message,
+                                failure
+                            );
+
+                            None
+                        }
+                    }
                 }
                 status => {
-                    log::warn!(
-                        "Failed to write lead to Zoho. id: {} airtable_record_id: {} message: {} status: {}",
-                        subscriber.id,
-                        subscriber.airtable_record_id,
-                        lead_result.message,
-                        status
-                    );
-                    None
+
+                    // In the case that we receive a duplicate error from Zoho, we can instead take the id
+                    // of the duplicate and apply it to our internal record
+                    match lead_result.message.as_str() {
+                        "duplicate data" => {
+                            match lead_result.details {
+                                ModuleUpdateResponseEntryDetails::Failure(ref details) => {
+                                    if let Some(id) = &details.id {
+                                        subscriber.zoho_lead_id = id.to_string();
+                                        Some(subscriber)
+                                    } else {
+                                        log::warn!(
+                                            "Zoho did not return an id in the duplicate data response details. id: {} airtable_record_id: {} response: {:?}",
+                                            subscriber.id,
+                                            subscriber.airtable_record_id,
+                                            lead_result
+                                        );
+
+                                        None
+                                    }
+                                },
+                                _ => {
+                                    log::warn!(
+                                        "Zoho returned a duplicate data error, but details did not match expectations. id: {} airtable_record_id: {} response: {:?}",
+                                        subscriber.id,
+                                        subscriber.airtable_record_id,
+                                        lead_result
+                                    );
+
+                                    None
+                                }
+                            }
+                        }
+                        other => {
+                            log::warn!(
+                                "Failed to write lead to Zoho. id: {} airtable_record_id: {} details: {:?}",
+                                subscriber.id,
+                                subscriber.airtable_record_id,
+                                lead_result
+                            );
+
+                            None
+                        }
+                    }
                 }
             })
             .collect();

@@ -625,7 +625,20 @@ pub struct ModuleUpdateResponseEntry {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ModuleUpdateResponseEntryDetails {
+#[serde(untagged)]
+pub enum ModuleUpdateResponseEntryDetails {
+    Failure(ModuleUpdateResponseEntryDetailsFailure),
+    Success(ModuleUpdateResponseEntryDetailsSuccess),
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ModuleUpdateResponseEntryDetailsFailure {
+    pub api_name: Option<String>,
+    pub id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ModuleUpdateResponseEntryDetailsSuccess {
     #[serde(alias = "Modified_Time")]
     pub modifiend_time: Option<String>,
     #[serde(alias = "Modified_Time")]
