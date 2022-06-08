@@ -4,7 +4,10 @@ use chrono::{Duration, Utc};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use regex::Regex;
 use serde_json::json;
-use zoho_api::{client::ModuleUpdateResponseEntryDetails, modules::{Leads, LeadsInput, Notes, NotesInput}};
+use zoho_api::{
+    client::ModuleUpdateResponseEntryDetails,
+    modules::{Leads, LeadsInput, Notes, NotesInput},
+};
 
 use crate::{companies::Company, db::Database, rack_line::RackLineSubscriber, schema::rack_line_subscribers};
 
