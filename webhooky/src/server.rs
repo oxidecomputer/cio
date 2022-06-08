@@ -255,7 +255,7 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
             .every(5.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-travel")});
         scheduler
-            .every(30.minutes())
+            .every(15.minutes())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-zoho")});
 
         // Run the RFD changelog.

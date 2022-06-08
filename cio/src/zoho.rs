@@ -26,7 +26,7 @@ pub async fn refresh_leads(db: &Database, company: &Company) -> Result<()> {
 
     let mut subscribers_to_process = rack_line_subscribers::dsl::rack_line_subscribers
         .filter(not_yet_processed.and(not_excluded).and(outside_webhook_time_window))
-        .limit(5)
+        .limit(100)
         .load_async::<RackLineSubscriber>(db.pool())
         .await?;
 
