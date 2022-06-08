@@ -48,7 +48,7 @@ async fn test_create_lead() {
 
     let record_id = match &insert.data[0].details {
         ModuleUpdateResponseEntryDetails::Success(details) => &details.id,
-        _ => panic!("Failed to get a success response back for lead")
+        _ => panic!("Failed to get a success response back for lead"),
     };
 
     let get = leads
@@ -71,7 +71,7 @@ async fn test_create_lead() {
 
     let note_id = match &inserted_note.data[0].details {
         ModuleUpdateResponseEntryDetails::Success(details) => &details.id,
-        _ => panic!("Failed to get a success response back for note")
+        _ => panic!("Failed to get a success response back for note"),
     };
 
     let delete_note = notes.delete(vec![note_id], false).await.unwrap();
