@@ -155,7 +155,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
 
             for note_result in notes_results.data {
                 match note_result.status.as_str() {
-                    "status" => (),
+                    "success" => (),
                     status => {
                         log::warn!(
                             "Failed to write note to Zoho. message: {} status: {}",
