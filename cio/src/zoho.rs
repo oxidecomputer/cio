@@ -119,7 +119,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
                             subscriber.zoho_lead_id = details.id;
                             Some(subscriber)
                         },
-                        failure => {
+                        _ => {
                             log::warn!(
                                 "Zoho returned success but did not include success response details. id: {} airtable_record_id: {} response: {:?}",
                                 subscriber.id,
@@ -131,7 +131,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
                         }
                     }
                 }
-                status => {
+                _status => {
 
                     // In the case that we receive a duplicate error from Zoho, we can instead take the id
                     // of the duplicate and apply it to our internal record
@@ -165,7 +165,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
                                 }
                             }
                         }
-                        other => {
+                        _other => {
                             log::warn!(
                                 "Failed to write lead to Zoho. id: {} airtable_record_id: {} details: {:?}",
                                 subscriber.id,
