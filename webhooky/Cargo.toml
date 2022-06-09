@@ -77,6 +77,9 @@ urlencoding = "2.1.0"
 uuid = { version = "^0.8", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"
 stacker = "0.1.14"
+sha2 = "0.10.0"
+hmac = "0.12.0"
+digest = "0.10.0"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]

@@ -10,6 +10,7 @@ mod handlers_cron;
 mod handlers_github;
 mod repos;
 mod sagas;
+mod sig;
 pub mod server;
 mod slack_commands;
 mod tracking_numbers;

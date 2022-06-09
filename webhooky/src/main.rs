@@ -11,6 +11,7 @@ mod handlers_github;
 mod repos;
 mod sagas;
 mod server;
+mod sig;
 mod slack_commands;
 mod tracking_numbers;
 #[macro_use]
