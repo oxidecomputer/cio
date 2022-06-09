@@ -627,8 +627,8 @@ pub struct ModuleUpdateResponseEntry {
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum ModuleUpdateResponseEntryDetails {
-    Failure(ModuleUpdateResponseEntryDetailsFailure),
     Success(ModuleUpdateResponseEntryDetailsSuccess),
+    Failure(ModuleUpdateResponseEntryDetailsFailure),
 }
 
 #[derive(Debug, Deserialize)]
@@ -648,7 +648,6 @@ pub struct ModuleUpdateResponseEntryDetailsSuccess {
     pub id: String,
     #[serde(alias = "Created_By")]
     pub created_by: Option<ModuleUpdateResponseEntryModified>,
-    pub api_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
