@@ -1,6 +1,6 @@
 use cio_api::{rack_line::RackLineSubscriber, zoho::push_new_rack_line_subscribers_to_zoho};
 
-#[ignore]
+// #[ignore]
 #[tokio::test]
 async fn test_pushes_lead() {
     tracing_subscriber::fmt::init();

@@ -5,7 +5,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use regex::Regex;
 use serde_json::json;
 use zoho_api::{
-    client::ModuleUpdateResponseEntryDetails,
+    client::{ModuleUpdateResponseEntry, ModuleUpdateResponseEntryError},
     modules::{Leads, LeadsInput, Notes, NotesInput},
 };
 
@@ -112,68 +112,39 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
         let updates: Vec<&mut RackLineSubscriber> = subscribers
             .into_iter()
             .zip(results.data.into_iter())
-            .filter_map(|(mut subscriber, lead_result)| match lead_result.status.as_str() {
-                "success" => {
-                    match lead_result.details {
-                        ModuleUpdateResponseEntryDetails::Success(details) => {
-                            subscriber.zoho_lead_id = details.id;
-                            Some(subscriber)
-                        },
-                        _ => {
-                            log::warn!(
-                                "Zoho returned success but did not include success response details. id: {} airtable_record_id: {} response: {:?}",
-                                subscriber.id,
-                                subscriber.airtable_record_id,
-                                lead_result
-                            );
+            .filter_map(|(mut subscriber, lead_result)|  {
+                match lead_result {
+                    ModuleUpdateResponseEntry::Success(success) => {
+                        subscriber.zoho_lead_id = success.details.id;
+                        Some(subscriber)
+                    },
+                    ModuleUpdateResponseEntry::Error(ref error) => {
+                        match error {
+                            ModuleUpdateResponseEntryError::DuplicateData { details, .. } => {
 
-                            None
-                        }
-                    }
-                }
-                _status => {
+                                // If we hit a duplicate conflict it means that we are likely hitting an Airtable
+                                // record duplicate. In this case we want to connect the two
+                                if details.api_name == "Airtable_Lead_Record_Id" {
+                                    log::info!("Zoho returned a duplicate data conflict, using lead id from found record. id: {} airtable_record_id: {} response: {:?}", subscriber.id, subscriber.airtable_record_id, lead_result);
 
-                    // In the case that we receive a duplicate error from Zoho, we can instead take the id
-                    // of the duplicate and apply it to our internal record
-                    match lead_result.message.as_str() {
-                        "duplicate data" => {
-                            match lead_result.details {
-                                ModuleUpdateResponseEntryDetails::Failure(ref details) => {
-                                    if let Some(id) = &details.id {
-                                        subscriber.zoho_lead_id = id.to_string();
-                                        Some(subscriber)
-                                    } else {
-                                        log::warn!(
-                                            "Zoho did not return an id in the duplicate data response details. id: {} airtable_record_id: {} response: {:?}",
-                                            subscriber.id,
-                                            subscriber.airtable_record_id,
-                                            lead_result
-                                        );
-
-                                        None
-                                    }
-                                },
-                                _ => {
-                                    log::warn!(
-                                        "Zoho returned a duplicate data error, but details did not match expectations. id: {} airtable_record_id: {} response: {:?}",
-                                        subscriber.id,
-                                        subscriber.airtable_record_id,
-                                        lead_result
-                                    );
+                                    subscriber.zoho_lead_id = details.id.clone();
+                                    Some(subscriber)
+                                } else {
+                                    log::warn!("Zoho returned a duplicate data conflict on a field other that the external airtable id. id: {} airtable_record_id: {} response: {:?}", subscriber.id, subscriber.airtable_record_id, lead_result);
 
                                     None
                                 }
-                            }
-                        }
-                        _other => {
-                            log::warn!(
-                                "Failed to write lead to Zoho. id: {} airtable_record_id: {} details: {:?}",
-                                subscriber.id,
-                                subscriber.airtable_record_id,
-                                lead_result
-                            );
+                            },
+                            _ => {
+                                log::warn!(
+                                    "Failed to write lead to Zoho. id: {} airtable_record_id: {} response: {:?}",
+                                    subscriber.id,
+                                    subscriber.airtable_record_id,
+                                    lead_result
+                                );
 
-                            None
+                                None
+                            }
                         }
                     }
                 }
@@ -217,15 +188,8 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
             let notes_results = notes_client.insert(notes, None).await?;
 
             for note_result in notes_results.data {
-                match note_result.status.as_str() {
-                    "success" => (),
-                    status => {
-                        log::warn!(
-                            "Failed to write note to Zoho. message: {} status: {}",
-                            note_result.message,
-                            status
-                        )
-                    }
+                if let ModuleUpdateResponseEntry::Error(_) = note_result {
+                    log::warn!("Failed to write note to Zoho. response: {:?}", note_result);
                 }
             }
         }

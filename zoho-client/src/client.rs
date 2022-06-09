@@ -617,18 +617,67 @@ pub struct ModuleUpdateResponse {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ModuleUpdateResponseEntry {
-    pub code: String,
-    pub details: ModuleUpdateResponseEntryDetails,
-    pub message: String,
-    pub status: String,
+#[serde(tag = "status")]
+pub enum ModuleUpdateResponseEntry {
+    #[serde(alias = "success")]
+    Success(ModuleUpdateResponseEntrySuccess),
+    #[serde(alias = "error")]
+    Error(ModuleUpdateResponseEntryError),
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(untagged)]
-pub enum ModuleUpdateResponseEntryDetails {
-    Success(ModuleUpdateResponseEntryDetailsSuccess),
-    Failure(ModuleUpdateResponseEntryDetailsFailure),
+pub struct ModuleUpdateResponseEntrySuccess {
+    pub message: String,
+    pub details: ModuleUpdateResponseEntrySuccessDetails,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ModuleUpdateResponseEntrySuccessDetails {
+    #[serde(alias = "Modified_Time")]
+    pub modifiend_time: Option<String>,
+    #[serde(alias = "Modified_Time")]
+    pub modified_by: Option<ModuleUpdateResponseEntryModified>,
+    #[serde(alias = "Created_Time")]
+    pub created_time: Option<String>,
+    pub id: String,
+    #[serde(alias = "Created_By")]
+    pub created_by: Option<ModuleUpdateResponseEntryModified>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "code")]
+pub enum ModuleUpdateResponseEntryError {
+    #[serde(alias = "DUPLICATE_DATA")]
+    DuplicateData {
+        message: String,
+        details: ModuleUpdateResponseEntryErrorDuplicateDataDetails,
+    },
+    #[serde(alias = "INVALID_MODULE")]
+    InvalidModule,
+    #[serde(alias = "INVALID_DATA")]
+    InvalidData,
+    #[serde(alias = "MANDATORY_NOT_FOUND")]
+    MandatoryNotFound,
+    #[serde(alias = "INVALID_URL_PATTERN")]
+    InvalidUrlPattern,
+    #[serde(alias = "OAUTH_SCOPE_MISMATCH")]
+    OAuthScopeMismatch,
+    #[serde(alias = "NO_PERMISSION")]
+    NoPermission,
+    #[serde(alias = "INTERNAL_ERROR")]
+    InternalError,
+    #[serde(alias = "INVALID_REQUEST_METHOD")]
+    InvalidRequestMethod,
+    #[serde(alias = "AUTHORIZATION_FAILED")]
+    AuthorizationFailed,
+    #[serde(alias = "LIMIT_EXCEEDED")]
+    LimitExceeded,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ModuleUpdateResponseEntryErrorDuplicateDataDetails {
+    pub id: String,
+    pub api_name: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -681,4 +730,66 @@ pub struct ModuleDeleteResponseEntry {
 #[derive(Debug, Deserialize)]
 pub struct ModuleDeleteResponseDetails {
     pub id: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_success() {
+        let success = "{\"data\": [{ \"status\": \"success\", \"code\": \"SUCCESS\", \"message\": \"record added\", \"details\": { \"id\": \"5229450000000925010\" } }] }";
+        let response: ModuleUpdateResponse = serde_json::from_str(success).unwrap();
+
+        match response.data[0] {
+            ModuleUpdateResponseEntry::Success(ref success) => {
+                assert_eq!("5229450000000925010", success.details.id);
+            }
+            _ => panic!("Did not parse response as a success"),
+        }
+    }
+
+    #[test]
+    fn test_parse_errors() {
+        let errors = [
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"INVALID_MODULE\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"INVALID_DATA\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"MANDATORY_NOT_FOUND\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"INVALID_URL_PATTERN\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"OAUTH_SCOPE_MISMATCH\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"NO_PERMISSION\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"INTERNAL_ERROR\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"INVALID_REQUEST_METHOD\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"AUTHORIZATION_FAILED\", \"message\": \" ... \", \"details\": {} }] }",
+            "{\"data\": [{ \"status\": \"error\", \"code\": \"LIMIT_EXCEEDED\", \"message\": \" ... \", \"details\": {} }] }",
+        ];
+
+        for error in errors {
+            let response: ModuleUpdateResponse = serde_json::from_str(error).unwrap();
+
+            match response.data[0] {
+                ModuleUpdateResponseEntry::Error(_) => (),
+                _ => panic!("Did not parse response as an error"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_parse_duplicate() {
+        let error = "{\"data\": [{ \"status\": \"error\", \"code\": \"DUPLICATE_DATA\", \"message\": \"duplicate data\", \"details\": { \"id\": \"5229450000000925010\", \"api_name\": \"unique_field\" } }] }";
+
+        let response: ModuleUpdateResponse = serde_json::from_str(error).unwrap();
+
+        match &response.data[0] {
+            ModuleUpdateResponseEntry::Error(err) => match err {
+                ModuleUpdateResponseEntryError::DuplicateData { message, details } => {
+                    assert_eq!("duplicate data", message);
+                    assert_eq!("5229450000000925010", details.id);
+                    assert_eq!("unique_field", details.api_name);
+                }
+                _ => panic!("Did not parse duplicate error"),
+            },
+            _ => panic!("Did not parse response as an error"),
+        }
+    }
 }

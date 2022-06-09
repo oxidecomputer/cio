@@ -219,6 +219,10 @@ impl Zone {
         }
     }
 
+    pub fn identifier(&self) -> &str {
+        self.identifier.as_str()
+    }
+
     pub fn is_expired(&self) -> bool {
         self.dns_cache.expires_at <= Instant::now()
     }

@@ -1,5 +1,9 @@
 use serde_json::json;
-use zoho_api::{client, client::ModuleUpdateResponseEntryDetails, modules};
+use zoho_api::{
+    client,
+    client::{ModuleDeleteResponseEntry, ModuleUpdateResponseEntry, ModuleUpdateResponseEntryError},
+    modules,
+};
 
 // This test requires manual intervention to run. Permanently deleting a lead from Zoho requires
 // an admin to delete the lead from the Zoho Recycling Bin (via the web ui). Until this delete is
@@ -40,49 +44,61 @@ async fn test_create_lead() {
 
     let insert = leads.insert(vec![input.clone(), input], Some(vec![])).await.unwrap();
 
-    assert_eq!("record added", insert.data[0].message);
-    assert_eq!("success", insert.data[0].status);
+    let (message_0, record_id_0) = get_update_success_message_and_id(&insert.data[0]);
 
-    assert_eq!("duplicate data", insert.data[1].message);
-    assert_eq!("error", insert.data[1].status);
+    assert_eq!("record added", message_0);
 
-    let record_id = match &insert.data[0].details {
-        ModuleUpdateResponseEntryDetails::Success(details) => &details.id,
-        _ => panic!("Failed to get a success response back for lead"),
+    let (message_1, record_id_1) = match &insert.data[1] {
+        ModuleUpdateResponseEntry::Error(err) => match err {
+            ModuleUpdateResponseEntryError::DuplicateData { message, details } => {
+                (message.as_str(), details.id.as_str())
+            }
+            _ => panic!("Failed to get duplicate data details for lead"),
+        },
+        _ => panic!("Failed to get a error response back for lead {:?}", insert),
     };
 
+    assert_eq!("duplicate data", message_1);
+
     let get = leads
-        .get(record_id, client::GetModuleRecordsParams::default())
+        .get(record_id_0, client::GetModuleRecordsParams::default())
         .await
         .unwrap();
 
     assert_eq!(1, get.data.len());
-    assert_eq!(record_id, &get.data[0].id);
+    assert_eq!(record_id_0, &get.data[0].id);
 
     let mut note_input = modules::NotesInput::default();
     note_input.note_content = Some("Test attached notes".to_string());
-    note_input.parent_id = serde_json::Value::String(record_id.to_string());
+    note_input.parent_id = serde_json::Value::String(record_id_0.to_string());
     note_input.se_module = "Leads".to_string();
 
     let inserted_note = notes.insert(vec![note_input], Some(vec![])).await.unwrap();
 
-    assert_eq!("record added", inserted_note.data[0].message);
-    assert_eq!("success", inserted_note.data[0].status);
+    let (message_n0, record_id_n0) = get_update_success_message_and_id(&inserted_note.data[0]);
 
-    let note_id = match &inserted_note.data[0].details {
-        ModuleUpdateResponseEntryDetails::Success(details) => &details.id,
-        _ => panic!("Failed to get a success response back for note"),
-    };
+    assert_eq!("record added", message_n0);
 
-    let delete_note = notes.delete(vec![note_id], false).await.unwrap();
+    let delete_note = notes.delete(vec![record_id_n0], false).await.unwrap();
 
-    assert_eq!("record deleted", delete_note.data[0].message);
-    assert_eq!("success", delete_note.data[0].status);
-    assert_eq!(note_id, &delete_note.data[0].details.id);
+    let (message_n0_del, record_id_n0_del) = (
+        delete_note.data[0].message.as_str(),
+        delete_note.data[0].details.id.as_str(),
+    );
 
-    let delete = leads.delete(vec![record_id], false).await.unwrap();
+    assert_eq!("record deleted", message_n0_del);
+    assert_eq!(record_id_n0, record_id_n0_del);
+
+    let delete = leads.delete(vec![record_id_0], false).await.unwrap();
 
     assert_eq!("record deleted", delete.data[0].message);
     assert_eq!("success", delete.data[0].status);
-    assert_eq!(record_id, &delete.data[0].details.id);
+    assert_eq!(record_id_0, &delete.data[0].details.id);
+}
+
+fn get_update_success_message_and_id(entry: &ModuleUpdateResponseEntry) -> (&str, &str) {
+    match entry {
+        ModuleUpdateResponseEntry::Success(success) => (&success.message, &success.details.id),
+        _ => panic!("Failed to get a success response back {:?}", entry),
+    }
 }
