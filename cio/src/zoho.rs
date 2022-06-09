@@ -121,11 +121,10 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
                         },
                         failure => {
                             log::warn!(
-                                "Zoho returned success but did not include success response details. id: {} airtable_record_id: {} message: {} details: {:?}",
+                                "Zoho returned success but did not include success response details. id: {} airtable_record_id: {} response: {:?}",
                                 subscriber.id,
                                 subscriber.airtable_record_id,
-                                lead_result.message,
-                                failure
+                                lead_result
                             );
 
                             None
