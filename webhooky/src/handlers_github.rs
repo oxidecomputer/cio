@@ -20,52 +20,32 @@ use hmac::Hmac;
 use log::{info, warn};
 use sha2::Sha256;
 
-use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context, sig::SignatureVerification, http::{forbidden, Headers}};
+use std::borrow::Cow;
 
-pub struct GitHubWebhookVerification {
-    _seal: Option<()>
-}
+use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context, sig::HmacSignatureVerifier, http::{unauthorized, Headers}};
 
-impl GitHubWebhookVerification {
-    fn new(key: &[u8], signature: &str, content: &[u8]) -> Result<Self> {
-
-        // Parse the signature value from the value presented by GitHub
-        let signature = hex::decode(signature.trim_start_matches("sha256"))?;
-
-        // Verify the contents
-        let verified = GitHubWebhookVerification::verify(key, &signature, content);
-
-        if verified {
-            Ok(Self {
-                _seal: None
-            })
-        } else {
-            Err(forbidden())?
-        }
-    }
-}
-
-impl SignatureVerification for GitHubWebhookVerification {
-    type Algo = Hmac<Sha256>;
-}
+pub struct GitHubWebhookVerification;
 
 #[async_trait]
-impl Extractor for GitHubWebhookVerification {
-    async fn from_request<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<GitHubWebhookVerification, HttpError> {
-        let headers = Headers::from_request(rqctx.clone()).await?;
-        let body = UntypedBody::from_request(rqctx.clone()).await?;
-        let signature = headers.0.get("X-Hub-Signature-256").and_then(|header_value| {
-            header_value.to_str().ok()
-        }).ok_or_else(forbidden)?;
+impl HmacSignatureVerifier for GitHubWebhookVerification {
+    type Algo = Hmac<Sha256>;
 
-        GitHubWebhookVerification::new("key".as_bytes(), &signature, body.as_bytes()).map_err(|_| forbidden())
+    async fn key<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+        Ok(std::env::var("GITHUB_KEY").map(|key| Cow::Owned(key.into_bytes()))?)
     }
 
-    fn metadata() -> ExtractorMetadata {
-        ExtractorMetadata {
-            paginated: false,
-            parameters: vec![],
-        }
+    async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+        let headers = Headers::from_request(rqctx.clone()).await?;
+        let signature = headers.0
+            .get("X-Hub-Signature-256")
+            .and_then(|header_value| {
+                header_value.to_str().ok()
+            })
+            .and_then(|header| {
+                hex::decode(header.trim_start_matches("sha256")).ok()
+            }).ok_or_else(unauthorized)?;
+
+        Ok(Cow::Owned(signature))
     }
 }
 
@@ -1040,10 +1020,10 @@ mod tests {
     #[test]
     fn test_verifies_valid_github_signature() {
         let test_key = "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=";
-        let test_signature = hex::decode("318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada19").unwrap();
+        let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada19";
         let test_body = include_str!("../tests/github_webhook_sig_test.json").trim();
 
-        assert!(GitHubWebhookVerification::new(test_key.as_bytes(), &test_signature, test_body.as_bytes()).is_ok());
+        assert!(GitHubWebhookVerification::new(test_key.as_bytes(), test_signature, test_body.as_bytes()).is_ok());
     }
 
     #[test]
@@ -1055,9 +1035,9 @@ mod tests {
         }
 
         let test_key = "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=";
-        let test_signature = hex::decode("318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18").unwrap();
+        let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
         let test_body = include_str!("../tests/github_webhook_sig_test.json").trim();
 
-        assert!(GitHubWebhookVerification::new(test_key.as_bytes(), &test_signature, test_body.as_bytes()).is_err());
+        assert!(GitHubWebhookVerification::new(test_key.as_bytes(), test_signature, test_body.as_bytes()).is_err());
     }
 }

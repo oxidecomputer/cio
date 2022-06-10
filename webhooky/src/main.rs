@@ -9,7 +9,7 @@ mod handlers_auth;
 mod handlers_checkr;
 mod handlers_cron;
 mod handlers_github;
-mod handlers_sendgrid;
+// mod handlers_sendgrid;
 mod http;
 mod repos;
 mod sagas;

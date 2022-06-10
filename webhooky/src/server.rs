@@ -26,7 +26,10 @@ use signal_hook::{
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::github_types::GitHubWebhook;
+use crate::{
+    github_types::GitHubWebhook,
+    sig::HmacVerifiedBody
+};
 
 pub async fn create_server(
     s: &crate::core::Server,
@@ -429,18 +432,11 @@ async fn listen_products_sold_count_requests(
 }]
 async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: UntypedBody,
-    _verified: crate::handlers_github::GitHubWebhookVerification,
+    body: HmacVerifiedBody<crate::handlers_github::GitHubWebhookVerification>
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let webhook = body.into_inner_as::<GitHubWebhook>()?;
 
-    // The body is manually processed inside the handler as we do not want to process it at all if
-    // the request fails its signature check
-    let webhook = body.as_str().and_then(|raw| serde_json::from_str::<GitHubWebhook>(raw).map_err(|_| {
-        HttpError::for_client_error(None, http::StatusCode::BAD_REQUEST, "".to_string())
-    }))?;
-
-    let mut txn =
-        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::Raw(webhook.clone()))).await;
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
     if let Err(e) = txn
         .run(|| crate::handlers_github::handle_github(rqctx, webhook))
@@ -894,7 +890,7 @@ pub struct IncomingEmail {
 async fn listen_emails_incoming_sendgrid_parse_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
-    _verified: crate::handlers_sendgrid::SendGridWebhookVerification,
+    // _verified: crate::handlers_sendgrid::SendGridWebhookVerification,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let mut txn = start_sentry_http_transaction(
         rqctx.clone(),
