@@ -1,6 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use anyhow::Result;
+use async_trait::async_trait;
 use chrono::offset::Utc;
 use cio_api::{
     companies::Company,
@@ -13,17 +14,46 @@ use cio_api::{
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
 };
-use dropshot::{RequestContext, TypedBody};
+use dropshot::{RequestContext, TypedBody, ExtractorMetadata, UntypedBody, HttpError, ServerContext, Extractor};
 use google_drive::traits::{DriveOps, FileOps};
+use hmac::Hmac;
 use log::{info, warn};
+use sha2::Sha256;
 
-use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context};
+use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context, sig::SignatureVerification, http::{forbidden, unauthorized, Headers}};
+
+pub struct GitHubWebhookVerification;
+
+impl SignatureVerification for GitHubWebhookVerification {
+    type Algo = Hmac<Sha256>;
+}
+
+#[async_trait]
+impl Extractor for GitHubWebhookVerification {
+    async fn from_request<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<GitHubWebhookVerification, HttpError> {
+        let headers = Headers::from_request(rqctx.clone()).await?;
+        let body = UntypedBody::from_request(rqctx.clone()).await?;
+        let signature = headers.0.get("X-Hub-Signature-256").ok_or_else(unauthorized)?;
+        let verified = GitHubWebhookVerification::verify(body.as_bytes(), "key".as_bytes(), signature.as_bytes());
+
+        if verified {
+            Ok(GitHubWebhookVerification)
+        } else {
+            Err(forbidden())
+        }
+    }
+
+    fn metadata() -> ExtractorMetadata {
+        ExtractorMetadata {
+            paginated: false,
+            parameters: vec![],
+        }
+    }
+}
 
 /// Handle a request to the /github endpoint.
-pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GitHubWebhook>) -> Result<()> {
+pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWebhook) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     // Parse the `X-GitHub-Event` header. Ensure the request lock is dropped once the
     // event_type has been extracted.

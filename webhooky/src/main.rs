@@ -8,6 +8,7 @@ mod handlers;
 mod handlers_auth;
 mod handlers_cron;
 mod handlers_github;
+mod http;
 mod repos;
 mod sagas;
 mod server;

@@ -6551,6 +6551,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-bb8-diesel",
+ "async-trait",
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
@@ -6567,6 +6568,7 @@ dependencies = [
  "futures-util",
  "google-drive",
  "gusto-api",
+ "hex",
  "hmac",
  "http",
  "hyper 0.10.16",

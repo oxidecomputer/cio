@@ -7,7 +7,7 @@ use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
+    HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, UntypedBody, TypedBody
 };
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
@@ -26,7 +26,11 @@ use signal_hook::{
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::github_types::GitHubWebhook;
+use crate::{
+    github_types::GitHubWebhook,
+    http::{Headers, unauthorized, forbidden},
+    sig::SignatureVerification
+};
 
 pub async fn create_server(
     s: &crate::core::Server,
@@ -429,13 +433,18 @@ async fn listen_products_sold_count_requests(
 }]
 async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<GitHubWebhook>,
+    body: UntypedBody,
+    _verified: crate::handlers_github::GitHubWebhookVerification,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let webhook = body.as_str().and_then(|raw| serde_json::from_str::<GitHubWebhook>(raw).map_err(|_| {
+        HttpError::for_client_error(None, http::StatusCode::BAD_REQUEST, "".to_string())
+    }))?;
+
     let mut txn =
-        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
+        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::Raw(webhook.clone()))).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers_github::handle_github(rqctx, body_param))
+        .run(|| crate::handlers_github::handle_github(rqctx, webhook))
         .await
     {
         // Send the error to sentry.
@@ -2605,6 +2614,7 @@ pub enum TypedOrUntypedBody<
 > {
     TypedBody(TypedBody<T>),
     UntypedBody(UntypedBody),
+    Raw(T),
 }
 
 async fn start_sentry_http_transaction<
@@ -2639,6 +2649,7 @@ async fn start_sentry_http_transaction<
                 serde_json::to_string(&inner).unwrap()
             }),
             TypedOrUntypedBody::UntypedBody(t) => Some(t.as_str().unwrap().to_string()),
+            TypedOrUntypedBody::Raw(t) => serde_json::to_string(&t).ok()
         }
     } else {
         None

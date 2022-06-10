@@ -80,6 +80,8 @@ stacker = "0.1.14"
 sha2 = "0.10.0"
 hmac = "0.12.0"
 digest = "0.10.0"
+async-trait = "0.1.52"
+hex = "0.4.3"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]
