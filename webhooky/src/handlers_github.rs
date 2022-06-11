@@ -14,7 +14,7 @@ use cio_api::{
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
 };
-use dropshot::{RequestContext, ExtractorMetadata, UntypedBody, HttpError, ServerContext, Extractor};
+use dropshot::{RequestContext, Extractor, ServerContext};
 use google_drive::traits::{DriveOps, FileOps};
 use hmac::Hmac;
 use log::{info, warn};
@@ -30,20 +30,28 @@ pub struct GitHubWebhookVerification;
 impl HmacSignatureVerifier for GitHubWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
-        Ok(std::env::var("GITHUB_KEY").map(|key| Cow::Owned(key.into_bytes()))?)
+    async fn key<'a, Context: ServerContext>(_: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+        Ok(std::env::var("GITHUB_WH_KEY").map(|key| Cow::Owned(key.into_bytes())).map_err(|err| {
+            warn!("Failed to find webhook key for verifying GitHub webhooks");
+            err
+        })?)
     }
 
     async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
         let headers = Headers::from_request(rqctx.clone()).await?;
         let signature = headers.0
             .get("X-Hub-Signature-256")
+            .ok_or_else(|| anyhow::anyhow!("GitHub webhook is missing signature"))
             .and_then(|header_value| {
-                header_value.to_str().ok()
+                Ok(header_value.to_str()?)
             })
             .and_then(|header| {
-                hex::decode(header.trim_start_matches("sha256")).ok()
-            }).ok_or_else(unauthorized)?;
+                Ok(hex::decode(header.trim_start_matches("sha256"))?)
+            })
+            .map_err(|err| {
+                info!("DocuSign webhook is missing a well-formed signature: {}", err);
+                unauthorized()
+            })?;
 
         Ok(Cow::Owned(signature))
     }

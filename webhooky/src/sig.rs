@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use digest::{KeyInit};
-use dropshot::{RequestContext, Extractor, HttpError, ExtractorMetadata, ServerContext, TypedBody, UntypedBody};
+use dropshot::{RequestContext, Extractor, HttpError, ExtractorMetadata, ServerContext, UntypedBody};
 use hmac::{Mac};
 use std::{borrow::Cow, marker::PhantomData, sync::Arc};
 
-use crate::http::{Headers, unauthorized};
+use crate::http::unauthorized;
 
 // listen_checkr_background_update_webhooks
 // listen_docusign_envelope_update_webhooks
@@ -21,6 +21,8 @@ pub struct HmacVerifiedBody<T> {
 }
 
 impl<T> HmacVerifiedBody<T> {
+
+    #[allow(dead_code)]
     pub fn into_inner(self) -> UntypedBody {
         self.body
     }

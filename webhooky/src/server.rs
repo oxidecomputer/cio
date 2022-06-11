@@ -2610,7 +2610,6 @@ pub enum TypedOrUntypedBody<
 > {
     TypedBody(TypedBody<T>),
     UntypedBody(UntypedBody),
-    Raw(T),
 }
 
 async fn start_sentry_http_transaction<
@@ -2645,7 +2644,6 @@ async fn start_sentry_http_transaction<
                 serde_json::to_string(&inner).unwrap()
             }),
             TypedOrUntypedBody::UntypedBody(t) => Some(t.as_str().unwrap().to_string()),
-            TypedOrUntypedBody::Raw(t) => serde_json::to_string(&t).ok()
         }
     } else {
         None

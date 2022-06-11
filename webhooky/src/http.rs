@@ -23,7 +23,3 @@ impl Extractor for Headers {
 pub fn unauthorized() -> HttpError {
     HttpError::for_client_error(None, http::StatusCode::UNAUTHORIZED, "".to_string())
 }
-
-pub fn forbidden() -> HttpError {
-    HttpError::for_client_error(None, http::StatusCode::FORBIDDEN, "".to_string())
-}
