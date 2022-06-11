@@ -1,8 +1,10 @@
+use anyhow::Result;
 use async_trait::async_trait;
+use cio_api::companies::Company;
 use dropshot::{RequestContext, ExtractorMetadata, UntypedBody, HttpError, ServerContext, Extractor};
 use hmac::Hmac;
 use sha2::Sha256;
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use crate::{sig::HmacSignatureVerifier, http::{forbidden, unauthorized, Headers}};
 
@@ -13,7 +15,11 @@ impl HmacSignatureVerifier for CheckrVerification {
     type Algo = Hmac<Sha256>;
 
     async fn key<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
-        Ok(std::env::var("GITHUB_KEY").map(|key| Cow::Owned(key.into_bytes()))?)
+        let api_context = rqctx.context();
+
+        Ok(Company::get_from_db(&api_context.db, "Oxide".to_string()).await.map(|company| {
+            Cow::Owned(company.checkr_api_key.into_bytes())
+        }).ok_or_else(unauthorized)?)
     }
 
     async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
