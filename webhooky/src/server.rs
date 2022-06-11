@@ -7,7 +7,7 @@ use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, UntypedBody, TypedBody
+    HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
@@ -26,10 +26,7 @@ use signal_hook::{
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::{
-    github_types::GitHubWebhook,
-    sig::HmacVerifiedBody
-};
+use crate::{github_types::GitHubWebhook, sig::HmacVerifiedBody};
 
 pub async fn create_server(
     s: &crate::core::Server,
@@ -432,16 +429,13 @@ async fn listen_products_sold_count_requests(
 }]
 async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBody<crate::handlers_github::GitHubWebhookVerification>
+    body: HmacVerifiedBody<crate::handlers_github::GitHubWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let webhook = body.into_inner_as::<GitHubWebhook>()?;
 
     let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
-    if let Err(e) = txn
-        .run(|| crate::handlers_github::handle_github(rqctx, webhook))
-        .await
-    {
+    if let Err(e) = txn.run(|| crate::handlers_github::handle_github(rqctx, webhook)).await {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));

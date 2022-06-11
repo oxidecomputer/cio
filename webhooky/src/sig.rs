@@ -1,7 +1,7 @@
 use async_trait::async_trait;
-use digest::{KeyInit};
-use dropshot::{RequestContext, Extractor, HttpError, ExtractorMetadata, ServerContext, UntypedBody};
-use hmac::{Mac};
+use digest::KeyInit;
+use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, UntypedBody};
+use hmac::Mac;
 use std::{borrow::Cow, marker::PhantomData, sync::Arc};
 
 use crate::http::unauthorized;
@@ -17,23 +17,21 @@ use crate::http::unauthorized;
 
 pub struct HmacVerifiedBody<T> {
     body: UntypedBody,
-    _verifier: PhantomData<T>
+    _verifier: PhantomData<T>,
 }
 
 impl<T> HmacVerifiedBody<T> {
-
     #[allow(dead_code)]
     pub fn into_inner(self) -> UntypedBody {
         self.body
     }
 
     pub fn into_inner_as<U>(self) -> Result<U, HttpError>
-        where U: serde::de::DeserializeOwned + Send + Sync + schemars::JsonSchema
+    where
+        U: serde::de::DeserializeOwned + Send + Sync + schemars::JsonSchema,
     {
         serde_json::from_slice::<U>(self.body.as_bytes())
-            .map_err(|e| {
-                HttpError::for_bad_request(None, format!("Failed to parse body: {}", e))
-            })
+            .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {}", e)))
     }
 }
 
@@ -42,15 +40,19 @@ pub trait HmacSignatureVerifier {
     type Algo: Mac + KeyInit;
 
     async fn key<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> anyhow::Result<Cow<'a, [u8]>>;
-    async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> anyhow::Result<Cow<'a, [u8]>>;
+    async fn signature<'a, Context: ServerContext>(
+        rqctx: &'a Arc<RequestContext<Context>>,
+    ) -> anyhow::Result<Cow<'a, [u8]>>;
 }
 
 #[async_trait]
 impl<T> Extractor for HmacVerifiedBody<T>
 where
-    T: HmacSignatureVerifier + Send + Sync
+    T: HmacSignatureVerifier + Send + Sync,
 {
-    async fn from_request<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<HmacVerifiedBody<T>, HttpError> {
+    async fn from_request<Context: ServerContext>(
+        rqctx: Arc<RequestContext<Context>>,
+    ) -> Result<HmacVerifiedBody<T>, HttpError> {
         let body = UntypedBody::from_request(rqctx.clone()).await?;
 
         let key = <T as HmacSignatureVerifier>::key(&rqctx).await.unwrap();
@@ -62,11 +64,11 @@ where
         } else {
             false
         };
-        
+
         if verified {
             Ok(HmacVerifiedBody {
                 body,
-                _verifier: PhantomData
+                _verifier: PhantomData,
             })
         } else {
             Err(unauthorized())
