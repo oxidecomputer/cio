@@ -4,7 +4,7 @@ use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerCo
 
 use std::{marker::PhantomData, sync::Arc};
 
-use crate::http::{unauthorized, Headers};
+use crate::http::{unauthorized, internal_error, Headers};
 
 #[async_trait]
 pub trait BearerProvider {
@@ -26,7 +26,7 @@ where
 {
     async fn from_request<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Bearer<T>, HttpError> {
         let headers = Headers::from_request(rqctx.clone()).await.map_err(|_| unauthorized())?;
-        let expected_token = T::token().await.map_err(|_| unauthorized())?;
+        let expected_token = T::token().await.map_err(|_| internal_error())?;
 
         let header = headers.0.get("Authorization").ok_or_else(unauthorized)?;
         let header_value = header.to_str().map_err(|_| unauthorized())?;

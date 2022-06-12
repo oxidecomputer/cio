@@ -4,7 +4,7 @@ use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerCo
 use hmac::Mac;
 use std::{borrow::Cow, marker::PhantomData, sync::Arc};
 
-use crate::http::unauthorized;
+use crate::http::{unauthorized, internal_error};
 
 // listen_checkr_background_update_webhooks
 // listen_docusign_envelope_update_webhooks
@@ -16,22 +16,20 @@ use crate::http::unauthorized;
 // listen_slack_commands_webhooks
 
 pub struct HmacVerifiedBody<T> {
-    body: UntypedBody,
-    _verifier: PhantomData<T>,
+    audit: HmacVerifiedBodyAudit<T>
 }
 
 impl<T> HmacVerifiedBody<T> {
     #[allow(dead_code)]
     pub fn into_inner(self) -> UntypedBody {
-        self.body
+        self.audit.into_inner()
     }
 
     pub fn into_inner_as<U>(self) -> Result<U, HttpError>
     where
         U: serde::de::DeserializeOwned + Send + Sync + schemars::JsonSchema,
     {
-        serde_json::from_slice::<U>(self.body.as_bytes())
-            .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {}", e)))
+        self.audit.into_inner_as::<U>()
     }
 }
 
@@ -78,8 +76,7 @@ where
 
         if audit.verified {
             Ok(HmacVerifiedBody {
-                body: audit.body,
-                _verifier: PhantomData,
+                audit
             })
         } else {
             Err(unauthorized())
@@ -103,9 +100,7 @@ where
         rqctx: Arc<RequestContext<Context>>,
     ) -> Result<HmacVerifiedBodyAudit<T>, HttpError> {
         let body = UntypedBody::from_request(rqctx.clone()).await?;
-
-        // TODO: Internal server error
-        let key = T::key(&rqctx).await.unwrap();
+        let key = T::key(&rqctx).await.map_err(|_| internal_error())?;
 
         let verified = if let Ok(signature) = T::signature(&rqctx).await {
             if let Ok(mut mac) = <T::Algo as Mac>::new_from_slice(&*key) {
