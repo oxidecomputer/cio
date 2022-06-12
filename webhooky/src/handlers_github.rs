@@ -23,11 +23,7 @@ use sha2::Sha256;
 use std::borrow::Cow;
 
 use crate::{
-    event_types::EventType,
-    github_types::GitHubWebhook,
-    http::Headers,
-    repos::Repo,
-    server::Context,
+    event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo, server::Context,
     sig::HmacSignatureVerifier,
 };
 

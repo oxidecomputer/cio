@@ -15,6 +15,10 @@ pub struct Bearer<T> {
     _provider: PhantomData<T>,
 }
 
+pub struct BearerAudit<T> {
+    _provider: PhantomData<T>,
+}
+
 #[async_trait]
 impl<T> Extractor for Bearer<T>
 where
@@ -39,6 +43,34 @@ where
         } else {
             Err(unauthorized())
         }
+    }
+
+    fn metadata() -> ExtractorMetadata {
+        ExtractorMetadata {
+            paginated: false,
+            parameters: vec![],
+        }
+    }
+}
+
+#[async_trait]
+impl<T> Extractor for BearerAudit<T>
+where
+    T: BearerProvider + Send + Sync,
+{
+    async fn from_request<Context: ServerContext>(
+        rqctx: Arc<RequestContext<Context>>,
+    ) -> Result<BearerAudit<T>, HttpError> {
+        if let Err(_) = Bearer::<T>::from_request(rqctx.clone()).await {
+            let uri = &rqctx.request.lock().await.uri().clone();
+            log::info!(
+                "Bearer authentication check failed. id: {}, uri: {}",
+                rqctx.request_id,
+                uri
+            );
+        };
+
+        Ok(BearerAudit { _provider: PhantomData })
     }
 
     fn metadata() -> ExtractorMetadata {

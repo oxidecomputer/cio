@@ -35,6 +35,27 @@ impl<T> HmacVerifiedBody<T> {
     }
 }
 
+pub struct HmacVerifiedBodyAudit<T> {
+    body: UntypedBody,
+    verified: bool,
+    _verifier: PhantomData<T>,
+}
+
+impl<T> HmacVerifiedBodyAudit<T> {
+    #[allow(dead_code)]
+    pub fn into_inner(self) -> UntypedBody {
+        self.body
+    }
+
+    pub fn into_inner_as<U>(self) -> Result<U, HttpError>
+    where
+        U: serde::de::DeserializeOwned + Send + Sync + schemars::JsonSchema,
+    {
+        serde_json::from_slice::<U>(self.body.as_bytes())
+            .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {}", e)))
+    }
+}
+
 #[async_trait]
 pub trait HmacSignatureVerifier {
     type Algo: Mac + KeyInit;
@@ -53,26 +74,55 @@ where
     async fn from_request<Context: ServerContext>(
         rqctx: Arc<RequestContext<Context>>,
     ) -> Result<HmacVerifiedBody<T>, HttpError> {
-        let body = UntypedBody::from_request(rqctx.clone()).await?;
+        let audit = HmacVerifiedBodyAudit::<T>::from_request(rqctx.clone()).await?;
 
-        let key = T::key(&rqctx).await.unwrap();
-        let signature = T::signature(&rqctx).await.unwrap();
-
-        let verified = if let Ok(mut mac) = <T::Algo as Mac>::new_from_slice(&*key) {
-            mac.update(body.as_bytes());
-            mac.verify_slice(&*signature).is_ok()
-        } else {
-            false
-        };
-
-        if verified {
+        if audit.verified {
             Ok(HmacVerifiedBody {
-                body,
+                body: audit.body,
                 _verifier: PhantomData,
             })
         } else {
             Err(unauthorized())
         }
+    }
+
+    fn metadata() -> ExtractorMetadata {
+        ExtractorMetadata {
+            paginated: false,
+            parameters: vec![],
+        }
+    }
+}
+
+#[async_trait]
+impl<T> Extractor for HmacVerifiedBodyAudit<T>
+where
+    T: HmacSignatureVerifier + Send + Sync,
+{
+    async fn from_request<Context: ServerContext>(
+        rqctx: Arc<RequestContext<Context>>,
+    ) -> Result<HmacVerifiedBodyAudit<T>, HttpError> {
+        let body = UntypedBody::from_request(rqctx.clone()).await?;
+
+        // TODO: Internal server error
+        let key = T::key(&rqctx).await.unwrap();
+
+        let verified = if let Ok(signature) = T::signature(&rqctx).await {
+            if let Ok(mut mac) = <T::Algo as Mac>::new_from_slice(&*key) {
+                mac.update(body.as_bytes());
+                mac.verify_slice(&*signature).is_ok()
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        Ok(HmacVerifiedBodyAudit {
+            body,
+            verified,
+            _verifier: PhantomData,
+        })
     }
 
     fn metadata() -> ExtractorMetadata {
