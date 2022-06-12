@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
+mod bearer;
 #[macro_use]
 pub mod core;
 mod event_types;
