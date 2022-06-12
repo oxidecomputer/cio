@@ -7,7 +7,7 @@ use sha2::Sha256;
 use std::{borrow::Cow, sync::Arc};
 
 use crate::{
-    http::{unauthorized, Headers},
+    http::Headers,
     sig::HmacSignatureVerifier,
 };
 
@@ -36,7 +36,7 @@ impl HmacSignatureVerifier for DocusignWebhookVerification {
             .and_then(|header| Ok(hex::decode(header)?))
             .map_err(|err| {
                 info!("DocuSign webhook is missing a well-formed signature: {}", err);
-                unauthorized()
+                err
             })?;
 
         Ok(Cow::Owned(signature))

@@ -25,7 +25,7 @@ use std::borrow::Cow;
 use crate::{
     event_types::EventType,
     github_types::GitHubWebhook,
-    http::{unauthorized, Headers},
+    http::Headers,
     repos::Repo,
     server::Context,
     sig::HmacSignatureVerifier,
@@ -55,8 +55,8 @@ impl HmacSignatureVerifier for GitHubWebhookVerification {
             .and_then(|header_value| Ok(header_value.to_str()?))
             .and_then(|header| Ok(hex::decode(header.trim_start_matches("sha256"))?))
             .map_err(|err| {
-                info!("DocuSign webhook is missing a well-formed signature: {}", err);
-                unauthorized()
+                info!("GitHub webhook is missing a well-formed signature: {}", err);
+                err
             })?;
 
         Ok(Cow::Owned(signature))

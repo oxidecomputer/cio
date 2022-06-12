@@ -8,7 +8,7 @@ use sha2::Sha256;
 use std::{borrow::Cow, sync::Arc};
 
 use crate::{
-    http::{unauthorized, Headers},
+    http::Headers,
     sig::HmacSignatureVerifier,
 };
 
@@ -26,7 +26,7 @@ impl HmacSignatureVerifier for CheckrVerification {
         Ok(Company::get_from_db(&db, "Oxide".to_string())
             .await
             .map(|company| Cow::Owned(company.checkr_api_key.into_bytes()))
-            .ok_or_else(unauthorized)?)
+            .ok_or_else(|| anyhow::anyhow!("Failed to find company API key for Checkr"))?)
     }
 
     async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
@@ -38,8 +38,8 @@ impl HmacSignatureVerifier for CheckrVerification {
             .and_then(|header_value| Ok(header_value.to_str()?))
             .and_then(|header| Ok(hex::decode(header)?))
             .map_err(|err| {
-                info!("DocuSign webhook is missing a well-formed signature: {}", err);
-                unauthorized()
+                info!("Checkr webhook is missing a well-formed signature: {}", err);
+                err
             })?;
 
         Ok(Cow::Owned(signature))
