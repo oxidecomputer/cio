@@ -55,10 +55,10 @@ where
     ) -> Result<HmacVerifiedBody<T>, HttpError> {
         let body = UntypedBody::from_request(rqctx.clone()).await?;
 
-        let key = <T as HmacSignatureVerifier>::key(&rqctx).await.unwrap();
-        let signature = <T as HmacSignatureVerifier>::signature(&rqctx).await.unwrap();
+        let key = T::key(&rqctx).await.unwrap();
+        let signature = T::signature(&rqctx).await.unwrap();
 
-        let verified = if let Ok(mut mac) = <<T as HmacSignatureVerifier>::Algo as Mac>::new_from_slice(&*key) {
+        let verified = if let Ok(mut mac) = <T::Algo as Mac>::new_from_slice(&*key) {
             mac.update(body.as_bytes());
             mac.verify_slice(&*signature).is_ok()
         } else {
