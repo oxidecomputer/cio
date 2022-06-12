@@ -1374,10 +1374,9 @@ pub async fn handle_shippo_tracking_update(
 
 pub async fn handle_checkr_background_update(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<checkr::WebhookEvent>,
+    event: checkr::WebhookEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
-    let event = body_param.into_inner();
 
     // Run the update of the background checks.
     // If we have a candidate ID let's get them from checkr.
@@ -1447,12 +1446,10 @@ pub async fn handle_checkr_background_update(
 
 pub async fn handle_docusign_envelope_update(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<docusign::Envelope>,
+    event: docusign::Envelope,
 ) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.db;
-
-    let event = body_param.into_inner();
 
     // We need to get the applicant for the envelope.
     // Check their offer first.

@@ -4,7 +4,7 @@ use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerCo
 use hmac::Mac;
 use std::{borrow::Cow, marker::PhantomData, sync::Arc};
 
-use crate::http::{unauthorized, internal_error};
+use crate::http::{internal_error, unauthorized};
 
 // listen_checkr_background_update_webhooks
 // listen_docusign_envelope_update_webhooks
@@ -16,7 +16,7 @@ use crate::http::{unauthorized, internal_error};
 // listen_slack_commands_webhooks
 
 pub struct HmacVerifiedBody<T> {
-    audit: HmacVerifiedBodyAudit<T>
+    audit: HmacVerifiedBodyAudit<T>,
 }
 
 impl<T> HmacVerifiedBody<T> {
@@ -75,9 +75,7 @@ where
         let audit = HmacVerifiedBodyAudit::<T>::from_request(rqctx.clone()).await?;
 
         if audit.verified {
-            Ok(HmacVerifiedBody {
-                audit
-            })
+            Ok(HmacVerifiedBody { audit })
         } else {
             Err(unauthorized())
         }

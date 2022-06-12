@@ -26,7 +26,7 @@ use signal_hook::{
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::{github_types::GitHubWebhook, sig::HmacVerifiedBody};
+use crate::{github_types::GitHubWebhook, sig::HmacVerifiedBodyAudit};
 
 pub async fn create_server(
     s: &crate::core::Server,
@@ -429,7 +429,7 @@ async fn listen_products_sold_count_requests(
 }]
 async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBody<crate::handlers_github::GitHubWebhookVerification>,
+    body: HmacVerifiedBodyAudit<crate::handlers_github::GitHubWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let webhook = body.into_inner_as::<GitHubWebhook>()?;
 
@@ -884,7 +884,6 @@ pub struct IncomingEmail {
 async fn listen_emails_incoming_sendgrid_parse_webhooks(
     rqctx: Arc<RequestContext<Context>>,
     body_param: UntypedBody,
-    // _verified: crate::handlers_sendgrid::SendGridWebhookVerification,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let mut txn = start_sentry_http_transaction(
         rqctx.clone(),
@@ -1189,13 +1188,14 @@ pub struct ShippoTrackingUpdateEvent {
 }]
 async fn listen_checkr_background_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<checkr::WebhookEvent>,
+    body: HmacVerifiedBodyAudit<crate::handlers_checkr::CheckrVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn =
-        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
+    let webhook = body.into_inner_as::<checkr::WebhookEvent>()?;
+
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_checkr_background_update(rqctx, body_param))
+        .run(|| crate::handlers::handle_checkr_background_update(rqctx, webhook))
         .await
     {
         // Send the error to sentry.
@@ -1689,13 +1689,14 @@ async fn listen_auth_docusign_callback(
 }]
 async fn listen_docusign_envelope_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<docusign::Envelope>,
+    body: HmacVerifiedBodyAudit<crate::handlers_docusign::DocusignWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn =
-        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
+    let webhook = body.into_inner_as::<docusign::Envelope>()?;
+
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_docusign_envelope_update(rqctx, body_param))
+        .run(|| crate::handlers::handle_docusign_envelope_update(rqctx, webhook))
         .await
     {
         // Send the error to sentry.

@@ -4,7 +4,7 @@ use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerCo
 
 use std::{marker::PhantomData, sync::Arc};
 
-use crate::http::{unauthorized, internal_error, Headers};
+use crate::http::{internal_error, unauthorized, Headers};
 
 #[async_trait]
 pub trait BearerProvider {
