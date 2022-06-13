@@ -15,6 +15,7 @@ use crate::http::{internal_error, unauthorized};
 // listen_shippo_tracking_update_webhooks
 // listen_slack_commands_webhooks
 
+#[derive(Debug)]
 pub struct HmacVerifiedBody<T> {
     audit: HmacVerifiedBodyAudit<T>,
 }
@@ -33,6 +34,7 @@ impl<T> HmacVerifiedBody<T> {
     }
 }
 
+#[derive(Debug)]
 pub struct HmacVerifiedBodyAudit<T> {
     body: UntypedBody,
     verified: bool,
@@ -73,6 +75,8 @@ where
         rqctx: Arc<RequestContext<Context>>,
     ) -> Result<HmacVerifiedBody<T>, HttpError> {
         let audit = HmacVerifiedBodyAudit::<T>::from_request(rqctx.clone()).await?;
+
+        log::debug!("Computed hmac audit result {}", audit.verified);
 
         if audit.verified {
             Ok(HmacVerifiedBody { audit })
@@ -123,34 +127,5 @@ where
             paginated: false,
             parameters: vec![],
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use hmac::{Hmac, Mac};
-    use sha2::Sha256;
-
-    use super::SignatureVerification;
-
-    #[test]
-    fn test_verifies_new_signature() {
-        struct Verifier;
-
-        impl SignatureVerification for Verifier {
-            type Algo = Hmac<Sha256>;
-        }
-
-        let test_key = "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=";
-        let test_body = "{\"fake\": \"message\"}";
-
-        type HmacSha256 = Hmac<Sha256>;
-
-        let mut mac = HmacSha256::new_from_slice(test_key.as_bytes()).unwrap();
-        mac.update(test_body.as_bytes());
-
-        let result = mac.finalize().into_bytes();
-
-        assert!(Verifier::verify(test_key.as_bytes(), &result, test_body.as_bytes()));
     }
 }

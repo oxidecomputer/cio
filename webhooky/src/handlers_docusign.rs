@@ -8,6 +8,7 @@ use std::{borrow::Cow, sync::Arc};
 
 use crate::{http::Headers, sig::HmacSignatureVerifier};
 
+#[derive(Debug)]
 pub struct DocusignWebhookVerification;
 
 #[async_trait]

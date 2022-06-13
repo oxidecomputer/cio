@@ -1188,7 +1188,7 @@ pub struct ShippoTrackingUpdateEvent {
 }]
 async fn listen_checkr_background_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_checkr::CheckrVerification>,
+    body: HmacVerifiedBodyAudit<crate::handlers_checkr::CheckrWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let webhook = body.into_inner_as::<checkr::WebhookEvent>()?;
 

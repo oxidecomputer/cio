@@ -1,23 +1,25 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
-mod bearer;
+pub mod auth;
+pub mod bearer;
 #[macro_use]
 pub mod core;
 mod event_types;
 mod github_types;
 mod handlers;
-mod handlers_auth;
-mod handlers_checkr;
-mod handlers_cron;
-mod handlers_docusign;
-mod handlers_github;
+pub mod handlers_auth;
+pub mod handlers_checkr;
+pub mod handlers_cron;
+pub mod handlers_docusign;
+pub mod handlers_github;
 // mod handlers_sendgrid;
 mod http;
 mod repos;
 mod sagas;
 pub mod server;
-mod sig;
+pub mod sig;
 mod slack_commands;
+pub mod token;
 mod tracking_numbers;
 #[macro_use]
 extern crate lazy_static;
