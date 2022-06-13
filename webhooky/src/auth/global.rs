@@ -1,8 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
-use crate::bearer::BearerProvider;
-use crate::token::TokenProvider;
+use super::bearer::BearerProvider;
+use super::token::TokenProvider;
 
 pub struct GlobalToken;
 

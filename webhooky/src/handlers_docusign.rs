@@ -6,7 +6,7 @@ use log::{info, warn};
 use sha2::Sha256;
 use std::{borrow::Cow, sync::Arc};
 
-use crate::{http::Headers, sig::HmacSignatureVerifier};
+use crate::{auth::sig::HmacSignatureVerifier, http::Headers};
 
 #[derive(Debug)]
 pub struct DocusignWebhookVerification;

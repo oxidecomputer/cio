@@ -1,6 +1,6 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
-mod bearer;
+mod auth;
 #[macro_use]
 mod core;
 mod event_types;
@@ -16,7 +16,6 @@ mod http;
 mod repos;
 mod sagas;
 mod server;
-mod sig;
 mod slack_commands;
 mod tracking_numbers;
 #[macro_use]

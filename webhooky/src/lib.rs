@@ -1,7 +1,6 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
 pub mod auth;
-pub mod bearer;
 #[macro_use]
 pub mod core;
 mod event_types;
@@ -17,9 +16,7 @@ mod http;
 mod repos;
 mod sagas;
 pub mod server;
-pub mod sig;
 mod slack_commands;
-pub mod token;
 mod tracking_numbers;
 #[macro_use]
 extern crate lazy_static;

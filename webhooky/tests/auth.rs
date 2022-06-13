@@ -1,12 +1,17 @@
 use anyhow::{anyhow, Result};
-use dropshot::{HttpServerStarter, HttpServer, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted, RequestContext, ApiDescription, ConfigDropshot, endpoint};
+use dropshot::{
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
+    HttpServer, HttpServerStarter, RequestContext,
+};
 use slog::Drain;
 use std::sync::Arc;
 
-use webhooky::auth::GlobalToken;
-use webhooky::bearer::{Bearer, BearerAudit};
-use webhooky::sig::{HmacVerifiedBody, HmacVerifiedBodyAudit};
-use webhooky::token::{Token, TokenAudit};
+use webhooky::auth::{
+    bearer::{Bearer, BearerAudit},
+    global::GlobalToken,
+    sig::{HmacVerifiedBody, HmacVerifiedBodyAudit},
+    token::{Token, TokenAudit},
+};
 
 #[endpoint {
     method = POST,
@@ -127,7 +132,9 @@ async fn make_server() -> anyhow::Result<HttpServer<()>> {
         request_body_max_bytes: 107374182400, // 100 Gigiabytes.
         tls: None,
     };
-    let config_logging = ConfigLogging::StderrTerminal { level: ConfigLoggingLevel::Error };
+    let config_logging = ConfigLogging::StderrTerminal {
+        level: ConfigLoggingLevel::Error,
+    };
     let log = config_logging.to_logger("webhooky-server").unwrap();
 
     let mut api = ApiDescription::new();

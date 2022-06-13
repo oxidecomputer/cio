@@ -26,7 +26,7 @@ use signal_hook::{
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::{github_types::GitHubWebhook, sig::HmacVerifiedBodyAudit};
+use crate::{auth::sig::HmacVerifiedBodyAudit, github_types::GitHubWebhook};
 
 pub async fn create_server(
     s: &crate::core::Server,
