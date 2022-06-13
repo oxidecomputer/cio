@@ -64,6 +64,13 @@ pub trait HmacSignatureVerifier {
     async fn signature<'a, Context: ServerContext>(
         rqctx: &'a Arc<RequestContext<Context>>,
     ) -> anyhow::Result<Cow<'a, [u8]>>;
+
+    async fn content<'a, 'b, Context: ServerContext>(
+        _rqctx: &'a Arc<RequestContext<Context>>,
+        body: &'b UntypedBody,
+    ) -> anyhow::Result<Cow<'b, [u8]>> {
+        Ok(Cow::Borrowed(body.as_bytes()))
+    }
 }
 
 #[async_trait]
@@ -102,11 +109,12 @@ where
         rqctx: Arc<RequestContext<Context>>,
     ) -> Result<HmacVerifiedBodyAudit<T>, HttpError> {
         let body = UntypedBody::from_request(rqctx.clone()).await?;
+        let content = T::content(&rqctx, &body).await.map_err(|_| internal_error())?;
         let key = T::key(&rqctx).await.map_err(|_| internal_error())?;
 
         let verified = if let Ok(signature) = T::signature(&rqctx).await {
             if let Ok(mut mac) = <T::Algo as Mac>::new_from_slice(&*key) {
-                mac.update(body.as_bytes());
+                mac.update(&*content);
                 mac.verify_slice(&*signature).is_ok()
             } else {
                 false

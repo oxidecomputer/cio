@@ -11,6 +11,7 @@ pub mod handlers_checkr;
 pub mod handlers_cron;
 pub mod handlers_docusign;
 pub mod handlers_github;
+pub mod handlers_slack;
 // mod handlers_sendgrid;
 mod http;
 mod repos;

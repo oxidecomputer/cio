@@ -3,7 +3,6 @@ use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpServer, HttpServerStarter, RequestContext,
 };
-use slog::Drain;
 use std::sync::Arc;
 
 use webhooky::auth::{
@@ -18,8 +17,8 @@ use webhooky::auth::{
     path = "/hmac/github/verify",
 }]
 async fn hmac_github_verification(
-    rqctx: Arc<RequestContext<()>>,
-    body: HmacVerifiedBody<webhooky::handlers_github::GitHubWebhookVerification>,
+    _rqctx: Arc<RequestContext<()>>,
+    _body: HmacVerifiedBody<webhooky::handlers_github::GitHubWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -29,8 +28,8 @@ async fn hmac_github_verification(
     path = "/hmac/github/audit",
 }]
 async fn hmac_github_audit(
-    rqctx: Arc<RequestContext<()>>,
-    body: HmacVerifiedBodyAudit<webhooky::handlers_github::GitHubWebhookVerification>,
+    _rqctx: Arc<RequestContext<()>>,
+    _body: HmacVerifiedBodyAudit<webhooky::handlers_github::GitHubWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -40,8 +39,8 @@ async fn hmac_github_audit(
     path = "/hmac/checkr/verify",
 }]
 async fn hmac_checkr_verification(
-    rqctx: Arc<RequestContext<()>>,
-    body: HmacVerifiedBody<webhooky::handlers_checkr::CheckrWebhookVerification>,
+    _rqctx: Arc<RequestContext<()>>,
+    _body: HmacVerifiedBody<webhooky::handlers_checkr::CheckrWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -51,8 +50,8 @@ async fn hmac_checkr_verification(
     path = "/hmac/checkr/audit",
 }]
 async fn hmac_checkr_audit(
-    rqctx: Arc<RequestContext<()>>,
-    body: HmacVerifiedBodyAudit<webhooky::handlers_checkr::CheckrWebhookVerification>,
+    _rqctx: Arc<RequestContext<()>>,
+    _body: HmacVerifiedBodyAudit<webhooky::handlers_checkr::CheckrWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -62,8 +61,8 @@ async fn hmac_checkr_audit(
     path = "/hmac/docusign/verify",
 }]
 async fn hmac_docusign_verification(
-    rqctx: Arc<RequestContext<()>>,
-    body: HmacVerifiedBody<webhooky::handlers_docusign::DocusignWebhookVerification>,
+    _rqctx: Arc<RequestContext<()>>,
+    _body: HmacVerifiedBody<webhooky::handlers_docusign::DocusignWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -73,8 +72,8 @@ async fn hmac_docusign_verification(
     path = "/hmac/docusign/audit",
 }]
 async fn hmac_docusign_audit(
-    rqctx: Arc<RequestContext<()>>,
-    body: HmacVerifiedBodyAudit<webhooky::handlers_docusign::DocusignWebhookVerification>,
+    _rqctx: Arc<RequestContext<()>>,
+    _body: HmacVerifiedBodyAudit<webhooky::handlers_docusign::DocusignWebhookVerification>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -84,7 +83,7 @@ async fn hmac_docusign_audit(
     path = "/bearer/verify",
 }]
 async fn bearer_verification(
-    rqctx: Arc<RequestContext<()>>,
+    _rqctx: Arc<RequestContext<()>>,
     _: Bearer<GlobalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -95,7 +94,7 @@ async fn bearer_verification(
     path = "/bearer/audit",
 }]
 async fn bearer_audit(
-    rqctx: Arc<RequestContext<()>>,
+    _rqctx: Arc<RequestContext<()>>,
     _: BearerAudit<GlobalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -106,7 +105,7 @@ async fn bearer_audit(
     path = "/token/verify",
 }]
 async fn token_verification(
-    rqctx: Arc<RequestContext<()>>,
+    _rqctx: Arc<RequestContext<()>>,
     _: QueryToken<GlobalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -117,7 +116,7 @@ async fn token_verification(
     path = "/token/audit",
 }]
 async fn token_audit(
-    rqctx: Arc<RequestContext<()>>,
+    _rqctx: Arc<RequestContext<()>>,
     _: QueryTokenAudit<GlobalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -181,7 +180,7 @@ async fn test_github_hmac_passes() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[tokio::test]
@@ -203,7 +202,7 @@ async fn test_github_hmac_fails() {
 
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[ignore]
@@ -226,7 +225,7 @@ async fn test_github_hmac_audit_passes_with_invalid_signature() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 /// Test Checkr signatures
@@ -251,7 +250,7 @@ async fn test_checkr_hmac_passes() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[ignore]
@@ -274,7 +273,7 @@ async fn test_checkr_hmac_fails() {
 
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[tokio::test]
@@ -296,7 +295,7 @@ async fn test_checkr_hmac_audit_passes_with_invalid_signature() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 /// Test Docusign signatures
@@ -321,7 +320,7 @@ async fn test_docusign_hmac_passes() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[ignore]
@@ -344,7 +343,7 @@ async fn test_docusign_hmac_fails() {
 
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[tokio::test]
@@ -366,7 +365,7 @@ async fn test_docusign_hmac_audit_passes_with_invalid_signature() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 /// Test global Bearer token
@@ -390,7 +389,7 @@ async fn test_bearer_passes() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[tokio::test]
@@ -412,7 +411,7 @@ async fn test_bearer_fails() {
 
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[tokio::test]
@@ -434,7 +433,7 @@ async fn test_bearer_audit_pass_with_invalid_token() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 /// Test global Query token
@@ -457,7 +456,7 @@ async fn test_query_token_passes() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[tokio::test]
@@ -478,7 +477,7 @@ async fn test_query_token_fails() {
 
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
 
 #[tokio::test]
@@ -499,5 +498,5 @@ async fn test_query_token_audit_pass_with_invalid_token() {
 
     assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
 
-    server.close().await;
+    server.close().await.unwrap();
 }
