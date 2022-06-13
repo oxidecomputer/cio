@@ -190,7 +190,7 @@ async fn test_github_hmac_passes() {
 
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada19";
+    let test_signature = "sha256=8c7ac6b6a1ca30229207b4406d50b5c034d90f56009835bc7f32a16b2044d29d";
     let test_body = include_str!("../tests/github_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -212,7 +212,7 @@ async fn test_github_hmac_passes() {
 async fn test_github_hmac_fails() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_signature = "sha256=8c7ac6b6a1ca30229207b4406d50b5c034d90f56009835bc7f32a16b2044d29c";
     let test_body = include_str!("../tests/github_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -234,7 +234,7 @@ async fn test_github_hmac_fails() {
 async fn test_github_hmac_audit_passes_with_invalid_signature() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_signature = "sha256=8c7ac6b6a1ca30229207b4406d50b5c034d90f56009835bc7f32a16b2044d29c";
     let test_body = include_str!("../tests/github_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -259,7 +259,7 @@ async fn test_github_hmac_audit_passes_with_invalid_signature() {
 async fn test_checkr_hmac_passes() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada19";
+    let test_signature = "66781e800f7d2934506890f5546af7736f1f84c46be507a7042f0be4e92259a0";
     let test_body = include_str!("../tests/checkr_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -282,7 +282,7 @@ async fn test_checkr_hmac_passes() {
 async fn test_checkr_hmac_fails() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_signature = "66781e800f7d2934506890f5546af7736f1f84c46be507a7042f0be4e92259b0";
     let test_body = include_str!("../tests/checkr_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -304,7 +304,7 @@ async fn test_checkr_hmac_fails() {
 async fn test_checkr_hmac_audit_passes_with_invalid_signature() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_signature = "66781e800f7d2934506890f5546af7736f1f84c46be507a7042f0be4e92259b0";
     let test_body = include_str!("../tests/checkr_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -324,12 +324,11 @@ async fn test_checkr_hmac_audit_passes_with_invalid_signature() {
 
 /// Test DocuSign signatures
 
-#[ignore]
 #[tokio::test]
 async fn test_docusign_hmac_passes() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada19";
+    let test_signature = "048a1564644f631795724ec078399d672b09a254b3adaf84e4b20100e0564216";
     let test_body = include_str!("../tests/docusign_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -347,12 +346,11 @@ async fn test_docusign_hmac_passes() {
     server.close().await.unwrap();
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_docusign_hmac_fails() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_signature = "048a1564644f631795724ec078399d672b09a254b3adaf84e4b20100e0564217";
     let test_body = include_str!("../tests/docusign_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -374,7 +372,7 @@ async fn test_docusign_hmac_fails() {
 async fn test_docusign_hmac_audit_passes_with_invalid_signature() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "sha256=318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_signature = "048a1564644f631795724ec078399d672b09a254b3adaf84e4b20100e0564216";
     let test_body = include_str!("../tests/docusign_webhook_sig_test.json").trim();
 
     // Make the post API call.
@@ -394,12 +392,11 @@ async fn test_docusign_hmac_audit_passes_with_invalid_signature() {
 
 /// Test Slack signatures
 
-#[ignore]
 #[tokio::test]
 async fn test_slack_hmac_passes() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada19";
+    let test_signature = "v0=4c5e9ddbd2e56bffeaf5a859ee07d149ed24480935bf63600c4e4cfc46ae1d65";
     let test_timestamp = "1531420618";
     let test_body = include_str!("../tests/slack_webhook_sig_test.json").trim();
 
@@ -419,12 +416,11 @@ async fn test_slack_hmac_passes() {
     server.close().await.unwrap();
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_slack_hmac_fails() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_signature = "v0=4c5e9ddbd2e56bffeaf5a859ee07d149ed24480935bf63600c4e4cfc46ae1d66";
     let test_timestamp = "1531420618";
     let test_body = include_str!("../tests/slack_webhook_sig_test.json").trim();
 
@@ -448,7 +444,7 @@ async fn test_slack_hmac_fails() {
 async fn test_slack_hmac_audit_passes_with_invalid_signature() {
     let server = make_server().await.unwrap();
 
-    let test_signature = "318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_signature = "v0=4c5e9ddbd2e56bffeaf5a859ee07d149ed24480935bf63600c4e4cfc46ae1d66";
     let test_timestamp = "1531420618";
     let test_body = include_str!("../tests/slack_webhook_sig_test.json").trim();
 

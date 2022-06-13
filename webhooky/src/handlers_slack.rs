@@ -31,7 +31,10 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
             .get("X-Slack-Signature")
             .ok_or_else(|| anyhow::anyhow!("Slack webhook is missing signature"))
             .and_then(|header_value| Ok(header_value.to_str()?))
-            .and_then(|header| Ok(hex::decode(header)?))
+            .and_then(|header| {
+                log::debug!("Found Slack signature header {}", header);
+                Ok(hex::decode(header.trim_start_matches("v0="))?)
+            })
             .map_err(|err| {
                 info!("Slack webhook is missing a well-formed signature: {}", err);
                 err
@@ -55,7 +58,7 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
                 err
             })?;
 
-        let mut content = ("v0".to_string() + timestamp).into_bytes();
+        let mut content = ("v0".to_string() + ":" + timestamp + ":").into_bytes();
         content.append(&mut body.as_bytes().to_vec());
 
         Ok(Cow::Owned(content))
