@@ -80,6 +80,28 @@ async fn hmac_docusign_audit(
 
 #[endpoint {
     method = POST,
+    path = "/hmac/slack/verify",
+}]
+async fn hmac_slack_verification(
+    _rqctx: Arc<RequestContext<()>>,
+    _body: HmacVerifiedBody<webhooky::handlers_slack::SlackWebhookVerification>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+#[endpoint {
+    method = POST,
+    path = "/hmac/slack/audit",
+}]
+async fn hmac_slack_audit(
+    _rqctx: Arc<RequestContext<()>>,
+    _body: HmacVerifiedBodyAudit<webhooky::handlers_slack::SlackWebhookVerification>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+#[endpoint {
+    method = POST,
     path = "/bearer/verify",
 }]
 async fn bearer_verification(
@@ -124,8 +146,9 @@ async fn token_audit(
 
 async fn make_server() -> anyhow::Result<HttpServer<()>> {
     std::env::set_var("AUTH_BEARER", "TEST_BEARER");
-    std::env::set_var("GITHUB_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
     std::env::set_var("DOCUSIGN_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
+    std::env::set_var("GITHUB_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
+    std::env::set_var("SLACK_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
 
     let config_dropshot = ConfigDropshot {
         bind_address: "127.0.0.1:12345".parse()?,
@@ -144,6 +167,8 @@ async fn make_server() -> anyhow::Result<HttpServer<()>> {
     api.register(hmac_checkr_audit).unwrap();
     api.register(hmac_docusign_verification).unwrap();
     api.register(hmac_docusign_audit).unwrap();
+    api.register(hmac_slack_verification).unwrap();
+    api.register(hmac_slack_audit).unwrap();
     api.register(bearer_verification).unwrap();
     api.register(bearer_audit).unwrap();
     api.register(token_verification).unwrap();
@@ -205,7 +230,6 @@ async fn test_github_hmac_fails() {
     server.close().await.unwrap();
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_github_hmac_audit_passes_with_invalid_signature() {
     let server = make_server().await.unwrap();
@@ -298,7 +322,7 @@ async fn test_checkr_hmac_audit_passes_with_invalid_signature() {
     server.close().await.unwrap();
 }
 
-/// Test Docusign signatures
+/// Test DocuSign signatures
 
 #[ignore]
 #[tokio::test]
@@ -358,6 +382,82 @@ async fn test_docusign_hmac_audit_passes_with_invalid_signature() {
     let response = client
         .post("http://127.0.0.1:12345/hmac/docusign/audit")
         .header("X-DocuSign-Signature-1", test_signature)
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
+
+    server.close().await.unwrap();
+}
+
+/// Test Slack signatures
+
+#[ignore]
+#[tokio::test]
+async fn test_slack_hmac_passes() {
+    let server = make_server().await.unwrap();
+
+    let test_signature = "318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada19";
+    let test_timestamp = "1531420618";
+    let test_body = include_str!("../tests/slack_webhook_sig_test.json").trim();
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://127.0.0.1:12345/hmac/slack/verify")
+        .header("X-Slack-Signature", test_signature)
+        .header("X-Slack-Request-Timestamp", test_timestamp)
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
+
+    server.close().await.unwrap();
+}
+
+#[ignore]
+#[tokio::test]
+async fn test_slack_hmac_fails() {
+    let server = make_server().await.unwrap();
+
+    let test_signature = "318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_timestamp = "1531420618";
+    let test_body = include_str!("../tests/slack_webhook_sig_test.json").trim();
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://127.0.0.1:12345/hmac/slack/verify")
+        .header("X-Slack-Signature", test_signature)
+        .header("X-Slack-Request-Timestamp", test_timestamp)
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    server.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn test_slack_hmac_audit_passes_with_invalid_signature() {
+    let server = make_server().await.unwrap();
+
+    let test_signature = "318376db08607eb984726533b1d53430e31c4825fd0d9b14e8ed38e2a88ada18";
+    let test_timestamp = "1531420618";
+    let test_body = include_str!("../tests/slack_webhook_sig_test.json").trim();
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://127.0.0.1:12345/hmac/slack/audit")
+        .header("X-Slack-Signature", test_signature)
+        .header("X-Slack-Request-Timestamp", test_timestamp)
         .body(test_body)
         .send()
         .await
