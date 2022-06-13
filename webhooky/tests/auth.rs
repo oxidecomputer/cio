@@ -10,7 +10,7 @@ use webhooky::auth::{
     bearer::{Bearer, BearerAudit},
     global::GlobalToken,
     sig::{HmacVerifiedBody, HmacVerifiedBodyAudit},
-    token::{Token, TokenAudit},
+    token::{QueryToken, QueryTokenAudit},
 };
 
 #[endpoint {
@@ -107,7 +107,7 @@ async fn bearer_audit(
 }]
 async fn token_verification(
     rqctx: Arc<RequestContext<()>>,
-    _: Token<GlobalToken>,
+    _: QueryToken<GlobalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -118,12 +118,13 @@ async fn token_verification(
 }]
 async fn token_audit(
     rqctx: Arc<RequestContext<()>>,
-    _: TokenAudit<GlobalToken>,
+    _: QueryTokenAudit<GlobalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 async fn make_server() -> anyhow::Result<HttpServer<()>> {
+    std::env::set_var("AUTH_BEARER", "TEST_BEARER");
     std::env::set_var("GITHUB_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
     std::env::set_var("DOCUSIGN_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
 
@@ -159,7 +160,6 @@ async fn make_server() -> anyhow::Result<HttpServer<()>> {
 
 /// Test GitHub signatures
 
-// #[ignore]
 #[tokio::test]
 async fn test_github_hmac_passes() {
     pretty_env_logger::init();
@@ -184,7 +184,6 @@ async fn test_github_hmac_passes() {
     server.close().await;
 }
 
-#[ignore]
 #[tokio::test]
 async fn test_github_hmac_fails() {
     let server = make_server().await.unwrap();
@@ -360,6 +359,139 @@ async fn test_docusign_hmac_audit_passes_with_invalid_signature() {
     let response = client
         .post("http://127.0.0.1:12345/hmac/docusign/audit")
         .header("X-DocuSign-Signature-1", test_signature)
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
+
+    server.close().await;
+}
+
+/// Test global Bearer token
+
+#[tokio::test]
+async fn test_bearer_passes() {
+    let server = make_server().await.unwrap();
+
+    let test_token = "TEST_BEARER";
+    let test_body = "";
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://127.0.0.1:12345/bearer/verify")
+        .header("Authorization", &format!("Bearer {}", test_token))
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
+
+    server.close().await;
+}
+
+#[tokio::test]
+async fn test_bearer_fails() {
+    let server = make_server().await.unwrap();
+
+    let test_token = "TEST_BEARER_2";
+    let test_body = "";
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://127.0.0.1:12345/bearer/verify")
+        .header("Authorization", &format!("Bearer {}", test_token))
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    server.close().await;
+}
+
+#[tokio::test]
+async fn test_bearer_audit_pass_with_invalid_token() {
+    let server = make_server().await.unwrap();
+
+    let test_token = "TEST_BEARER_2";
+    let test_body = "";
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://127.0.0.1:12345/bearer/audit")
+        .header("Authorization", &format!("Bearer {}", test_token))
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
+
+    server.close().await;
+}
+
+/// Test global Query token
+
+#[tokio::test]
+async fn test_query_token_passes() {
+    let server = make_server().await.unwrap();
+
+    let test_token = "TEST_BEARER";
+    let test_body = "";
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("http://127.0.0.1:12345/token/verify?token={}", test_token))
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
+
+    server.close().await;
+}
+
+#[tokio::test]
+async fn test_query_token_fails() {
+    let server = make_server().await.unwrap();
+
+    let test_token = "TEST_BEARER_2";
+    let test_body = "";
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("http://127.0.0.1:12345/token/verify?token={}", test_token))
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    server.close().await;
+}
+
+#[tokio::test]
+async fn test_query_token_audit_pass_with_invalid_token() {
+    let server = make_server().await.unwrap();
+
+    let test_token = "TEST_BEARER_2";
+    let test_body = "";
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("http://127.0.0.1:12345/token/audit?token={}", test_token))
         .body(test_body)
         .send()
         .await

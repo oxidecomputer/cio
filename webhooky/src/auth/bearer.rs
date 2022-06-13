@@ -16,6 +16,7 @@ pub struct Bearer<T> {
 }
 
 pub struct BearerAudit<T> {
+    verified: bool,
     _provider: PhantomData<T>,
 }
 
@@ -25,21 +26,10 @@ where
     T: BearerProvider + Send + Sync,
 {
     async fn from_request<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Bearer<T>, HttpError> {
-        let headers = Headers::from_request(rqctx.clone()).await.map_err(|_| unauthorized())?;
-        let expected_token = T::token().await.map_err(|_| internal_error())?;
+        let audit = BearerAudit::<T>::from_request(rqctx).await?;
 
-        let header = headers.0.get("Authorization").ok_or_else(unauthorized)?;
-        let header_value = header.to_str().map_err(|_| unauthorized())?;
-        let mut parts = header_value.split(" ");
-        let label = parts.next();
-        let user_token = parts.next();
-
-        if let (Some(label), Some(user_token)) = (label, user_token) {
-            if label == "Bearer" && expected_token == user_token {
-                Ok(Bearer { _provider: PhantomData })
-            } else {
-                Err(unauthorized())
-            }
+        if audit.verified {
+            Ok(Bearer { _provider: PhantomData })
         } else {
             Err(unauthorized())
         }
@@ -61,16 +51,26 @@ where
     async fn from_request<Context: ServerContext>(
         rqctx: Arc<RequestContext<Context>>,
     ) -> Result<BearerAudit<T>, HttpError> {
-        if let Err(_) = Bearer::<T>::from_request(rqctx.clone()).await {
-            let uri = &rqctx.request.lock().await.uri().clone();
-            log::info!(
-                "Bearer authentication check failed. id: {}, uri: {}",
-                rqctx.request_id,
-                uri
-            );
-        };
+        let headers = Headers::from_request(rqctx.clone()).await.map_err(|_| unauthorized())?;
+        let expected_token = T::token().await.map_err(|_| internal_error())?;
 
-        Ok(BearerAudit { _provider: PhantomData })
+        let header = headers.0.get("Authorization").ok_or_else(unauthorized)?;
+        let header_value = header.to_str().map_err(|_| unauthorized())?;
+        let mut parts = header_value.split(" ");
+        let label = parts.next();
+        let user_token = parts.next();
+
+        if let (Some(label), Some(user_token)) = (label, user_token) {
+            Ok(BearerAudit {
+                verified: label == "Bearer" && expected_token == user_token,
+                _provider: PhantomData
+            })
+        } else {
+            Ok(BearerAudit {
+                verified: false,
+                _provider: PhantomData
+            })
+        }
     }
 
     fn metadata() -> ExtractorMetadata {

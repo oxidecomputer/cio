@@ -1,45 +1,44 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext};
+use dropshot::{Extractor, ExtractorMetadata, HttpError, Query, RequestContext, ServerContext};
+use schemars::JsonSchema;
+use serde::Deserialize;
 
 use std::{marker::PhantomData, sync::Arc};
 
-use crate::http::{internal_error, unauthorized, Headers};
+use crate::http::{internal_error, unauthorized};
 
 #[async_trait]
-pub trait TokenProvider {
+pub trait QueryTokenProvider {
     async fn token() -> Result<String>;
 }
 
-pub struct Token<T> {
+pub struct QueryToken<T> {
     _provider: PhantomData<T>,
 }
 
-pub struct TokenAudit<T> {
+pub struct QueryTokenAudit<T> {
+    verified: bool,
     _provider: PhantomData<T>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+struct Token {
+    token: String,
 }
 
 #[async_trait]
-impl<T> Extractor for Token<T>
+impl<T> Extractor for QueryToken<T>
 where
-    T: TokenProvider + Send + Sync,
+    T: QueryTokenProvider + Send + Sync,
 {
-    async fn from_request<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Token<T>, HttpError> {
-        let headers = Headers::from_request(rqctx.clone()).await.map_err(|_| unauthorized())?;
-        let expected_token = T::token().await.map_err(|_| internal_error())?;
+    async fn from_request<Context: ServerContext>(
+        rqctx: Arc<RequestContext<Context>>,
+    ) -> Result<QueryToken<T>, HttpError> {
+        let audit = QueryTokenAudit::<T>::from_request(rqctx).await?;
 
-        let header = headers.0.get("Authorization").ok_or_else(unauthorized)?;
-        let header_value = header.to_str().map_err(|_| unauthorized())?;
-        let mut parts = header_value.split(" ");
-        let label = parts.next();
-        let user_token = parts.next();
-
-        if let (Some(label), Some(user_token)) = (label, user_token) {
-            if label == "Token" && expected_token == user_token {
-                Ok(Token { _provider: PhantomData })
-            } else {
-                Err(unauthorized())
-            }
+        if audit.verified {
+            Ok(QueryToken { _provider: PhantomData })
         } else {
             Err(unauthorized())
         }
@@ -54,23 +53,22 @@ where
 }
 
 #[async_trait]
-impl<T> Extractor for TokenAudit<T>
+impl<T> Extractor for QueryTokenAudit<T>
 where
-    T: TokenProvider + Send + Sync,
+    T: QueryTokenProvider + Send + Sync,
 {
     async fn from_request<Context: ServerContext>(
         rqctx: Arc<RequestContext<Context>>,
-    ) -> Result<TokenAudit<T>, HttpError> {
-        if let Err(_) = Token::<T>::from_request(rqctx.clone()).await {
-            let uri = &rqctx.request.lock().await.uri().clone();
-            log::info!(
-                "Token authentication check failed. id: {}, uri: {}",
-                rqctx.request_id,
-                uri
-            );
-        };
-
-        Ok(TokenAudit { _provider: PhantomData })
+    ) -> Result<QueryTokenAudit<T>, HttpError> {
+        let req_token = Query::<Token>::from_request(rqctx.clone())
+            .await
+            .map(|token| token.into_inner().token)
+            .unwrap_or_else(|_| "".to_string());
+        let expected_token = T::token().await.map_err(|_| internal_error())?;
+        Ok(QueryTokenAudit {
+            verified: expected_token == req_token,
+            _provider: PhantomData,
+        })
     }
 
     fn metadata() -> ExtractorMetadata {

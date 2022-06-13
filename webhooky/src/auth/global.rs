@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 
 use super::bearer::BearerProvider;
-use super::token::TokenProvider;
+use super::token::QueryTokenProvider;
 
 pub struct GlobalToken;
 
@@ -14,7 +14,7 @@ impl BearerProvider for GlobalToken {
 }
 
 #[async_trait]
-impl TokenProvider for GlobalToken {
+impl QueryTokenProvider for GlobalToken {
     async fn token() -> Result<String> {
         Ok(std::env::var("AUTH_BEARER")?)
     }
