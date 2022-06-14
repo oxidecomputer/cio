@@ -697,8 +697,10 @@ pub async fn handle_rfd_push(
                     if rfd.discussion != pull.html_url {
                         rfd.update_discussion(&pull.html_url, file.ends_with("README.md"));
 
-                        // Update the file in GitHub.
-                        // Keep in mind: this push will kick off another webhook.
+                        // Update the file in GitHub. This will trigger another commit webhook
+                        // and therefore must only occur when there is a change that needs to
+                        // be made. If this is handled unconditionally then commit hooks could
+                        // loop indefinitely.
                         create_or_update_file_in_github_repo(
                             github,
                             owner,
@@ -708,7 +710,7 @@ pub async fn handle_rfd_push(
                             rfd.content.as_bytes().to_vec(),
                         )
                         .await?;
-                        a("[SUCCESS]: updated RFD file in GitHub with any changes");
+                        a("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
 
                         if let Err(err) = rfd.update(db).await {
                             a(&format!(
