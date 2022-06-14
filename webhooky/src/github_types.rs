@@ -204,9 +204,14 @@ impl GitHubWebhook {
         let err = format!(
             r#"{} failed:
 
+<details>
+<summary>backtrace:</summary>
+
 ```
 {:?}
 ```
+
+</details>
 
 <details>
 <summary>event:</summary>
@@ -217,7 +222,7 @@ impl GitHubWebhook {
 
 </details>
 
-cc @jessfraz"#,
+cc @jessfraz @augustuswm"#,
             msg,
             e, // We use the {:?} debug output for the error so we get the stack as well.
             self,
