@@ -95,10 +95,22 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: Type
                 scope.set_tag("github.event.type", &event_type_string);
             });
 
-            // Now let's handle the event.
-            if let Err(e) = handle_repository_event(&github, api_context, event.clone(), &company).await {
-                // Send the error to sentry.
-                sentry::integrations::anyhow::capture_anyhow(&e);
+            let result = handle_repository_event(&github, api_context, event.clone(), &company).await;
+
+            match result {
+                Ok(message) => log::info!(
+                    "Completed repo sync for new repo {}. Message: {}",
+                    event.repository.name,
+                    message
+                ),
+                Err(e) => {
+                    log::warn!(
+                        "Failed to handle repo sync for new repo {}. err: {:?}",
+                        event.repository.name,
+                        e
+                    );
+                    sentry::integrations::anyhow::capture_anyhow(&e);
+                }
             }
 
             return Ok(());

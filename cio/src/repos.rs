@@ -398,7 +398,10 @@ impl GithubRepo {
             .await;
 
         if let Err(e) = branch {
-            info!("Failed to find default branch {} on {}. Returning early. err: {:?}", self.default_branch, self.name, e);
+            info!(
+                "Failed to find default branch {} on {}. Returning early. err: {:?}",
+                self.default_branch, self.name, e
+            );
 
             if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
                 bail!("could not get branch {} repo {}: {}", self.default_branch, self.name, e);
@@ -501,7 +504,7 @@ impl GithubRepo {
                         self.name,
                         e
                     )
-                },
+                }
             }
 
             info!(
