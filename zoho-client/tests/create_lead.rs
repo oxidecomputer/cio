@@ -1,7 +1,7 @@
 use serde_json::json;
 use zoho_api::{
     client,
-    client::{ModuleDeleteResponseEntry, ModuleUpdateResponseEntry, ModuleUpdateResponseEntryError},
+    client::{ModuleUpdateResponseEntry, ModuleUpdateResponseEntryError},
     modules,
 };
 
@@ -48,7 +48,7 @@ async fn test_create_lead() {
 
     assert_eq!("record added", message_0);
 
-    let (message_1, record_id_1) = match &insert.data[1] {
+    let (message_1, _record_id_1) = match &insert.data[1] {
         ModuleUpdateResponseEntry::Error(err) => match err {
             ModuleUpdateResponseEntryError::DuplicateData { message, details } => {
                 (message.as_str(), details.id.as_str())
