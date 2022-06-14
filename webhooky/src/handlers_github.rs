@@ -320,7 +320,7 @@ pub async fn handle_rfd_pull_request(
 
     // Update the discussion link.
     let discussion_link = event.pull_request.html_url;
-    rfd.update_discussion(&discussion_link, path.ends_with(".md"))?;
+    rfd.update_discussion(&discussion_link, path.ends_with(".md"));
     a(&format!(
         "[SUCCESS]: ensured RFD discussion link is `{}`",
         discussion_link
@@ -623,34 +623,47 @@ pub async fn handle_rfd_push(
             // for that RFD.
             // Make sure we are not on the default branch, since then we would not need
             // a PR. Instead, below, the state of the RFD would be moved to `published`.
-            // TODO: see if we drop events, if we do, we might want to remove the check with
-            // the old state and just do it everytime an RFD is in discussion.
-            if old_rfd_state != rfd.state && rfd.state == "discussion" && branch != event.repository.default_branch {
-                // First, we need to make sure we don't already have a pull request open.
-                // TODO: actually filter by the base or branch.
-                let pulls = github
-                    .pulls()
-                    .list_all(
-                        owner,
-                        &repo,
-                        octorust::types::IssuesListState::All,
-                        // head
-                        "",
-                        // base
-                        "",
-                        // sort
-                        Default::default(),
-                        // direction
-                        Default::default(),
-                    )
-                    .await?;
-                // Check if any pull requests are from our branch.
-                let mut has_pull = false;
-                for pull in pulls {
-                    // Check if the pull request is for our branch.
-                    let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
+            if rfd.state == "discussion" && branch != event.repository.default_branch {
+                let pull_requests = RFD::find_pull_requests(github, owner, &repo, branch).await?;
 
-                    if pull_branch == branch {
+                if pull_requests.is_empty() {
+                    let pull = github
+                        .pulls()
+                        .create(
+                            owner,
+                            &repo,
+                            &octorust::types::PullsCreateRequest {
+                                title: rfd.name.to_string(),
+                                head: format!("{}:{}", company.github_org, branch),
+                                base: event.repository.default_branch.to_string(),
+                                body: "Automatically opening the pull request since the document \
+                                    is marked as being in discussion. If you wish to not have \
+                                    a pull request open, change the state of your document and \
+                                    close this pull request."
+                                    .to_string(),
+                                draft: Some(false),
+                                maintainer_can_modify: Some(true),
+                                issue: 0,
+                            },
+                        )
+                        .await?;
+
+                    a(&format!(
+                        "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, opened pull request {}",
+                        rfd.number_string, old_rfd_state, rfd.state, branch, pull.number,
+                    ));
+                } else {
+                    // This is here to remain consistent with previous behavior. This block
+                    // likely needs to be refactored to account for multiple pull requests
+                    // existing (even though there *should* never be multiple)
+                    let pull = &pull_requests[0];
+
+                    // This block updates the title and labels for the pull request. This only
+                    // runs when the state changes, which means that if there is a manual title
+                    // update or a label is deleted by a user, then this process will not fix
+                    // that data. This needs to largely be refactored (in conjunction with the
+                    // discussion link handling below) to be more coherent.
+                    if old_rfd_state != rfd.state {
                         a(&format!(
                             "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
                             rfd.number_string,
@@ -660,10 +673,8 @@ pub async fn handle_rfd_push(
                             pull.html_url
                         ));
 
-                        has_pull = true;
-
                         // Let's update the pull request stuff tho just in case.
-                        match rfd.update_pull_request(github, company, &pull.into()).await {
+                        match rfd.update_pull_request(github, company, pull).await {
                             Ok(_) => {
                                 a("[SUCCESS]: update pull request title and labels");
                             }
@@ -679,41 +690,33 @@ pub async fn handle_rfd_push(
                                 ));
                             }
                         }
-
-                        break;
                     }
-                }
 
-                // Open a pull request, if we don't already have one.
-                if !has_pull {
-                    let pull = github
-                        .pulls()
-                        .create(
+                    // If the stored discussion link does not match the PR we found, then and
+                    // update is required
+                    if rfd.discussion != pull.html_url {
+                        rfd.update_discussion(&pull.html_url, file.ends_with("README.md"));
+
+                        // Update the file in GitHub.
+                        // Keep in mind: this push will kick off another webhook.
+                        create_or_update_file_in_github_repo(
+                            github,
                             owner,
                             &repo,
-                            &octorust::types::PullsCreateRequest {
-                                title: rfd.name.to_string(),
-                                head: format!("{}:{}", company.github_org, branch),
-                                base: event.repository.default_branch.to_string(),
-                                body: "Automatically opening the pull request since the document \
-                                       is marked as being in discussion. If you wish to not have \
-                                       a pull request open, change the state of your document and \
-                                       close this pull request."
-                                    .to_string(),
-                                draft: Some(false),
-                                maintainer_can_modify: Some(true),
-                                issue: 0,
-                            },
+                            branch,
+                            &file,
+                            rfd.content.as_bytes().to_vec(),
                         )
                         .await?;
-                    a(&format!(
-                        "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, opened pull request {}",
-                        rfd.number_string, old_rfd_state, rfd.state, branch, pull.number,
-                    ));
+                        a("[SUCCESS]: updated RFD file in GitHub with any changes");
 
-                    // We could update the discussion link here, but we will already
-                    // trigger a `pull_request` `opened` event, so we might as well let
-                    // that do its thing.
+                        if let Err(err) = rfd.update(db).await {
+                            a(&format!(
+                                "[ERROR]: failed to update disucussion url: {} cc @jessfraz @augustuswm",
+                                err
+                            ));
+                        }
+                    }
                 }
             }
 
