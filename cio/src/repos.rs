@@ -396,7 +396,10 @@ impl GithubRepo {
             .repos()
             .get_branch(&company.github_org, &self.name, &self.default_branch)
             .await;
+
         if let Err(e) = branch {
+            info!("Failed to find default branch {} on {}. Returning early. err: {:?}", self.default_branch, self.name, e);
+
             if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
                 bail!("could not get branch {} repo {}: {}", self.default_branch, self.name, e);
             } else {
@@ -430,6 +433,8 @@ impl GithubRepo {
             {
                 Ok(_) => (),
                 Err(e) => {
+                    info!("Failed to update branch protection on {}. err: {:?}", self.name, e);
+
                     if !e.to_string().contains("empty repository") {
                         bail!("could not update protection for repo {}: {}", self.name, e);
                     }
@@ -442,6 +447,8 @@ impl GithubRepo {
         match github.repos().list_all_teams(&company.github_org, &self.name).await {
             Ok(v) => (ts = v),
             Err(e) => {
+                info!("Failed to get teams for repo {}. err: {:?}", self.name, e);
+
                 // If we get a 404 for teams then likely the repo is new, we can just move on and
                 // add the teams.
                 if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
@@ -486,12 +493,15 @@ impl GithubRepo {
                 .await
             {
                 Ok(_) => (),
-                Err(e) => bail!(
-                    "adding repo permission for team {} in repo {} failed: {}",
-                    team_name,
-                    self.name,
-                    e
-                ),
+                Err(e) => {
+                    info!("Failed to update repo permissions on {}. err: {:?}", self.name, e);
+                    bail!(
+                        "adding repo permission for team {} in repo {} failed: {}",
+                        team_name,
+                        self.name,
+                        e
+                    )
+                },
             }
 
             info!(
