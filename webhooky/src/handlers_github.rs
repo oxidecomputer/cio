@@ -624,9 +624,12 @@ pub async fn handle_rfd_push(
             // Make sure we are not on the default branch, since then we would not need
             // a PR. Instead, below, the state of the RFD would be moved to `published`.
             if rfd.state == "discussion" && branch != event.repository.default_branch {
+                // We always fetch the PR list so that we can repair discussion links if needed
                 let pull_requests = RFD::find_pull_requests(github, owner, &repo, branch).await?;
 
-                if pull_requests.is_empty() {
+                // If we are performing a state transition into discussion (from anywhere?) then
+                // we need to have a PR open
+                if old_rfd_state != rfd.state && pull_requests.is_empty() {
                     let pull = github
                         .pulls()
                         .create(
@@ -652,17 +655,16 @@ pub async fn handle_rfd_push(
                         "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, opened pull request {}",
                         rfd.number_string, old_rfd_state, rfd.state, branch, pull.number,
                     ));
-                } else {
+                }
+
+                // Otherwise if there is at least one pull request, then we select the first pull
+                // request and attempt to perform updates against it
+                if !pull_requests.is_empty() {
                     // This is here to remain consistent with previous behavior. This block
                     // likely needs to be refactored to account for multiple pull requests
                     // existing (even though there *should* never be multiple)
                     let pull = &pull_requests[0];
 
-                    // This block updates the title and labels for the pull request. This only
-                    // runs when the state changes, which means that if there is a manual title
-                    // update or a label is deleted by a user, then this process will not fix
-                    // that data. This needs to largely be refactored (in conjunction with the
-                    // discussion link handling below) to be more coherent.
                     if old_rfd_state != rfd.state {
                         a(&format!(
                             "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
@@ -673,7 +675,10 @@ pub async fn handle_rfd_push(
                             pull.html_url
                         ));
 
-                        // Let's update the pull request stuff tho just in case.
+                        // This should be broken down to split apart concerns. We only want
+                        // to assign the discussion label when transitioning to discussion,
+                        // but we always want to synchronize the title whenever it has
+                        // diverged from our expected value
                         match rfd.update_pull_request(github, company, pull).await {
                             Ok(_) => {
                                 a("[SUCCESS]: update pull request title and labels");
