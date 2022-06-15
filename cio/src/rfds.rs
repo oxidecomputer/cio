@@ -513,11 +513,9 @@ impl RFD {
     }
 
     /// Update an RFDs discussion link.
-    pub fn update_discussion(&mut self, link: &str, is_markdown: bool) -> Result<()> {
-        self.content = update_discussion_link(&self.content, link, is_markdown)?;
+    pub fn update_discussion(&mut self, link: &str, is_markdown: bool) {
+        self.content = update_discussion_link(&self.content, link, is_markdown);
         self.discussion = link.to_string();
-
-        Ok(())
     }
 
     /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
@@ -640,6 +638,44 @@ impl RFD {
         }
 
         Ok(())
+    }
+
+    /// Find any existing pull request coming from the branch for this RFD
+    pub async fn find_pull_requests(
+        github: &octorust::Client,
+        owner: &str,
+        repo: &str,
+        branch: &str,
+    ) -> Result<Vec<GitHubPullRequest>> {
+        let pulls = github
+            .pulls()
+            .list_all(
+                owner,
+                repo,
+                octorust::types::IssuesListState::All,
+                // head
+                "",
+                // base
+                "",
+                // sort
+                Default::default(),
+                // direction
+                Default::default(),
+            )
+            .await?;
+
+        let mut matching_pulls = vec![];
+
+        for pull in pulls.into_iter() {
+            // Check if the pull request is for our branch.
+            let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
+
+            if pull_branch == branch {
+                matching_pulls.push(pull.into());
+            }
+        }
+
+        Ok(matching_pulls)
     }
 
     /// Update the pull request information for an RFD.
@@ -1065,15 +1101,19 @@ pub fn clean_rfd_html_links(content: &str, num: &str) -> Result<String> {
         .replace(&format!("link:https://{}.rfd.oxide.computer/http", num), "link:http"))
 }
 
-pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> Result<String> {
+pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> String {
     // TODO: there is probably a better way to do these regexes.
-    let mut re = Regex::new(r"(?m)(:discussion:.*$)")?;
+    // This is a fixed regex, it should not arbitrarily fail
+    let mut re = Regex::new(r"(?m)(:discussion:.*$)").unwrap();
+
     // Asciidoc starts with a colon.
     let mut pre = ":";
     if is_markdown {
         // Markdown does not start with a colon.
         pre = "";
-        re = Regex::new(r"(?m)(discussion:.*$)")?;
+
+        // This is a fixed regex, it should not arbitrarily fail
+        re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
     }
 
     let replacement = if let Some(v) = re.find(content) {
@@ -1082,7 +1122,7 @@ pub fn update_discussion_link(content: &str, link: &str, is_markdown: bool) -> R
         String::new()
     };
 
-    Ok(content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1))
+    content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1)
 }
 
 pub fn update_state(content: &str, state: &str, is_markdown: bool) -> Result<String> {
@@ -1527,7 +1567,7 @@ discussion:   https://github.com/oxidecomputer/rfd/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
-        let mut result = update_discussion_link(content, link, true).unwrap();
+        let mut result = update_discussion_link(content, link, true);
         let mut expected = r#"sdfsdf
 sdfsdf
 discussion: https://github.com/oxidecomputer/rfd/pulls/2019
@@ -1543,7 +1583,7 @@ discussion: fgsdfg
 dsfsdf
 sdf
 :discussion: nope"#;
-        result = update_discussion_link(content, link, false).unwrap();
+        result = update_discussion_link(content, link, false);
         expected = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
@@ -1560,7 +1600,7 @@ discussion: fgsdfg
 dsfsdf
 sdf
 :discussion: nope"#;
-        result = update_discussion_link(content, link, false).unwrap();
+        result = update_discussion_link(content, link, false);
         expected = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
