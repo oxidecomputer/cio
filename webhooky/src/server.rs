@@ -234,7 +234,7 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
             .every(18.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-other")});
         scheduler
-            .every(2.hours())
+            .every(3.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-recorded-meetings")});
         scheduler
             .every(16.hours())
