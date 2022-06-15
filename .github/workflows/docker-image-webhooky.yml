@@ -29,13 +29,13 @@ jobs:
       - uses: actions/checkout@master
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      # - name: Cache Docker layers
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: /tmp/.buildx-cache
-      #     key: ${{ runner.os }}-buildx-webhooky-${{ github.ref }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-buildx-webhooky-master
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-webhooky-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-webhooky-master
       - name: Login to GitHub Packages Docker Registry
         uses: docker/login-action@v1
         with:
@@ -48,5 +48,5 @@ jobs:
           push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') && github.event_name != 'pull_request' }}
           file: ./webhooky/Dockerfile
           tags: ghcr.io/${{ github.repository_owner }}/cio:webhooky
-          # cache-from: type=local,src=/tmp/.buildx-cache
-          # cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
