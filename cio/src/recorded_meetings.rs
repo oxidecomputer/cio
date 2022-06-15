@@ -609,9 +609,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     Ok(_) => (),
                     Err(e) => {
                         info!(
-                            "adding permission for event `{}` chat log `{}` failed: {}",
+                            "adding permission for event `{}` chat log `{}` with owner `{}` event_id `{}` calendar_id `{}` failed: {}",
                             event.summary.trim().to_string(),
                             chat_log_link,
+                            owner,
+                            event.id,
+                            calendar.id,
                             e
                         );
                     }
@@ -643,9 +646,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 Ok(_) => (),
                 Err(e) => {
                     info!(
-                        "adding permission for event `{}` video `{}` failed: {}",
+                        "adding permission for event `{}` video `{}` with owner `{}` event_id `{}` calendar_id `{}` failed: {}",
                         event.summary.trim().to_string(),
                         video,
+                        owner,
+                        event.id,
+                        calendar.id,
                         e
                     );
                 }
