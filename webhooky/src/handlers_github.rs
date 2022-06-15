@@ -699,30 +699,35 @@ pub async fn handle_rfd_push(
 
                     // If the stored discussion link does not match the PR we found, then and
                     // update is required
-                    if rfd.discussion != pull.html_url {
+                    if rfd.discussion != pull.html_url && !pull.html_url.is_empty() {
+                        info!(
+                            "Stored discussion link \"{}\" does not match the PR found \"{}\"",
+                            rfd.discussion, pull.html_url
+                        );
+
                         rfd.update_discussion(&pull.html_url, file.ends_with("README.md"));
 
                         // Update the file in GitHub. This will trigger another commit webhook
                         // and therefore must only occur when there is a change that needs to
                         // be made. If this is handled unconditionally then commit hooks could
                         // loop indefinitely.
-                        create_or_update_file_in_github_repo(
-                            github,
-                            owner,
-                            &repo,
-                            branch,
-                            &file,
-                            rfd.content.as_bytes().to_vec(),
-                        )
-                        .await?;
-                        a("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
+                        // create_or_update_file_in_github_repo(
+                        //     github,
+                        //     owner,
+                        //     &repo,
+                        //     branch,
+                        //     &file,
+                        //     rfd.content.as_bytes().to_vec(),
+                        // )
+                        // .await?;
+                        // a("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
 
-                        if let Err(err) = rfd.update(db).await {
-                            a(&format!(
-                                "[ERROR]: failed to update disucussion url: {} cc @jessfraz @augustuswm",
-                                err
-                            ));
-                        }
+                        // if let Err(err) = rfd.update(db).await {
+                        //     a(&format!(
+                        //         "[ERROR]: failed to update disucussion url: {} cc @jessfraz @augustuswm",
+                        //         err
+                        //     ));
+                        // }
                     }
                 }
             }
