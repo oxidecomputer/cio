@@ -719,11 +719,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 // Because rev.ai can only do uploads under 2GB.
                 let b = byte_unit::Byte::from_unit(video_contents.len() as f64, byte_unit::ByteUnit::B)?;
                 let b = b.get_adjusted_unit(byte_unit::ByteUnit::GB);
-                info!(
-                    "video for meeting `{}` has size `{}`",
-                    event.summary.trim().to_string(),
-                    b.to_string()
-                );
+                info!("video for meeting `{}` has size `{}`", event.summary.trim(), b);
 
                 // If we don't have a transcript ID, let's post the video to be
                 // transcribed.
@@ -735,6 +731,14 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         db_meeting.update(db).await?;
                     }
                     Err(e) => {
+                        info!(
+                            "Failed submitting video data to Rev.ai directly. meeting: {} event: {} video: {} err: {}",
+                            db_meeting.id,
+                            event.summary.trim(),
+                            video_id,
+                            e
+                        );
+
                         if e.to_string().contains("413") {
                             // The video is too large, lets add permissions for an hour and do it
                             // another way.
