@@ -835,15 +835,15 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     .get(&db_meeting.transcript_id, revai::types::AcceptTranscript::TextPlain)
                     .await
                 {
-                    Ok(t) => t,
+                    Ok(t) => {
+                        info!(
+                            "Fetched transcript from Rev.ai to be stored. meeting: {} transcript: {}",
+                            db_meeting.id, db_meeting.transcript_id
+                        );
+                        t
+                    }
                     Err(e) => {
-                        if e.to_string().contains("404") {
-                            // Reset the transcript ID to be blank, so that we can re-request
-                            // a transcript.
-                            db_meeting.transcript_id = String::new();
-                        } else {
-                            warn!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
-                        }
+                        warn!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
                         String::new()
                     }
                 };
