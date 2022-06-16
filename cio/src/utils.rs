@@ -11,6 +11,7 @@ use octorust::Client as GitHub;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
 use sentry::IntoDsn;
+use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
@@ -468,6 +469,20 @@ pub async fn get_github_file(
 
             bail!("[rfd] getting file contents for {} failed: {}", file.path, e);
         }
+    }
+}
+
+pub fn trim<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    let trimmed = value.trim();
+
+    if value.len() != trimmed.len() {
+        Ok(trimmed.to_string())
+    } else {
+        Ok(value)
     }
 }
 
