@@ -517,30 +517,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 continue;
             }
 
-            let mut owner = "".to_string();
-            let mut attendees: Vec<String> = Default::default();
-            for attendee in &event.attendees {
-                if !attendee.resource {
-                    attendees.push(attendee.email.to_string());
-                }
-                if attendee.organizer && attendee.email.ends_with(&company.gsuite_domain) && owner.is_empty() {
-                    // Make sure the person is still a user.
-                    if let Some(_user) = User::get_from_db(
-                        db,
-                        company.id,
-                        attendee
-                            .email
-                            .trim_end_matches(&company.gsuite_domain)
-                            .trim_end_matches('@')
-                            .to_string(),
-                    )
-                    .await
-                    {
-                        owner = attendee.email.to_string()
-                    }
-                }
-            }
-
             let mut video = "".to_string();
             let mut chat_log_link = "".to_string();
             for attachment in &event.attachments {
@@ -567,6 +543,30 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             if video.is_empty() {
                 // Continue early, we don't care.
                 continue;
+            }
+
+            let mut owner = "".to_string();
+            let mut attendees: Vec<String> = Default::default();
+            for attendee in &event.attendees {
+                if !attendee.resource {
+                    attendees.push(attendee.email.to_string());
+                }
+                if attendee.organizer && attendee.email.ends_with(&company.gsuite_domain) && owner.is_empty() {
+                    // Make sure the person is still a user.
+                    if let Some(_user) = User::get_from_db(
+                        db,
+                        company.id,
+                        attendee
+                            .email
+                            .trim_end_matches(&company.gsuite_domain)
+                            .trim_end_matches('@')
+                            .to_string(),
+                    )
+                    .await
+                    {
+                        owner = attendee.email.to_string()
+                    }
+                }
             }
 
             if owner.is_empty() {
