@@ -420,17 +420,15 @@ impl DriveClientCache {
         }
 
         match self.clients.get(email) {
-            Some(res) => match res {
-                Ok(drive) => drive,
-                Err(err) => {
-                    info!(
-                        "using oauth2 token since getting google drive token with service account failed: {}",
-                        err
-                    );
+            Some(Ok(drive)) => drive,
+            Some(Err(err)) => {
+                info!(
+                    "using oauth2 token since getting google drive token with service account failed: {}",
+                    err
+                );
 
-                    &self.fallback
-                }
-            },
+                &self.fallback
+            }
             None => &self.fallback,
         }
     }
