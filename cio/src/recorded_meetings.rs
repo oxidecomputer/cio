@@ -843,7 +843,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         t
                     }
                     Err(e) => {
-                        warn!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
+                        info!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
                         String::new()
                     }
                 };
