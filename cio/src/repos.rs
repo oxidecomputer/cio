@@ -397,50 +397,49 @@ impl GithubRepo {
             .get_branch(&company.github_org, &self.name, &self.default_branch)
             .await;
 
-        if let Err(e) = branch {
-            info!(
-                "Failed to find default branch {} on {}. Returning early. err: {:?}",
-                self.default_branch, self.name, e
-            );
+        match branch {
+            Ok(default_branch) => {
+                // Add branch protection to disallow force pushing to the default branch.
+                // Only do this if it is not already protected.
+                if !default_branch.protected {
+                    match github
+                        .repos()
+                        .update_branch_protection(
+                            &company.github_org,
+                            &self.name,
+                            &self.default_branch,
+                            &octorust::types::ReposUpdateBranchProtectionRequest {
+                                allow_deletions: Default::default(),
+                                allow_force_pushes: Default::default(),
+                                enforce_admins: Some(true),
+                                required_conversation_resolution: Default::default(),
+                                required_linear_history: Default::default(),
+                                required_pull_request_reviews: None,
+                                required_status_checks: None,
+                                restrictions: None,
+                            },
+                        )
+                        .await
+                    {
+                        Ok(_) => (),
+                        Err(e) => {
+                            info!("Failed to update branch protection on {}. err: {:?}", self.name, e);
 
-            if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
-                bail!("could not get branch {} repo {}: {}", self.default_branch, self.name, e);
-            } else {
-                // Return early. Likely the repo no longer exists.
-                return Ok(());
-            }
-        }
-        let default_branch = branch?;
-
-        // Add branch protection to disallow force pushing to the default branch.
-        // Only do this if it is not already protected.
-        if !default_branch.protected {
-            match github
-                .repos()
-                .update_branch_protection(
-                    &company.github_org,
-                    &self.name,
-                    &self.default_branch,
-                    &octorust::types::ReposUpdateBranchProtectionRequest {
-                        allow_deletions: Default::default(),
-                        allow_force_pushes: Default::default(),
-                        enforce_admins: Some(true),
-                        required_conversation_resolution: Default::default(),
-                        required_linear_history: Default::default(),
-                        required_pull_request_reviews: None,
-                        required_status_checks: None,
-                        restrictions: None,
-                    },
-                )
-                .await
-            {
-                Ok(_) => (),
-                Err(e) => {
-                    info!("Failed to update branch protection on {}. err: {:?}", self.name, e);
-
-                    if !e.to_string().contains("empty repository") {
-                        bail!("could not update protection for repo {}: {}", self.name, e);
+                            if !e.to_string().contains("empty repository") {
+                                bail!("could not update protection for repo {}: {}", self.name, e);
+                            }
+                        }
                     }
+                }
+            },
+            Err(err) => {
+                info!(
+                    "Failed to find default branch {} on {}. Returning early. err: {:?}",
+                    self.default_branch, self.name, e
+                );
+
+                if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
+                    bail!("could not get branch {} repo {}: {}", self.default_branch, self.name, e);
                 }
             }
         }
