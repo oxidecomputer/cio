@@ -431,15 +431,20 @@ impl GithubRepo {
                         }
                     }
                 }
-            },
+            }
             Err(err) => {
                 info!(
                     "Failed to find default branch {} on {}. Returning early. err: {:?}",
-                    self.default_branch, self.name, e
+                    self.default_branch, self.name, err
                 );
 
-                if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
-                    bail!("could not get branch {} repo {}: {}", self.default_branch, self.name, e);
+                if !err.to_string().contains("404") && !err.to_string().contains("Not Found") {
+                    bail!(
+                        "could not get branch {} repo {}: {}",
+                        self.default_branch,
+                        self.name,
+                        err
+                    );
                 }
             }
         }
