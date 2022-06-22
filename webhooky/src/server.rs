@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Result};
@@ -7,7 +8,7 @@ use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
+    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
@@ -995,9 +996,12 @@ pub struct ApplicationFileUploadData {
 async fn listen_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<ApplicationFileUploadData>,
-) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
     let mut txn =
         start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
+
+    // Check the origin header. In the future this may be upgraded to a hard failure
+    let origin_access = crate::cors::get_cors_origin_header(rqctx.clone(), &["https://apply.oxide.computer"]).await;
 
     match txn
         .run(|| crate::handlers::handle_application_files_upload(rqctx, body_param))
@@ -1006,7 +1010,14 @@ async fn listen_application_files_upload_requests(
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
 
-            Ok(HttpResponseOk(r))
+            let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
+
+            if let Ok(origin_access) = origin_access {
+                let headers = resp.headers_mut();
+                headers.insert("Access-Control-Allow-Origin", origin_access);
+            }
+
+            Ok(resp)
         }
         // Send the error to sentry.
         Err(e) => {

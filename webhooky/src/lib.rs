@@ -2,6 +2,7 @@
 #![feature(async_closure)]
 #[macro_use]
 pub mod core;
+mod cors;
 mod event_types;
 mod github_types;
 mod handlers;
