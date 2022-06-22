@@ -1012,9 +1012,17 @@ async fn listen_application_files_upload_requests(
 
             let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
 
-            if let Ok(origin_access) = origin_access {
-                let headers = resp.headers_mut();
-                headers.insert("Access-Control-Allow-Origin", origin_access);
+            match origin_access {
+                Ok(origin) => {
+                    let headers = resp.headers_mut();
+                    headers.insert("Access-Control-Allow-Origin", origin);
+                }
+                Err(err) => {
+                    warn!(
+                        "Submission to /application/files/upload failed CORS simulation. Err {:?}",
+                        err
+                    );
+                }
             }
 
             Ok(resp)
