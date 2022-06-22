@@ -256,13 +256,39 @@ impl Airtable {
 
     /// Bulk create records in a table.
     ///
-    /// Due to limitations on the Airtable API, you can only bulk create 10
-    /// records at a time.
+    /// The Airtable API limits record creation requests to 10 records per request. Because of
+    /// this, calls to this function containing more than 10 records will send multiple requests
+    /// (one request for each chunk of 10 records) to the Airtable API.
     pub async fn create_records<T: Serialize + DeserializeOwned>(
         &self,
         table: &str,
         records: Vec<Record<T>>,
     ) -> Result<Vec<Record<T>>> {
+        if records.len() <= 10 {
+            self.create_records_inner(table, records).await
+        } else {
+            let mut res = Vec::new();
+
+            let mut records = records.into_iter();
+            while records.len() > 0 {
+                let chunk = (&mut records).take(10).collect();
+                res.extend(self.create_records_inner(table, chunk).await?);
+            }
+
+            Ok(res)
+        }
+    }
+
+    /// Bulk create records in a table.
+    ///
+    /// The provided `records` vector MUST contain at most 10 items, or this function will panic.
+    async fn create_records_inner<T: Serialize + DeserializeOwned>(
+        &self,
+        table: &str,
+        records: Vec<Record<T>>,
+    ) -> Result<Vec<Record<T>>> {
+        assert!(records.len() <= 10);
+
         // Build the request.
         let request = self.request(
             Method::POST,
@@ -291,13 +317,39 @@ impl Airtable {
 
     /// Bulk update records in a table.
     ///
-    /// Due to limitations on the Airtable API, you can only bulk update 10
-    /// records at a time.
+    /// The Airtable API limits record update requests to 10 records per request. Because of
+    /// this, calls to this function containing more than 10 records will send multiple requests
+    /// (one request for each chunk of 10 records) to the Airtable API.
     pub async fn update_records<T: Serialize + DeserializeOwned>(
         &self,
         table: &str,
         records: Vec<Record<T>>,
     ) -> Result<Vec<Record<T>>> {
+        if records.len() <= 10 {
+            self.update_records_inner(table, records).await
+        } else {
+            let mut res = Vec::new();
+
+            let mut records = records.into_iter();
+            while records.len() > 0 {
+                let chunk = (&mut records).take(10).collect();
+                res.extend(self.update_records_inner(table, chunk).await?);
+            }
+
+            Ok(res)
+        }
+    }
+
+    /// Bulk update records in a table.
+    ///
+    /// The provided `records` vector MUST contain at most 10 items, or this function will panic.
+    async fn update_records_inner<T: Serialize + DeserializeOwned>(
+        &self,
+        table: &str,
+        records: Vec<Record<T>>,
+    ) -> Result<Vec<Record<T>>> {
+        assert!(records.len() <= 10);
+
         // Build the request.
         let request = self.request(
             Method::PATCH,
