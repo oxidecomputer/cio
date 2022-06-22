@@ -126,6 +126,7 @@ pub async fn create_server(
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(trigger_cleanup_create).unwrap();
+    api.register(test_post_untyped).unwrap();
 
     api.register(trigger_sync_analytics_create).unwrap();
     api.register(trigger_sync_api_tokens_create).unwrap();
@@ -429,9 +430,9 @@ async fn listen_products_sold_count_requests(
 }]
 async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_github::GitHubWebhookVerification>,
+    body: HmacVerifiedBodyAudit<crate::handlers_github::GitHubWebhookVerification, GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let webhook = body.into_inner_as::<GitHubWebhook>()?;
+    let webhook = body.into_inner()?;
 
     let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
@@ -508,6 +509,20 @@ pub struct GitHubRateLimit {
     pub remaining: u32,
     #[serde(default)]
     pub reset: String,
+}
+
+/**
+ * Testing openapi desc for untyped body
+ */
+#[endpoint {
+    method = POST,
+    path = "/test/body/untyped"
+}]
+async fn test_post_untyped(
+    rqctx: Arc<RequestContext<Context>>,
+    body: UntypedBody,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /**
@@ -1206,9 +1221,9 @@ pub struct ShippoTrackingUpdateEvent {
 }]
 async fn listen_checkr_background_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_checkr::CheckrWebhookVerification>,
+    body: HmacVerifiedBodyAudit<crate::handlers_checkr::CheckrWebhookVerification, checkr::WebhookEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let webhook = body.into_inner_as::<checkr::WebhookEvent>()?;
+    let webhook = body.into_inner()?;
 
     let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
@@ -1707,9 +1722,9 @@ async fn listen_auth_docusign_callback(
 }]
 async fn listen_docusign_envelope_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_docusign::DocusignWebhookVerification>,
+    body: HmacVerifiedBodyAudit<crate::handlers_docusign::DocusignWebhookVerification, docusign::Envelope>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let webhook = body.into_inner_as::<docusign::Envelope>()?;
+    let webhook = body.into_inner()?;
 
     let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
@@ -1842,13 +1857,13 @@ async fn listen_mailchimp_rack_line_webhooks(
 }]
 async fn listen_slack_commands_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification>,
+    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, String>,
 ) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
-    let command = body.into_inner();
+    let command = body.into_inner()?;
 
-    let mut txn = start_sentry_http_transaction(
+    let mut txn = start_sentry_http_transaction::<()>(
         rqctx.clone(),
-        Some(TypedOrUntypedBody::<()>::UntypedBody(command.clone())),
+        None,
     )
     .await;
 
@@ -1876,13 +1891,13 @@ async fn listen_slack_commands_webhooks(
 }]
 async fn listen_slack_interactive_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification>,
+    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, String>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
-    let command = body.into_inner();
+    let command = body.into_inner()?;
 
-    let mut txn = start_sentry_http_transaction(
+    let mut txn = start_sentry_http_transaction::<()>(
         rqctx.clone(),
-        Some(TypedOrUntypedBody::<()>::UntypedBody(command.clone())),
+        None,
     )
     .await;
 

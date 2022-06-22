@@ -1,57 +1,54 @@
 use async_trait::async_trait;
 use digest::KeyInit;
-use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, UntypedBody};
+use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, UntypedBody, TypedBody};
 use hmac::Mac;
 use std::{borrow::Cow, marker::PhantomData, sync::Arc};
 
 use crate::http::{internal_error, unauthorized};
 
-// listen_checkr_background_update_webhooks
-// listen_docusign_envelope_update_webhooks
-// listen_emails_incoming_sendgrid_parse_webhooks
-// listen_github_webhooks
-// listen_mailchimp_mailing_list_webhooks
-// listen_mailchimp_rack_line_webhooks
-// listen_shippo_tracking_update_webhooks
-// listen_slack_commands_webhooks
+pub trait BodyTypeAlias: serde::de::DeserializeOwned + Send + Sync + schemars::JsonSchema {}
+impl<T> BodyTypeAlias for T where T: serde::de::DeserializeOwned + Send + Sync + schemars::JsonSchema {}
 
 #[derive(Debug)]
-pub struct HmacVerifiedBody<T> {
-    audit: HmacVerifiedBodyAudit<T>,
+pub struct HmacVerifiedBody<T, BodyType> {
+    audit: HmacVerifiedBodyAudit<T, BodyType>,
 }
 
-impl<T> HmacVerifiedBody<T> {
+impl<T, BodyType> HmacVerifiedBody<T, BodyType>
+where
+    BodyType: BodyTypeAlias,
+{
     #[allow(dead_code)]
-    pub fn into_inner(self) -> UntypedBody {
+    pub fn into_inner_raw(self) -> UntypedBody {
+        self.audit.into_inner_raw()
+    }
+
+    pub fn into_inner(self) -> Result<BodyType, HttpError>
+    {
         self.audit.into_inner()
     }
-
-    pub fn into_inner_as<U>(self) -> Result<U, HttpError>
-    where
-        U: serde::de::DeserializeOwned + Send + Sync + schemars::JsonSchema,
-    {
-        self.audit.into_inner_as::<U>()
-    }
 }
 
 #[derive(Debug)]
-pub struct HmacVerifiedBodyAudit<T> {
+pub struct HmacVerifiedBodyAudit<T, BodyType> {
     body: UntypedBody,
+    _body_type: PhantomData<BodyType>,
     verified: bool,
     _verifier: PhantomData<T>,
 }
 
-impl<T> HmacVerifiedBodyAudit<T> {
+impl<T, BodyType> HmacVerifiedBodyAudit<T, BodyType>
+where
+    BodyType: BodyTypeAlias,
+{
     #[allow(dead_code)]
-    pub fn into_inner(self) -> UntypedBody {
+    pub fn into_inner_raw(self) -> UntypedBody {
         self.body
     }
 
-    pub fn into_inner_as<U>(self) -> Result<U, HttpError>
-    where
-        U: serde::de::DeserializeOwned + Send + Sync + schemars::JsonSchema,
+    pub fn into_inner(self) -> Result<BodyType, HttpError>
     {
-        serde_json::from_slice::<U>(self.body.as_bytes())
+        serde_json::from_slice::<BodyType>(self.body.as_bytes())
             .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {}", e)))
     }
 }
@@ -74,14 +71,15 @@ pub trait HmacSignatureVerifier {
 }
 
 #[async_trait]
-impl<T> Extractor for HmacVerifiedBody<T>
+impl<T, BodyType> Extractor for HmacVerifiedBody<T, BodyType>
 where
     T: HmacSignatureVerifier + Send + Sync,
+    BodyType: BodyTypeAlias
 {
     async fn from_request<Context: ServerContext>(
         rqctx: Arc<RequestContext<Context>>,
-    ) -> Result<HmacVerifiedBody<T>, HttpError> {
-        let audit = HmacVerifiedBodyAudit::<T>::from_request(rqctx.clone()).await?;
+    ) -> Result<HmacVerifiedBody<T, BodyType>, HttpError> {
+        let audit = HmacVerifiedBodyAudit::<T, BodyType>::from_request(rqctx.clone()).await?;
 
         log::debug!("Computed hmac audit result {}", audit.verified);
 
@@ -93,21 +91,19 @@ where
     }
 
     fn metadata() -> ExtractorMetadata {
-        ExtractorMetadata {
-            paginated: false,
-            parameters: vec![],
-        }
+        HmacVerifiedBodyAudit::<T, BodyType>::metadata()
     }
 }
 
 #[async_trait]
-impl<T> Extractor for HmacVerifiedBodyAudit<T>
+impl<T, BodyType> Extractor for HmacVerifiedBodyAudit<T, BodyType>
 where
     T: HmacSignatureVerifier + Send + Sync,
+    BodyType: BodyTypeAlias
 {
     async fn from_request<Context: ServerContext>(
         rqctx: Arc<RequestContext<Context>>,
-    ) -> Result<HmacVerifiedBodyAudit<T>, HttpError> {
+    ) -> Result<HmacVerifiedBodyAudit<T, BodyType>, HttpError> {
         let body = UntypedBody::from_request(rqctx.clone()).await?;
         let content = T::content(&rqctx, &body).await.map_err(|_| internal_error())?;
         let key = T::key(&rqctx).await.map_err(|_| internal_error())?;
@@ -125,15 +121,22 @@ where
 
         Ok(HmacVerifiedBodyAudit {
             body,
+            _body_type: PhantomData,
             verified,
             _verifier: PhantomData,
         })
     }
 
     fn metadata() -> ExtractorMetadata {
+
+        // The HMAC extractor is a wrapper around an inner type that does not imposed any
+        // alterations of the body content. Therefore we can use the metadata of the inner
+        // type, as that is what we expect users to submit
+        let body = TypedBody::<BodyType>::metadata();
+
         ExtractorMetadata {
             paginated: false,
-            parameters: vec![],
+            parameters: vec![body]
         }
     }
 }

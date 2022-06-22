@@ -151,14 +151,14 @@ pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Re
 
 pub async fn handle_slack_commands(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
+    body_param: String,
 ) -> Result<serde_json::Value> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
     // We should have a string, which we will then parse into our args.
     // Parse the request body as a Slack BotCommand.
-    let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes())?;
+    let bot_command: BotCommand = serde_urlencoded::from_str(&body_param)?;
 
     // Get the company from the Slack team id.
     let company = Company::get_from_slack_team_id(db, &bot_command.team_id).await?;
@@ -526,12 +526,10 @@ pub async fn handle_slack_commands(
 
 pub async fn handle_slack_interactive(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
+    body_param: String,
 ) -> Result<InteractiveResponse> {
-    let s = String::from_utf8(body_param.as_bytes().to_vec())?;
-
     // Decode the URL encoded struct.
-    let decoded = urlencoding::decode(s.trim_start_matches("payload="))?;
+    let decoded = urlencoding::decode(body_param.trim_start_matches("payload="))?;
 
     // We should have a string, which we will then parse into our args.
     // Parse the request body as a Slack InteractivePayload.
