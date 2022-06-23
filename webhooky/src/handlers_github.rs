@@ -636,78 +636,90 @@ pub async fn handle_rfd_push(
             // Make sure we are not on the default branch, since then we would not need
             // a PR. Instead, below, the state of the RFD would be moved to `published`.
             if rfd.state == "discussion" && branch != event.repository.default_branch {
+
                 // We always fetch the PR list so that we can repair discussion links if needed
                 let pull_requests = RFD::find_pull_requests(github, owner, &repo, branch).await?;
 
-                // If we are performing a state transition into discussion (from anywhere?) then
-                // we need to have a PR open
-                if old_rfd_state != rfd.state && pull_requests.is_empty() {
-                    let pull = github
-                        .pulls()
-                        .create(
-                            owner,
-                            &repo,
-                            &octorust::types::PullsCreateRequest {
-                                title: rfd.name.to_string(),
-                                head: format!("{}:{}", company.github_org, branch),
-                                base: event.repository.default_branch.to_string(),
-                                body: "Automatically opening the pull request since the document \
-                                    is marked as being in discussion. If you wish to not have \
-                                    a pull request open, change the state of your document and \
-                                    close this pull request."
-                                    .to_string(),
-                                draft: Some(false),
-                                maintainer_can_modify: Some(true),
-                                issue: 0,
-                            },
-                        )
-                        .await?;
+                // Get the first pull request an assume it represents the PR that we should be
+                // operating on. This is here to remain consistent with previous behavior. This
+                // check (or find_pull_requests) should instead be ensuring that this PR is trying
+                // to merge in to the default branch
+                let mut pull = pull_requests.first();
 
-                    a(&format!(
-                        "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, opened pull request {}",
-                        rfd.number_string, old_rfd_state, rfd.state, branch, pull.number,
-                    ));
-                }
+                // First handle anything that needs to occur on state transition
+                if old_rfd_state != rfd.state {
+                    pull = Some(match pull {
+                        Some(pull) => {
+                            a(&format!(
+                                "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
+                                rfd.number_string,
+                                old_rfd_state,
+                                rfd.state,
+                                branch,
+                                pull.html_url
+                            ));
 
-                // Otherwise if there is at least one pull request, then we select the first pull
-                // request and attempt to perform updates against it
-                if !pull_requests.is_empty() {
-                    // This is here to remain consistent with previous behavior. This block
-                    // likely needs to be refactored to account for multiple pull requests
-                    // existing (even though there *should* never be multiple)
-                    let pull = &pull_requests[0];
+                            // This should be broken down to split apart concerns. We only want
+                            // to assign the discussion label when transitioning to discussion,
+                            // but we always want to synchronize the title whenever it has
+                            // diverged from our expected value
+                            match rfd.update_pull_request(github, company, pull).await {
+                                Ok(_) => {
+                                    a("[SUCCESS]: update pull request title and labels");
+                                }
+                                Err(e) => {
+                                    warn!(
+                                        "unable to update pull request for pr#{}: {}",
+                                        event.pull_request.number, e,
+                                    );
 
-                    if old_rfd_state != rfd.state {
-                        a(&format!(
-                            "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
-                            rfd.number_string,
-                            old_rfd_state,
-                            rfd.state,
-                            branch,
-                            pull.html_url
-                        ));
-
-                        // This should be broken down to split apart concerns. We only want
-                        // to assign the discussion label when transitioning to discussion,
-                        // but we always want to synchronize the title whenever it has
-                        // diverged from our expected value
-                        match rfd.update_pull_request(github, company, pull).await {
-                            Ok(_) => {
-                                a("[SUCCESS]: update pull request title and labels");
+                                    a(&format!(
+                                        "[ERROR]: update pull request title and labels: {} cc @jessfraz @augustuswm",
+                                        e
+                                    ));
+                                }
                             }
-                            Err(e) => {
-                                warn!(
-                                    "unable to update pull request for pr#{}: {}",
-                                    event.pull_request.number, e,
-                                );
 
-                                a(&format!(
-                                    "[ERROR]: update pull request title and labels: {} cc @jessfraz @augustuswm",
-                                    e
-                                ));
-                            }
+                            pull
+                        },
+                        None => {
+
+                            // If we are performing a state transition into discussion (from anywhere?) and we
+                            // do not already have a PR, we need to create one
+                            let new_pull = github
+                                .pulls()
+                                .create(
+                                    owner,
+                                    &repo,
+                                    &octorust::types::PullsCreateRequest {
+                                        title: rfd.name.to_string(),
+                                        head: format!("{}:{}", company.github_org, branch),
+                                        base: event.repository.default_branch.to_string(),
+                                        body: "Automatically opening the pull request since the document \
+                                            is marked as being in discussion. If you wish to not have \
+                                            a pull request open, change the state of your document and \
+                                            close this pull request."
+                                            .to_string(),
+                                        draft: Some(false),
+                                        maintainer_can_modify: Some(true),
+                                        issue: 0,
+                                    },
+                                )
+                                .await?;
+
+                            a(&format!(
+                                "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, opened pull request {}",
+                                rfd.number_string, old_rfd_state, rfd.state, branch, new_pull.number,
+                            ));
+
+                            pull
                         }
                     }
+                }
+
+                // Independent of if we have an existing PR or just created a new PR, we always
+                // want to check and update the discussion url if an RFD is in the discussion state
+                if let Some(pull) = pull {
 
                     // If the stored discussion link does not match the PR we found, then and
                     // update is required
@@ -723,23 +735,23 @@ pub async fn handle_rfd_push(
                         // and therefore must only occur when there is a change that needs to
                         // be made. If this is handled unconditionally then commit hooks could
                         // loop indefinitely.
-                        // create_or_update_file_in_github_repo(
-                        //     github,
-                        //     owner,
-                        //     &repo,
-                        //     branch,
-                        //     &file,
-                        //     rfd.content.as_bytes().to_vec(),
-                        // )
-                        // .await?;
-                        // a("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
+                        create_or_update_file_in_github_repo(
+                            github,
+                            owner,
+                            &repo,
+                            branch,
+                            &file,
+                            rfd.content.as_bytes().to_vec(),
+                        )
+                        .await?;
+                        a("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
 
-                        // if let Err(err) = rfd.update(db).await {
-                        //     a(&format!(
-                        //         "[ERROR]: failed to update disucussion url: {} cc @jessfraz @augustuswm",
-                        //         err
-                        //     ));
-                        // }
+                        if let Err(err) = rfd.update(db).await {
+                            a(&format!(
+                                "[ERROR]: failed to update discussion url: {} cc @jessfraz @augustuswm",
+                                err
+                            ));
+                        }
                     }
                 }
             }
