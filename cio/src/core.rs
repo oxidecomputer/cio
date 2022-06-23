@@ -259,6 +259,61 @@ impl From<octorust::types::PullRequestSimple> for GitHubPullRequest {
     }
 }
 
+impl From<octorust::types::PullRequestData> for GitHubPullRequest {
+    fn from(item: octorust::types::PullRequestData) -> Self {
+        GitHubPullRequest {
+            id: item.id,
+            url: item.url.to_string(),
+            diff_url: item.diff_url.to_string(),
+            issue_url: item.issue_url.to_string(),
+            patch_url: item.patch_url.to_string(),
+            comments_url: item.comments_url.to_string(),
+            html_url: item.html_url.to_string(),
+            commits_url: item.commits_url.to_string(),
+            review_comments_url: item.review_comments_url.to_string(),
+            review_comment_url: item.review_comment_url.to_string(),
+            statuses_url: item.statuses_url.to_string(),
+            number: item.number,
+            state: item.state.to_string(),
+            title: item.title.to_string(),
+            body: item.body.to_string(),
+            closed_at: item.closed_at,
+            merged_at: item.merged_at,
+            head: GitHubCommit {
+                id: item.head.sha.to_string(),
+                timestamp: None,
+                label: item.head.label.to_string(),
+                author: Default::default(),
+                url: "".to_string(),
+                distinct: true,
+                added: vec![],
+                modified: vec![],
+                removed: vec![],
+                message: "".to_string(),
+                commit_ref: item.head.ref_.to_string(),
+                sha: item.head.sha.to_string(),
+            },
+            base: GitHubCommit {
+                id: item.base.sha.to_string(),
+                timestamp: None,
+                label: item.base.label.to_string(),
+                author: Default::default(),
+                url: "".to_string(),
+                distinct: true,
+                added: vec![],
+                modified: vec![],
+                removed: vec![],
+                message: "".to_string(),
+                commit_ref: item.base.ref_.to_string(),
+                sha: item.base.sha.to_string(),
+            },
+            // TODO: actually do these.
+            user: Default::default(),
+            merged: item.merged_at.is_some(),
+        }
+    }
+}
+
 /// A GitHub commit.
 /// FROM: https://docs.github.com/en/free-pro-team@latest/developers/webhooks-and-events/webhook-events-and-payloads#push
 #[derive(Debug, Clone, Default, PartialEq, JsonSchema, Deserialize, Serialize)]

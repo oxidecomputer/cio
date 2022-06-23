@@ -636,7 +636,6 @@ pub async fn handle_rfd_push(
             // Make sure we are not on the default branch, since then we would not need
             // a PR. Instead, below, the state of the RFD would be moved to `published`.
             if rfd.state == "discussion" && branch != event.repository.default_branch {
-
                 // We always fetch the PR list so that we can repair discussion links if needed
                 let pull_requests = RFD::find_pull_requests(github, owner, &repo, branch).await?;
 
@@ -644,7 +643,7 @@ pub async fn handle_rfd_push(
                 // operating on. This is here to remain consistent with previous behavior. This
                 // check (or find_pull_requests) should instead be ensuring that this PR is trying
                 // to merge in to the default branch
-                let mut pull = pull_requests.first();
+                let mut pull = pull_requests.into_iter().next();
 
                 // First handle anything that needs to occur on state transition
                 if old_rfd_state != rfd.state {
@@ -663,7 +662,7 @@ pub async fn handle_rfd_push(
                             // to assign the discussion label when transitioning to discussion,
                             // but we always want to synchronize the title whenever it has
                             // diverged from our expected value
-                            match rfd.update_pull_request(github, company, pull).await {
+                            match rfd.update_pull_request(github, company, &pull).await {
                                 Ok(_) => {
                                     a("[SUCCESS]: update pull request title and labels");
                                 }
@@ -681,9 +680,8 @@ pub async fn handle_rfd_push(
                             }
 
                             pull
-                        },
+                        }
                         None => {
-
                             // If we are performing a state transition into discussion (from anywhere?) and we
                             // do not already have a PR, we need to create one
                             let new_pull = github
@@ -712,15 +710,14 @@ pub async fn handle_rfd_push(
                                 rfd.number_string, old_rfd_state, rfd.state, branch, new_pull.number,
                             ));
 
-                            pull
+                            new_pull.into()
                         }
-                    }
+                    })
                 }
 
                 // Independent of if we have an existing PR or just created a new PR, we always
                 // want to check and update the discussion url if an RFD is in the discussion state
                 if let Some(pull) = pull {
-
                     // If the stored discussion link does not match the PR we found, then and
                     // update is required
                     if rfd.discussion != pull.html_url && !pull.html_url.is_empty() {
