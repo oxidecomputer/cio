@@ -4,7 +4,7 @@ pub mod auth;
 #[macro_use]
 pub mod core;
 mod event_types;
-mod github_types;
+pub mod github_types;
 mod handlers;
 pub mod handlers_auth;
 pub mod handlers_checkr;
