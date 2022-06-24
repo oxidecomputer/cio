@@ -63,12 +63,12 @@ where
         if let (Some(label), Some(user_token)) = (label, user_token) {
             Ok(BearerAudit {
                 verified: label == "Bearer" && expected_token == user_token,
-                _provider: PhantomData
+                _provider: PhantomData,
             })
         } else {
             Ok(BearerAudit {
                 verified: false,
-                _provider: PhantomData
+                _provider: PhantomData,
             })
         }
     }

@@ -26,7 +26,15 @@ use signal_hook::{
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::{auth::{bearer::BearerAudit, global::GlobalToken, sig::HmacVerifiedBodyAudit, token::QueryTokenAudit}, github_types::GitHubWebhook};
+use crate::{
+    auth::{
+        bearer::BearerAudit,
+        global::GlobalToken,
+        sig::{HmacVerifiedBodyAudit, RawBody},
+        token::QueryTokenAudit,
+    },
+    github_types::GitHubWebhook,
+};
 
 pub async fn create_server(
     s: &crate::core::Server,
@@ -126,7 +134,6 @@ pub async fn create_server(
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(trigger_cleanup_create).unwrap();
-    api.register(test_post_untyped).unwrap();
 
     api.register(trigger_sync_analytics_create).unwrap();
     api.register(trigger_sync_api_tokens_create).unwrap();
@@ -509,20 +516,6 @@ pub struct GitHubRateLimit {
     pub remaining: u32,
     #[serde(default)]
     pub reset: String,
-}
-
-/**
- * Testing openapi desc for untyped body
- */
-#[endpoint {
-    method = POST,
-    path = "/test/body/untyped"
-}]
-async fn test_post_untyped(
-    rqctx: Arc<RequestContext<Context>>,
-    body: UntypedBody,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    Ok(HttpResponseAccepted("ok".to_string()))
 }
 
 /**
@@ -1857,20 +1850,13 @@ async fn listen_mailchimp_rack_line_webhooks(
 }]
 async fn listen_slack_commands_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, String>,
+    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, RawBody>,
 ) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
-    let command = body.into_inner()?;
+    let command = body.into_inner()?.to_string()?;
 
-    let mut txn = start_sentry_http_transaction::<()>(
-        rqctx.clone(),
-        None,
-    )
-    .await;
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
-    match txn
-        .run(|| crate::handlers::handle_slack_commands(rqctx, command))
-        .await
-    {
+    match txn.run(|| crate::handlers::handle_slack_commands(rqctx, command)).await {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
 
@@ -1891,15 +1877,11 @@ async fn listen_slack_commands_webhooks(
 }]
 async fn listen_slack_interactive_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, String>,
+    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, RawBody>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
-    let command = body.into_inner()?;
+    let command = body.into_inner()?.to_string()?;
 
-    let mut txn = start_sentry_http_transaction::<()>(
-        rqctx.clone(),
-        None,
-    )
-    .await;
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
     if let Err(e) = txn
         .run(|| crate::handlers::handle_slack_interactive(rqctx, command))
