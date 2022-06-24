@@ -6,10 +6,7 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, Duration};
 use chrono_humanize::HumanTime;
-use google_drive::{
-    traits::{DriveOps, FileOps, PermissionOps},
-    Client as GoogleDrive,
-};
+use google_drive::traits::{DriveOps, FileOps, PermissionOps};
 use inflector::cases::kebabcase::to_kebab_case;
 use log::{debug, info, warn};
 use macros::db;
@@ -23,7 +20,6 @@ use serde::{Deserialize, Serialize};
 use slack_chat_api::{
     FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
 };
-use std::collections::HashMap;
 use zoom_api::types::GetAccountCloudRecordingResponseMeetingsFilesFileType;
 
 use crate::{
@@ -398,42 +394,6 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
     Ok(())
 }
 
-struct DriveClientCache {
-    clients: HashMap<String, Result<GoogleDrive>>,
-    fallback: GoogleDrive,
-}
-
-impl DriveClientCache {
-    pub fn new(fallback: GoogleDrive) -> Self {
-        Self {
-            clients: HashMap::new(),
-            fallback,
-        }
-    }
-
-    async fn get_client(&mut self, company: &Company, email: &str) -> &GoogleDrive {
-        if self.clients.get(email).is_none() {
-            self.clients.insert(
-                email.to_string(),
-                company.authenticate_google_drive_with_service_account(email).await,
-            );
-        }
-
-        match self.clients.get(email) {
-            Some(Ok(drive)) => drive,
-            Some(Err(err)) => {
-                info!(
-                    "using oauth2 token since getting google drive token with service account failed: {}",
-                    err
-                );
-
-                &self.fallback
-            }
-            None => &self.fallback,
-        }
-    }
-}
-
 /// Sync the recorded meetings from Google.
 pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) -> Result<()> {
     let mut gcal = match company.authenticate_google_calendar_with_service_account("").await {
@@ -449,7 +409,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
     };
 
     let revai = RevAI::new_from_env();
-    let mut drive_cache = DriveClientCache::new(company.authenticate_google_drive(db).await?);
 
     // Get the list of our calendars.
     let calendars = gcal
@@ -517,6 +476,30 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 continue;
             }
 
+            let mut owner = "".to_string();
+            let mut attendees: Vec<String> = Default::default();
+            for attendee in &event.attendees {
+                if !attendee.resource {
+                    attendees.push(attendee.email.to_string());
+                }
+                if attendee.organizer && attendee.email.ends_with(&company.gsuite_domain) && owner.is_empty() {
+                    // Make sure the person is still a user.
+                    if let Some(_user) = User::get_from_db(
+                        db,
+                        company.id,
+                        attendee
+                            .email
+                            .trim_end_matches(&company.gsuite_domain)
+                            .trim_end_matches('@')
+                            .to_string(),
+                    )
+                    .await
+                    {
+                        owner = attendee.email.to_string()
+                    }
+                }
+            }
+
             let mut video = "".to_string();
             let mut chat_log_link = "".to_string();
             for attachment in &event.attachments {
@@ -545,32 +528,19 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 continue;
             }
 
-            let mut owner = "".to_string();
-            let mut attendees: Vec<String> = Default::default();
-            for attendee in &event.attendees {
-                if !attendee.resource {
-                    attendees.push(attendee.email.to_string());
-                }
-                if attendee.organizer && attendee.email.ends_with(&company.gsuite_domain) && owner.is_empty() {
-                    // Make sure the person is still a user.
-                    if let Some(_user) = User::get_from_db(
-                        db,
-                        company.id,
-                        attendee
-                            .email
-                            .trim_end_matches(&company.gsuite_domain)
-                            .trim_end_matches('@')
-                            .to_string(),
-                    )
-                    .await
-                    {
-                        owner = attendee.email.to_string()
-                    }
-                }
-            }
-
             if owner.is_empty() {
-                let drive_client = drive_cache.get_client(company, "").await;
+                // We need a drive client to get information for the file.
+                let drive_client = match company.authenticate_google_drive_with_service_account("").await {
+                    Ok(dc) => dc,
+                    // If we can't auth as the owner, then let's just just do a normal auth.
+                    Err(e) => {
+                        info!(
+                            "using oauth2 token since getting google drive token with service account failed: {}",
+                            e
+                        );
+                        company.authenticate_google_drive(db).await?
+                    }
+                };
 
                 // Let's get the owner of the video so we can auth as them.
                 if let Ok(file) = drive_client
@@ -611,8 +581,17 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     event.summary.trim().to_string()
                 );
             }
-
-            let drive_client = drive_cache.get_client(company, &owner).await;
+            let drive_client = match company.authenticate_google_drive_with_service_account(&owner).await {
+                Ok(dc) => dc,
+                // If we can't auth as the owner, then let's just just do a normal auth.
+                Err(e) => {
+                    info!(
+                        "using oauth2 token since getting google drive token with service account failed: {}",
+                        e
+                    );
+                    company.authenticate_google_drive(db).await?
+                }
+            };
 
             // If we have a chat log, we should download it.
             let mut chat_log = "".to_string();
