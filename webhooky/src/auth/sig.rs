@@ -18,8 +18,7 @@ pub trait FromBytes<E>: Send + Sync {
 }
 
 /// Provide an implementation of from_bytes for anything that can be deserialized from a JSON
-/// payload. The JsonSchema bounds allows us to additionally piggyback on [dropshot::TypedBody]
-/// for generating OpenAPI data.
+/// payload. The JsonSchema bounds allows piggybacking on [`TypedBody`](dropshot::TypedBody) for generating OpenAPI data.
 impl<T> FromBytes<HttpError> for T
 where
     T: DeserializeOwned + JsonSchema + Send + Sync + 'static,
@@ -37,7 +36,7 @@ where
     }
 }
 
-/// A type very similar to [dropshot::UntypedBody], used for holding a body of arbitrary bytes
+/// A type very similar to [`UntypedBody`](dropshot::UntypedBody), used for holding a body of arbitrary bytes
 pub struct RawBody {
     inner: Vec<u8>,
 }
@@ -66,10 +65,7 @@ impl FromBytes<HttpError> for RawBody {
     }
 }
 
-/// A request body that has been verified by an HMAC verifier T. Extracting an [HMACVerifiedBody]
-/// will return an UNAUTHORIZED error if verification fails. An INTERNAL_SERVER_ERROR will be
-/// returned if verification can not be performed due to a the verifier T failing to supply a key
-/// or content,
+/// A request body that has been verified by an HMAC verifier `T`.
 #[derive(Debug)]
 pub struct HmacVerifiedBody<T, BodyType> {
     audit: HmacVerifiedBodyAudit<T, BodyType>,
@@ -80,17 +76,16 @@ where
     BodyType: FromBytes<HttpError>,
 {
     /// Attempts to deserialize the request body into the specified `BodyType`. Returns a
-    /// BAD_REQUEST [dropshot::HttpError] if the deserialization of `BodyType` fails
+    /// [`BAD_REQUEST`](http::status::StatusCode::BAD_REQUEST) [`HttpError`](dropshot::HttpError) if the deserialization of `BodyType` fails
     #[allow(dead_code)]
     pub fn into_inner(self) -> Result<BodyType, HttpError> {
         self.audit.into_inner()
     }
 }
 
-/// A request body that performs the HMAC verification specified by the verifier T, but does not
-/// fail extraction when verification fails. The extracted [HmacVerifiedBodyAudit] can be queried
-/// to determine if verification failed. An INTERNAL_SERVER_ERROR will be returned if verification
-/// can not be performed due to a the verifier T failing to supply a key or content,
+/// A request body that performs the HMAC verification specified by the verifier `T`, but does not
+/// fail extraction when verification fails. The [`HmacVerifiedBodyAudit`] can be queried to determine
+/// if verification failed.
 #[derive(Debug)]
 pub struct HmacVerifiedBodyAudit<T, BodyType> {
     body: UntypedBody,
@@ -109,7 +104,7 @@ where
     }
 
     /// Attempts to deserialize the request body into the specified `BodyType`. Returns a
-    /// BAD_REQUEST HttpError if the deserialization of `BodyType` fails.
+    /// [`BAD_REQUEST`](http::status::StatusCode::BAD_REQUEST) [`HttpError`](dropshot::HttpError) if the deserialization of `BodyType` fails.
     pub fn into_inner(self) -> Result<BodyType, HttpError> {
         BodyType::from_bytes(self.body.as_bytes())
             .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {}", e)))
@@ -141,6 +136,9 @@ pub trait HmacSignatureVerifier {
     }
 }
 
+/// Extracting an [`HmacVerifiedBody`] will return an [`UNAUTHORIZED`](http::status::StatusCode::UNAUTHORIZED) [`HttpError`](dropshot::HttpError) if verification fails.
+/// An [`INTERNAL_SERVER_ERROR`](http::status::StatusCode::INTERNAL_SERVER_ERROR) will be returned if verification can not be performed due to a
+/// the verifier `T` failing to supply a key or content,
 #[async_trait]
 impl<T, BodyType> Extractor for HmacVerifiedBody<T, BodyType>
 where
@@ -166,6 +164,8 @@ where
     }
 }
 
+/// An [`INTERNAL_SERVER_ERROR`](http::status::StatusCode::INTERNAL_SERVER_ERROR) will be returned if verification can not be performed due to
+/// the verifier `T` failing to supply a key or content,
 #[async_trait]
 impl<T, BodyType> Extractor for HmacVerifiedBodyAudit<T, BodyType>
 where
