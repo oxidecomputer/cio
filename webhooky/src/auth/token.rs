@@ -63,10 +63,10 @@ where
         let req_token = Query::<Token>::from_request(rqctx.clone())
             .await
             .map(|token| token.into_inner().token)
-            .unwrap_or_else(|_| "".to_string());
+            .ok();
         let expected_token = T::token().await.map_err(|_| internal_error())?;
         Ok(QueryTokenAudit {
-            verified: expected_token == req_token,
+            verified: Some(expected_token) == req_token,
             _provider: PhantomData,
         })
     }

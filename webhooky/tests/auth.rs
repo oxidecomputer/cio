@@ -11,8 +11,8 @@ use webhooky::{
     auth::{
         bearer::{Bearer, BearerAudit},
         global::GlobalToken,
-        sig::{RawBody, HmacVerifiedBody, HmacVerifiedBodyAudit},
-        token::{QueryToken, QueryTokenAudit}
+        sig::{HmacVerifiedBody, HmacVerifiedBodyAudit, RawBody},
+        token::{QueryToken, QueryTokenAudit},
     },
     github_types::GitHubWebhook,
 };
