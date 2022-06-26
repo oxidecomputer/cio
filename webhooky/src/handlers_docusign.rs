@@ -1,12 +1,13 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use dropshot::{Extractor, RequestContext, ServerContext};
+use dropshot_auth::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{info, warn};
 use sha2::Sha256;
 use std::{borrow::Cow, sync::Arc};
 
-use crate::{auth::sig::HmacSignatureVerifier, http::Headers};
+use crate::{http::Headers};
 
 #[derive(Debug)]
 pub struct DocusignWebhookVerification;

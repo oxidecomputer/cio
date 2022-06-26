@@ -1,8 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-
-use super::bearer::BearerProvider;
-use super::token::QueryTokenProvider;
+use dropshot_auth::{bearer::BearerProvider, query::QueryTokenProvider};
 
 pub struct GlobalToken;
 
