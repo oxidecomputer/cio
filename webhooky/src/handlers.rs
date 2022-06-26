@@ -1269,10 +1269,7 @@ pub async fn handle_airtable_shipments_inbound_create(
     Ok(())
 }
 
-pub async fn handle_store_order_create(
-    rqctx: Arc<RequestContext<Context>>,
-    event: Order,
-) -> Result<()> {
+pub async fn handle_store_order_create(rqctx: Arc<RequestContext<Context>>, event: Order) -> Result<()> {
     let api_context = rqctx.context();
 
     event.do_order(&api_context.db).await?;
@@ -1475,10 +1472,7 @@ pub async fn handle_docusign_envelope_update(
     Ok(())
 }
 
-pub async fn handle_analytics_page_view(
-    rqctx: Arc<RequestContext<Context>>,
-    mut event: NewPageView,
-) -> Result<()> {
+pub async fn handle_analytics_page_view(rqctx: Arc<RequestContext<Context>>, mut event: NewPageView) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -1570,10 +1564,7 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, eve
     Ok(())
 }
 
-pub async fn handle_shipbob(
-    rqctx: Arc<RequestContext<Context>>,
-    event: serde_json::Value,
-) -> Result<()> {
+pub async fn handle_shipbob(rqctx: Arc<RequestContext<Context>>, event: serde_json::Value) -> Result<()> {
     // We need to get the webhook type from the header.
     let headers = rqctx.request.lock().await.headers().clone();
 

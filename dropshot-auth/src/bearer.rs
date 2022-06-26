@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, ApiEndpointBodyContentType};
+use dropshot::{ApiEndpointBodyContentType, Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext};
 
 use std::{marker::PhantomData, sync::Arc};
 
@@ -76,7 +76,6 @@ pub struct BearerAudit<T> {
 }
 
 impl<T> BearerAudit<T> {
-
     /// Returns that status of if this request passed verification
     pub fn verified(&self) -> bool {
         self.verified

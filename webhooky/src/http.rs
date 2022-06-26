@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, ApiEndpointBodyContentType};
+use dropshot::{ApiEndpointBodyContentType, Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext};
 use http::header::HeaderMap;
 use std::sync::Arc;
 
@@ -19,4 +19,3 @@ impl Extractor for Headers {
         }
     }
 }
-

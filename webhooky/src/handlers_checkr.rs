@@ -8,7 +8,7 @@ use log::info;
 use sha2::Sha256;
 use std::{borrow::Cow, sync::Arc};
 
-use crate::{http::Headers};
+use crate::http::Headers;
 
 #[derive(Debug)]
 pub struct CheckrWebhookVerification;

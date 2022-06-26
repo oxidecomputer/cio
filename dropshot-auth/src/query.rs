@@ -1,6 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot::{Extractor, ExtractorMetadata, HttpError, Query, RequestContext, ServerContext, ApiEndpointBodyContentType};
+use dropshot::{
+    ApiEndpointBodyContentType, Extractor, ExtractorMetadata, HttpError, Query, RequestContext, ServerContext,
+};
 use schemars::JsonSchema;
 use serde::Deserialize;
 

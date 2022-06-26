@@ -1,4 +1,4 @@
-use dropshot::{Extractor, ExtractorMetadata, HttpError, TypedBody, UntypedBody, ApiEndpointBodyContentType};
+use dropshot::{ApiEndpointBodyContentType, Extractor, ExtractorMetadata, HttpError, TypedBody, UntypedBody};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde_json;

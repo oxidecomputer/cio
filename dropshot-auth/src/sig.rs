@@ -1,12 +1,14 @@
 use async_trait::async_trait;
 use digest::KeyInit;
-use dropshot::{Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, UntypedBody, ApiEndpointBodyContentType};
+use dropshot::{
+    ApiEndpointBodyContentType, Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, UntypedBody,
+};
 use hmac::Mac;
 use std::{borrow::Cow, marker::PhantomData, sync::Arc};
 
 use crate::{
     http::{internal_error, unauthorized},
-    FromBytes
+    FromBytes,
 };
 
 /// A request body that has been verified by an HMAC verifier `T`.
