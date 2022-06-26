@@ -9,7 +9,7 @@ use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
-use dropshot_auth::{bearer::BearerAudit, query::QueryTokenAudit, sig::HmacVerifiedBodyAudit, RawBody};
+use dropshot_auth::{bearer::BearerAudit, query::QueryTokenAudit, sig::HmacVerifiedBodyAudit};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use http::StatusCode;
@@ -24,7 +24,7 @@ use signal_hook::{
     consts::{SIGINT, SIGTERM},
     iterator::Signals,
 };
-use slack_chat_api::Slack;
+use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
 use crate::{auth::global::GlobalToken, github_types::GitHubWebhook};
@@ -1820,12 +1820,13 @@ async fn listen_mailchimp_rack_line_webhooks(
 #[endpoint {
     method = POST,
     path = "/slack/commands",
+    content_type = "application/x-www-form-urlencoded"
 }]
 async fn listen_slack_commands_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, RawBody>,
+    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, BotCommand>,
 ) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
-    let command = body.into_inner()?.to_string()?;
+    let command = body.into_inner()?;
 
     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&command)).await;
 
@@ -1847,12 +1848,13 @@ async fn listen_slack_commands_webhooks(
 #[endpoint {
     method = POST,
     path = "/slack/interactive",
+    content_type = "application/x-www-form-urlencoded"
 }]
 async fn listen_slack_interactive_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, RawBody>,
+    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, String>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
-    let command = body.into_inner()?.to_string()?;
+    let command = body.into_inner()?;
 
     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&command)).await;
 
