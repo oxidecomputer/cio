@@ -13,7 +13,7 @@ use dropshot::{
 use dropshot_auth::{bearer::BearerAudit, query::QueryTokenAudit, sig::HmacVerifiedBodyAudit};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
-use http::StatusCode;
+use http::{Method, StatusCode};
 use log::{info, warn};
 use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
@@ -90,6 +90,7 @@ pub async fn create_server(
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_application_submit_requests).unwrap();
     api.register(listen_applicant_review_requests).unwrap();
+    api.register(listen_application_files_upload_requests_cors).unwrap();
     api.register(listen_application_files_upload_requests).unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_docusign_consent).unwrap();
@@ -993,6 +994,31 @@ pub struct ApplicationFileUploadData {
 }
 
 /**
+ * CORS functionality for file uploads
+ */
+#[endpoint {
+    method = OPTIONS,
+    path = "/application/files/upload",
+}]
+async fn listen_application_files_upload_requests_cors(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
+    let headers = resp.headers_mut();
+
+    let allowed_origins = crate::cors::get_cors_origin_header(rqctx.clone(), &["https://apply.oxide.computer"]).await?;
+    headers.insert("Access-Control-Allow-Origin", allowed_origins);
+
+    let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
+    headers.insert("Access-Control-Allow-Headers", allowed_headers);
+
+    let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]).await?;
+    headers.insert("Access-Control-Allow-Method", allowed_methods);
+
+    Ok(resp)
+}
+
+/**
  * Listen for files being uploaded for incoming job applications */
 #[endpoint {
     method = POST,
@@ -1000,9 +1026,8 @@ pub struct ApplicationFileUploadData {
 }]
 async fn listen_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
     body_param: TypedBody<ApplicationFileUploadData>,
-) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>, HttpError>>> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
     let body = body_param.into_inner();
     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
 
