@@ -238,6 +238,44 @@ fn make_server() -> (u16, HttpServer<()>) {
     (server.local_addr().port(), server)
 }
 
+/// General signature tests
+
+#[tokio::test]
+async fn test_missing_signature_hmac_fails() {
+    let (port, _server) = make_server();
+
+    let test_body = include_str!("../tests/github_webhook_sig_test.json").trim();
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("http://127.0.0.1:{}/hmac/github/verify", port))
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_missing_signature_hmac_audit_passes() {
+    let (port, _server) = make_server();
+
+    let test_body = include_str!("../tests/github_webhook_sig_test.json").trim();
+
+    // Make the post API call.
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("http://127.0.0.1:{}/hmac/github/audit", port))
+        .body(test_body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
+}
+
 /// Test GitHub signatures
 
 #[tokio::test]
