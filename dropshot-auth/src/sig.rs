@@ -96,7 +96,7 @@ where
     ) -> Result<HmacVerifiedBody<T, BodyType>, HttpError> {
         let audit = HmacVerifiedBodyAudit::<T, BodyType>::from_request(rqctx.clone()).await?;
 
-        log::debug!("Computed hmac audit result {}", audit.verified);
+        log::debug!("Computed HMAC audit result {}", audit.verified);
 
         if audit.verified() {
             Ok(HmacVerifiedBody { audit })
@@ -125,15 +125,22 @@ where
         let content = T::content(&rqctx, &body).await.map_err(|_| internal_error())?;
         let key = T::key(&rqctx).await.map_err(|_| internal_error())?;
 
-        let verified = if let Ok(signature) = T::signature(&rqctx).await {
-            if let Ok(mut mac) = <T::Algo as Mac>::new_from_slice(&*key) {
+        let signature = T::signature(&rqctx).await;
+        let mac = <T::Algo as Mac>::new_from_slice(&*key);
+
+        let verified = match (signature, mac) {
+            (Ok(signature), Ok(mut mac)) => {
                 mac.update(&*content);
-                mac.verify_slice(&*signature).is_ok()
-            } else {
+                let verify_result = mac.verify_slice(&signature);
+
+                log::info!("Failed to verify signature. req_id: {} sig: {:?}", rqctx.request_id, signature);
+
+                verify_result.is_ok()    
+            },
+            (signature_res, mac_res) => {
+                log::info!("Unable to test signature. req_id: {} sig: {:?} mac_err: {:?}", rqctx.request_id, signature_res, mac_res.err());
                 false
             }
-        } else {
-            false
         };
 
         Ok(HmacVerifiedBodyAudit {

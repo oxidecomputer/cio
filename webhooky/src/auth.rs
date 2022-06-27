@@ -27,6 +27,7 @@ impl BearerProvider for AirtableToken {
     }
 }
 
+#[async_trait]
 impl QueryTokenProvider for AirtableToken {
     async fn token() -> Result<String> {
         Ok(std::env::var("AIRTABLE_WH_TOKEN")?)

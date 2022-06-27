@@ -185,7 +185,17 @@ async fn token_audit(
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+static INIT: std::sync::Once = std::sync::Once::new();
+
+/// Setup function that is only run once, even if called multiple times.
+fn setup_logger() {
+    INIT.call_once(|| {
+        pretty_env_logger::init();
+    });
+}
+
 fn make_server() -> (u16, HttpServer<()>) {
+    setup_logger();
 
     // Configure fake test keys for checking implementations
     std::env::set_var("GLOBAL_AUTH_BEARER", "TEST_BEARER");
