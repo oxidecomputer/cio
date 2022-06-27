@@ -7,13 +7,13 @@ pub struct GlobalToken;
 #[async_trait]
 impl BearerProvider for GlobalToken {
     async fn token() -> Result<String> {
-        Ok(std::env::var("AUTH_BEARER")?)
+        Ok(std::env::var("GLOBAL_AUTH_BEARER")?)
     }
 }
 
 #[async_trait]
 impl QueryTokenProvider for GlobalToken {
     async fn token() -> Result<String> {
-        Ok(std::env::var("AUTH_BEARER")?)
+        Ok(std::env::var("GLOBAL_AUTH_BEARER")?)
     }
 }
