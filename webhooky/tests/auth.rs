@@ -188,7 +188,7 @@ async fn token_audit(
 fn make_server() -> (u16, HttpServer<()>) {
     std::env::set_var("GLOBAL_AUTH_BEARER", "TEST_BEARER");
     std::env::set_var("DOCUSIGN_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
-    std::env::set_var("GITHUB_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
+    std::env::set_var("GH_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
     std::env::set_var("SLACK_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
 
     let config_dropshot = ConfigDropshot {
