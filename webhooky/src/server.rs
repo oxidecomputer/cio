@@ -28,7 +28,7 @@ use signal_hook::{
 use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
-use crate::{auth::GlobalToken, github_types::GitHubWebhook};
+use crate::{auth::{GlobalToken, AirtableToken}, github_types::GitHubWebhook};
 
 pub async fn create_server(
     s: &crate::core::Server,
@@ -522,7 +522,7 @@ pub struct GitHubRateLimit {
 }]
 async fn listen_airtable_employees_print_home_address_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -551,7 +551,7 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
 }]
 async fn listen_airtable_certificates_renew_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -580,7 +580,7 @@ async fn listen_airtable_certificates_renew_webhooks(
 }]
 async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -609,7 +609,7 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
 }]
 async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -638,7 +638,7 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
 }]
 async fn listen_airtable_applicants_request_background_check_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -668,7 +668,7 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
 }]
 async fn listen_airtable_applicants_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -698,7 +698,7 @@ async fn listen_airtable_applicants_update_webhooks(
 }]
 async fn listen_airtable_shipments_outbound_create_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -736,7 +736,7 @@ pub struct AirtableRowEvent {
 }]
 async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -765,7 +765,7 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
 }]
 async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -794,7 +794,7 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
 }]
 async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -825,7 +825,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
 }]
 async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1076,7 +1076,7 @@ async fn listen_application_files_upload_requests(
 }]
 async fn listen_airtable_shipments_inbound_create_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();

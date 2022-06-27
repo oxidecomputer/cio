@@ -186,6 +186,8 @@ async fn token_audit(
 }
 
 fn make_server() -> (u16, HttpServer<()>) {
+
+    // Configure fake test keys for checking implementations
     std::env::set_var("GLOBAL_AUTH_BEARER", "TEST_BEARER");
     std::env::set_var("DOCUSIGN_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
     std::env::set_var("GH_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
