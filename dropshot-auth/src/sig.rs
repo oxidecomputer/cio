@@ -54,7 +54,6 @@ where
     /// [`BAD_REQUEST`](http::status::StatusCode::BAD_REQUEST) [`HttpError`](dropshot::HttpError) if the deserialization of `BodyType` fails.
     pub fn into_inner(self) -> Result<BodyType, HttpError> {
         BodyType::from_bytes(self.body.as_bytes(), &self.content_type)
-            .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {}", e)))
     }
 }
 

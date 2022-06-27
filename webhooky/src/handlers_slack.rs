@@ -4,6 +4,8 @@ use dropshot::{Extractor, RequestContext, ServerContext, UntypedBody};
 use dropshot_auth::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{info, warn};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::{borrow::Cow, sync::Arc};
 
@@ -64,4 +66,9 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
 
         Ok(Cow::Owned(content))
     }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+pub struct InteractiveEvent {
+    pub payload: String,
 }
