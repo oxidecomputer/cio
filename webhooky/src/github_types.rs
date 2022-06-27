@@ -50,7 +50,11 @@ pub struct GitHubInstallation {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<String>,
     // created_at, updated_at
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "octorust::utils::deserialize_null_string::deserialize"
+    )]
     pub single_file_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub repository_selection: String,
@@ -200,9 +204,14 @@ impl GitHubWebhook {
         let err = format!(
             r#"{} failed:
 
+<details>
+<summary>backtrace:</summary>
+
 ```
 {:?}
 ```
+
+</details>
 
 <details>
 <summary>event:</summary>
@@ -213,7 +222,7 @@ impl GitHubWebhook {
 
 </details>
 
-cc @jessfraz"#,
+cc @jessfraz @augustuswm"#,
             msg,
             e, // We use the {:?} debug output for the error so we get the stack as well.
             self,

@@ -3,6 +3,7 @@
 pub mod auth;
 #[macro_use]
 pub mod core;
+mod cors;
 mod event_types;
 pub mod github_types;
 mod handlers;

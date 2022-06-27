@@ -35,8 +35,9 @@ RUN gem install \
 	asciidoctor-mermaid \
 	rouge
 
-RUN npm install @mermaid-js/mermaid-cli && \
-	ln -s ./node_modules/.bin/mmdc /usr/local/bin/mmdc
+RUN cd /usr/local/lib && \
+	npm install @mermaid-js/mermaid-cli && \
+	ln -s ../lib/node_modules/.bin/mmdc /usr/local/bin/mmdc
 
 # ------------------------------------------------------------------------------
 # Cargo Nightly Stage

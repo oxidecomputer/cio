@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 #[ignore]
 #[tokio::test]
@@ -7,7 +7,7 @@ async fn test_google_drive_reauth() {
     let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
         .await
         .unwrap();
-    let mut drive = company.authenticate_google_drive(&db).await.unwrap();
+    let drive = company.authenticate_google_drive(&db).await.unwrap();
 
     // Get the initial expiration assigned to the token
     let mut expires_at = drive.expires_at().await.unwrap();
@@ -45,7 +45,7 @@ async fn test_google_drive_reauth() {
 
     let files = drive.files();
 
-    let test_file = files
+    let _test_file = files
         .get(&std::env::var("REAUTH_TEST_FILE_ID").unwrap(), false, "", false, false)
         .await
         .unwrap();
@@ -63,7 +63,7 @@ async fn test_google_drive_reauth_invalid_expires_in() {
     let company = cio_api::companies::Company::get_from_domain(&db, "oxide.computer")
         .await
         .unwrap();
-    let mut drive = company.authenticate_google_drive(&db).await.unwrap();
+    let drive = company.authenticate_google_drive(&db).await.unwrap();
 
     // Refresh the access token, getting a new token and expiration time
     drive.refresh_access_token().await.unwrap();

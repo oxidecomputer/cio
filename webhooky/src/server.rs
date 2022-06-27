@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Result};
@@ -7,7 +8,7 @@ use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
+    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
 use dropshot_auth::{bearer::BearerAudit, query::QueryTokenAudit, sig::HmacVerifiedBodyAudit};
 use google_drive::Client as GoogleDrive;
@@ -235,7 +236,7 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
             .every(18.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-other")});
         scheduler
-            .every(2.hours())
+            .every(3.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-recorded-meetings")});
         scheduler
             .every(16.hours())
@@ -1001,9 +1002,12 @@ async fn listen_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
     _auth: BearerAudit<GlobalToken>,
     body_param: TypedBody<ApplicationFileUploadData>,
-) -> Result<HttpResponseOk<HashMap<String, String>>, HttpError> {
+) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>, HttpError>>> {
     let body = body_param.into_inner();
     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+
+    // Check the origin header. In the future this may be upgraded to a hard failure
+    let origin_access = crate::cors::get_cors_origin_header(rqctx.clone(), &["https://apply.oxide.computer"]).await;
 
     match txn
         .run(|| crate::handlers::handle_application_files_upload(rqctx, body))
@@ -1012,7 +1016,22 @@ async fn listen_application_files_upload_requests(
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
 
-            Ok(HttpResponseOk(r))
+            let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
+
+            match origin_access {
+                Ok(origin) => {
+                    let headers = resp.headers_mut();
+                    headers.insert("Access-Control-Allow-Origin", origin);
+                }
+                Err(err) => {
+                    warn!(
+                        "Submission to /application/files/upload failed CORS simulation. Err {:?}",
+                        err
+                    );
+                }
+            }
+
+            Ok(resp)
         }
         // Send the error to sentry.
         Err(e) => {

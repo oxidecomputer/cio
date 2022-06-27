@@ -3,6 +3,7 @@
 mod auth;
 #[macro_use]
 mod core;
+mod cors;
 mod event_types;
 mod github_types;
 mod handlers;

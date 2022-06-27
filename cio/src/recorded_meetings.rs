@@ -46,7 +46,11 @@ use crate::{
 pub struct NewRecordedMeeting {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "crate::utils::trim"
+    )]
     pub description: String,
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
@@ -609,9 +613,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     Ok(_) => (),
                     Err(e) => {
                         info!(
-                            "adding permission for event `{}` chat log `{}` failed: {}",
+                            "adding permission for event `{}` chat log `{}` with owner `{}` event_id `{}` calendar_id `{}` failed: {}",
                             event.summary.trim().to_string(),
                             chat_log_link,
+                            owner,
+                            event.id,
+                            calendar.id,
                             e
                         );
                     }
@@ -643,9 +650,12 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 Ok(_) => (),
                 Err(e) => {
                     info!(
-                        "adding permission for event `{}` video `{}` failed: {}",
+                        "adding permission for event `{}` video `{}` with owner `{}` event_id `{}` calendar_id `{}` failed: {}",
                         event.summary.trim().to_string(),
                         video,
+                        owner,
+                        event.id,
+                        calendar.id,
                         e
                     );
                 }
@@ -713,11 +723,7 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 // Because rev.ai can only do uploads under 2GB.
                 let b = byte_unit::Byte::from_unit(video_contents.len() as f64, byte_unit::ByteUnit::B)?;
                 let b = b.get_adjusted_unit(byte_unit::ByteUnit::GB);
-                info!(
-                    "video for meeting `{}` has size `{}`",
-                    event.summary.trim().to_string(),
-                    b.to_string()
-                );
+                info!("video for meeting `{}` has size `{}`", event.summary.trim(), b);
 
                 // If we don't have a transcript ID, let's post the video to be
                 // transcribed.
@@ -729,6 +735,14 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                         db_meeting.update(db).await?;
                     }
                     Err(e) => {
+                        info!(
+                            "Failed submitting video data to Rev.ai directly. meeting: {} event: {} video: {} err: {}",
+                            db_meeting.id,
+                            event.summary.trim(),
+                            video_id,
+                            e
+                        );
+
                         if e.to_string().contains("413") {
                             // The video is too large, lets add permissions for an hour and do it
                             // another way.
@@ -821,15 +835,15 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                     .get(&db_meeting.transcript_id, revai::types::AcceptTranscript::TextPlain)
                     .await
                 {
-                    Ok(t) => t,
+                    Ok(t) => {
+                        info!(
+                            "Fetched transcript from Rev.ai to be stored. meeting: {} transcript: {}",
+                            db_meeting.id, db_meeting.transcript_id
+                        );
+                        t
+                    }
                     Err(e) => {
-                        if e.to_string().contains("404") {
-                            // Reset the transcript ID to be blank, so that we can re-request
-                            // a transcript.
-                            db_meeting.transcript_id = String::new();
-                        } else {
-                            warn!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
-                        }
+                        info!("getting transcript for id `{}` failed: {}", db_meeting.transcript_id, e);
                         String::new()
                     }
                 };
