@@ -13,7 +13,7 @@ use dropshot_auth::{
 use slack_chat_api::BotCommand;
 use std::sync::Arc;
 
-use webhooky::{auth::global::GlobalToken, github_types::GitHubWebhook, handlers_slack::InteractiveEvent};
+use webhooky::{auth::GlobalToken, github_types::GitHubWebhook, handlers_slack::InteractiveEvent};
 
 #[endpoint {
     method = POST,
