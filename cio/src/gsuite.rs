@@ -14,7 +14,7 @@ use serde_json::Value;
 
 use crate::{
     companies::Company,
-    configs::{Building, ConferenceRoom, Group, User},
+    configs::{Building, Resource, Group, User},
     db::Database,
     providers::ProviderOps,
     utils::generate_password,
@@ -406,7 +406,7 @@ pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str)
 /// Update a calendar resource.
 pub fn update_gsuite_calendar_resource(
     c: &GSuiteCalendarResource,
-    resource: &ConferenceRoom,
+    resource: &Resource,
     id: &str,
 ) -> GSuiteCalendarResource {
     let mut gsuite_resource = c.clone();

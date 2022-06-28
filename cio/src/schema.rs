@@ -391,8 +391,24 @@ table! {
     }
 }
 
+// table! {
+//     conference_rooms (id) {
+//         id -> Int4,
+//         name -> Varchar,
+//         description -> Varchar,
+//         typev -> Varchar,
+//         building -> Varchar,
+//         link_to_building -> Array<Text>,
+//         capacity -> Int4,
+//         floor -> Varchar,
+//         section -> Varchar,
+//         cio_company_id -> Int4,
+//         airtable_record_id -> Varchar,
+//     }
+// }
+
 table! {
-    conference_rooms (id) {
+    resources (id) {
         id -> Int4,
         name -> Varchar,
         description -> Varchar,
@@ -402,6 +418,7 @@ table! {
         capacity -> Int4,
         floor -> Varchar,
         section -> Varchar,
+        category -> Varchar,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
@@ -935,7 +952,7 @@ joinable!(barcode_scans -> companys (cio_company_id));
 joinable!(bookings -> companys (cio_company_id));
 joinable!(buildings -> companys (cio_company_id));
 joinable!(certificates -> companys (cio_company_id));
-joinable!(conference_rooms -> companys (cio_company_id));
+// joinable!(conference_rooms -> companys (cio_company_id));
 joinable!(credit_card_transactions -> companys (cio_company_id));
 joinable!(expensed_items -> companys (cio_company_id));
 joinable!(functions -> companys (cio_company_id));
@@ -951,6 +968,7 @@ joinable!(package_pickups -> companys (cio_company_id));
 joinable!(page_views -> companys (cio_company_id));
 joinable!(rack_line_subscribers -> companys (cio_company_id));
 joinable!(recorded_meetings -> companys (cio_company_id));
+joinable!(resources -> companys (cio_company_id));
 joinable!(rfds -> companys (cio_company_id));
 joinable!(software_vendors -> companys (cio_company_id));
 joinable!(swag_inventory_items -> companys (cio_company_id));
@@ -972,7 +990,7 @@ allow_tables_to_appear_in_same_query!(
     buildings,
     certificates,
     companys,
-    conference_rooms,
+    // conference_rooms,
     credit_card_transactions,
     expensed_items,
     functions,
@@ -988,6 +1006,7 @@ allow_tables_to_appear_in_same_query!(
     page_views,
     rack_line_subscribers,
     recorded_meetings,
+    resources,
     rfds,
     software_vendors,
     swag_inventory_items,

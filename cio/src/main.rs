@@ -4,7 +4,7 @@ use std::{fs::File, sync::Arc};
 use cio_api::{
     applicants::{Applicant, Applicants},
     auth_logins::{AuthUser, AuthUsers},
-    configs::{Building, Buildings, ConferenceRoom, ConferenceRooms, Group, Groups, Link, Links, User, Users},
+    configs::{Building, Buildings, Resource, Resources, Group, Groups, Link, Links, User, Users},
     db::Database,
     journal_clubs::{JournalClubMeeting, JournalClubMeetings},
     mailing_list::{MailingListSubscriber, MailingListSubscribers},
@@ -175,11 +175,11 @@ async fn api_get_buildings(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
 #[inline]
 async fn api_get_conference_rooms(
     rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<ConferenceRoom>>, HttpError> {
+) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(ConferenceRooms::get_from_db(db, 1).await.unwrap().0))
+    Ok(HttpResponseOk(Resources::get_from_db(db, 1).await.unwrap().0))
 }
 
 /**

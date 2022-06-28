@@ -5,7 +5,7 @@ use chrono::offset::Utc;
 use cio_api::{
     companies::Company,
     configs::{
-        get_configs_from_repo, sync_buildings, sync_certificates, sync_conference_rooms,
+        get_configs_from_repo, sync_buildings, sync_certificates, sync_resources,
         sync_github_outside_collaborators, sync_groups, sync_links, sync_users,
     },
     repos::NewRepo,
@@ -936,7 +936,7 @@ pub async fn handle_configs_push(
 
     // Check if the resources.toml file changed.
     if commit.file_changed("configs/resources.toml") {
-        sync_conference_rooms(&api_context.db, configs.resources, company).await?;
+        sync_resources(&api_context.db, configs.resources, company).await?;
         a("[SUCCESS]: conference rooms");
     }
 
