@@ -5,8 +5,8 @@ use chrono::offset::Utc;
 use cio_api::{
     companies::Company,
     configs::{
-        get_configs_from_repo, sync_buildings, sync_certificates, sync_resources,
-        sync_github_outside_collaborators, sync_groups, sync_links, sync_users,
+        get_configs_from_repo, sync_buildings, sync_certificates, sync_github_outside_collaborators, sync_groups,
+        sync_links, sync_resources, sync_users,
     },
     repos::NewRepo,
     rfds::{is_image, NewRFD, RFD},
