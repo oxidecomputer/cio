@@ -28,7 +28,7 @@ use signal_hook::{
 use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
-use crate::{auth::{GlobalToken, AirtableToken}, github_types::GitHubWebhook};
+use crate::{auth::{GlobalToken, AirtableToken}, github_types::GitHubWebhook, handlers_slack::InteractiveEvent};
 
 pub async fn create_server(
     s: &crate::core::Server,
@@ -1896,14 +1896,14 @@ async fn listen_slack_commands_webhooks(
 }]
 async fn listen_slack_interactive_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, String>,
+    body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, InteractiveEvent>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
-    let command = body.into_inner()?;
+    let event = body.into_inner()?;
 
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&command)).await;
+    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&event.payload)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_slack_interactive(rqctx, command))
+        .run(|| crate::handlers::handle_slack_interactive(rqctx, event.payload))
         .await
     {
         // Send the error to sentry.
