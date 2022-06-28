@@ -33,7 +33,7 @@ use crate::{
     db::Database,
     gsuite::{update_gsuite_building, update_gsuite_calendar_resource},
     providers::ProviderOps,
-    schema::{applicants, buildings, resources, groups, links, users},
+    schema::{applicants, buildings, groups, links, resources, users},
     shipments::NewOutboundShipment,
     utils::{get_file_content_from_repo, get_github_user_public_ssh_keys},
 };

@@ -4,7 +4,7 @@ use std::{fs::File, sync::Arc};
 use cio_api::{
     applicants::{Applicant, Applicants},
     auth_logins::{AuthUser, AuthUsers},
-    configs::{Building, Buildings, Resource, Resources, Group, Groups, Link, Links, User, Users},
+    configs::{Building, Buildings, Group, Groups, Link, Links, Resource, Resources, User, Users},
     db::Database,
     journal_clubs::{JournalClubMeeting, JournalClubMeetings},
     mailing_list::{MailingListSubscriber, MailingListSubscribers},

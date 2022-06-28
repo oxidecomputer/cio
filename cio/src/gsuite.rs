@@ -14,7 +14,7 @@ use serde_json::Value;
 
 use crate::{
     companies::Company,
-    configs::{Building, Resource, Group, User},
+    configs::{Building, Group, Resource, User},
     db::Database,
     providers::ProviderOps,
     utils::generate_password,
