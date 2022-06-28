@@ -1423,6 +1423,21 @@ impl UpdateAirtableRecord<Building> for Building {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ResourceCategory {
+    ConferenceRoom,
+    Other,
+}
+
+impl ResourceCategory {
+    fn to_api_value(&self) -> String {
+        match self {
+            ResourceCategory::ConferenceRoom => "CONFERENCE_ROOM".to_string(),
+            ResourceCategory::Other => "OTHER".to_string(),
+        }
+    }
+}
+
 /// The data type for a resource. These are conference rooms that people can book
 /// through GSuite or Zoom.
 #[db {
@@ -1440,6 +1455,8 @@ pub struct ResourceConfig {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
+    #[serde(default = ResourceCategory::ConferenceRoom)]
+    pub category: ResourceCategory,
     #[serde(rename = "type")]
     pub typev: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
