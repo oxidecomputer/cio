@@ -11,7 +11,7 @@ use cio_api::{
     mailing_list::{MailingListSubscriber, MailingListSubscribers},
     repos::{GithubRepo, GithubRepos},
     rfds::{RFDs, RFD},
-    schema::resources
+    schema::resources,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use dropshot::{
@@ -185,8 +185,9 @@ async fn api_get_conference_rooms(
 
     let rooms = resources::dsl::resources
         .filter(
-            resources::dsl::category.eq("CONFERENCE_ROOM".to_string())
-            .and(resources::dsl::cio_company_id.eq(1))
+            resources::dsl::category
+                .eq("CONFERENCE_ROOM".to_string())
+                .and(resources::dsl::cio_company_id.eq(1)),
         )
         .load_async::<Resource>(db.pool())
         .await;
@@ -201,14 +202,12 @@ async fn api_get_conference_rooms(
 /**
  * Fetch a list of resources.
  */
- #[endpoint {
+#[endpoint {
     method = GET,
     path = "/resources",
 }]
 #[inline]
-async fn api_get_resources(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
+async fn api_get_resources(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 

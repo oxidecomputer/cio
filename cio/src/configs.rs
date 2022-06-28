@@ -23,8 +23,8 @@ use zoom_api::Client as Zoom;
 
 use crate::{
     airtable::{
-        AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE,
-        AIRTABLE_LINKS_TABLE,
+        AIRTABLE_BUILDINGS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE,
+        AIRTABLE_RESOURCES_TABLE,
     },
     applicants::Applicant,
     certs::{Certificate, Certificates, NewCertificate},
@@ -1447,7 +1447,7 @@ fn default_resource_category() -> String {
 #[db {
     new_struct_name = "Resource",
     airtable_base = "directory",
-    airtable_table = "AIRTABLE_CONFERENCE_ROOMS_TABLE",
+    airtable_table = "AIRTABLE_RESOURCES_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "name" = "String",

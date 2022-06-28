@@ -392,22 +392,6 @@ table! {
 }
 
 table! {
-    conference_rooms (id) {
-        id -> Int4,
-        name -> Varchar,
-        description -> Varchar,
-        typev -> Varchar,
-        building -> Varchar,
-        link_to_building -> Array<Text>,
-        capacity -> Int4,
-        floor -> Varchar,
-        section -> Varchar,
-        cio_company_id -> Int4,
-        airtable_record_id -> Varchar,
-    }
-}
-
-table! {
     resources (id) {
         id -> Int4,
         name -> Varchar,
@@ -952,7 +936,6 @@ joinable!(barcode_scans -> companys (cio_company_id));
 joinable!(bookings -> companys (cio_company_id));
 joinable!(buildings -> companys (cio_company_id));
 joinable!(certificates -> companys (cio_company_id));
-// joinable!(conference_rooms -> companys (cio_company_id));
 joinable!(credit_card_transactions -> companys (cio_company_id));
 joinable!(expensed_items -> companys (cio_company_id));
 joinable!(functions -> companys (cio_company_id));
@@ -990,7 +973,6 @@ allow_tables_to_appear_in_same_query!(
     buildings,
     certificates,
     companys,
-    // conference_rooms,
     credit_card_transactions,
     expensed_items,
     functions,
