@@ -1438,8 +1438,8 @@ impl ResourceCategory {
     }
 }
 
-fn default_resource_category() -> String {
-    "CONFERENCE_ROOM".to_string()
+fn default_resource_category() -> ResourceCategory {
+    ResourceCategory::ConferenceRoom
 }
 
 /// The data type for a resource. These are conference rooms that people can book
@@ -1471,7 +1471,7 @@ pub struct NewResourceConfig {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub section: String,
     #[serde(default = "default_resource_category")]
-    pub category: String,
+    pub category: ResourceCategory,
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,

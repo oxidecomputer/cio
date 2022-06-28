@@ -420,8 +420,7 @@ pub fn update_gsuite_calendar_resource(
     gsuite_resource.capacity = resource.capacity as i64;
     gsuite_resource.floor_name = resource.floor.to_string();
     gsuite_resource.floor_section = resource.section.to_string();
-    // gsuite_resource.resource_category = resource.category.to_api_value();
-    gsuite_resource.resource_category = resource.category.to_string();
+    gsuite_resource.resource_category = resource.category.to_api_value();
 
     gsuite_resource
 }
