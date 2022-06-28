@@ -1,6 +1,7 @@
 #![recursion_limit = "256"]
 use std::{fs::File, sync::Arc};
 
+use async_bb8_diesel::AsyncRunQueryDsl;
 use cio_api::{
     applicants::{Applicant, Applicants},
     auth_logins::{AuthUser, AuthUsers},
@@ -10,7 +11,9 @@ use cio_api::{
     mailing_list::{MailingListSubscriber, MailingListSubscribers},
     repos::{GithubRepo, GithubRepos},
     rfds::{RFDs, RFD},
+    schema::resources
 };
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseOk,
     HttpServerStarter, RequestContext,
@@ -51,6 +54,7 @@ async fn main() -> Result<(), String> {
     api.register(api_get_auth_users).unwrap();
     api.register(api_get_buildings).unwrap();
     api.register(api_get_conference_rooms).unwrap();
+    api.register(api_get_resources).unwrap();
     api.register(api_get_github_repos).unwrap();
     api.register(api_get_groups).unwrap();
     api.register(api_get_journal_club_meetings).unwrap();
@@ -174,6 +178,35 @@ async fn api_get_buildings(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
 }]
 #[inline]
 async fn api_get_conference_rooms(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
+    let api_context = rqctx.context();
+    let db = &api_context.db;
+
+    let rooms = resources::dsl::resources
+        .filter(
+            resources::dsl::category.eq("CONFERENCE_ROOM".to_string())
+            .and(resources::dsl::cio_company_id.eq(1))
+        )
+        .load_async::<Resource>(db.pool())
+        .await;
+
+    if let Ok(rooms) = rooms {
+        Ok(HttpResponseOk(rooms))
+    } else {
+        Err(HttpError::for_internal_error("".to_string()))
+    }
+}
+
+/**
+ * Fetch a list of resources.
+ */
+ #[endpoint {
+    method = GET,
+    path = "/resources",
+}]
+#[inline]
+async fn api_get_resources(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
     let api_context = rqctx.context();
