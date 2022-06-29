@@ -211,7 +211,7 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
             .every(12.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-companies")});
         scheduler
-            .every(4.hours())
+            .every(1.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-configs")});
         scheduler
             .every(6.hours())
