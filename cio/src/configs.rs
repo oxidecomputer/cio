@@ -1919,61 +1919,61 @@ pub async fn sync_users(
     // Remove any users that should no longer be in the database.
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
-    // for (username, user) in user_map {
-    //     info!("deleting user `{}` from the database and other services", username);
+    for (username, user) in user_map {
+        info!("deleting user `{}` from the database and other services", username);
 
-    //     if !user.google_anniversary_event_id.is_empty() {
-    //         // First delete the recurring event for their anniversary.
-    //         gcal.events()
-    //             .delete(
-    //                 &anniversary_cal_id,
-    //                 &user.google_anniversary_event_id,
-    //                 true, // send_notifications
-    //                 google_calendar::types::SendUpdates::All,
-    //             )
-    //             .await?;
-    //         info!(
-    //             "deleted user {} event {} from google",
-    //             username, user.google_anniversary_event_id
-    //         );
-    //     }
+        if !user.google_anniversary_event_id.is_empty() {
+            // First delete the recurring event for their anniversary.
+            gcal.events()
+                .delete(
+                    &anniversary_cal_id,
+                    &user.google_anniversary_event_id,
+                    true, // send_notifications
+                    google_calendar::types::SendUpdates::All,
+                )
+                .await?;
+            info!(
+                "deleted user {} event {} from google",
+                username, user.google_anniversary_event_id
+            );
+        }
 
-    //     // Supend the user from okta.
-    //     if let Some(ref okta) = okta_auth {
-    //         okta.delete_user(db, company, &user).await?;
-    //     }
+        // Supend the user from okta.
+        if let Some(ref okta) = okta_auth {
+            okta.delete_user(db, company, &user).await?;
+        }
 
-    //     if company.okta_domain.is_empty() {
-    //         // Delete the user from GSuite and other apps.
-    //         // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-    //         // Suspend the user from GSuite so we can transfer their data.
-    //         gsuite.delete_user(db, company, &user).await?;
-    //     }
+        if company.okta_domain.is_empty() {
+            // Delete the user from GSuite and other apps.
+            // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
+            // Suspend the user from GSuite so we can transfer their data.
+            gsuite.delete_user(db, company, &user).await?;
+        }
 
-    //     // Remove the user from the github org.
-    //     github.delete_user(db, company, &user).await?;
+        // Remove the user from the github org.
+        github.delete_user(db, company, &user).await?;
 
-    //     // TODO: Deactivate the user from Ramp.
-    //     // We only want to lock the cards from more purchases. Removing GSuite/Okta
-    //     // will disallow them from logging in. And we want their purchase history so
-    //     // we don't want to delete them.
+        // TODO: Deactivate the user from Ramp.
+        // We only want to lock the cards from more purchases. Removing GSuite/Okta
+        // will disallow them from logging in. And we want their purchase history so
+        // we don't want to delete them.
 
-    //     // TODO: Delete the user from Slack.
-    //     // Removing SSO (GSuite/Okta) will disallow them from logging in.
+        // TODO: Delete the user from Slack.
+        // Removing SSO (GSuite/Okta) will disallow them from logging in.
 
-    //     // Delete the user from Zoom.
-    //     if let Ok(ref zoom) = zoom_auth {
-    //         zoom.delete_user(db, company, &user).await?;
-    //     }
+        // Delete the user from Zoom.
+        if let Ok(ref zoom) = zoom_auth {
+            zoom.delete_user(db, company, &user).await?;
+        }
 
-    //     // Delete the user from Airtable.
-    //     // Okta should take care of this if we are using Okta.
-    //     // But let's do it anyway.
-    //     airtable_auth.delete_user(db, company, &user).await?;
+        // Delete the user from Airtable.
+        // Okta should take care of this if we are using Okta.
+        // But let's do it anyway.
+        airtable_auth.delete_user(db, company, &user).await?;
 
-    //     // Delete the user from the database and Airtable.
-    //     user.delete(db).await?;
-    // }
+        // Delete the user from the database and Airtable.
+        user.delete(db).await?;
+    }
 
     info!("updated configs users in the database");
 
