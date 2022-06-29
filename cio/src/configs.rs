@@ -8,6 +8,14 @@ use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
+use diesel::{
+    backend::Backend,
+    deserialize::{self, FromSql},
+    pg::{Pg, PgValue},
+    serialize::{self, IsNull, Output, ToSql},
+    sql_types::VarChar,
+    FromSqlRow,
+};
 use google_calendar::types::{Event, EventAttendee, EventDateTime};
 use google_geocode::Geocode;
 use gsuite_api::types::{
@@ -19,6 +27,7 @@ use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use zoom_api::Client as Zoom;
 
 use crate::{
@@ -1423,17 +1432,47 @@ impl UpdateAirtableRecord<Building> for Building {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, JsonSchema, Serialize, Deserialize, FromSqlRow, AsExpression)]
+#[diesel(sql_type = VarChar)]
 pub enum ResourceCategory {
     ConferenceRoom,
     Other,
 }
 
+impl Default for ResourceCategory {
+    fn default() -> Self {
+        ResourceCategory::ConferenceRoom
+    }
+}
+
 impl ResourceCategory {
-    fn to_api_value(&self) -> String {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ResourceCategory::ConferenceRoom => "ConferenceRoom",
+            ResourceCategory::Other => "Other",
+        }
+    }
+
+    pub fn to_api_value(&self) -> String {
         match self {
             ResourceCategory::ConferenceRoom => "CONFERENCE_ROOM".to_string(),
             ResourceCategory::Other => "OTHER".to_string(),
+        }
+    }
+}
+
+impl ToSql<VarChar, Pg> for ResourceCategory {
+    fn to_sql<W: std::io::Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+        <str as ToSql<VarChar, Pg>>::to_sql(self.as_str(), out)
+    }
+}
+
+impl FromSql<VarChar, Pg> for ResourceCategory {
+    fn from_sql(bytes: PgValue<'_>) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"ConferenceRoom" => Ok(ResourceCategory::ConferenceRoom),
+            b"Other" => Ok(ResourceCategory::Other),
+            _ => Err("Unrecognized enum variant".into()),
         }
     }
 }
