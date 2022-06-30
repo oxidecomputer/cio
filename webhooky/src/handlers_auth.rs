@@ -63,7 +63,7 @@ pub async fn handle_auth_google_callback(
 
     // If the returned token is missing either the access token or refresh token then we can
     // not accept the authentication. We require both during normal processing.
-    if t.access_token.is_empty() && t.refresh_token.is_empty() {
+    if t.access_token.is_empty() || t.refresh_token.is_empty() {
         let access_status = if t.access_token.is_empty() {
             "missing"
         } else {
@@ -75,7 +75,7 @@ pub async fn handle_auth_google_callback(
             "present"
         };
         return Err(anyhow::anyhow!(
-            "Unable to finish authentication without both an access token ({}) and refresh token ({})",
+            "Unable to finish Google authentication without both an access token ({}) and refresh token ({})",
             access_status,
             refresh_status
         ));
@@ -317,6 +317,26 @@ pub async fn handle_auth_ramp_callback(
         }
     }
 
+    // If the returned token is missing either the access token or refresh token then we can
+    // not accept the authentication. We require both during normal processing.
+    if t.access_token.is_empty() || t.refresh_token.is_empty() {
+        let access_status = if t.access_token.is_empty() {
+            "missing"
+        } else {
+            "present"
+        };
+        let refresh_status = if t.refresh_token.is_empty() {
+            "missing"
+        } else {
+            "present"
+        };
+        return Err(anyhow::anyhow!(
+            "Unable to finish Ramp authentication without both an access token ({}) and refresh token ({})",
+            access_status,
+            refresh_status
+        ));
+    }
+
     let company = Company::get_from_domain(&api_context.db, &domain).await?;
 
     // Save the token to the database.
@@ -551,6 +571,26 @@ pub async fn handle_auth_docusign_callback(
     let mut domain = "".to_string();
     if vec.len() > 1 {
         domain = vec.get(1).unwrap().to_string();
+    }
+
+    // If the returned token is missing either the access token or refresh token then we can
+    // not accept the authentication. We require both during normal processing.
+    if t.access_token.is_empty() || t.refresh_token.is_empty() {
+        let access_status = if t.access_token.is_empty() {
+            "missing"
+        } else {
+            "present"
+        };
+        let refresh_status = if t.refresh_token.is_empty() {
+            "missing"
+        } else {
+            "present"
+        };
+        return Err(anyhow::anyhow!(
+            "Unable to finish Docusign authentication without both an access token ({}) and refresh token ({})",
+            access_status,
+            refresh_status
+        ));
     }
 
     let company = Company::get_from_domain(&api_context.db, &domain).await?;
