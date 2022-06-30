@@ -1544,7 +1544,10 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
     let event_string = body_param.as_str().unwrap().to_string();
     let qs_non_strict = QSConfig::new(10, false);
 
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string)?;
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map(|err| {
+        warn!("Failed to parse MailChimp webhook. err: {:?}", err);
+        err
+    })?;
 
     if event.webhook_type != *"subscribe" {
         info!("not a `subscribe` event, got `{}`", event.webhook_type);
