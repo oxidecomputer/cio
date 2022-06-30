@@ -1547,7 +1547,7 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
 
     let qs_non_strict = QSConfig::new(10, false);
 
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map(|err| {
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map_err(|err| {
         warn!("Failed to parse MailChimp mailing list webhook. err: {:?}", err);
         err
     })?;
@@ -1590,7 +1590,7 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
 
     let qs_non_strict = QSConfig::new(10, false);
 
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map(|err| {
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map_err(|err| {
         warn!("Failed to parse MailChimp rack_line webhook. err: {:?}", err);
         err
     })?;
