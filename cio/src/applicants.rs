@@ -1107,7 +1107,7 @@ Twitter: [TWITTER HANDLE]
 GitHub: {}
 Phone: {}
 Location: {}
-cc @jessfraz
+cc @augustuswm
 
 ```
 [users.{}]
@@ -1187,7 +1187,7 @@ Notes:
                         &octorust::types::IssuesUpdateRequest {
                             title: Some(title.into()),
                             body: Default::default(),
-                            assignee: "jessfraz".to_string(),
+                            assignee: "augustuswm".to_string(),
                             assignees: Default::default(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
@@ -1219,7 +1219,7 @@ Notes:
                         &octorust::types::IssuesUpdateRequest {
                             title: Some(title.into()),
                             body: body.to_string(),
-                            assignee: "jessfraz".to_string(),
+                            assignee: "augustuswm".to_string(),
                             assignees: Default::default(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
@@ -1241,7 +1241,7 @@ Notes:
                             &octorust::types::IssuesUpdateRequest {
                                 title: Some(title.into()),
                                 body: body.to_string(),
-                                assignee: "jessfraz".to_string(),
+                                assignee: "augustuswm".to_string(),
                                 assignees: Default::default(),
                                 labels: vec![label.into()],
                                 milestone: Default::default(),
@@ -1266,7 +1266,7 @@ Notes:
                 &octorust::types::IssuesCreateRequest {
                     title: title.into(),
                     body,
-                    assignee: "jessfraz".to_string(),
+                    assignee: "augustuswm".to_string(),
                     assignees: Default::default(),
                     labels: vec![label.into()],
                     milestone: Default::default(),
