@@ -2015,9 +2015,9 @@ dependencies = [
 
 [[package]]
 name = "google-calendar"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c57ad403ccacd7101e307297c446dbfc54123a0cfd0be7e7e2e87cb20cc78e2"
+checksum = "017b2e8aa8adc6afaffbbc2b5b1fc98fc92a12d640e57270f8f02f5d3a5a299f"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2030,11 +2030,14 @@ dependencies = [
  "jsonwebtoken",
  "log 0.4.16",
  "mime 0.3.16",
+ "pem",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
  "reqwest-tracing",
+ "ring",
  "schemars",
  "serde",
  "serde_json",
@@ -2048,9 +2051,9 @@ dependencies = [
 
 [[package]]
 name = "google-drive"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50648eebc0293698930e7fbf646971e1997827c463ce9ff912b33f5903bc0343"
+checksum = "db2f42bc8504117a673c85c590e7ac7c17d75a9f15da1656bf493b89fa33f41b"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2063,11 +2066,14 @@ dependencies = [
  "jsonwebtoken",
  "log 0.4.16",
  "mime 0.3.16",
+ "pem",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
  "reqwest-tracing",
+ "ring",
  "schemars",
  "serde",
  "serde_json",
@@ -2101,9 +2107,9 @@ dependencies = [
 
 [[package]]
 name = "google-groups-settings"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f748c10ccc98c17279b502c0cc98d885ae9858aca9268a047ac39d64777f72d"
+checksum = "32a15e27ac4930669bc094636e0c0991cfc28f0d01ec95a1c08b947149480056"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2116,11 +2122,14 @@ dependencies = [
  "jsonwebtoken",
  "log 0.4.16",
  "mime 0.3.16",
+ "pem",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
  "reqwest-tracing",
+ "ring",
  "schemars",
  "serde",
  "serde_json",
@@ -2134,9 +2143,9 @@ dependencies = [
 
 [[package]]
 name = "gsuite-api"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b02a0bf38da804e012b6934532593ffa733aff985554ae9680c241c88fc31f2e"
+checksum = "ea797390bb6d66bc27d415711a61362238eca433e6efd3528e00f8ca7f5715a6"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -2149,11 +2158,14 @@ dependencies = [
  "jsonwebtoken",
  "log 0.4.16",
  "mime 0.3.16",
+ "pem",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
  "reqwest-tracing",
+ "ring",
  "schemars",
  "serde",
  "serde_json",
@@ -5166,9 +5178,9 @@ dependencies = [
 
 [[package]]
 name = "sheets"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "962ede02bb96cd5169fa9eccccb3eddd662f18050d617f0589d1808428988205"
+checksum = "6d4bb947cbe4deba513a8e7e99a3f122b5337731c3134e47aafdb8bfa4e36d94"
 dependencies = [
  "anyhow",
  "async-recursion",
@@ -5181,11 +5193,14 @@ dependencies = [
  "jsonwebtoken",
  "log 0.4.16",
  "mime 0.3.16",
+ "pem",
  "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
  "reqwest-tracing",
+ "ring",
  "schemars",
  "serde",
  "serde_json",
