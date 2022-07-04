@@ -192,10 +192,12 @@ async fn api_get_conference_rooms(
         .load_async::<Resource>(db.pool())
         .await;
 
-    if let Ok(rooms) = rooms {
-        Ok(HttpResponseOk(rooms))
-    } else {
-        Err(HttpError::for_internal_error("".to_string()))
+    match rooms {
+        Ok(rooms) => Ok(HttpResponseOk(rooms)),
+        Err(err) => {
+            log::error!("Failed to lookup conference rooms. err: {:?}", err);
+            Err(HttpError::for_internal_error("".to_string()))
+        }
     }
 }
 
@@ -211,10 +213,14 @@ async fn api_get_resources(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    if let Ok(resources) = Resources::get_from_db(db, 1).await {
-        Ok(HttpResponseOk(resources.0))
-    } else {
-        Err(HttpError::for_internal_error("".to_string()))
+    let resources = Resources::get_from_db(db, 1).await;
+
+    match resources {
+        Ok(resources) => Ok(HttpResponseOk(resources.0)),
+        Err(err) => {
+            log::error!("Failed to lookup resources. err: {:?}", err);
+            Err(HttpError::for_internal_error("".to_string()))
+        }
     }
 }
 
