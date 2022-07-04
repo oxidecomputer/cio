@@ -193,7 +193,7 @@ async fn api_get_conference_rooms(
         .await;
 
     if let Ok(rooms) = rooms {
-        Ok(HttpResponseOk(rooms))
+        Ok(HttpResponseOk(rooms.0))
     } else {
         Err(HttpError::for_internal_error("".to_string()))
     }
@@ -211,7 +211,11 @@ async fn api_get_resources(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    Ok(HttpResponseOk(Resources::get_from_db(db, 1).await.unwrap().0))
+    if let Ok(resources) = Resources::get_from_db(db, 1).await {
+        Ok(HttpResponseOk(resources.0))
+    } else {
+        Err(HttpError::for_internal_error("".to_string()))
+    }
 }
 
 /**
