@@ -5,7 +5,7 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use cio_api::{
     applicants::{Applicant, Applicants},
     auth_logins::{AuthUser, AuthUsers},
-    configs::{Building, Buildings, Group, Groups, Link, Links, Resource, Resources, User, Users},
+    configs::{Building, Buildings, Group, Groups, Link, Links, Resource, ResourceCategory, Resources, User, Users},
     db::Database,
     journal_clubs::{JournalClubMeeting, JournalClubMeetings},
     mailing_list::{MailingListSubscriber, MailingListSubscribers},
@@ -186,7 +186,7 @@ async fn api_get_conference_rooms(
     let rooms = resources::dsl::resources
         .filter(
             resources::dsl::category
-                .eq("CONFERENCE_ROOM".to_string())
+                .eq(ResourceCategory::ConferenceRoom.as_str())
                 .and(resources::dsl::cio_company_id.eq(1)),
         )
         .load_async::<Resource>(db.pool())
