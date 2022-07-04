@@ -284,16 +284,17 @@ impl Company {
 
     /// Authenticate with Cloudflare.
     pub fn authenticate_cloudflare(&self) -> Result<CloudFlareClient> {
-        if self.cloudflare_api_key.is_empty() || self.gsuite_subject.is_empty() {
+        // Migrating to auth token authentication
+        if self.cloudflare_api_key.is_empty() {
             // Return early.
             bail!("no token");
         }
 
         // Create the Cloudflare client.
-        let cf_creds = CloudflareCredentials::UserAuthKey {
-            email: self.gsuite_subject.to_string(),
-            key: self.cloudflare_api_key.to_string(),
+        let cf_creds = CloudflareCredentials::UserAuthToken {
+            token: self.cloudflare_api_key.to_string(),
         };
+
         let api_client = Cloudflare::new(cf_creds, HttpApiClientConfig::default(), Environment::Production)?;
         Ok(api_client.into())
     }

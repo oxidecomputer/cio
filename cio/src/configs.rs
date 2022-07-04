@@ -1948,11 +1948,16 @@ pub async fn sync_users(
 
         let mut results: Vec<Result<()>> = Default::default();
         for task in tasks {
-            results.push(task.await?);
+            match task.await {
+                Ok(task) => results.push(task),
+                Err(err) => warn!("Task syncing user panicked. err: {:?}", err),
+            }
         }
 
         for result in results {
-            result?;
+            if let Err(err) = result {
+                warn!("Syncing user failed. err: {:?}", err);
+            }
         }
 
         i += take;
@@ -1964,42 +1969,90 @@ pub async fn sync_users(
         user_map.remove(&user.username);
     }
 
+    info!(
+        "Remaining users that would be removed during sync: {:?}",
+        user_map.keys()
+    );
+
     // Remove any users that should no longer be in the database.
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, user) in user_map {
         info!("deleting user `{}` from the database and other services", username);
 
+        let mut has_failures = false;
+
         if !user.google_anniversary_event_id.is_empty() {
             // First delete the recurring event for their anniversary.
-            gcal.events()
+            let cal_delete = gcal
+                .events()
                 .delete(
                     &anniversary_cal_id,
                     &user.google_anniversary_event_id,
                     true, // send_notifications
                     google_calendar::types::SendUpdates::All,
                 )
-                .await?;
-            info!(
-                "deleted user {} event {} from google",
-                username, user.google_anniversary_event_id
-            );
+                .await;
+
+            match cal_delete {
+                Ok(_) => {
+                    info!(
+                        "deleted user {} event {} from google",
+                        username, user.google_anniversary_event_id
+                    );
+                }
+                Err(err) => {
+                    warn!(
+                        "Failed to delete anniversary calendar {} / {}. err: {:?}",
+                        username, user.google_anniversary_event_id, err
+                    );
+
+                    has_failures = true;
+                }
+            }
         }
 
         // Supend the user from okta.
         if let Some(ref okta) = okta_auth {
-            okta.delete_user(db, company, &user).await?;
+            match okta.delete_user(db, company, &user).await {
+                Ok(_) => {
+                    info!("Deleted user {} from okta", username);
+                }
+                Err(err) => {
+                    warn!("Failed to delete user {} from okta. err: {:?}", username, err);
+
+                    has_failures = true;
+                }
+            }
         }
 
         if company.okta_domain.is_empty() {
             // Delete the user from GSuite and other apps.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
             // Suspend the user from GSuite so we can transfer their data.
-            gsuite.delete_user(db, company, &user).await?;
+            match gsuite.delete_user(db, company, &user).await {
+                Ok(_) => {
+                    info!("Deactivated user {} in GSuite", username);
+                }
+                Err(err) => {
+                    warn!("Failed to deactivate user {} in GSuite. err: {:?}", username, err);
+
+                    has_failures = true;
+                }
+            }
         }
 
         // Remove the user from the github org.
-        github.delete_user(db, company, &user).await?;
+        match github.delete_user(db, company, &user).await {
+            Ok(_) => {
+                info!("Deleted user {} from GitHub", username);
+            }
+            Err(err) => {
+                warn!("Failed to delete user {} from GitHub. err: {:?}", username, err);
+
+                has_failures = true;
+            }
+        }
 
         // TODO: Deactivate the user from Ramp.
         // We only want to lock the cards from more purchases. Removing GSuite/Okta
@@ -2011,16 +2064,46 @@ pub async fn sync_users(
 
         // Delete the user from Zoom.
         if let Ok(ref zoom) = zoom_auth {
-            zoom.delete_user(db, company, &user).await?;
+            match zoom.delete_user(db, company, &user).await {
+                Ok(_) => {
+                    info!("Deleted user {} from Zoom", username);
+                }
+                Err(err) => {
+                    warn!("Failed to delete user {} from Zoom. err: {:?}", username, err);
+
+                    has_failures = true;
+                }
+            }
         }
 
         // Delete the user from Airtable.
         // Okta should take care of this if we are using Okta.
         // But let's do it anyway.
-        airtable_auth.delete_user(db, company, &user).await?;
+        match airtable_auth.delete_user(db, company, &user).await {
+            Ok(_) => {
+                info!("Deleted user {} from Airtable", username);
+            }
+            Err(err) => {
+                warn!("Failed to delete user {} from Airtable. err: {:?}", username, err);
 
-        // Delete the user from the database and Airtable.
-        user.delete(db).await?;
+                has_failures = true;
+            }
+        }
+
+        // Only delete the user from the database and Airtable if all previous deletes
+        // have actually succeeded
+        if !has_failures {
+            match user.delete(db).await {
+                Ok(_) => {
+                    info!("Successfully deleted user {} from database", username);
+                }
+                Err(err) => {
+                    warn!("Failed to delete user {} from database. err: {:?}", username, err);
+                }
+            }
+        } else {
+            info!("Skipping final user deletion due to previous delete steps failing");
+        }
     }
 
     info!("updated configs users in the database");

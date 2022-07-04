@@ -277,7 +277,7 @@ pub async fn handle_rfd_pull_request(
             );
 
             a(&format!(
-                "[ERROR]: update pull request title and labels: {} cc @jessfraz @augustuswm",
+                "[ERROR]: update pull request title and labels: {} cc @augustuswm",
                 e
             ));
 
@@ -702,7 +702,7 @@ pub async fn handle_rfd_push(
                                 );
 
                                 a(&format!(
-                                    "[ERROR]: update pull request title and labels: {} cc @jessfraz @augustuswm",
+                                    "[ERROR]: update pull request title and labels: {} cc @augustuswm",
                                     e
                                 ));
                             }
@@ -736,7 +736,7 @@ pub async fn handle_rfd_push(
 
                         // if let Err(err) = rfd.update(db).await {
                         //     a(&format!(
-                        //         "[ERROR]: failed to update disucussion url: {} cc @jessfraz @augustuswm",
+                        //         "[ERROR]: failed to update disucussion url: {} cc @augustuswm",
                         //         err
                         //     ));
                         // }

@@ -697,7 +697,10 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 }
             } else {
                 // We have a new meeting, let's send the notification.
-                meeting.send_slack_notification(db, company).await?;
+                let _ = meeting.send_slack_notification(db, company).await.map_err(|err| {
+                    warn!("Failed to post new meeting message to Slack. err: {:?}", err);
+                    err
+                });
             }
 
             // Upsert the meeting in the database.
