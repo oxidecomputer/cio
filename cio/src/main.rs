@@ -193,7 +193,7 @@ async fn api_get_conference_rooms(
         .await;
 
     if let Ok(rooms) = rooms {
-        Ok(HttpResponseOk(rooms.0))
+        Ok(HttpResponseOk(rooms))
     } else {
         Err(HttpError::for_internal_error("".to_string()))
     }
