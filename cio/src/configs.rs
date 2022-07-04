@@ -9,10 +9,9 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
 use diesel::{
-    backend::Backend,
     deserialize::{self, FromSql},
     pg::{Pg, PgValue},
-    serialize::{self, IsNull, Output, ToSql},
+    serialize::{self, Output, ToSql},
     sql_types::VarChar,
     FromSqlRow,
 };
@@ -27,7 +26,6 @@ use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 use zoom_api::Client as Zoom;
 
 use crate::{
