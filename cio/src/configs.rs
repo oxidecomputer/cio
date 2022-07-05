@@ -2302,10 +2302,12 @@ pub async fn sync_resources(
                 // If the conference room does not exist in our map we need to delete
                 // it from GSuite.
                 info!("deleting conference room {} from gsuite", id);
-                gsuite
-                    .resources()
-                    .calendars_delete(&company.gsuite_account_id, &r.resource_id)
-                    .await?;
+
+                // Do not delete externally provisioned resources as this can be destructive
+                // gsuite
+                //     .resources()
+                //     .calendars_delete(&company.gsuite_account_id, &r.resource_id)
+                //     .await?;
 
                 info!("deleted conference room from gsuite: {}", id);
                 continue;

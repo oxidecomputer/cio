@@ -9,7 +9,7 @@ CREATE TABLE resources (
     section VARCHAR NOT NULL,
     category VARCHAR NOT NULL,
     link_to_building TEXT [] NOT NULL,
-    airtable_record_id VARCHAR NOT NULL,
+    airtable_record_id VARCHAR NOT NULL DEFAULT '',
     cio_company_id INTEGER NOT NULL
 );
 
