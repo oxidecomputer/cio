@@ -8,6 +8,13 @@ use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::naive::NaiveDate;
+use diesel::{
+    deserialize::{self, FromSql},
+    pg::{Pg, PgValue},
+    serialize::{self, Output, ToSql},
+    sql_types::VarChar,
+    FromSqlRow,
+};
 use google_calendar::types::{Event, EventAttendee, EventDateTime};
 use google_geocode::Geocode;
 use gsuite_api::types::{
@@ -23,8 +30,8 @@ use zoom_api::Client as Zoom;
 
 use crate::{
     airtable::{
-        AIRTABLE_BUILDINGS_TABLE, AIRTABLE_CONFERENCE_ROOMS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE,
-        AIRTABLE_LINKS_TABLE,
+        AIRTABLE_BUILDINGS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE,
+        AIRTABLE_RESOURCES_TABLE,
     },
     applicants::Applicant,
     certs::{Certificate, Certificates, NewCertificate},
@@ -33,7 +40,7 @@ use crate::{
     db::Database,
     gsuite::{update_gsuite_building, update_gsuite_calendar_resource},
     providers::ProviderOps,
-    schema::{applicants, buildings, conference_rooms, groups, links, users},
+    schema::{applicants, buildings, groups, links, resources, users},
     shipments::NewOutboundShipment,
     utils::{get_file_content_from_repo, get_github_user_public_ssh_keys},
 };
@@ -50,7 +57,7 @@ pub struct Config {
     pub buildings: BTreeMap<String, BuildingConfig>,
 
     #[serde(default)]
-    pub resources: BTreeMap<String, ResourceConfig>,
+    pub resources: BTreeMap<String, NewResourceConfig>,
 
     #[serde(default)]
     pub links: BTreeMap<String, LinkConfig>,
@@ -1423,20 +1430,69 @@ impl UpdateAirtableRecord<Building> for Building {
     }
 }
 
-/// The data type for a resource. These are conference rooms that people can book
-/// through GSuite or Zoom.
+#[derive(Debug, Clone, PartialEq, JsonSchema, Serialize, Deserialize, FromSqlRow, AsExpression)]
+#[diesel(sql_type = VarChar)]
+pub enum ResourceCategory {
+    ConferenceRoom,
+    Other,
+}
+
+impl Default for ResourceCategory {
+    fn default() -> Self {
+        ResourceCategory::ConferenceRoom
+    }
+}
+
+impl ResourceCategory {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ResourceCategory::ConferenceRoom => "ConferenceRoom",
+            ResourceCategory::Other => "Other",
+        }
+    }
+
+    pub fn to_api_value(&self) -> String {
+        match self {
+            ResourceCategory::ConferenceRoom => "CONFERENCE_ROOM".to_string(),
+            ResourceCategory::Other => "OTHER".to_string(),
+        }
+    }
+}
+
+impl ToSql<VarChar, Pg> for ResourceCategory {
+    fn to_sql<W: std::io::Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+        <str as ToSql<VarChar, Pg>>::to_sql(self.as_str(), out)
+    }
+}
+
+impl FromSql<VarChar, Pg> for ResourceCategory {
+    fn from_sql(bytes: PgValue<'_>) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"ConferenceRoom" => Ok(ResourceCategory::ConferenceRoom),
+            b"Other" => Ok(ResourceCategory::Other),
+            _ => Err("Unrecognized enum variant".into()),
+        }
+    }
+}
+
+fn default_resource_category() -> ResourceCategory {
+    ResourceCategory::ConferenceRoom
+}
+
+/// The data type for a resource. These are conference rooms, machines, or other resources with fixed
+/// availability that people can book through GSuite.
 #[db {
-    new_struct_name = "ConferenceRoom",
+    new_struct_name = "Resource",
     airtable_base = "directory",
-    airtable_table = "AIRTABLE_CONFERENCE_ROOMS_TABLE",
+    airtable_table = "AIRTABLE_RESOURCES_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "name" = "String",
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-#[diesel(table_name = conference_rooms)]
-pub struct ResourceConfig {
+#[diesel(table_name = resources)]
+pub struct NewResourceConfig {
     pub name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
@@ -1451,15 +1507,17 @@ pub struct ResourceConfig {
     pub floor: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub section: String,
+    #[serde(default = "default_resource_category")]
+    pub category: ResourceCategory,
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
 }
 
-/// Implement updating the Airtable record for a ConferenceRoom.
+/// Implement updating the Airtable record for a Resource.
 #[async_trait]
-impl UpdateAirtableRecord<ConferenceRoom> for ConferenceRoom {
-    async fn update_airtable_record(&mut self, _record: ConferenceRoom) -> Result<()> {
+impl UpdateAirtableRecord<Resource> for Resource {
+    async fn update_airtable_record(&mut self, _record: Resource) -> Result<()> {
         // Set the building to right building link.
         // Get the current buildings in Airtable so we can link to it.
         // TODO: make this more dry so we do not call it every single damn time.
@@ -2182,10 +2240,10 @@ pub async fn sync_buildings(
     Ok(())
 }
 
-/// Sync our conference_rooms with our database and then update Airtable from the database.
-pub async fn sync_conference_rooms(
+/// Sync our resources with our database and then update Airtable from the database.
+pub async fn sync_resources(
     db: &Database,
-    conference_rooms: BTreeMap<String, ResourceConfig>,
+    resources: BTreeMap<String, NewResourceConfig>,
     company: &Company,
 ) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
@@ -2202,43 +2260,43 @@ pub async fn sync_conference_rooms(
         )
         .await?;
 
-    // Get all the conference_rooms.
-    let db_conference_rooms = ConferenceRooms::get_from_db(db, company.id).await?;
+    // Get all the resources.
+    let db_resources = Resources::get_from_db(db, company.id).await?;
     // Create a BTreeMap
-    let mut conference_room_map: BTreeMap<String, ConferenceRoom> = Default::default();
-    for u in db_conference_rooms {
-        conference_room_map.insert(u.name.to_string(), u);
+    let mut resource_map: BTreeMap<String, Resource> = Default::default();
+    for u in db_resources {
+        resource_map.insert(u.name.to_string(), u);
     }
-    // Sync conference_rooms.
-    for (_, mut conference_room) in conference_rooms {
-        conference_room.cio_company_id = company.id;
-        conference_room.upsert(db).await?;
+    // Sync resources.
+    for (_, mut resource) in resources {
+        resource.cio_company_id = company.id;
+        resource.upsert(db).await?;
 
-        // Remove the conference_room from the BTreeMap.
-        conference_room_map.remove(&conference_room.name);
+        // Remove the resource from the BTreeMap.
+        resource_map.remove(&resource.name);
     }
-    // Remove any conference_rooms that should no longer be in the database.
-    // This is found by the remaining conference_rooms that are in the map since we removed
+    // Remove any resources that should no longer be in the database.
+    // This is found by the remaining resources that are in the map since we removed
     // the existing repos from the map above.
-    for (name, room) in conference_room_map {
+    for (name, room) in resource_map {
         info!("deleting conference room {} from the database", name);
         room.delete(db).await?;
     }
-    info!("updated configs conference_rooms in the database");
+    info!("updated configs resources in the database");
 
-    // Update the conference_rooms in GSuite.
-    // Get all the conference_rooms.
-    let db_conference_rooms = ConferenceRooms::get_from_db(db, company.id).await?;
+    // Update the resources in GSuite.
+    // Get all the resources.
+    let db_resources = Resources::get_from_db(db, company.id).await?;
     // Create a BTreeMap
-    let mut conference_room_map: BTreeMap<String, ConferenceRoom> = Default::default();
-    for u in db_conference_rooms {
-        conference_room_map.insert(u.name.to_string(), u);
+    let mut resource_map: BTreeMap<String, Resource> = Default::default();
+    for u in db_resources {
+        resource_map.insert(u.name.to_string(), u);
     }
     for r in g_suite_calendar_resources {
         let id = r.resource_name.to_string();
 
         // Check if we have that resource already in our database.
-        let resource: ConferenceRoom = match conference_room_map.get(&id) {
+        let resource: Resource = match resource_map.get(&id) {
             Some(val) => val.clone(),
             None => {
                 // If the conference room does not exist in our map we need to delete
@@ -2265,13 +2323,13 @@ pub async fn sync_conference_rooms(
 
         // Remove the resource from the database map and continue.
         // This allows us to add all the remaining new resource after.
-        conference_room_map.remove(&id);
+        resource_map.remove(&id);
 
         info!("updated conference room in gsuite: {}", id);
     }
 
     // Create any remaining resources from the database that we do not have in GSuite.
-    for (id, resource) in conference_room_map {
+    for (id, resource) in resource_map {
         // Create the resource.
         let r: GSuiteCalendarResource = Default::default();
 
@@ -2285,8 +2343,8 @@ pub async fn sync_conference_rooms(
         info!("created conference room in gsuite: {}", id);
     }
 
-    // Update conference_rooms in airtable.
-    ConferenceRooms::get_from_db(db, company.id)
+    // Update resources in airtable.
+    Resources::get_from_db(db, company.id)
         .await?
         .update_airtable(db)
         .await?;
@@ -2516,11 +2574,11 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -
     let configs = get_configs_from_repo(&github, company).await?;
 
     // Sync buildings.
-    // Syncing buildings must happen before we sync conference rooms.
+    // Syncing buildings must happen before we sync resource.
     sync_buildings(db, configs.buildings, company).await?;
 
-    // Sync conference rooms.
-    sync_conference_rooms(db, configs.resources, company).await?;
+    // Sync resources.
+    sync_resources(db, configs.resources, company).await?;
 
     // Sync groups.
     // Syncing groups must happen before we sync the users.

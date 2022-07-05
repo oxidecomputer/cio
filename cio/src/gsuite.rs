@@ -14,7 +14,7 @@ use serde_json::Value;
 
 use crate::{
     companies::Company,
-    configs::{Building, ConferenceRoom, Group, User},
+    configs::{Building, Group, Resource, User},
     db::Database,
     providers::ProviderOps,
     utils::generate_password,
@@ -406,21 +406,21 @@ pub fn update_gsuite_building(b: &GSuiteBuilding, building: &Building, id: &str)
 /// Update a calendar resource.
 pub fn update_gsuite_calendar_resource(
     c: &GSuiteCalendarResource,
-    resource: &ConferenceRoom,
+    resource: &Resource,
     id: &str,
 ) -> GSuiteCalendarResource {
-    let mut gsuite_conference_room = c.clone();
+    let mut gsuite_resource = c.clone();
 
-    gsuite_conference_room.resource_id = id.to_string();
-    gsuite_conference_room.resource_type = resource.typev.to_string();
-    gsuite_conference_room.resource_name = resource.name.to_string();
-    gsuite_conference_room.building_id = resource.building.to_string();
-    gsuite_conference_room.resource_description = resource.description.to_string();
-    gsuite_conference_room.user_visible_description = resource.description.to_string();
-    gsuite_conference_room.capacity = resource.capacity as i64;
-    gsuite_conference_room.floor_name = resource.floor.to_string();
-    gsuite_conference_room.floor_section = resource.section.to_string();
-    gsuite_conference_room.resource_category = "CONFERENCE_ROOM".to_string();
+    gsuite_resource.resource_id = id.to_string();
+    gsuite_resource.resource_type = resource.typev.to_string();
+    gsuite_resource.resource_name = resource.name.to_string();
+    gsuite_resource.building_id = resource.building.to_string();
+    gsuite_resource.resource_description = resource.description.to_string();
+    gsuite_resource.user_visible_description = resource.description.to_string();
+    gsuite_resource.capacity = resource.capacity as i64;
+    gsuite_resource.floor_name = resource.floor.to_string();
+    gsuite_resource.floor_section = resource.section.to_string();
+    gsuite_resource.resource_category = resource.category.to_api_value();
 
-    gsuite_conference_room
+    gsuite_resource
 }
