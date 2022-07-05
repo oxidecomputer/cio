@@ -1479,8 +1479,8 @@ fn default_resource_category() -> ResourceCategory {
     ResourceCategory::ConferenceRoom
 }
 
-/// The data type for a resource. These are conference rooms that people can book
-/// through GSuite or Zoom.
+/// The data type for a resource. These are conference rooms, machines, or other resources with fixed
+/// availability that people can book through GSuite.
 #[db {
     new_struct_name = "Resource",
     airtable_base = "directory",
