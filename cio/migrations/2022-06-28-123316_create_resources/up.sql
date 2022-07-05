@@ -35,7 +35,7 @@ INSERT INTO resources (
     capacity,
     floor,
     section,
-    'CONFERENCE_ROOM',
+    'ConferenceRoom',
     link_to_building,
     airtable_record_id,
     cio_company_id
