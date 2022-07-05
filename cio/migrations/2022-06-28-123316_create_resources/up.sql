@@ -37,7 +37,7 @@ INSERT INTO resources (
     section,
     'ConferenceRoom',
     link_to_building,
-    airtable_record_id,
+    '',
     cio_company_id
   FROM
     conference_rooms;
