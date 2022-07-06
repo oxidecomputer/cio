@@ -2020,7 +2020,10 @@ pub async fn sync_users(
 
                         has_failures = true;
                     } else {
-                        info!("Ignoring error for anniversary calendar {} / {} delete", username, user.google_anniversary_event_id);
+                        info!(
+                            "Ignoring error for anniversary calendar {} / {} delete",
+                            username, user.google_anniversary_event_id
+                        );
                     }
                 }
             }
@@ -2148,7 +2151,10 @@ pub async fn sync_users(
                     }
                 }
             } else {
-                info!("Would delete user {} from database, but user deletes have been disabled", username);
+                info!(
+                    "Would delete user {} from database, but user deletes have been disabled",
+                    username
+                );
             }
         } else {
             info!("Skipping final user deletion due to previous delete steps failing");
