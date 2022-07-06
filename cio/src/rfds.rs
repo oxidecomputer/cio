@@ -29,6 +29,7 @@ use crate::{
     companies::Company,
     core::{GitHubPullRequest, UpdateAirtableRecord},
     db::Database,
+    features::Features,
     schema::rfds as r_f_ds,
     schema::rfds,
     utils::{
@@ -599,15 +600,17 @@ impl RFD {
         }
 
         // Create or update the file in the github repository.
-        create_or_update_file_in_github_repo(
-            github,
-            owner,
-            rfd_repo,
-            &repo.default_branch,
-            &rfd_path,
-            cmd_output.stdout.clone(),
-        )
-        .await?;
+        if Features::is_enabled("RFD_PDFS_IN_GITHUB") {
+            create_or_update_file_in_github_repo(
+                github,
+                owner,
+                rfd_repo,
+                &repo.default_branch,
+                &rfd_path,
+                cmd_output.stdout.clone(),
+            )
+            .await?;
+        }
 
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"

@@ -22,6 +22,7 @@ pub mod db;
 pub mod dns_providers;
 #[macro_use]
 pub mod enclose;
+pub mod features;
 pub mod finance;
 pub mod functions;
 pub mod github_commits;
