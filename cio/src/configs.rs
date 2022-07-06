@@ -2270,7 +2270,10 @@ pub async fn sync_resources(
     // Sync resources.
     for (_, mut resource) in resources {
         resource.cio_company_id = company.id;
-        resource.upsert(db).await?;
+        resource.upsert(db).await.map_err(|err| {
+            log::warn!("Failed to upsert resource {:?}. err: {:?}", resource, err);
+            err
+        })?;
 
         // Remove the resource from the BTreeMap.
         resource_map.remove(&resource.name);
