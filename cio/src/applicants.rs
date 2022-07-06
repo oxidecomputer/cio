@@ -57,6 +57,16 @@ pub static DOCUSIGN_OFFER_SUBJECT: &str = "Sign your Oxide Computer Company Offe
 pub static DOCUSIGN_PIIA_TEMPLATE: &str = "Employee Agreements (Mediation, PIIA)";
 pub static DOCUSIGN_PIIA_SUBJECT: &str = "Sign your Oxide Computer Company Employee Agreements";
 
+static ONBOARDING_ASSIGNEES: OnboardingAssignees = OnboardingAssignees(["augustuswm", "jclulow"]);
+
+struct OnboardingAssignees([&'static str; 2]);
+
+impl From<&OnboardingAssignees> for Vec<String> {
+    fn from(assignees: &OnboardingAssignees) -> Self {
+        assignees.0.iter().map(|assignee| assignee.to_string()).collect()
+    }
+}
+
 /// The data type for a NewApplicant.
 #[db {
     new_struct_name = "Applicant",
@@ -1187,8 +1197,8 @@ Notes:
                         &octorust::types::IssuesUpdateRequest {
                             title: Some(title.into()),
                             body: Default::default(),
-                            assignee: "augustuswm".to_string(),
-                            assignees: Default::default(),
+                            assignee: "".to_string(),
+                            assignees: (&ONBOARDING_ASSIGNEES).into(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
                             state: Some(octorust::types::State::Closed),
@@ -1219,8 +1229,8 @@ Notes:
                         &octorust::types::IssuesUpdateRequest {
                             title: Some(title.into()),
                             body: body.to_string(),
-                            assignee: "augustuswm".to_string(),
-                            assignees: Default::default(),
+                            assignee: "".to_string(),
+                            assignees: (&ONBOARDING_ASSIGNEES).into(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
                             state: Some(octorust::types::State::Open),
@@ -1242,7 +1252,7 @@ Notes:
                                 title: Some(title.into()),
                                 body: body.to_string(),
                                 assignee: "augustuswm".to_string(),
-                                assignees: Default::default(),
+                                assignees: (&ONBOARDING_ASSIGNEES).into(),
                                 labels: vec![label.into()],
                                 milestone: Default::default(),
                                 state: Some(octorust::types::State::Open),
