@@ -2002,12 +2002,26 @@ pub async fn sync_users(
                     );
                 }
                 Err(err) => {
-                    warn!(
-                        "Failed to delete anniversary calendar {} / {}. err: {:?}",
-                        username, user.google_anniversary_event_id, err
-                    );
+                    let msg = format!("{}", err);
 
-                    has_failures = true;
+                    // An anniversary calender event may not exist if the user was partially
+                    // provisioned or deprovisioned. In the case of deprovisioning, Google will
+                    // return a 410 Gone error if the calendar event has already been removed.
+                    // This should not be considered a failure.
+
+                    // Errors from the Google Calendar client are stringy and do not return
+                    // structured data. As a result this check is extremely brittle. We can not
+                    // use its failure to authorize anything destructive.
+                    if !msg.starts_with("code: 410 Gone") {
+                        warn!(
+                            "Failed to delete anniversary calendar {} / {}. err: {}",
+                            username, user.google_anniversary_event_id, msg
+                        );
+
+                        has_failures = true;
+                    } else {
+                        info!("Ignoring error for anniversary calendar {} / {} delete", username, user.google_anniversary_event_id);
+                    }
                 }
             }
         }
@@ -2048,9 +2062,21 @@ pub async fn sync_users(
                 info!("Deleted user {} from GitHub", username);
             }
             Err(err) => {
-                warn!("Failed to delete user {} from GitHub. err: {:?}", username, err);
+                let msg = format!("{}", err);
 
-                has_failures = true;
+                // If the error from GitHub is a 404 NotFound then the user does not exist in our
+                // organization. This may be an attempt to remove a partially provisioned or
+                // deprovisioned user. This is not considered a failure.
+
+                // Errors from the GitHub client are stringy and do not return structured data.
+                // As a result this check is extremely brittle. We can not use its failure to
+                // authorize anything destructive.
+                if !msg.starts_with("code: 404 Not Found") {
+                    warn!("Failed to delete user {} from GitHub. err: {}", username, msg);
+                    has_failures = true;
+                } else {
+                    info!("Ignoring error for GitHub user {} delete", username);
+                }
             }
         }
 
@@ -2084,22 +2110,45 @@ pub async fn sync_users(
                 info!("Deleted user {} from Airtable", username);
             }
             Err(err) => {
-                warn!("Failed to delete user {} from Airtable. err: {:?}", username, err);
+                let msg = format!("{:?}", err);
 
-                has_failures = true;
+                // If the only error we encounter is that we failed to find an Airtable user to
+                // remove then it is likely that we are handling a user that was only partially
+                // provisioned or deprovisioned and therefore should not be considered an error.
+
+                // Errors from the Airtable client are stringy and do not return structured data.
+                // As a result this check is extremely brittle. We can not use its failure to
+                // authorize anything destructive. We can only perform this check at all because
+                // we are only trying to delete a single record.
+                if !msg.contains("type_: \"NOT_FOUND\"") {
+                    warn!("Failed to delete user {} from Airtable. err: {}", username, err);
+
+                    has_failures = true;
+                } else {
+                    info!("Ignoring error for Airtable user {} delete", username);
+                }
             }
         }
 
+        // User deletes are currently disabled. We no longer want to allow the behavior of removing
+        // user records from our system. Instead they should be only marked as deleted so that we
+        // can restore them in the future if needed.
+        let enable_user_deletes = false;
+
         // Only delete the user from the database and Airtable if all previous deletes
-        // have actually succeeded
+        // have actually succeeded and user deletes are enabled.
         if !has_failures {
-            match user.delete(db).await {
-                Ok(_) => {
-                    info!("Successfully deleted user {} from database", username);
+            if enable_user_deletes {
+                match user.delete(db).await {
+                    Ok(_) => {
+                        info!("Successfully deleted user {} from database", username);
+                    }
+                    Err(err) => {
+                        warn!("Failed to delete user {} from database. err: {:?}", username, err);
+                    }
                 }
-                Err(err) => {
-                    warn!("Failed to delete user {} from database. err: {:?}", username, err);
-                }
+            } else {
+                info!("Would delete user {} from database, but user deletes have been disabled", username);
             }
         } else {
             info!("Skipping final user deletion due to previous delete steps failing");
