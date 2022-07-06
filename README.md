@@ -17,6 +17,7 @@ Specific runtime behaviors can be controlled via environment variables. Flags ar
 | Flag               | Description |
 | ------------------ | ----------- |
 | RFD_PDFS_IN_GITHUB | Enables committing of rendered RFD PDFs back to their source repo |
+| RFD_PDFS_IN_GOOGLE_DRIVE | Enables writing of rendered RFD PDFs to Google Drive |
 
 The architecture for this application server and all it's surroundings is:
 
