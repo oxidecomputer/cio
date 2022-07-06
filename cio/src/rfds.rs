@@ -13,9 +13,13 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use comrak::{markdown_to_html, ComrakOptions};
 use csv::ReaderBuilder;
-use google_drive::traits::{DriveOps, FileOps};
+use google_drive::{
+    traits::{DriveOps, FileOps},
+    Client as GoogleDrive,
+};
 use log::{info, warn};
 use macros::db;
+use octorust::Client as Octorust;
 use regex::Regex;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
@@ -546,7 +550,6 @@ impl RFD {
         file.write_all(rfd_content.as_bytes()).await?;
 
         let file_name = self.get_pdf_filename();
-        let rfd_path = format!("/pdfs/{}", file_name);
 
         let mut branch = self.number_string.to_string();
         if self.link.contains(&format!("/{}/", repo.default_branch)) {
@@ -601,31 +604,19 @@ impl RFD {
 
         // Create or update the file in the github repository.
         if Features::is_enabled("RFD_PDFS_IN_GITHUB") {
-            create_or_update_file_in_github_repo(
-                github,
-                owner,
-                rfd_repo,
-                &repo.default_branch,
-                &rfd_path,
-                cmd_output.stdout.clone(),
-            )
-            .await?;
+            let branch = RfdBranch {
+                client: github.clone(),
+                owner: owner.to_string(),
+                repo: "rfd".to_string(),
+                branch: repo.default_branch.clone(),
+            };
+
+            branch.store_rfd_pdf(&file_name, &cmd_output.stdout).await?;
         }
 
-        // Figure out where our directory is.
-        // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
-        let drive_id = shared_drive.id.to_string();
-
-        // Get the directory by the name.
-        let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await?;
-
-        // Create or update the file in the google_drive.
-        let drive_file = drive_client
-            .files()
-            .create_or_update(&drive_id, &parent_id, &file_name, "application/pdf", &cmd_output.stdout)
-            .await?;
-        self.pdf_link_google_drive = format!("https://drive.google.com/open?id={}", drive_file.id);
+        if Features::is_enabled("RFD_PDFS_IN_GOOGLE_DRIVE") {
+            self.pdf_link_google_drive = drive_client.store_rfd_pdf(&file_name, &cmd_output.stdout).await?;
+        }
 
         // Delete our temporary file.
         if path.exists() && !path.is_dir() {
@@ -1405,6 +1396,65 @@ pub async fn send_rfd_changelog(db: &Database, company: &Company) -> Result<()> 
         .await?;
 
     Ok(())
+}
+
+#[async_trait]
+trait PDFStorage {
+    async fn store_rfd_pdf<S>(&self, filename: S, contents: &[u8]) -> Result<String>
+    where
+        S: AsRef<str> + Send + Sync;
+}
+
+#[async_trait]
+impl PDFStorage for GoogleDrive {
+    async fn store_rfd_pdf<S>(&self, filename: S, contents: &[u8]) -> Result<String>
+    where
+        S: AsRef<str> + Send + Sync,
+    {
+        // Figure out where our directory is.
+        // It should be in the shared drive : "Automated Documents"/"rfds"
+        let shared_drive = self.drives().get_by_name("Automated Documents").await?;
+        let drive_id = shared_drive.id.to_string();
+
+        // Get the directory by the name.
+        let parent_id = self.files().create_folder(&drive_id, "", "rfds").await?;
+
+        // Create or update the file in the google_drive.
+        let drive_file = self
+            .files()
+            .create_or_update(&drive_id, &parent_id, filename.as_ref(), "application/pdf", contents)
+            .await?;
+
+        Ok(format!("https://drive.google.com/open?id={}", drive_file.id))
+    }
+}
+
+struct RfdBranch {
+    client: Octorust,
+    owner: String,
+    repo: String,
+    branch: String,
+}
+
+#[async_trait]
+impl PDFStorage for RfdBranch {
+    async fn store_rfd_pdf<S>(&self, filename: S, contents: &[u8]) -> Result<String>
+    where
+        S: AsRef<str> + Send + Sync,
+    {
+        let rfd_path = format!("/pdfs/{}", filename.as_ref());
+
+        create_or_update_file_in_github_repo(
+            &self.client,
+            &self.owner,
+            &self.repo,
+            &self.branch,
+            &rfd_path,
+            contents.to_vec(),
+        )
+        .await
+        .map(|_| "".to_string())
+    }
 }
 
 #[cfg(test)]
