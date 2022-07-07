@@ -30,7 +30,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{
     airtable::AIRTABLE_RFD_TABLE,
-    companies::Company,
+    companies::{Company, RFDRepo},
     core::{GitHubPullRequest, UpdateAirtableRecord},
     db::Database,
     features::Features,
@@ -523,47 +523,31 @@ impl RFD {
         self.discussion = link.to_string();
     }
 
-    /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
-    /// repository.
-    pub async fn convert_and_upload_pdf(
-        &mut self,
-        db: &Database,
-        github: &octorust::Client,
-        company: &Company,
-    ) -> Result<()> {
-        // Initialize the Google Drive client.
-        // We do this here so we know the token is not expired.
-        let drive_client = company.authenticate_google_drive(db).await?;
-
-        // Get the rfd repo client.
-        let owner = &company.github_org;
-        let rfd_repo = "rfd";
-        let repo = github.repos().get(owner, rfd_repo).await?;
-
+    async fn create_pdf(&self, repo: &RFDRepo, github: &Octorust) -> Result<RFDPdf> {
+        // Create temporary space for holding raw contents for generating PDFs
         let mut path = env::temp_dir();
         path.push(format!("pdfcontents{}.adoc", self.number_string));
 
-        let rfd_content = self.content.to_string();
+        // Write the contents to a temporary file
+        let mut file = fs::File::create(&path).await?;
+        file.write_all(self.content.as_bytes()).await?;
 
-        // Write the contents to a temporary file.
-        let mut file = fs::File::create(path.clone()).await?;
-        file.write_all(rfd_content.as_bytes()).await?;
-
-        let file_name = self.get_pdf_filename();
-
-        let mut branch = self.number_string.to_string();
+        // Determine the branch to pull images from
+        let mut branch = &self.number_string;
         if self.link.contains(&format!("/{}/", repo.default_branch)) {
-            branch = repo.default_branch.to_string();
+            branch = &repo.default_branch;
         }
 
         // Create the dir where to save images.
         let temp_dir = env::temp_dir();
         let temp_dir_str = temp_dir.to_str().unwrap();
 
-        // We need to save the images locally as well.
-        // This ensures that
+        // Save the images locally to ensure they are available during rendering
         let old_dir = format!("rfd/{}", self.number_string);
-        let images = get_images_in_branch(github, owner, rfd_repo, &old_dir, &branch).await?;
+        let images = get_images_in_branch(github, &repo.owner, &repo.name, &old_dir, branch).await?;
+
+        // Keep track of all of the images that we write so that we can remove
+        // them after processing
         let mut image_paths: Vec<String> = Vec::new();
         for image in images {
             // Save the image to our temporary directory.
@@ -578,6 +562,7 @@ impl RFD {
             write_file(&PathBuf::from(image_path), &decode_base64(&image.content)).await?;
         }
 
+        // Spawn a task for generating the actual pdf contents
         let cmd_output = tokio::task::spawn_blocking(enclose! { (path) move || {
             Command::new("asciidoctor-pdf")
                 .current_dir(env::temp_dir())
@@ -594,41 +579,60 @@ impl RFD {
         }})
         .await??;
 
-        if !cmd_output.status.success() {
+        // Delete the temporary document file
+        if path.exists() && !path.is_dir() {
+            fs::remove_file(path).await?;
+        }
+
+        // Cleanup the locally stored images.
+        for image_path in image_paths {
+            // Ignore the error we don't care.
+            // TODO: One thing we are doing on every RFD push is updating these images twice, once
+            // to parse the asciidoc and again for PDF, should probably combine into one thing.
+            fs::remove_file(PathBuf::from(&image_path)).await.unwrap_or_default();
+        }
+
+        if cmd_output.status.success() {
+            Ok(RFDPdf {
+                filename: self.get_pdf_filename(),
+                contents: cmd_output.stdout,
+            })
+        } else {
             bail!(
                 "running asciidoctor failed: {} {}",
                 from_utf8(&cmd_output.stdout)?,
                 from_utf8(&cmd_output.stderr)?
             );
         }
+    }
+
+    /// Convert the RFD content to a PDF and upload the PDF to the /pdfs folder of the RFD
+    /// repository.
+    pub async fn convert_and_upload_pdf(
+        &mut self,
+        db: &Database,
+        github: &octorust::Client,
+        company: &Company,
+    ) -> Result<()> {
+        // Find the RFD repo
+        let repo = company.rfd_repo().await?;
+
+        let pdf = self.create_pdf(&repo, github).await?;
 
         // Create or update the file in the github repository.
         if Features::is_enabled("RFD_PDFS_IN_GITHUB") {
-            let branch = RfdBranch {
+            let branch = RFDBranch {
                 client: github.clone(),
-                owner: owner.to_string(),
-                repo: "rfd".to_string(),
-                branch: repo.default_branch.clone(),
+                owner: repo.owner,
+                repo: repo.name,
+                branch: repo.default_branch,
             };
 
-            branch.store_rfd_pdf(&file_name, &cmd_output.stdout).await?;
+            branch.store_rfd_pdf(&pdf).await?;
         }
 
         if Features::is_enabled("RFD_PDFS_IN_GOOGLE_DRIVE") {
-            self.pdf_link_google_drive = drive_client.store_rfd_pdf(&file_name, &cmd_output.stdout).await?;
-        }
-
-        // Delete our temporary file.
-        if path.exists() && !path.is_dir() {
-            fs::remove_file(path).await?;
-        }
-
-        // Cleanup our images.
-        for image_path in image_paths {
-            // Ignore the error we don't care.
-            // TODO: One thing we are doing on every RFD push is updating these images twoce, once
-            // to parse the asciidoc and again for PDF, should probably combine into one thing.
-            fs::remove_file(PathBuf::from(&image_path)).await.unwrap_or_default();
+            self.pdf_link_google_drive = company.authenticate_google_drive(db).await?.store_rfd_pdf(&pdf).await?;
         }
 
         Ok(())
@@ -834,6 +838,11 @@ impl RFD {
 
         Ok(())
     }
+}
+
+struct RFDPdf {
+    filename: String,
+    contents: Vec<u8>,
 }
 
 /// Implement updating the Airtable record for an RFD.
@@ -1400,17 +1409,12 @@ pub async fn send_rfd_changelog(db: &Database, company: &Company) -> Result<()> 
 
 #[async_trait]
 trait PDFStorage {
-    async fn store_rfd_pdf<S>(&self, filename: S, contents: &[u8]) -> Result<String>
-    where
-        S: AsRef<str> + Send + Sync;
+    async fn store_rfd_pdf(&self, pdf: &RFDPdf) -> Result<String>;
 }
 
 #[async_trait]
 impl PDFStorage for GoogleDrive {
-    async fn store_rfd_pdf<S>(&self, filename: S, contents: &[u8]) -> Result<String>
-    where
-        S: AsRef<str> + Send + Sync,
-    {
+    async fn store_rfd_pdf(&self, pdf: &RFDPdf) -> Result<String> {
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
         let shared_drive = self.drives().get_by_name("Automated Documents").await?;
@@ -1422,14 +1426,14 @@ impl PDFStorage for GoogleDrive {
         // Create or update the file in the google_drive.
         let drive_file = self
             .files()
-            .create_or_update(&drive_id, &parent_id, filename.as_ref(), "application/pdf", contents)
+            .create_or_update(&drive_id, &parent_id, &pdf.filename, "application/pdf", &pdf.contents)
             .await?;
 
         Ok(format!("https://drive.google.com/open?id={}", drive_file.id))
     }
 }
 
-struct RfdBranch {
+struct RFDBranch {
     client: Octorust,
     owner: String,
     repo: String,
@@ -1437,12 +1441,9 @@ struct RfdBranch {
 }
 
 #[async_trait]
-impl PDFStorage for RfdBranch {
-    async fn store_rfd_pdf<S>(&self, filename: S, contents: &[u8]) -> Result<String>
-    where
-        S: AsRef<str> + Send + Sync,
-    {
-        let rfd_path = format!("/pdfs/{}", filename.as_ref());
+impl PDFStorage for RFDBranch {
+    async fn store_rfd_pdf(&self, pdf: &RFDPdf) -> Result<String> {
+        let rfd_path = format!("/pdfs/{}", pdf.filename);
 
         create_or_update_file_in_github_repo(
             &self.client,
@@ -1450,7 +1451,7 @@ impl PDFStorage for RfdBranch {
             &self.repo,
             &self.branch,
             &rfd_path,
-            contents.to_vec(),
+            pdf.contents.to_vec(),
         )
         .await
         .map(|_| "".to_string())
