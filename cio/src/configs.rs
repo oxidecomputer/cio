@@ -560,18 +560,18 @@ impl UserConfig {
         // Deprovision this user explicitly from any service they should not have access to
         for denied_service in &new_user.denied_services {
             match denied_service.get_provider_writer(db, company).await {
-                Ok(denied_service_provider) => {
+                Ok(_denied_service_provider) => {
                     info!(
                         "User {} will be removed from {} when denied services lists are enforced",
                         new_user.id, denied_service
                     );
-                    match denied_service_provider.delete_user(db, company, &new_user).await {
-                        Ok(_) => info!("Removed user from {} from {}", new_user.id, denied_service),
-                        Err(err) => warn!(
-                            "Failed to remove user {} from {}. err: {}",
-                            new_user.id, denied_service, err
-                        ),
-                    }
+                    // match denied_service_provider.delete_user(db, company, &new_user).await {
+                    //     Ok(_) => info!("Removed user from {} from {}", new_user.id, denied_service),
+                    //     Err(err) => warn!(
+                    //         "Failed to remove user {} from {}. err: {}",
+                    //         new_user.id, denied_service, err
+                    //     ),
+                    // }
                 }
                 Err(err) => warn!(
                     "Failed to create provider client for {} when handling denied services for user {}. err: {}",
