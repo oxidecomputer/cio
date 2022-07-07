@@ -72,6 +72,17 @@ pub struct Config {
     pub certificates: BTreeMap<String, NewCertificate>,
 }
 
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum ExternalServices {
+    Airtable,
+    GitHub,
+    Google,
+    Okta,
+    Ramp,
+    Zoom,
+}
+
 /// The data type for a user.
 #[db {
     new_struct_name = "User",
@@ -127,7 +138,8 @@ pub struct UserConfig {
     #[serde(default, alias = "aws_role", skip_serializing_if = "String::is_empty")]
     pub aws_role: String,
 
-    /// Specifically prevents the users from being granted access to GitHub teams
+    /// Defines a list of services that the user should not be provisioned in or
+    /// granted access to
     #[serde(default)]
     pub denied_services: Vec<String>,
 
@@ -2807,4 +2819,34 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde::{Deserialize, Serialize};
+    use serde_json;
+
+    use super::ExternalServices;
+
+    #[derive(Debug, PartialEq, Deserialize, Serialize)]
+    struct ServiceWrapper {
+        service: ExternalServices
+    }
+
+    #[test]
+    fn test_handles_lowercase_services() {
+        assert_eq!(ServiceWrapper { service: ExternalServices::Airtable }, serde_json::from_str::<ServiceWrapper>("{\"service\": \"airtable\"}").unwrap());
+        assert_eq!(ServiceWrapper { service: ExternalServices::GitHub }, serde_json::from_str::<ServiceWrapper>("{\"service\": \"github\"}").unwrap());
+        assert_eq!(ServiceWrapper { service: ExternalServices::Google }, serde_json::from_str::<ServiceWrapper>("{\"service\": \"google\"}").unwrap());
+        assert_eq!(ServiceWrapper { service: ExternalServices::Okta }, serde_json::from_str::<ServiceWrapper>("{\"service\": \"okta\"}").unwrap());
+        assert_eq!(ServiceWrapper { service: ExternalServices::Ramp }, serde_json::from_str::<ServiceWrapper>("{\"service\": \"ramp\"}").unwrap());
+        assert_eq!(ServiceWrapper { service: ExternalServices::Zoom }, serde_json::from_str::<ServiceWrapper>("{\"service\": \"zoom\"}").unwrap());
+
+        assert_eq!("{\"service\":\"airtable\"}", serde_json::to_string(&ServiceWrapper { service: ExternalServices::Airtable }).unwrap().as_str());
+        assert_eq!("{\"service\":\"github\"}", serde_json::to_string(&ServiceWrapper { service: ExternalServices::GitHub }).unwrap().as_str());
+        assert_eq!("{\"service\":\"google\"}", serde_json::to_string(&ServiceWrapper { service: ExternalServices::Google }).unwrap().as_str());
+        assert_eq!("{\"service\":\"okta\"}", serde_json::to_string(&ServiceWrapper { service: ExternalServices::Okta }).unwrap().as_str());
+        assert_eq!("{\"service\":\"ramp\"}", serde_json::to_string(&ServiceWrapper { service: ExternalServices::Ramp }).unwrap().as_str());
+        assert_eq!("{\"service\":\"zoom\"}", serde_json::to_string(&ServiceWrapper { service: ExternalServices::Zoom }).unwrap().as_str());
+    }
 }
