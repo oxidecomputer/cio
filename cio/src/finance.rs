@@ -21,7 +21,7 @@ use crate::{
     configs::{Group, User},
     core::UpdateAirtableRecord,
     db::Database,
-    providers::ProviderOps,
+    providers::ProviderReadOps,
     schema::{accounts_payables, credit_card_transactions, expensed_items, software_vendors, users},
 };
 

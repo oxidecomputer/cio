@@ -4,14 +4,14 @@ use log::{info, warn};
 
 use crate::{
     companies::Company,
-    configs::{Group, User},
+    configs::{ExternalServices, Group, User},
     db::Database,
 };
 
 /// This trait defines how to implement a provider for a vendor that manages users
 /// and groups.
 #[async_trait]
-pub trait ProviderOps<U, G> {
+pub trait ProviderWriteOps {
     /// Ensure the user exists and has the correct information.
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String>;
 
@@ -24,18 +24,31 @@ pub trait ProviderOps<U, G> {
 
     async fn remove_user_from_group(&self, company: &Company, user: &User, group: &str) -> Result<()>;
 
-    async fn list_provider_users(&self, company: &Company) -> Result<Vec<U>>;
-
-    async fn list_provider_groups(&self, company: &Company) -> Result<Vec<G>>;
-
     async fn delete_user(&self, db: &Database, company: &Company, user: &User) -> Result<()>;
 
     async fn delete_group(&self, company: &Company, group: &Group) -> Result<()>;
 }
 
 #[async_trait]
-impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
+pub trait ProviderReadOps {
+    type ProviderUser;
+    type ProviderGroup;
+
+    async fn list_provider_users(&self, company: &Company) -> Result<Vec<Self::ProviderUser>>;
+    async fn list_provider_groups(&self, company: &Company) -> Result<Vec<Self::ProviderGroup>>;
+}
+
+#[async_trait]
+impl ProviderWriteOps for ramp_api::Client {
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
+        if user.denied_services.contains(&ExternalServices::Ramp) {
+            log::info!(
+                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                user.id,
+                ExternalServices::Ramp
+            );
+        }
+
         // Only do this if the user is full time.
         if !user.is_full_time() {
             return Ok(String::new());
@@ -164,6 +177,22 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
         Ok(())
     }
 
+    async fn delete_user(&self, _db: &Database, _company: &Company, _user: &User) -> Result<()> {
+        // TODO: Suspend the user from Ramp.
+        Ok(())
+    }
+
+    // Ramp does not have groups so this is a no-op.
+    async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ProviderReadOps for ramp_api::Client {
+    type ProviderUser = ramp_api::types::User;
+    type ProviderGroup = ();
+
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<ramp_api::types::User>> {
         self.users()
             .get_all(
@@ -177,21 +206,19 @@ impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
         Ok(vec![])
     }
-
-    async fn delete_user(&self, _db: &Database, _company: &Company, _user: &User) -> Result<()> {
-        // TODO: Suspend the user from Ramp.
-        Ok(())
-    }
-
-    // Ramp does not have groups so this is a no-op.
-    async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {
-        Ok(())
-    }
 }
 
 #[async_trait]
-impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorust::Client {
+impl ProviderWriteOps for octorust::Client {
     async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
+        if user.denied_services.contains(&ExternalServices::GitHub) {
+            log::info!(
+                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                user.id,
+                ExternalServices::GitHub
+            );
+        }
+
         if user.github.is_empty() {
             // Return early, this user doesn't have a github handle.
             return Ok(String::new());
@@ -447,22 +474,6 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
         Ok(())
     }
 
-    async fn list_provider_users(&self, company: &Company) -> Result<Vec<octorust::types::SimpleUser>> {
-        // List all the users in the GitHub organization.
-        self.orgs()
-            .list_all_members(
-                &company.github_org,
-                octorust::types::OrgsListMembersFilter::All,
-                octorust::types::OrgsListMembersRole::All,
-            )
-            .await
-    }
-
-    async fn list_provider_groups(&self, company: &Company) -> Result<Vec<octorust::types::Team>> {
-        // List all the teams in the GitHub organization.
-        self.teams().list_all(&company.github_org).await
-    }
-
     async fn delete_user(&self, _db: &Database, company: &Company, user: &User) -> Result<()> {
         if user.github.is_empty() {
             // Return early.
@@ -492,8 +503,38 @@ impl ProviderOps<octorust::types::SimpleUser, octorust::types::Team> for octorus
 }
 
 #[async_trait]
-impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_api::Client {
+impl ProviderReadOps for octorust::Client {
+    type ProviderUser = octorust::types::SimpleUser;
+    type ProviderGroup = octorust::types::Team;
+
+    async fn list_provider_users(&self, company: &Company) -> Result<Vec<octorust::types::SimpleUser>> {
+        // List all the users in the GitHub organization.
+        self.orgs()
+            .list_all_members(
+                &company.github_org,
+                octorust::types::OrgsListMembersFilter::All,
+                octorust::types::OrgsListMembersRole::All,
+            )
+            .await
+    }
+
+    async fn list_provider_groups(&self, company: &Company) -> Result<Vec<octorust::types::Team>> {
+        // List all the teams in the GitHub organization.
+        self.teams().list_all(&company.github_org).await
+    }
+}
+
+#[async_trait]
+impl ProviderWriteOps for gsuite_api::Client {
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
+        if user.denied_services.contains(&ExternalServices::Google) {
+            log::info!(
+                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                user.id,
+                ExternalServices::Google
+            );
+        }
+
         // First get the user from gsuite.
         match self
             .users()
@@ -740,35 +781,6 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
         Ok(())
     }
 
-    async fn list_provider_users(&self, company: &Company) -> Result<Vec<gsuite_api::types::User>> {
-        self.users()
-            .list_all(
-                &company.gsuite_account_id,
-                &company.gsuite_domain,
-                gsuite_api::types::Event::Noop,
-                gsuite_api::types::DirectoryUsersListOrderBy::Email,
-                gsuite_api::types::DirectoryUsersListProjection::Full,
-                "", // query
-                "", // show deleted
-                gsuite_api::types::SortOrder::Ascending,
-                gsuite_api::types::ViewType::AdminView,
-            )
-            .await
-    }
-
-    async fn list_provider_groups(&self, company: &Company) -> Result<Vec<gsuite_api::types::Group>> {
-        self.groups()
-            .list_all(
-                &company.gsuite_account_id,
-                &company.gsuite_domain,
-                gsuite_api::types::DirectoryGroupsListOrderBy::Email,
-                "", // query
-                gsuite_api::types::SortOrder::Ascending,
-                "", // user_key
-            )
-            .await
-    }
-
     async fn delete_user(&self, _db: &Database, _company: &Company, user: &User) -> Result<()> {
         // First get the user from gsuite.
         let mut gsuite_user = self
@@ -804,8 +816,51 @@ impl ProviderOps<gsuite_api::types::User, gsuite_api::types::Group> for gsuite_a
 }
 
 #[async_trait]
-impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
+impl ProviderReadOps for gsuite_api::Client {
+    type ProviderUser = gsuite_api::types::User;
+    type ProviderGroup = gsuite_api::types::Group;
+
+    async fn list_provider_users(&self, company: &Company) -> Result<Vec<gsuite_api::types::User>> {
+        self.users()
+            .list_all(
+                &company.gsuite_account_id,
+                &company.gsuite_domain,
+                gsuite_api::types::Event::Noop,
+                gsuite_api::types::DirectoryUsersListOrderBy::Email,
+                gsuite_api::types::DirectoryUsersListProjection::Full,
+                "", // query
+                "", // show deleted
+                gsuite_api::types::SortOrder::Ascending,
+                gsuite_api::types::ViewType::AdminView,
+            )
+            .await
+    }
+
+    async fn list_provider_groups(&self, company: &Company) -> Result<Vec<gsuite_api::types::Group>> {
+        self.groups()
+            .list_all(
+                &company.gsuite_account_id,
+                &company.gsuite_domain,
+                gsuite_api::types::DirectoryGroupsListOrderBy::Email,
+                "", // query
+                gsuite_api::types::SortOrder::Ascending,
+                "", // user_key
+            )
+            .await
+    }
+}
+
+#[async_trait]
+impl ProviderWriteOps for okta::Client {
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
+        if user.denied_services.contains(&ExternalServices::Okta) {
+            log::info!(
+                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                user.id,
+                ExternalServices::Google
+            );
+        }
+
         let mut user = user.clone();
 
         let mut aliases: Vec<String> = Default::default();
@@ -1112,28 +1167,6 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
         Ok(())
     }
 
-    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<okta::types::User>> {
-        self.users()
-            .list_all(
-                "", // query
-                "", // filter
-                "", // search
-                "", // sort by
-                "", // sort order
-            )
-            .await
-    }
-
-    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<okta::types::Group>> {
-        self.groups()
-            .list_all(
-                "", // query
-                "", // search
-                "", // expand
-            )
-            .await
-    }
-
     async fn delete_user(&self, _db: &Database, _company: &Company, user: &User) -> Result<()> {
         if user.okta_id.is_empty() {
             // Return early.
@@ -1181,8 +1214,44 @@ impl ProviderOps<okta::types::User, okta::types::Group> for okta::Client {
 }
 
 #[async_trait]
-impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
+impl ProviderReadOps for okta::Client {
+    type ProviderUser = okta::types::User;
+    type ProviderGroup = okta::types::Group;
+
+    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<okta::types::User>> {
+        self.users()
+            .list_all(
+                "", // query
+                "", // filter
+                "", // search
+                "", // sort by
+                "", // sort order
+            )
+            .await
+    }
+
+    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<okta::types::Group>> {
+        self.groups()
+            .list_all(
+                "", // query
+                "", // search
+                "", // expand
+            )
+            .await
+    }
+}
+
+#[async_trait]
+impl ProviderWriteOps for zoom_api::Client {
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
+        if user.denied_services.contains(&ExternalServices::Zoom) {
+            log::info!(
+                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                user.id,
+                ExternalServices::Zoom
+            );
+        }
+
         // Only do this if the user is full time.
         if !user.is_full_time() {
             return Ok(String::new());
@@ -1326,20 +1395,6 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
         Ok(())
     }
 
-    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<zoom_api::types::UsersResponse>> {
-        self.users()
-            .get_all(
-                zoom_api::types::UsersStatus::Active,
-                "", // role id
-                zoom_api::types::UsersIncludeFields::HostKey,
-            )
-            .await
-    }
-
-    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
-        Ok(vec![])
-    }
-
     async fn delete_user(&self, db: &Database, _company: &Company, user: &User) -> Result<()> {
         if user.zoom_id.is_empty() {
             // Return early.
@@ -1368,8 +1423,36 @@ impl ProviderOps<zoom_api::types::UsersResponse, ()> for zoom_api::Client {
 }
 
 #[async_trait]
-impl ProviderOps<(), ()> for airtable_api::Airtable {
+impl ProviderReadOps for zoom_api::Client {
+    type ProviderUser = zoom_api::types::UsersResponse;
+    type ProviderGroup = ();
+
+    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<zoom_api::types::UsersResponse>> {
+        self.users()
+            .get_all(
+                zoom_api::types::UsersStatus::Active,
+                "", // role id
+                zoom_api::types::UsersIncludeFields::HostKey,
+            )
+            .await
+    }
+
+    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
+        Ok(vec![])
+    }
+}
+
+#[async_trait]
+impl ProviderWriteOps for airtable_api::Airtable {
     async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
+        if user.denied_services.contains(&ExternalServices::Airtable) {
+            log::info!(
+                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                user.id,
+                ExternalServices::Airtable
+            );
+        }
+
         if company.airtable_enterprise_account_id.is_empty() {
             // We don't have an enterprise account, we can't perform this function.
             return Ok(String::new());
@@ -1451,14 +1534,6 @@ impl ProviderOps<(), ()> for airtable_api::Airtable {
         Ok(())
     }
 
-    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<()>> {
-        Ok(vec![])
-    }
-
-    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
-        Ok(vec![])
-    }
-
     async fn delete_user(&self, _db: &Database, company: &Company, user: &User) -> Result<()> {
         if company.airtable_enterprise_account_id.is_empty() {
             // We don't have an enterprise account, we can't perform this function.
@@ -1479,12 +1554,27 @@ impl ProviderOps<(), ()> for airtable_api::Airtable {
         Ok(())
     }
 }
+
+#[async_trait]
+impl ProviderReadOps for airtable_api::Airtable {
+    type ProviderUser = ();
+    type ProviderGroup = ();
+
+    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<()>> {
+        Ok(vec![])
+    }
+
+    async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {
+        Ok(vec![])
+    }
+}
+
 /*
  *
  * Keep as empty boiler plate for now.
 
 #[async_trait]
-impl ProviderOps<ramp_api::types::User, ()> for ramp_api::Client {
+impl ProviderWriteOps<ramp_api::types::User, ()> for ramp_api::Client {
     async fn ensure_user(&self, _db: &Database, _company: &Company, _user: &User) -> Result<String> {
         Ok(String::new())
     }
