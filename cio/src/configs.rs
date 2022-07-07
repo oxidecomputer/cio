@@ -127,6 +127,10 @@ pub struct UserConfig {
     #[serde(default, alias = "aws_role", skip_serializing_if = "String::is_empty")]
     pub aws_role: String,
 
+    /// Specifically prevents the users from being granted access to GitHub teams
+    #[serde(default)]
+    pub disallow_github_access: bool,
+
     /// The following fields do not exist in the config files but are populated
     /// by the Gusto API before the record gets saved in the database.
     /// Home address (automatically populated by Gusto)
