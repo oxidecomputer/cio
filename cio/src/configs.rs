@@ -129,7 +129,7 @@ pub struct UserConfig {
 
     /// Specifically prevents the users from being granted access to GitHub teams
     #[serde(default)]
-    pub disallow_github_access: bool,
+    pub denied_services: Vec<String>,
 
     /// The following fields do not exist in the config files but are populated
     /// by the Gusto API before the record gets saved in the database.
