@@ -1251,7 +1251,7 @@ Notes:
                             &octorust::types::IssuesUpdateRequest {
                                 title: Some(title.into()),
                                 body: body.to_string(),
-                                assignee: "augustuswm".to_string(),
+                                assignee: "".to_string(),
                                 assignees: (&ONBOARDING_ASSIGNEES).into(),
                                 labels: vec![label.into()],
                                 milestone: Default::default(),
@@ -1276,8 +1276,8 @@ Notes:
                 &octorust::types::IssuesCreateRequest {
                     title: title.into(),
                     body,
-                    assignee: "augustuswm".to_string(),
-                    assignees: Default::default(),
+                    assignee: "".to_string(),
+                    assignees: (&ONBOARDING_ASSIGNEES).into(),
                     labels: vec![label.into()],
                     milestone: Default::default(),
                 },
