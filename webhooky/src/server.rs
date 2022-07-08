@@ -1001,7 +1001,11 @@ async fn listen_application_files_upload_requests(
         start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
 
     // Check the origin header. In the future this may be upgraded to a hard failure
-    let origin_access = crate::cors::get_cors_origin_header(rqctx.clone(), &["https://apply.oxide.computer"]).await;
+    let origin_access = crate::cors::get_cors_origin_header(
+        rqctx.clone(),
+        &["https://apply.oxide.computer", "https://oxide.computer"],
+    )
+    .await;
 
     match txn
         .run(|| crate::handlers::handle_application_files_upload(rqctx, body_param))

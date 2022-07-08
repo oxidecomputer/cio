@@ -1109,6 +1109,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         let title = format!("Onboarding: {}", self.name);
         let body = format!(
             r#"- [ ] Add to users.toml
+- [ ] Provision user in Airtable
 - [ ] Add to matrix chat
 
 Start Date: {}
