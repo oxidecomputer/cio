@@ -284,16 +284,17 @@ impl Company {
 
     /// Authenticate with Cloudflare.
     pub fn authenticate_cloudflare(&self) -> Result<CloudFlareClient> {
-        if self.cloudflare_api_key.is_empty() || self.gsuite_subject.is_empty() {
+        // Migrating to auth token authentication
+        if self.cloudflare_api_key.is_empty() {
             // Return early.
             bail!("no token");
         }
 
         // Create the Cloudflare client.
-        let cf_creds = CloudflareCredentials::UserAuthKey {
-            email: self.gsuite_subject.to_string(),
-            key: self.cloudflare_api_key.to_string(),
+        let cf_creds = CloudflareCredentials::UserAuthToken {
+            token: self.cloudflare_api_key.to_string(),
         };
+
         let api_client = Cloudflare::new(cf_creds, HttpApiClientConfig::default(), Environment::Production)?;
         Ok(api_client.into())
     }
@@ -1057,6 +1058,32 @@ impl Company {
             http_cache,
         ))
     }
+
+    // TODO: Extract out the hardcoded repo name so that it can be configurable
+    pub fn rfd_repo_name(&self) -> &str {
+        "rfd"
+    }
+
+    // Creates a minimal type for callers that need information about the RFD repo, but
+    // do not want to parse data from the full API response
+    pub async fn rfd_repo(&self) -> Result<RFDRepo> {
+        self.authenticate_github()?
+            .repos()
+            .get(&self.github_org, self.rfd_repo_name())
+            .await
+            .map(|repo| RFDRepo {
+                owner: self.github_org.clone(),
+                name: self.rfd_repo_name().to_string(),
+                default_branch: repo.default_branch,
+            })
+    }
+}
+
+// A minimal struct representing the repository that holds the RFDs for a given company
+pub struct RFDRepo {
+    pub owner: String,
+    pub name: String,
+    pub default_branch: String,
 }
 
 pub async fn refresh_companies() -> Result<()> {

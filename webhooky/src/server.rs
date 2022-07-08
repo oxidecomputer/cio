@@ -213,7 +213,7 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
             .every(12.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-companies")});
         scheduler
-            .every(4.hours())
+            .every(1.hours())
             .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-configs")});
         scheduler
             .every(6.hours())
@@ -1032,7 +1032,11 @@ async fn listen_application_files_upload_requests(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
 
     // Check the origin header. In the future this may be upgraded to a hard failure
-    let origin_access = crate::cors::get_cors_origin_header(rqctx.clone(), &["https://apply.oxide.computer"]).await;
+    let origin_access = crate::cors::get_cors_origin_header(
+        rqctx.clone(),
+        &["https://apply.oxide.computer", "https://oxide.computer"],
+    )
+    .await;
 
     match txn
         .run(|| crate::handlers::handle_application_files_upload(rqctx, body))

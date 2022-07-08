@@ -10,6 +10,7 @@ repository = "https://github.com/oxidecomputer/cio.git"
 diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420", features = [ "r2d2", "postgres"] }
 serde = "1"
 # This HAS to match that in webhooky or else it won't work
-sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
+sentry = { features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], version = "0.27.0" }
+# sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
 tracing = "^0.1"
 uuid = { version = "^0.8", features = [ "v4", "serde" ] }

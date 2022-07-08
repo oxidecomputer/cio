@@ -94,11 +94,13 @@ async fn test_github_webhook_rfd_126() {
     run_github_request(&BodyContents::RFD126).await.unwrap();
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_github_webhook_rfd_252() {
     run_github_request(&BodyContents::RFD252).await.unwrap();
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_github_webhook_configs() {
     run_github_request(&BodyContents::Configs).await.unwrap();

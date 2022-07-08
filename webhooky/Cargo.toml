@@ -33,7 +33,7 @@ duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
 formdata = "^0.13.0"
 futures-util = "0.3"
-google-drive = "^0.3.1"
+google-drive = "^0.4.0"
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
@@ -55,13 +55,14 @@ rand = "^0.8.5"
 regex = "^1.5.5"
 reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
-sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
+sentry = { features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], version = "0.27.0" }
+# sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
 #sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"], path = "../../sentry-rust/sentry"  }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.9"
 serde_urlencoded = "^0.7.0"
-sheets = "^0.3.1"
+sheets = "^0.4.0"
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
 shipbob = "^0.1.4"
 shippo = "^0.1.12"

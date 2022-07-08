@@ -222,7 +222,7 @@ impl GitHubWebhook {
 
 </details>
 
-cc @jessfraz @augustuswm"#,
+cc @augustuswm"#,
             msg,
             e, // We use the {:?} debug output for the error so we get the stack as well.
             self,

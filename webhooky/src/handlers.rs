@@ -1492,9 +1492,14 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
     let db = &api_context.db;
 
     // We should have a string, which we will then parse into our args.
+    info!("Handling MailChimp mailing_list webhook {}", event_string);
+
     let qs_non_strict = QSConfig::new(10, false);
 
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string)?;
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map_err(|err| {
+        warn!("Failed to parse MailChimp mailing list webhook. err: {:?}", err);
+        err
+    })?;
 
     if event.webhook_type != *"subscribe" {
         info!("not a `subscribe` event, got `{}`", event.webhook_type);
@@ -1527,10 +1532,14 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, eve
     let api_context = rqctx.context();
     let db = &api_context.db;
 
-    // We should have a string, which we will then parse into our args.
+    info!("Handling MailChimp rack_line webhook {}", event_string);
+
     let qs_non_strict = QSConfig::new(10, false);
 
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string)?;
+    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map_err(|err| {
+        warn!("Failed to parse MailChimp rack_line webhook. err: {:?}", err);
+        err
+    })?;
 
     if event.webhook_type != *"subscribe" {
         info!("not a `subscribe` event, got `{}`", event.webhook_type);
