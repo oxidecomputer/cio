@@ -13,7 +13,7 @@ use dropshot_auth::{
 use slack_chat_api::BotCommand;
 use std::sync::Arc;
 
-use webhooky::{auth::GlobalToken, github_types::GitHubWebhook, handlers_slack::InteractiveEvent};
+use webhooky::{auth::InternalToken, github_types::GitHubWebhook, handlers_slack::InteractiveEvent};
 
 #[endpoint {
     method = POST,
@@ -147,7 +147,7 @@ async fn hmac_slack_interactive_audit(
 }]
 async fn bearer_verification(
     _rqctx: Arc<RequestContext<()>>,
-    _: Bearer<GlobalToken>,
+    _: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -158,7 +158,7 @@ async fn bearer_verification(
 }]
 async fn bearer_audit(
     _rqctx: Arc<RequestContext<()>>,
-    _: BearerAudit<GlobalToken>,
+    _: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -169,7 +169,7 @@ async fn bearer_audit(
 }]
 async fn token_verification(
     _rqctx: Arc<RequestContext<()>>,
-    _: QueryToken<GlobalToken>,
+    _: QueryToken<InternalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -180,7 +180,7 @@ async fn token_verification(
 }]
 async fn token_audit(
     _rqctx: Arc<RequestContext<()>>,
-    _: QueryTokenAudit<GlobalToken>,
+    _: QueryTokenAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
 }
@@ -198,7 +198,7 @@ fn make_server() -> (u16, HttpServer<()>) {
     setup_logger();
 
     // Configure fake test keys for checking implementations
-    std::env::set_var("GLOBAL_AUTH_BEARER", "TEST_BEARER");
+    std::env::set_var("INTERNAL_AUTH_BEARER", "TEST_BEARER");
     std::env::set_var("DOCUSIGN_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
     std::env::set_var("GH_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");
     std::env::set_var("SLACK_WH_KEY", "vkPkH4G2k8XNC5HWA6QgZd08v37P8KcVZMjaP4zgGWc=");

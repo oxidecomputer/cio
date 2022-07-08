@@ -28,7 +28,7 @@ use signal_hook::{
 use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
-use crate::{auth::{GlobalToken, AirtableToken}, github_types::GitHubWebhook, handlers_slack::InteractiveEvent};
+use crate::{auth::{InternalToken, AirtableToken, MailChimpToken, ShippoToken, }, github_types::GitHubWebhook, handlers_slack::InteractiveEvent};
 
 pub async fn create_server(
     s: &crate::core::Server,
@@ -152,8 +152,6 @@ pub async fn create_server(
     api.register(trigger_sync_travel_create).unwrap();
     api.register(trigger_sync_zoho_create).unwrap();
 
-    api.register(listen_get_function_by_uuid).unwrap();
-    api.register(listen_get_function_logs_by_uuid).unwrap();
     api.register(api_get_schema).unwrap();
 
     // Create the API schema.
@@ -461,7 +459,7 @@ pub struct RFDPathParams {
 }]
 async fn trigger_rfd_update_by_number(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
     path_params: Path<RFDPathParams>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
@@ -522,7 +520,7 @@ pub struct GitHubRateLimit {
 }]
 async fn listen_airtable_employees_print_home_address_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -551,7 +549,7 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
 }]
 async fn listen_airtable_certificates_renew_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -580,7 +578,7 @@ async fn listen_airtable_certificates_renew_webhooks(
 }]
 async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -609,7 +607,7 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
 }]
 async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -638,7 +636,7 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
 }]
 async fn listen_airtable_applicants_request_background_check_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -668,7 +666,7 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
 }]
 async fn listen_airtable_applicants_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -698,7 +696,7 @@ async fn listen_airtable_applicants_update_webhooks(
 }]
 async fn listen_airtable_shipments_outbound_create_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -736,7 +734,7 @@ pub struct AirtableRowEvent {
 }]
 async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -765,7 +763,7 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
 }]
 async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -794,7 +792,7 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
 }]
 async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -825,7 +823,7 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
 }]
 async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -923,7 +921,7 @@ async fn listen_emails_incoming_sendgrid_parse_webhooks(
 }]
 async fn listen_applicant_review_requests(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
     body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -948,7 +946,7 @@ async fn listen_applicant_review_requests(
 }]
 async fn listen_application_submit_requests(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1080,7 +1078,7 @@ async fn listen_application_files_upload_requests(
 }]
 async fn listen_airtable_shipments_inbound_create_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<AirtableToken>,
+    _auth: BearerAudit<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1109,7 +1107,7 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
 }]
 async fn listen_store_order_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
     body_param: TypedBody<Order>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1209,7 +1207,7 @@ pub struct EasyPostTrackingUpdateEvent {
 }]
 async fn listen_shippo_tracking_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<ShippoToken>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1806,7 +1804,7 @@ async fn ping_mailchimp_mailing_list_webhooks(
 }]
 async fn listen_mailchimp_mailing_list_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<MailChimpToken>,
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.as_str().unwrap().to_string();
@@ -1844,7 +1842,7 @@ async fn ping_mailchimp_rack_line_webhooks(
 }]
 async fn listen_mailchimp_rack_line_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<MailChimpToken>,
     body_param: UntypedBody,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.as_str().unwrap().to_string();
@@ -1927,7 +1925,7 @@ async fn listen_slack_interactive_webhooks(
 }]
 async fn listen_shipbob_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryTokenAudit<GlobalToken>,
+    _auth: QueryTokenAudit<InternalToken>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1944,69 +1942,6 @@ async fn listen_shipbob_webhooks(
     Ok(HttpResponseOk("ok".to_string()))
 }
 
-#[derive(Deserialize, Debug, JsonSchema)]
-pub struct FunctionPathParams {
-    pub uuid: String,
-}
-
-/** Get information about a function by its uuid. */
-#[endpoint {
-    method = GET,
-    path = "/functions/{uuid}",
-}]
-async fn listen_get_function_by_uuid(
-    rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
-    path_params: Path<FunctionPathParams>,
-) -> Result<HttpResponseOk<Function>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
-
-    match txn
-        .run(|| crate::handlers_cron::handle_get_function_by_uuid(rqctx, path_params))
-        .await
-    {
-        Ok(r) => {
-            txn.finish(http::StatusCode::OK);
-
-            Ok(HttpResponseOk(r))
-        }
-        // Send the error to sentry.
-        Err(e) => {
-            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-            Err(handle_anyhow_err_as_http_err(e))
-        }
-    }
-}
-
-/** Get a functions logs by its uuid. */
-#[endpoint {
-    method = GET,
-    path = "/functions/{uuid}/logs",
-}]
-async fn listen_get_function_logs_by_uuid(
-    rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
-    path_params: Path<FunctionPathParams>,
-) -> Result<HttpResponseOk<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
-
-    match txn
-        .run(|| crate::handlers_cron::handle_get_function_logs_by_uuid(rqctx, path_params))
-        .await
-    {
-        Ok(r) => {
-            txn.finish(http::StatusCode::OK);
-
-            Ok(HttpResponseOk(r))
-        }
-        // Send the error to sentry.
-        Err(e) => {
-            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-            Err(handle_anyhow_err_as_http_err(e))
-        }
-    }
-}
-
 /** Listen for triggering a function run of sync repos. */
 #[endpoint {
     method = POST,
@@ -2014,7 +1949,7 @@ async fn listen_get_function_logs_by_uuid(
 }]
 async fn trigger_sync_repos_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2042,7 +1977,7 @@ async fn trigger_sync_repos_create(
 }]
 async fn trigger_sync_rfds_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2070,7 +2005,7 @@ async fn trigger_sync_rfds_create(
 }]
 async fn trigger_sync_travel_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2098,7 +2033,7 @@ async fn trigger_sync_travel_create(
 }]
 async fn trigger_sync_zoho_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2126,7 +2061,7 @@ async fn trigger_sync_zoho_create(
 }]
 async fn trigger_sync_functions_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2154,7 +2089,7 @@ async fn trigger_sync_functions_create(
 }]
 async fn trigger_sync_finance_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2182,7 +2117,7 @@ async fn trigger_sync_finance_create(
 }]
 async fn trigger_sync_shipments_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2210,7 +2145,7 @@ async fn trigger_sync_shipments_create(
 }]
 async fn trigger_sync_shorturls_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2238,7 +2173,7 @@ async fn trigger_sync_shorturls_create(
 }]
 async fn trigger_sync_configs_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2266,7 +2201,7 @@ async fn trigger_sync_configs_create(
 }]
 async fn trigger_sync_recorded_meetings_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2294,7 +2229,7 @@ async fn trigger_sync_recorded_meetings_create(
 }]
 async fn trigger_sync_asset_inventory_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2322,7 +2257,7 @@ async fn trigger_sync_asset_inventory_create(
 }]
 async fn trigger_sync_swag_inventory_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2350,7 +2285,7 @@ async fn trigger_sync_swag_inventory_create(
 }]
 async fn trigger_sync_interviews_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2378,7 +2313,7 @@ async fn trigger_sync_interviews_create(
 }]
 async fn trigger_sync_applications_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2406,7 +2341,7 @@ async fn trigger_sync_applications_create(
 }]
 async fn trigger_sync_analytics_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2434,7 +2369,7 @@ async fn trigger_sync_analytics_create(
 }]
 async fn trigger_sync_companies_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2462,7 +2397,7 @@ async fn trigger_sync_companies_create(
 }]
 async fn trigger_sync_other_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2490,7 +2425,7 @@ async fn trigger_sync_other_create(
 }]
 async fn trigger_sync_huddles_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2518,7 +2453,7 @@ async fn trigger_sync_huddles_create(
 }]
 async fn trigger_sync_mailing_lists_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2546,7 +2481,7 @@ async fn trigger_sync_mailing_lists_create(
 }]
 async fn trigger_sync_journal_clubs_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2574,7 +2509,7 @@ async fn trigger_sync_journal_clubs_create(
 }]
 async fn trigger_sync_api_tokens_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2603,7 +2538,7 @@ async fn trigger_sync_api_tokens_create(
 }]
 async fn trigger_cleanup_create(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<GlobalToken>,
+    _auth: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
@@ -2619,6 +2554,11 @@ async fn trigger_cleanup_create(
             Err(handle_anyhow_err_as_http_err(e))
         }
     }
+}
+
+#[derive(Deserialize, Debug, JsonSchema)]
+pub struct FunctionPathParams {
+    pub uuid: String,
 }
 
 async fn do_cleanup(ctx: &Context) -> Result<()> {
