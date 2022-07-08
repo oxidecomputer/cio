@@ -1,7 +1,6 @@
 use dropshot::{ApiEndpointBodyContentType, Extractor, ExtractorMetadata, HttpError, TypedBody};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
-use serde_json;
 
 pub mod bearer;
 mod http;

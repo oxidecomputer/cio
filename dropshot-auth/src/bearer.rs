@@ -32,7 +32,7 @@ impl Extractor for BearerToken {
 
         // Finally ensure that the value we found is properly formed
         let contents = header_value.and_then(|value| {
-            let mut parts = value.split(" ");
+            let mut parts = value.split(' ');
             let label = parts.next();
             let token = parts.next();
 
