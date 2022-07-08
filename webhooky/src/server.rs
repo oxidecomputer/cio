@@ -28,7 +28,11 @@ use signal_hook::{
 use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
-use crate::{auth::{InternalToken, AirtableToken, MailChimpToken, ShippoToken, }, github_types::GitHubWebhook, handlers_slack::InteractiveEvent};
+use crate::{
+    auth::{AirtableToken, InternalToken, MailChimpToken, ShippoToken},
+    github_types::GitHubWebhook,
+    handlers_slack::InteractiveEvent,
+};
 
 pub async fn create_server(
     s: &crate::core::Server,

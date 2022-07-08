@@ -76,11 +76,14 @@ pub async fn get_cors_header<C: ServerContext>(
     // Split the header value on ", " to handle headers that pass in multiple values in a single
     // header like Access-Control-Request-Headers
     let req_values: HashSet<&str> = req_value.split(", ").collect();
-    let allowed_values: HashSet<&str> = allowed.iter().map(|s| *s).collect();
+    let allowed_values: HashSet<&str> = allowed.iter().copied().collect();
 
-    let diff: HashSet<&str> = req_values.difference(&allowed_values).map(|s| *s).collect();
+    // The remaining headers are those that the client requested, but are not allowed
+    let diff: HashSet<&str> = req_values.difference(&allowed_values).copied().collect();
 
-    if diff.len() == 0 {
+    // If the diff is empty, then all of the headers requested by the client are allowed by the provided
+    // configuration list. Therefore we can echo back the exact list of headers the client requested.
+    if diff.is_empty() {
         // This should never panic as we are reusing the str value that was taken from a HeaderValue
         // on the request
         Ok(HeaderValue::from_str(req_value).expect("Rejoining passed in header values failed"))

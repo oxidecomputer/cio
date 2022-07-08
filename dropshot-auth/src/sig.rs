@@ -133,12 +133,21 @@ where
                 mac.update(&*content);
                 let verify_result = mac.verify_slice(&signature);
 
-                log::info!("Failed to verify signature. req_id: {} sig: {:?}", rqctx.request_id, signature);
+                log::info!(
+                    "Failed to verify signature. req_id: {} sig: {:?}",
+                    rqctx.request_id,
+                    signature
+                );
 
-                verify_result.is_ok()    
-            },
+                verify_result.is_ok()
+            }
             (signature_res, mac_res) => {
-                log::info!("Unable to test signature. req_id: {} sig: {:?} mac_err: {:?}", rqctx.request_id, signature_res, mac_res.err());
+                log::info!(
+                    "Unable to test signature. req_id: {} sig: {:?} mac_err: {:?}",
+                    rqctx.request_id,
+                    signature_res,
+                    mac_res.err()
+                );
                 false
             }
         };
