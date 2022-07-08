@@ -1058,6 +1058,32 @@ impl Company {
             http_cache,
         ))
     }
+
+    // TODO: Extract out the hardcoded repo name so that it can be configurable
+    pub fn rfd_repo_name(&self) -> &str {
+        "rfd"
+    }
+
+    // Creates a minimal type for callers that need information about the RFD repo, but
+    // do not want to parse data from the full API response
+    pub async fn rfd_repo(&self) -> Result<RFDRepo> {
+        self.authenticate_github()?
+            .repos()
+            .get(&self.github_org, self.rfd_repo_name())
+            .await
+            .map(|repo| RFDRepo {
+                owner: self.github_org.clone(),
+                name: self.rfd_repo_name().to_string(),
+                default_branch: repo.default_branch,
+            })
+    }
+}
+
+// A minimal struct representing the repository that holds the RFDs for a given company
+pub struct RFDRepo {
+    pub owner: String,
+    pub name: String,
+    pub default_branch: String,
 }
 
 pub async fn refresh_companies() -> Result<()> {
