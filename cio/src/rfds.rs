@@ -614,25 +614,32 @@ impl RFD {
         github: &octorust::Client,
         company: &Company,
     ) -> Result<()> {
-        // Find the RFD repo
-        let repo = company.rfd_repo().await?;
+        if Features::is_enabled("RFD_PDFS_IN_GITHUB") || Features::is_enabled("RFD_PDFS_IN_GOOGLE_DRIVE") {
+            // Find the RFD repo
+            let repo = company.rfd_repo().await?;
 
-        let pdf = self.create_pdf(&repo, github).await?;
+            let pdf = self.create_pdf(&repo, github).await?;
 
-        // Create or update the file in the github repository.
-        if Features::is_enabled("RFD_PDFS_IN_GITHUB") {
-            let branch = RFDBranch {
-                client: github.clone(),
-                owner: repo.owner,
-                repo: repo.name,
-                branch: repo.default_branch,
-            };
+            // Create or update the file in the github repository.
+            if Features::is_enabled("RFD_PDFS_IN_GITHUB") {
+                let branch = RFDBranch {
+                    client: github.clone(),
+                    owner: repo.owner,
+                    repo: repo.name,
+                    branch: repo.default_branch,
+                };
 
-            branch.store_rfd_pdf(&pdf).await?;
-        }
+                branch.store_rfd_pdf(&pdf).await?;
+            }
 
-        if Features::is_enabled("RFD_PDFS_IN_GOOGLE_DRIVE") {
-            self.pdf_link_google_drive = company.authenticate_google_drive(db).await?.store_rfd_pdf(&pdf).await?;
+            if Features::is_enabled("RFD_PDFS_IN_GOOGLE_DRIVE") {
+                self.pdf_link_google_drive = company.authenticate_google_drive(db).await?.store_rfd_pdf(&pdf).await?;
+            }
+        } else {
+            info!(
+                "No RFD PDF storage locations are configured. Skipping PDF generation for RFD {}.",
+                self.number_string
+            );
         }
 
         Ok(())
