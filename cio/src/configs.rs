@@ -90,7 +90,7 @@ impl ExternalServices {
         match self {
             ExternalServices::Airtable => "airtable",
             ExternalServices::GitHub => "github",
-            ExternalServices::Google => "hoogle",
+            ExternalServices::Google => "google",
             ExternalServices::Okta => "okta",
             ExternalServices::Ramp => "ramp",
             ExternalServices::Zoom => "zoom",
@@ -142,7 +142,7 @@ impl FromSql<VarChar, Pg> for ExternalServices {
         match bytes.as_bytes() {
             b"airtable" => Ok(ExternalServices::Airtable),
             b"github" => Ok(ExternalServices::GitHub),
-            b"hoogle" => Ok(ExternalServices::Google),
+            b"google" => Ok(ExternalServices::Google),
             b"okta" => Ok(ExternalServices::Okta),
             b"ramp" => Ok(ExternalServices::Ramp),
             b"zoom" => Ok(ExternalServices::Zoom),
@@ -560,19 +560,10 @@ impl UserConfig {
         // Deprovision this user explicitly from any service they should not have access to
         for denied_service in &new_user.denied_services {
             match denied_service.get_provider_writer(db, company).await {
-                Ok(_denied_service_provider) => {
-                    info!(
-                        "User {} will be removed from {} when denied services lists are enforced",
-                        new_user.id, denied_service
-                    );
-                    // match denied_service_provider.delete_user(db, company, &new_user).await {
-                    //     Ok(_) => info!("Removed user from {} from {}", new_user.id, denied_service),
-                    //     Err(err) => warn!(
-                    //         "Failed to remove user {} from {}. err: {}",
-                    //         new_user.id, denied_service, err
-                    //     ),
-                    // }
-                }
+                Ok(_denied_service_provider) => info!(
+                    "User {} will be removed from {} when denied services lists are enforced",
+                    new_user.id, denied_service
+                ),
                 Err(err) => warn!(
                     "Failed to create provider client for {} when handling denied services for user {}. err: {}",
                     denied_service, new_user.id, err
@@ -3039,8 +3030,11 @@ groups = [
     'gamma',
 ]
 denied_services = [
+    'airtable',
     'github',
+    'google',
     'okta',
+    'ramp',
     'zoom'
 ]
 recovery_email = 'testuser@localhost'
@@ -3059,7 +3053,47 @@ manager = 'orb'
         assert_eq!(user.last_name, "User");
         assert_eq!(
             user.denied_services,
-            vec![ExternalServices::GitHub, ExternalServices::Okta, ExternalServices::Zoom]
+            vec![
+                ExternalServices::Airtable,
+                ExternalServices::GitHub,
+                ExternalServices::Google,
+                ExternalServices::Okta,
+                ExternalServices::Ramp,
+                ExternalServices::Zoom
+            ]
         );
+    }
+
+    #[test]
+    fn test_deserializes_user_config_without_denies() {
+        let user: UserConfig = toml::from_str(
+            r#"
+first_name = 'Test'
+last_name = 'User'
+username = 'test'
+is_group_admin = true
+aliases = [
+	"parse_test",
+]
+groups = [
+    'alpha',
+    'beta',
+    'gamma',
+]
+recovery_email = 'testuser@localhost'
+recovery_phone = '+15555555555'
+gender = ''
+github = 'github_username'
+chat = ''
+aws_role = 'arn:aws:iam::5555555:role/AnArbitraryAWSRole,arn:aws:iam::5555555:role/AnotherArbitraryAWSRole'
+department = 'aerospace'
+manager = 'orb'
+        "#,
+        )
+        .expect("Failed to parse user config");
+
+        assert_eq!(user.first_name, "Test");
+        assert_eq!(user.last_name, "User");
+        assert_eq!(user.denied_services, vec![]);
     }
 }
