@@ -17,7 +17,7 @@ use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
 use log::{info, warn};
 use macros::db;
-use mailchimp_api::MailChimp;
+use mailchimp_minimal_api::{AuthMode, MailChimp};
 use octorust::{
     auth::{Credentials, InstallationTokenGenerator, JWTCredentials},
     http_cache::FileBasedCache,
@@ -417,43 +417,11 @@ impl Company {
     }
 
     /// Authenticate with MailChimp.
-    pub async fn authenticate_mailchimp(&self, db: &Database) -> Result<MailChimp> {
-        // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "mailchimp".to_string()).await {
-            // Initialize the MailChimp client.
-            let mut mailchimp = MailChimp::new_from_env(
-                t.access_token.to_string(),
-                t.refresh_token.to_string(),
-                t.endpoint.to_string(),
-            );
+    pub async fn authenticate_mailchimp(&self) -> Result<MailChimp> {
+        let key = std::env::var("MAILCHIMP_API_KEY")?;
+        let endpoint = std::env::var("MAILCHIMP_API_ENDPOINT")?;
 
-            // MailChimp does not give you a refresh token so we should never refresh.
-            // But just in case in the future they do, we will leave this here.
-            // https://mailchimp.com/developer/marketing/guides/access-user-data-oauth-2/
-            if !t.refresh_token.is_empty() && t.is_expired() {
-                let nt = mailchimp.refresh_access_token().await?;
-                if !nt.access_token.is_empty() {
-                    t.access_token = nt.access_token.to_string();
-                }
-                if nt.expires_in > 0 {
-                    t.expires_in = nt.expires_in as i32;
-                }
-                t.last_updated_at = Utc::now();
-                if !nt.refresh_token.is_empty() {
-                    t.refresh_token = nt.refresh_token.to_string();
-                }
-                if nt.x_refresh_token_expires_in > 0 {
-                    t.refresh_token_expires_in = nt.x_refresh_token_expires_in as i32;
-                }
-                t.expand();
-                // Update the token in the database.
-                t.update(db).await?;
-            }
-
-            return Ok(mailchimp);
-        }
-
-        bail!("no token");
+        Ok(MailChimp::new(endpoint, AuthMode::new_basic_auth(key)?)?)
     }
 
     /// Authenticate with Slack.
