@@ -952,13 +952,14 @@ async fn listen_applicant_review_requests(
 }]
 async fn listen_test_application_submit_requests(
     rqctx: Arc<RequestContext<Context>>,
+    _auth: BearerAudit<InternalToken>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn =
-        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
+    let body = body_param.into_inner();
+    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_test_application_submit(rqctx, body_param))
+        .run(|| crate::handlers::handle_test_application_submit(rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -1039,7 +1040,11 @@ async fn listen_application_files_upload_requests_cors(
     let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
     let headers = resp.headers_mut();
 
-    let allowed_origins = crate::cors::get_cors_origin_header(rqctx.clone(), &["https://apply.oxide.computer"]).await?;
+    let allowed_origins = crate::cors::get_cors_origin_header(
+        rqctx.clone(),
+        &["https://apply.oxide.computer", "https://oxide.computer"],
+    )
+    .await?;
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
 
     let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
@@ -1061,11 +1066,11 @@ async fn listen_test_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
-    let mut txn =
-        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
+    let body = body_param.into_inner();
+    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
 
     match txn
-        .run(|| crate::handlers::handle_test_application_files_upload(rqctx, body_param))
+        .run(|| crate::handlers::handle_test_application_files_upload(rqctx, body))
         .await
     {
         Ok(r) => {

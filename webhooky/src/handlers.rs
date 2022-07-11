@@ -1118,10 +1118,8 @@ pub async fn handle_applicant_review(
 
 pub async fn handle_test_application_submit(
     _rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<cio_api::application_form::ApplicationForm>,
+    event: cio_api::application_form::ApplicationForm,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     event.test_form_submission().await?;
 
     info!(
@@ -1147,10 +1145,8 @@ pub async fn handle_application_submit(
 
 pub async fn handle_test_application_files_upload(
     _rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<ApplicationFileUploadData>,
+    data: ApplicationFileUploadData,
 ) -> Result<HashMap<String, String>> {
-    let data = body_param.into_inner();
-
     // We will return a key value of the name of file and the link in google drive.
     let mut response: HashMap<String, String> = Default::default();
 
