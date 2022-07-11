@@ -39,6 +39,27 @@ pub struct ApplicationForm {
 }
 
 impl ApplicationForm {
+    pub async fn test_form_submission(&self) -> Result<()> {
+        // If their email is empty return early.
+        if self.email.is_empty()
+            || self.name.is_empty()
+            || self.role.is_empty()
+            || self.materials.is_empty()
+            || self.resume.is_empty()
+            || self.phone.is_empty()
+        {
+            // This should not happen since we verify on the client side we have these
+            // things.
+            return Ok(());
+        }
+
+        let new_applicant: NewApplicant = self.clone().into();
+
+        log::info!("Received test applicant {:?}", new_applicant);
+
+        Ok(())
+    }
+
     pub async fn do_form(&self, db: &Database) -> Result<()> {
         // If their email is empty return early.
         if self.email.is_empty()

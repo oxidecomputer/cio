@@ -88,8 +88,10 @@ pub async fn create_server(
         .unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
     api.register(listen_application_submit_requests).unwrap();
+    api.register(listen_test_application_submit_requests).unwrap();
     api.register(listen_applicant_review_requests).unwrap();
     api.register(listen_application_files_upload_requests).unwrap();
+    api.register(listen_test_application_files_upload_requests).unwrap();
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_docusign_consent).unwrap();
     api.register(listen_auth_github_callback).unwrap();
@@ -939,6 +941,33 @@ async fn listen_applicant_review_requests(
  * Listen for applications being submitted for incoming job applications */
 #[endpoint {
     method = POST,
+    path = "/application-test/submit",
+}]
+async fn listen_test_application_submit_requests(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<cio_api::application_form::ApplicationForm>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let mut txn =
+        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
+
+    if let Err(e) = txn
+        .run(|| crate::handlers::handle_test_application_submit(rqctx, body_param))
+        .await
+    {
+        // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+        return Err(handle_anyhow_err_as_http_err(e));
+    }
+
+    txn.finish(http::StatusCode::ACCEPTED);
+
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for applications being submitted for incoming job applications */
+#[endpoint {
+    method = POST,
     path = "/application/submit",
 }]
 async fn listen_application_submit_requests(
@@ -977,6 +1006,8 @@ pub struct ApplicationFileUploadData {
     pub email: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub role: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub interested_in: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub user_name: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -985,6 +1016,41 @@ pub struct ApplicationFileUploadData {
     pub materials_contents: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub portfolio_pdf_contents: String,
+}
+
+/**
+ * Listen for files being uploaded for incoming job applications */
+#[endpoint {
+    method = POST,
+    path = "/application-test/files/upload",
+}]
+async fn listen_test_application_files_upload_requests(
+    rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<ApplicationFileUploadData>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
+    let mut txn =
+        start_sentry_http_transaction(rqctx.clone(), Some(TypedOrUntypedBody::TypedBody(body_param.clone()))).await;
+
+    match txn
+        .run(|| crate::handlers::handle_test_application_files_upload(rqctx, body_param))
+        .await
+    {
+        Ok(r) => {
+            txn.finish(http::StatusCode::OK);
+
+            let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
+
+            let headers = resp.headers_mut();
+            headers.insert("Access-Control-Allow-Origin", http::HeaderValue::from_static("*"));
+
+            Ok(resp)
+        }
+        // Send the error to sentry.
+        Err(e) => {
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(e))
+        }
+    }
 }
 
 /**
