@@ -3022,7 +3022,7 @@ last_name = 'User'
 username = 'test'
 is_group_admin = true
 aliases = [
-	"parse_test",
+    "parse_test",
 ]
 groups = [
     'alpha',
@@ -3073,7 +3073,7 @@ last_name = 'User'
 username = 'test'
 is_group_admin = true
 aliases = [
-	"parse_test",
+    "parse_test",
 ]
 groups = [
     'alpha',
