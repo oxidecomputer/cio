@@ -1144,6 +1144,22 @@ pub async fn handle_applicant_review(
     Ok(())
 }
 
+pub async fn handle_test_application_submit(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<cio_api::application_form::ApplicationForm>,
+) -> Result<()> {
+    let event = body_param.into_inner();
+
+    event.test_form_submission().await?;
+
+    info!(
+        "test application for {} {} created successfully",
+        event.email, event.role
+    );
+
+    Ok(())
+}
+
 pub async fn handle_application_submit(
     rqctx: Arc<RequestContext<Context>>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
@@ -1156,6 +1172,77 @@ pub async fn handle_application_submit(
     info!("application for {} {} created successfully", event.email, event.role);
 
     Ok(())
+}
+
+pub async fn handle_test_application_files_upload(
+    _rqctx: Arc<RequestContext<Context>>,
+    body_param: TypedBody<ApplicationFileUploadData>,
+) -> Result<HashMap<String, String>> {
+    let data = body_param.into_inner();
+
+    // We will return a key value of the name of file and the link in google drive.
+    let mut response: HashMap<String, String> = Default::default();
+
+    if data.email.is_empty()
+        || data.role.is_empty()
+        || data.cio_company_id <= 0
+        || data.materials.is_empty()
+        || data.resume.is_empty()
+        || data.materials_contents.is_empty()
+        || data.resume_contents.is_empty()
+        || data.user_name.is_empty()
+    {
+        bail!("could not get applicant information for: {:?}", data);
+    }
+
+    let mut files: HashMap<String, (String, String)> = HashMap::new();
+    files.insert(
+        "resume".to_string(),
+        (data.resume.to_string(), data.resume_contents.to_string()),
+    );
+    files.insert(
+        "materials".to_string(),
+        (data.materials.to_string(), data.materials_contents.to_string()),
+    );
+    // If we have a portfolio PDF add it to our uploads.
+    if !data.portfolio_pdf_name.is_empty() && !data.portfolio_pdf_contents.is_empty() {
+        files.insert(
+            "portfolio_pdf".to_string(),
+            (
+                data.portfolio_pdf_name.to_string(),
+                data.portfolio_pdf_contents.to_string(),
+            ),
+        );
+    }
+
+    // Iterate over our files and create them in google drive.
+    // Create or update the file in the google_drive.
+    for (name, (file_path, contents)) in files {
+        // Get the extension from the content type.
+        let ext = get_extension_from_filename(&file_path).unwrap();
+        let ct = mime_guess::from_ext(ext).first().unwrap();
+        let content_type = ct.essence_str().to_string();
+        let file_name = format!("{} - {}.{}", data.user_name, name, ext);
+        let raw_bytes = decode_base64(&contents);
+
+        log::info!(
+            "Test application file submission would write {} bytes of type {} to {}",
+            raw_bytes.len(),
+            content_type,
+            file_name
+        );
+
+        // Add the file to our links.
+        response.insert(
+            name.to_string(),
+            format!(
+                "https://drive.google.com/open?id=test-application-submission-file_{}",
+                file_name
+            ),
+        );
+    }
+
+    Ok(response)
 }
 
 pub async fn handle_application_files_upload(
