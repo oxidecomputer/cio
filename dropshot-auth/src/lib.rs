@@ -8,7 +8,7 @@ pub mod query;
 pub mod sig;
 
 /// Trait that defines for a given type how to construct that type from a byte slice, as well
-/// as how the type out to be described via an OpenAPI spec
+/// as how the type ought to be described via an OpenAPI spec
 pub trait FromBytes<E>: Send + Sync {
     fn from_bytes(bytes: &[u8], body_content_type: &ApiEndpointBodyContentType) -> Result<Self, E>
     where
