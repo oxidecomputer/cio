@@ -48,6 +48,16 @@ impl ApplicationForm {
             || self.resume.is_empty()
             || self.phone.is_empty()
         {
+            log::info!(
+                "Form submission is missing required fields email: {:?} name: {:?} role: {:?} materials: {:?}, resume: {:?}, phone: {:?}",
+                self.email.is_empty(),
+                self.name.is_empty(),
+                self.role.is_empty(),
+                self.materials.is_empty(),
+                self.resume.is_empty(),
+                self.phone.is_empty()
+            );
+
             // This should not happen since we verify on the client side we have these
             // things.
             return Ok(());
@@ -69,6 +79,16 @@ impl ApplicationForm {
             || self.resume.is_empty()
             || self.phone.is_empty()
         {
+            log::info!(
+                "Form submission is missing required fields email: {:?} name: {:?} role: {:?} materials: {:?}, resume: {:?}, phone: {:?}",
+                self.email.is_empty(),
+                self.name.is_empty(),
+                self.role.is_empty(),
+                self.materials.is_empty(),
+                self.resume.is_empty(),
+                self.phone.is_empty()
+            );
+
             // This should not happen since we verify on the client side we have these
             // things.
             return Ok(());
