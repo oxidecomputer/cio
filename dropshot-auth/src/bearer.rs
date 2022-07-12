@@ -32,14 +32,11 @@ impl Extractor for BearerToken {
 
         // Finally ensure that the value we found is properly formed
         let contents = header_value.and_then(|value| {
-            let mut parts = value.split(' ');
-            let label = parts.next();
-            let token = parts.next();
+            let parts = value.split_once(' ');
 
-            if label == Some("Bearer") {
-                token.map(|s| s.to_string())
-            } else {
-                None
+            match parts {
+                Some(("Bearer", token)) => Some(token.to_string()),
+                _ => None
             }
         });
 

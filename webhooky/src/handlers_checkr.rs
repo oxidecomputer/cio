@@ -6,7 +6,7 @@ use dropshot_auth::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::info;
 use sha2::Sha256;
-use std::{borrow::Cow, sync::Arc};
+use std::sync::Arc;
 
 use crate::http::Headers;
 
@@ -17,18 +17,23 @@ pub struct CheckrWebhookVerification;
 impl HmacSignatureVerifier for CheckrWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<'a, Context: ServerContext>(_: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
-        // We only have a generic context here so we can not take values out. Instead construct a
-        // new db connection in the meantime
-        let db = Database::new().await;
+    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+        match std::env::var("CHECKR_API_KEY") {
+            Ok(key) => Ok(key.into_bytes()),
+            Err(_) => {
+                // We only have a generic context here so we can not take values out. Instead construct a
+                // new db connection in the meantime
+                let db = Database::new().await;
 
-        Ok(Company::get_from_db(&db, "Oxide".to_string())
-            .await
-            .map(|company| Cow::Owned(company.checkr_api_key.into_bytes()))
-            .ok_or_else(|| anyhow::anyhow!("Failed to find company API key for Checkr"))?)
+                Ok(Company::get_from_db(&db, "Oxide".to_string())
+                    .await
+                    .map(|company| company.checkr_api_key.into_bytes())
+                    .ok_or_else(|| anyhow::anyhow!("Failed to find company API key for Checkr"))?)
+            }
+        }
     }
 
-    async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         let headers = Headers::from_request(rqctx.clone()).await?;
         let signature = headers
             .0
@@ -41,6 +46,6 @@ impl HmacSignatureVerifier for CheckrWebhookVerification {
                 err
             })?;
 
-        Ok(Cow::Owned(signature))
+        Ok(signature)
     }
 }

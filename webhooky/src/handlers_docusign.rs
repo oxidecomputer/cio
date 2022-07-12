@@ -5,7 +5,7 @@ use dropshot_auth::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{info, warn};
 use sha2::Sha256;
-use std::{borrow::Cow, sync::Arc};
+use std::sync::Arc;
 
 use crate::http::Headers;
 
@@ -16,16 +16,16 @@ pub struct DocusignWebhookVerification;
 impl HmacSignatureVerifier for DocusignWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<'a, Context: ServerContext>(_: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         Ok(std::env::var("DOCUSIGN_WH_KEY")
-            .map(|key| Cow::Owned(key.into_bytes()))
+            .map(|key| key.into_bytes())
             .map_err(|err| {
                 warn!("Failed to find webhook key for verifying DocuSign webhooks");
                 err
             })?)
     }
 
-    async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         let headers = Headers::from_request(rqctx.clone()).await?;
         let signature = headers
             .0
@@ -38,6 +38,6 @@ impl HmacSignatureVerifier for DocusignWebhookVerification {
                 err
             })?;
 
-        Ok(Cow::Owned(signature))
+        Ok(signature)
     }
 }

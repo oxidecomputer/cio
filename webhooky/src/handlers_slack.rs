@@ -18,16 +18,16 @@ pub struct SlackWebhookVerification;
 impl HmacSignatureVerifier for SlackWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<'a, Context: ServerContext>(_: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         Ok(std::env::var("SLACK_WH_KEY")
-            .map(|key| Cow::Owned(key.into_bytes()))
+            .map(|key| key.into_bytes())
             .map_err(|err| {
-                warn!("Failed to find webhook key for verifying Slack webhooks");
+                warn!("Failed to find webhook key for verifying Slack webhooks: {}", err);
                 err
             })?)
     }
 
-    async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         let headers = Headers::from_request(rqctx.clone()).await?;
         let signature = headers
             .0
@@ -43,7 +43,7 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
                 err
             })?;
 
-        Ok(Cow::Owned(signature))
+        Ok(signature)
     }
 
     async fn content<'a, 'b, Context: ServerContext>(

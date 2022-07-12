@@ -66,12 +66,12 @@ pub trait HmacSignatureVerifier {
     type Algo: Mac + KeyInit;
 
     /// Provides the key to be used in signature verification.
-    async fn key<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> anyhow::Result<Cow<'a, [u8]>>;
+    async fn key<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> anyhow::Result<Vec<u8>>;
 
     /// Provides the signature that should be tested.
-    async fn signature<'a, Context: ServerContext>(
-        rqctx: &'a Arc<RequestContext<Context>>,
-    ) -> anyhow::Result<Cow<'a, [u8]>>;
+    async fn signature<Context: ServerContext>(
+        rqctx: Arc<RequestContext<Context>>,
+    ) -> anyhow::Result<Vec<u8>>;
 
     /// Provides the content that should be signed. By default this provides the request body content.
     async fn content<'a, 'b, Context: ServerContext>(
@@ -123,23 +123,25 @@ where
     ) -> Result<HmacVerifiedBodyAudit<T, BodyType>, HttpError> {
         let body = UntypedBody::from_request(rqctx.clone()).await?;
         let content = T::content(&rqctx, &body).await.map_err(|_| internal_error())?;
-        let key = T::key(&rqctx).await.map_err(|_| internal_error())?;
+        let key = T::key(rqctx.clone()).await.map_err(|_| internal_error())?;
 
-        let signature = T::signature(&rqctx).await;
+        let signature = T::signature(rqctx.clone()).await;
         let mac = <T::Algo as Mac>::new_from_slice(&*key);
 
         let verified = match (signature, mac) {
             (Ok(signature), Ok(mut mac)) => {
                 mac.update(&*content);
-                let verify_result = mac.verify_slice(&signature);
+                let verified = mac.verify_slice(&signature).is_ok();
 
-                log::info!(
-                    "Failed to verify signature. req_id: {} sig: {:?}",
-                    rqctx.request_id,
-                    signature
-                );
+                if !verified {
+                    log::info!(
+                        "Failed to verify signature. req_id: {} sig: {:?}",
+                        rqctx.request_id,
+                        signature
+                    );
+                }
 
-                verify_result.is_ok()
+                verified
             }
             (signature_res, mac_res) => {
                 log::info!(

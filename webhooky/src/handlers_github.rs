@@ -1,5 +1,3 @@
-use std::{str::FromStr, sync::Arc};
-
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::offset::Utc;
@@ -20,8 +18,7 @@ use google_drive::traits::{DriveOps, FileOps};
 use hmac::Hmac;
 use log::{info, warn};
 use sha2::Sha256;
-
-use std::borrow::Cow;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo, server::Context};
 
@@ -32,16 +29,16 @@ pub struct GitHubWebhookVerification;
 impl HmacSignatureVerifier for GitHubWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<'a, Context: ServerContext>(_: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         Ok(std::env::var("GH_WH_KEY")
-            .map(|key| Cow::Owned(key.into_bytes()))
+            .map(|key| key.into_bytes())
             .map_err(|err| {
                 warn!("Failed to find webhook key for verifying GitHub webhooks");
                 err
             })?)
     }
 
-    async fn signature<'a, Context: ServerContext>(rqctx: &'a Arc<RequestContext<Context>>) -> Result<Cow<'a, [u8]>> {
+    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         let headers = Headers::from_request(rqctx.clone()).await?;
         let signature = headers
             .0
@@ -57,7 +54,7 @@ impl HmacSignatureVerifier for GitHubWebhookVerification {
                 err
             })?;
 
-        Ok(Cow::Owned(signature))
+        Ok(signature)
     }
 }
 

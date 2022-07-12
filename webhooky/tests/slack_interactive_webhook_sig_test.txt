@@ -1,1 +1,0 @@
-payload=%7B%22type%22%3A%22test_type%22%2C%22api_app_id%22%3A%20%22test%22%7D
