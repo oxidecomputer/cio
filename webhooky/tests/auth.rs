@@ -352,7 +352,8 @@ async fn test_github_hmac_audit_passes_with_invalid_signature() {
 
 /// Test Checkr signatures
 
-const CHECKR_TEST_BODY: &str = r#"{"scene":false,"dry":{"face":false,"fox":["accurate",1795857417,false]},"created_at":"2022-01-01T00:00:00Z"}"#;
+const CHECKR_TEST_BODY: &str =
+    r#"{"scene":false,"dry":{"face":false,"fox":["accurate",1795857417,false]},"created_at":"2022-01-01T00:00:00Z"}"#;
 
 #[tokio::test]
 async fn test_checkr_hmac_passes() {
@@ -549,7 +550,8 @@ async fn test_slack_hmac_audit_passes_with_invalid_signature() {
     assert_eq!("fakecommand", body.command.as_str());
 }
 
-const SLACK_INTERACTIVE_TEST_BODY: &str = r#"payload=%7B%22type%22%3A%22test_type%22%2C%22api_app_id%22%3A%20%22test%22%7D"#;
+const SLACK_INTERACTIVE_TEST_BODY: &str =
+    r#"payload=%7B%22type%22%3A%22test_type%22%2C%22api_app_id%22%3A%20%22test%22%7D"#;
 
 #[tokio::test]
 async fn test_slack_interactive_hmac_passes() {

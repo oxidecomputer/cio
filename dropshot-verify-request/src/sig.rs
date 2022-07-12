@@ -69,9 +69,7 @@ pub trait HmacSignatureVerifier {
     async fn key<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> anyhow::Result<Vec<u8>>;
 
     /// Provides the signature that should be tested.
-    async fn signature<Context: ServerContext>(
-        rqctx: Arc<RequestContext<Context>>,
-    ) -> anyhow::Result<Vec<u8>>;
+    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> anyhow::Result<Vec<u8>>;
 
     /// Provides the content that should be signed. By default this provides the request body content.
     async fn content<'a, 'b, Context: ServerContext>(

@@ -36,7 +36,7 @@ impl Extractor for BearerToken {
 
             match parts {
                 Some(("Bearer", token)) => Some(token.to_string()),
-                _ => None
+                _ => None,
             }
         });
 

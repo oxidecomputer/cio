@@ -30,12 +30,10 @@ impl HmacSignatureVerifier for GitHubWebhookVerification {
     type Algo = Hmac<Sha256>;
 
     async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
-        Ok(std::env::var("GH_WH_KEY")
-            .map(|key| key.into_bytes())
-            .map_err(|err| {
-                warn!("Failed to find webhook key for verifying GitHub webhooks");
-                err
-            })?)
+        Ok(std::env::var("GH_WH_KEY").map(|key| key.into_bytes()).map_err(|err| {
+            warn!("Failed to find webhook key for verifying GitHub webhooks");
+            err
+        })?)
     }
 
     async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
