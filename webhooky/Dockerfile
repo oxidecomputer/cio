@@ -81,6 +81,8 @@ COPY macros ../macros
 
 COPY diesel-sentry ../diesel-sentry
 
+COPY dropshot-verify-request ../dropshot-verify-request
+
 COPY zoho-client ../zoho-client
 
 RUN sed -i 's#main.rs#dummy.rs#' ./Cargo.toml
