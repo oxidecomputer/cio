@@ -886,6 +886,7 @@ table! {
         building -> Varchar,
         link_to_building -> Array<Text>,
         aws_role -> Varchar,
+        denied_services -> Array<Text>,
         home_address_street_1 -> Varchar,
         home_address_street_2 -> Varchar,
         home_address_city -> Varchar,

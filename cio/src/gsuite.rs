@@ -16,7 +16,7 @@ use crate::{
     companies::Company,
     configs::{Building, Group, Resource, User},
     db::Database,
-    providers::ProviderOps,
+    providers::{ProviderReadOps, ProviderWriteOps},
     utils::generate_password,
 };
 
