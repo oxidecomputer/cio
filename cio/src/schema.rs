@@ -908,6 +908,7 @@ table! {
         start_date -> Date,
         birthday -> Date,
         public_ssh_keys -> Array<Text>,
+        materials -> Varchar,
         typev -> Varchar,
         google_anniversary_event_id -> Varchar,
         email -> Varchar,

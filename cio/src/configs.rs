@@ -277,6 +277,9 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub public_ssh_keys: Vec<String>,
 
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub materials: String,
+
     #[serde(default, rename = "type", skip_serializing_if = "String::is_empty")]
     pub typev: String,
 
@@ -829,6 +832,24 @@ impl UserConfig {
         }
     }
 
+    // If the user does not yet have a materials url, attempt to look it up from our applicant
+    // data based on the recovery email. This is performed when a user joins the
+    // organization and their record is first populated. If these do not match, then materials
+    // urls will need to be manually assigned
+    pub async fn populate_materials(&mut self, db: &Database) {
+        if self.materials.is_empty() {
+            if let Ok(applicant) = applicants::dsl::applicants
+                .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
+                .first_async::<Applicant>(db.pool())
+                .await
+            {
+                self.materials = applicant.materials;
+            } else {
+                log::info!("Unable to find matching applicant when attempting to assign materials to employee {}", self.id);
+            }
+        }
+    }
+
     pub fn populate_type(&mut self) {
         // TODO: make this an enum.
         self.typev = "full-time".to_string();
@@ -893,6 +914,8 @@ impl UserConfig {
         self.populate_work_address(db).await;
 
         self.populate_start_date(db).await;
+
+        self.populate_materials(db).await;
 
         // Create the link to the manager.
         if !self.manager.is_empty() {
