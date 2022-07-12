@@ -146,7 +146,11 @@ impl FromSql<VarChar, Pg> for ExternalServices {
             b"okta" => Ok(ExternalServices::Okta),
             b"ramp" => Ok(ExternalServices::Ramp),
             b"zoom" => Ok(ExternalServices::Zoom),
-            _ => Err("Unrecognized enum variant".into()),
+            unknown_service => Err(format!(
+                "Encountered unknown value {:?} in database. Unable to deserialize.",
+                from_utf8(unknown_service)
+            )
+            .into()),
         }
     }
 }
