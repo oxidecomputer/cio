@@ -147,7 +147,7 @@ impl FromSql<VarChar, Pg> for ExternalServices {
             b"ramp" => Ok(ExternalServices::Ramp),
             b"zoom" => Ok(ExternalServices::Zoom),
             unknown_service => Err(format!(
-                "Encountered unknown value {:?} in database. Unable to deserialize.",
+                "Encountered unknown external service value {:?} in database. Unable to deserialize.",
                 from_utf8(unknown_service)
             )
             .into()),
