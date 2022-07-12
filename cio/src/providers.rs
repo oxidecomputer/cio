@@ -178,7 +178,7 @@ impl ProviderWriteOps for ramp_api::Client {
     }
 
     async fn delete_user(&self, _db: &Database, _company: &Company, _user: &User) -> Result<()> {
-        // TODO: Suspend the user from Ramp.
+        log::info!("Skipping Ramp user deletion as access is controlled via GSuite account. Ramp account is left in tact for auditing.");
         Ok(())
     }
 
