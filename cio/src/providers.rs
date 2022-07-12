@@ -43,10 +43,12 @@ impl ProviderWriteOps for ramp_api::Client {
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Ramp) {
             log::info!(
-                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                "User {} is denied access to {}. Exiting provisioning.",
                 user.id,
                 ExternalServices::Ramp
             );
+
+            return Ok(String::new());
         }
 
         // Only do this if the user is full time.
@@ -213,10 +215,12 @@ impl ProviderWriteOps for octorust::Client {
     async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::GitHub) {
             log::info!(
-                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                "User {} is denied access to {}. Exiting provisioning.",
                 user.id,
                 ExternalServices::GitHub
             );
+
+            return Ok(String::new());
         }
 
         if user.github.is_empty() {
@@ -529,10 +533,12 @@ impl ProviderWriteOps for gsuite_api::Client {
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Google) {
             log::info!(
-                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                "User {} is denied access to {}. Exiting provisioning.",
                 user.id,
                 ExternalServices::Google
             );
+
+            return Ok(String::new());
         }
 
         // First get the user from gsuite.
@@ -855,10 +861,12 @@ impl ProviderWriteOps for okta::Client {
     async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Okta) {
             log::info!(
-                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                "User {} is denied access to {}. Exiting provisioning.",
                 user.id,
                 ExternalServices::Google
             );
+
+            return Ok(String::new());
         }
 
         let mut user = user.clone();
@@ -1246,10 +1254,12 @@ impl ProviderWriteOps for zoom_api::Client {
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Zoom) {
             log::info!(
-                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                "User {} is denied access to {}. Exiting provisioning.",
                 user.id,
                 ExternalServices::Zoom
             );
+
+            return Ok(String::new());
         }
 
         // Only do this if the user is full time.
@@ -1447,10 +1457,12 @@ impl ProviderWriteOps for airtable_api::Airtable {
     async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Airtable) {
             log::info!(
-                "User {} is denied access to {}. Will exit provisioning when deny lists are enforced.",
+                "User {} is denied access to {}. Exiting provisioning.",
                 user.id,
                 ExternalServices::Airtable
             );
+
+            return Ok(String::new());
         }
 
         if company.airtable_enterprise_account_id.is_empty() {
