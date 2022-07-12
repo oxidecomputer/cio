@@ -419,9 +419,8 @@ impl Company {
     /// Authenticate with MailChimp.
     pub async fn authenticate_mailchimp(&self) -> Result<MailChimp> {
         let key = std::env::var("MAILCHIMP_API_KEY")?;
-        let endpoint = std::env::var("MAILCHIMP_API_ENDPOINT")?;
 
-        Ok(MailChimp::new(endpoint, AuthMode::new_basic_auth(key)?)?)
+        Ok(MailChimp::new(AuthMode::new_basic_auth(key)?))
     }
 
     /// Authenticate with Slack.

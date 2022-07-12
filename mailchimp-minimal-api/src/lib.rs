@@ -1,17 +1,40 @@
 use http::{
-    header::{HeaderMap, HeaderValue, InvalidHeaderValue, AUTHORIZATION, CONTENT_TYPE},
+    header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     StatusCode,
 };
 use reqwest::{Client, Method, RequestBuilder, Url};
-use std::{error, fmt};
+use std::{error, fmt, str::FromStr};
 use url::ParseError;
 
 mod types;
 
 pub use crate::types::*;
 
+#[derive(Debug)]
 pub enum AuthMode {
-    Basic(HeaderValue),
+    Basic(BasicAuth),
+}
+
+#[derive(Debug)]
+pub struct BasicAuth {
+    auth_header: HeaderValue,
+    endpoint: Url,
+}
+
+#[derive(Debug)]
+struct MailChimpDataCenter(String);
+
+impl FromStr for MailChimpDataCenter {
+    type Err = MailChimpError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split('-');
+
+        let _key = parts.next();
+        let dc = parts.next();
+
+        dc.map(|dc| Self(dc.to_string())).ok_or(MailChimpError::MalformedAPIKey)
+    }
 }
 
 impl AuthMode {
@@ -21,9 +44,13 @@ impl AuthMode {
     {
         let encoded = base64::encode(format!("username:{}", key.as_ref()).as_bytes());
         let auth_header =
-            HeaderValue::from_str(&format!("Basic {}", encoded)).map_err(MailChimpError::MalformedAPIKey)?;
+            HeaderValue::from_str(&format!("Basic {}", encoded)).map_err(|_| MailChimpError::MalformedAPIKey)?;
 
-        Ok(AuthMode::Basic(auth_header))
+        let dc: MailChimpDataCenter = key.as_ref().parse()?;
+        let url = format!("https://{}.api.mailchimp.com", dc.0);
+        let endpoint = Url::parse(&url).map_err(MailChimpError::InvalidDataCenterEndpoint)?;
+
+        Ok(AuthMode::Basic(BasicAuth { auth_header, endpoint }))
     }
 
     pub fn has_token(&self) -> bool {
@@ -32,9 +59,15 @@ impl AuthMode {
         }
     }
 
+    pub fn to_endpoint_url(&self) -> Result<Url, MailChimpError> {
+        match self {
+            AuthMode::Basic(auth) => Ok(auth.endpoint.clone()),
+        }
+    }
+
     pub fn to_authorization_header(&self) -> Result<HeaderValue, MailChimpError> {
         match self {
-            AuthMode::Basic(header) => Ok(header.clone()),
+            AuthMode::Basic(auth) => Ok(auth.auth_header.clone()),
         }
     }
 }
@@ -42,19 +75,14 @@ impl AuthMode {
 pub struct MailChimp {
     auth: AuthMode,
     client: Client,
-    dc_endpoint: Url,
 }
 
 impl MailChimp {
-    pub fn new<T>(endpoint: T, auth: AuthMode) -> Result<Self, MailChimpError>
-    where
-        T: AsRef<str>,
-    {
-        Ok(Self {
+    pub fn new(auth: AuthMode) -> Self {
+        Self {
             auth,
             client: Client::new(),
-            dc_endpoint: Url::parse(endpoint.as_ref()).map_err(MailChimpError::InvalidDataCenterEndpoint)?,
-        })
+        }
     }
 
     fn request<P>(&self, method: Method, path: P) -> Result<RequestBuilder, MailChimpError>
@@ -68,7 +96,10 @@ impl MailChimp {
             uri = format!("/{}", uri);
         }
 
-        let url = self.dc_endpoint.join(&uri).map_err(MailChimpError::InvalidUri)?;
+        let url = self
+            .auth
+            .to_endpoint_url()
+            .and_then(|url| url.join(&uri).map_err(MailChimpError::InvalidUri))?;
 
         // Set the default headers.
         let mut headers = HeaderMap::new();
@@ -137,7 +168,7 @@ pub enum MailChimpError {
     InternalError(reqwest::Error),
     InvalidDataCenterEndpoint(ParseError),
     InvalidUri(ParseError),
-    MalformedAPIKey(InvalidHeaderValue),
+    MalformedAPIKey,
     MissingAuthentication,
 }
 
@@ -153,20 +184,6 @@ impl fmt::Display for MailChimpError {
     }
 }
 
-// impl fmt::Debug for MailChimpError {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         match self {
-//             APIError(api_error) => write!(f, "{:?}", ),
-//             InternalError(reqwest::Error),
-//             InvalidDataCenterEndpoint(ParseError),
-//             InvalidUri(ParseError),
-//             MalformedAPIKey(InvalidHeaderValue),
-//             MissingAuthentication,
-//         }
-//         write!(f, "MailChimp client error: {:?}", self)
-//     }
-// }
-
 // This is important for other errors to wrap this one.
 impl error::Error for MailChimpError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
@@ -177,9 +194,53 @@ impl error::Error for MailChimpError {
 
 #[cfg(test)]
 mod tests {
+    use super::{AuthMode, MailChimpError};
+    use base64;
+    use std::str::from_utf8;
+
+    static VALID_FORMAT: &'static str = "5555555555555555-us6";
+    static INVALID_FORMAT: &'static str = "5555555555555555us6";
+
     #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+    fn test_computes_datacenter() {
+        let auth = AuthMode::new_basic_auth(VALID_FORMAT).unwrap();
+
+        match auth {
+            AuthMode::Basic(auth) => assert_eq!("https://us6.api.mailchimp.com/", auth.endpoint.as_str()),
+        }
+    }
+
+    #[test]
+    fn test_handles_malformed_datacenter() {
+        let auth = AuthMode::new_basic_auth(INVALID_FORMAT);
+
+        match auth {
+            Err(MailChimpError::MalformedAPIKey) => (),
+            other => panic!("Expected malformed api key error, but instead received {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_computes_valid_header() {
+        let auth = AuthMode::new_basic_auth(VALID_FORMAT).unwrap();
+
+        match auth {
+            AuthMode::Basic(auth) => {
+                let value = auth.auth_header.to_str().unwrap();
+                let mut value_parts = value.split(' ');
+
+                let label = value_parts.next().unwrap();
+
+                assert_eq!("Basic", label);
+
+                let basic = value_parts.next().unwrap();
+
+                let decoded = base64::decode(basic).unwrap();
+                let mut basic_parts = from_utf8(&decoded).unwrap().split(':');
+
+                assert_eq!("username", basic_parts.next().unwrap());
+                assert_eq!(VALID_FORMAT, basic_parts.next().unwrap());
+            }
+        }
     }
 }

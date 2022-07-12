@@ -15,3 +15,6 @@ http = "0.2.5"
 urlencoding = "2.1.0"
 url = "2.2.2"
 serde_json = "1.0.73"
+
+[dev-dependencies]
+tokio = {version = "1.14.0", features = ["full"]}
