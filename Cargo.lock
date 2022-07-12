@@ -2945,20 +2945,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mailchimp-api"
-version = "0.1.15"
-dependencies = [
- "bytes",
- "chrono",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "serde_qs 0.9.1",
- "urlencoding 2.1.0",
-]
-
-[[package]]
 name = "mailchimp-minimal-api"
 version = "0.1.0"
 dependencies = [
