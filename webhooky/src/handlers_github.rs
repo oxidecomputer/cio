@@ -13,7 +13,7 @@ use cio_api::{
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
 };
 use dropshot::{Extractor, RequestContext, ServerContext};
-use dropshot_auth::sig::HmacSignatureVerifier;
+use dropshot_verify_request::sig::HmacSignatureVerifier;
 use google_drive::traits::{DriveOps, FileOps};
 use hmac::Hmac;
 use log::{info, warn};

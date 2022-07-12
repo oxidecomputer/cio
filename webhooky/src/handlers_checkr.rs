@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use cio_api::{companies::Company, db::Database};
 use dropshot::{Extractor, RequestContext, ServerContext};
-use dropshot_auth::sig::HmacSignatureVerifier;
+use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::info;
 use sha2::Sha256;

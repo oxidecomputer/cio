@@ -1,6 +1,6 @@
 [package]
-name = "dropshot-auth"
-description = "Extractor types for performing authentication on dropshot endpoints"
+name = "dropshot-verify-request"
+description = "Extractor types for performing verification on dropshot endpoints"
 version = "0.1.0"
 edition = "2021"
 

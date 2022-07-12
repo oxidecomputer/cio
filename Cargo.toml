@@ -7,7 +7,7 @@ members = [
 	"cio",
 	"diesel-sentry",
 	"docusign",
-	"dropshot-auth",
+	"dropshot-verify-request",
 	"google-geocode",
 	"macros",
 	"mailchimp",

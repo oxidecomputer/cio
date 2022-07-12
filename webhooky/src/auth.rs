@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot_auth::{bearer::BearerProvider, query::QueryTokenProvider};
+use dropshot_verify_request::{bearer::BearerProvider, query::QueryTokenProvider};
 
 pub struct InternalToken;
 

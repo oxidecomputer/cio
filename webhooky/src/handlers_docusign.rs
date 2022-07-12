@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use dropshot::{Extractor, RequestContext, ServerContext};
-use dropshot_auth::sig::HmacSignatureVerifier;
+use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{info, warn};
 use sha2::Sha256;

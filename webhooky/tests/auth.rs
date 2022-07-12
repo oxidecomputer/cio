@@ -5,7 +5,7 @@ use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpServer, HttpServerStarter, RequestContext,
 };
-use dropshot_auth::{
+use dropshot_verify_request::{
     bearer::{Bearer, BearerAudit},
     query::{QueryToken, QueryTokenAudit},
     sig::{HmacVerifiedBody, HmacVerifiedBodyAudit},

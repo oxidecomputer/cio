@@ -1539,7 +1539,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dropshot-auth"
+name = "dropshot-verify-request"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -6722,7 +6722,7 @@ dependencies = [
  "diesel",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot 0.7.1-dev",
- "dropshot-auth",
+ "dropshot-verify-request",
  "duct",
  "formdata",
  "futures-util",
