@@ -344,28 +344,13 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
             continue;
         }
 
-        // Get their application materials.
-        let mut materials_url = "".to_string();
-        if let Ok(a) = applicants::dsl::applicants
-            .filter(applicants::dsl::email.eq(employee.recovery_email.to_string()))
-            .first_async::<Applicant>(db.pool())
-            .await
-        {
-            materials_url = a.materials;
-        }
-
-        if materials_url.is_empty() {
-            if employee.username == "ben.leonard" {
-                // Add Ben's materials.
-                materials_url = "https://drive.google.com/open?id=1bOHalcpSyXwaxr4E-_2LeT06HGXQCW0n".to_string();
-            } else {
-                info!("could not find materials for email {}", employee.recovery_email);
-                continue;
-            }
+        if employee.materials.is_empty() {
+            info!("could not find materials for employee {}", employee.id);
+            continue;
         }
 
         // Let's download the contents of their materials locally.
-        download_materials_as_pdf(&drive_client, &materials_url, &employee.username)
+        download_materials_as_pdf(&drive_client, &employee.materials, &employee.username)
             .await
             .map_err(|err| {
                 log::error!(
