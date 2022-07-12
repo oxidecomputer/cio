@@ -47,6 +47,8 @@ COPY rust-toolchain ./rust-toolchain
 
 COPY macros ../macros
 
+COPY mailchimp-minimal-api ../mailchimp-minimal-api
+
 COPY diesel-sentry ../diesel-sentry
 
 COPY zoho-client ../zoho-client
