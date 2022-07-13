@@ -193,13 +193,8 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
 
 /// Sync the rack_line_subscribers from Mailchimp with our database.
 pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) -> Result<()> {
-    let mailchimp_auth = company.authenticate_mailchimp(db).await;
+    let mailchimp_auth = company.authenticate_mailchimp().await;
     if let Err(e) = mailchimp_auth {
-        if e.to_string().contains("no token") {
-            // Return early, this company does not use MailChimp.
-            return Ok(());
-        }
-
         bail!("authenticating mailchimp failed: {}", e);
     }
 
@@ -240,7 +235,10 @@ pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) 
 }
 
 /// Convert to a signup data type.
-pub async fn as_rack_line_subscriber(webhook: mailchimp_api::Webhook, db: &Database) -> Result<NewRackLineSubscriber> {
+pub async fn as_rack_line_subscriber(
+    webhook: mailchimp_minimal_api::Webhook,
+    db: &Database,
+) -> Result<NewRackLineSubscriber> {
     let mut signup: NewRackLineSubscriber = Default::default();
 
     let _list_id = webhook.data.list_id.as_ref().unwrap();
@@ -280,7 +278,7 @@ pub async fn as_rack_line_subscriber(webhook: mailchimp_api::Webhook, db: &Datab
     }
 }
 
-impl Into<NewRackLineSubscriber> for mailchimp_api::Member {
+impl Into<NewRackLineSubscriber> for mailchimp_minimal_api::Member {
     fn into(self) -> NewRackLineSubscriber {
         let mut tags: Vec<String> = Default::default();
         for t in &self.tags {

@@ -14,7 +14,6 @@ use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use http::StatusCode;
 use log::{info, warn};
-use mailchimp_api::MailChimp;
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
 use schemars::JsonSchema;
@@ -100,8 +99,6 @@ pub async fn create_server(
     api.register(listen_auth_google_consent).unwrap();
     api.register(listen_auth_gusto_callback).unwrap();
     api.register(listen_auth_gusto_consent).unwrap();
-    api.register(listen_auth_mailchimp_callback).unwrap();
-    api.register(listen_auth_mailchimp_consent).unwrap();
     api.register(listen_auth_plaid_callback).unwrap();
     api.register(listen_auth_ramp_callback).unwrap();
     api.register(listen_auth_ramp_consent).unwrap();
@@ -1396,51 +1393,6 @@ async fn listen_auth_github_callback(
 
         warn!("github callback: {:?}", event);
     });
-
-    txn.finish(http::StatusCode::ACCEPTED);
-
-    Ok(HttpResponseAccepted("ok".to_string()))
-}
-
-/** Get the consent URL for MailChimp auth. */
-#[endpoint {
-    method = GET,
-    path = "/auth/mailchimp/consent",
-}]
-async fn listen_auth_mailchimp_consent(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<TypedOrUntypedBody<()>>).await;
-
-    // Initialize the MailChimp client.
-    let g = txn.run(|| MailChimp::new_from_env("", "", ""));
-
-    txn.finish(http::StatusCode::OK);
-
-    Ok(HttpResponseOk(UserConsentURL {
-        url: g.user_consent_url(),
-    }))
-}
-
-/** Listen for callbacks to MailChimp auth. */
-#[endpoint {
-    method = GET,
-    path = "/auth/mailchimp/callback",
-}]
-async fn listen_auth_mailchimp_callback(
-    rqctx: Arc<RequestContext<Context>>,
-    query_args: Query<AuthCallback>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<TypedOrUntypedBody<()>>).await;
-
-    if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_mailchimp_callback(rqctx, query_args))
-        .await
-    {
-        // Send the error to sentry.
-        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-        return Err(handle_anyhow_err_as_http_err(e));
-    }
 
     txn.finish(http::StatusCode::ACCEPTED);
 

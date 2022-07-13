@@ -25,7 +25,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, 
 use dropshot::{Path, RequestContext, TypedBody, UntypedBody};
 use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
-use mailchimp_api::Webhook as MailChimpWebhook;
+use mailchimp_minimal_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde_qs::Config as QSConfig;
 use slack_chat_api::{

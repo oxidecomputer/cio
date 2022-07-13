@@ -9,7 +9,7 @@ members = [
 	"docusign",
 	"google-geocode",
 	"macros",
-	"mailchimp",
+	"mailchimp-minimal-api",
 	"printy",
 	"quickbooks",
 	"shippo",
