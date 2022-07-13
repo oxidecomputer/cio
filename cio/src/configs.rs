@@ -819,7 +819,7 @@ impl UserConfig {
     // Looks up an applicant record based on the users recovery_email. There is a historical
     // implicit assumption here that employees use the email that they applied with as their
     // recovery_email
-    async fn applicant_record(&self, db: &Database) ->  Result<Applicant> {
+    async fn applicant_record(&self, db: &Database) -> Result<Applicant> {
         Ok(applicants::dsl::applicants
             .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
             .first_async::<Applicant>(db.pool())
@@ -830,7 +830,6 @@ impl UserConfig {
         // Only populate the start date, if we could not update it from Gusto.
         if self.start_date == crate::utils::default_date() {
             if let Ok(a) = self.applicant_record(db).await {
-
                 // Get their start date.
                 if a.start_date.is_some() {
                     self.start_date = a.start_date.unwrap();
