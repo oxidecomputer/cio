@@ -43,7 +43,8 @@ http = "0.2.6"
 hyperx = { package = "hyper", version = "0.10" }
 lazy_static = "^1.4.0"
 log = { version = "0.4", features = ["serde"] }
-mailchimp-api = "^0.1.11"
+# mailchimp-api = "^0.1.11"
+mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
 mime_guess = "2"
 octorust = { version = "^0.1.35", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }

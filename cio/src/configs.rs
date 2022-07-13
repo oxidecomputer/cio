@@ -1,6 +1,7 @@
 #![allow(clippy::from_over_into)]
 use std::{
     collections::{BTreeMap, HashMap},
+    fmt,
     str::from_utf8,
 };
 
@@ -39,7 +40,7 @@ use crate::{
     core::UpdateAirtableRecord,
     db::Database,
     gsuite::{update_gsuite_building, update_gsuite_calendar_resource},
-    providers::ProviderOps,
+    providers::{ProviderReadOps, ProviderWriteOps},
     schema::{applicants, buildings, groups, links, resources, users},
     shipments::NewOutboundShipment,
     utils::{get_file_content_from_repo, get_github_user_public_ssh_keys},
@@ -70,6 +71,88 @@ pub struct Config {
 
     #[serde(default)]
     pub certificates: BTreeMap<String, NewCertificate>,
+}
+
+#[derive(Debug, Deserialize, Clone, JsonSchema, Serialize, PartialEq, FromSqlRow, AsExpression)]
+#[serde(rename_all = "lowercase")]
+#[diesel(sql_type = VarChar)]
+pub enum ExternalServices {
+    Airtable,
+    GitHub,
+    Google,
+    Okta,
+    Ramp,
+    Zoom,
+}
+
+impl ExternalServices {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ExternalServices::Airtable => "airtable",
+            ExternalServices::GitHub => "github",
+            ExternalServices::Google => "google",
+            ExternalServices::Okta => "okta",
+            ExternalServices::Ramp => "ramp",
+            ExternalServices::Zoom => "zoom",
+        }
+    }
+
+    pub async fn get_provider_writer(
+        &self,
+        db: &Database,
+        company: &Company,
+    ) -> Result<Box<dyn ProviderWriteOps + Send + Sync>> {
+        Ok(match self {
+            // We don't need a base id here since we are only using the enterprise api features.
+            ExternalServices::Airtable => Box::new(company.authenticate_airtable("")),
+            ExternalServices::GitHub => Box::new(company.authenticate_github()?),
+            ExternalServices::Google => Box::new(company.authenticate_google_admin(db).await?),
+            ExternalServices::Okta => Box::new(
+                company
+                    .authenticate_okta()
+                    .ok_or_else(|| anyhow::anyhow!("Failed to instantiate Okta client"))?,
+            ),
+            ExternalServices::Ramp => Box::new(company.authenticate_ramp(db).await?),
+            ExternalServices::Zoom => Box::new(company.authenticate_zoom(db).await?),
+        })
+    }
+}
+
+impl fmt::Display for ExternalServices {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ExternalServices::Airtable => write!(f, "Airtable"),
+            ExternalServices::GitHub => write!(f, "GitHub"),
+            ExternalServices::Google => write!(f, "Google"),
+            ExternalServices::Okta => write!(f, "Okta"),
+            ExternalServices::Ramp => write!(f, "Ramp"),
+            ExternalServices::Zoom => write!(f, "Zoom"),
+        }
+    }
+}
+
+impl ToSql<VarChar, Pg> for ExternalServices {
+    fn to_sql<W: std::io::Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+        <str as ToSql<VarChar, Pg>>::to_sql(self.as_str(), out)
+    }
+}
+
+impl FromSql<VarChar, Pg> for ExternalServices {
+    fn from_sql(bytes: PgValue<'_>) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"airtable" => Ok(ExternalServices::Airtable),
+            b"github" => Ok(ExternalServices::GitHub),
+            b"google" => Ok(ExternalServices::Google),
+            b"okta" => Ok(ExternalServices::Okta),
+            b"ramp" => Ok(ExternalServices::Ramp),
+            b"zoom" => Ok(ExternalServices::Zoom),
+            unknown_service => Err(format!(
+                "Encountered unknown external service value {:?} in database. Unable to deserialize.",
+                from_utf8(unknown_service)
+            )
+            .into()),
+        }
+    }
 }
 
 /// The data type for a user.
@@ -126,6 +209,11 @@ pub struct UserConfig {
 
     #[serde(default, alias = "aws_role", skip_serializing_if = "String::is_empty")]
     pub aws_role: String,
+
+    /// Defines a list of services that the user should not be provisioned in or
+    /// granted access to
+    #[serde(default)]
+    pub denied_services: Vec<ExternalServices>,
 
     /// The following fields do not exist in the config files but are populated
     /// by the Gusto API before the record gets saved in the database.
@@ -394,6 +482,8 @@ impl UserConfig {
 
         let mut new_user = self.upsert(db).await?;
 
+        // Attempt to provision this user with our known external services
+
         if let Some(ref okta) = okta_auth {
             // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
             // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
@@ -459,10 +549,41 @@ impl UserConfig {
         }
 
         // Get the Airtable information for the user.
-        let airtable_id = airtable_auth.ensure_user(db, company, &new_user).await?;
-        new_user.airtable_id = airtable_id.to_string();
-        // Update the user in the database.
-        new_user = new_user.update(db).await?;
+        match airtable_auth.ensure_user(db, company, &new_user).await {
+            Ok(airtable_id) => {
+                new_user.airtable_id = airtable_id;
+
+                // Update the user in the database.
+                new_user = new_user.update(db).await?;
+            }
+            Err(e) => {
+                warn!("Failed to ensure airtable user `{}`: {}", new_user.id, e);
+            }
+        }
+
+        // Deprovision this user explicitly from any service they should not have access to
+        for denied_service in &new_user.denied_services {
+            match denied_service.get_provider_writer(db, company).await {
+                Ok(denied_service_provider) => {
+                    info!(
+                        "Removing user {} from {} as they are denied access in their config",
+                        new_user.id, denied_service
+                    );
+
+                    match denied_service_provider.delete_user(db, company, &new_user).await {
+                        Ok(_) => info!("Removed user {} from {}", new_user.id, denied_service),
+                        Err(err) => warn!(
+                            "Failed to remove user {} from {}. err: {:?}",
+                            new_user.id, denied_service, err
+                        ),
+                    }
+                }
+                Err(err) => warn!(
+                    "Failed to create provider client for {} when handling denied services for user {}. err: {}",
+                    denied_service, new_user.id, err
+                ),
+            }
+        }
 
         // Update with any other changes we made to the user.
         new_user.update(db).await?;
@@ -2803,4 +2924,190 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde::{Deserialize, Serialize};
+    use serde_json;
+
+    use super::{ExternalServices, UserConfig};
+
+    #[derive(Debug, PartialEq, Deserialize, Serialize)]
+    struct ServiceWrapper {
+        service: ExternalServices,
+    }
+
+    #[test]
+    fn test_handles_lowercase_services() {
+        assert_eq!(
+            ServiceWrapper {
+                service: ExternalServices::Airtable
+            },
+            serde_json::from_str::<ServiceWrapper>("{\"service\": \"airtable\"}").unwrap()
+        );
+        assert_eq!(
+            ServiceWrapper {
+                service: ExternalServices::GitHub
+            },
+            serde_json::from_str::<ServiceWrapper>("{\"service\": \"github\"}").unwrap()
+        );
+        assert_eq!(
+            ServiceWrapper {
+                service: ExternalServices::Google
+            },
+            serde_json::from_str::<ServiceWrapper>("{\"service\": \"google\"}").unwrap()
+        );
+        assert_eq!(
+            ServiceWrapper {
+                service: ExternalServices::Okta
+            },
+            serde_json::from_str::<ServiceWrapper>("{\"service\": \"okta\"}").unwrap()
+        );
+        assert_eq!(
+            ServiceWrapper {
+                service: ExternalServices::Ramp
+            },
+            serde_json::from_str::<ServiceWrapper>("{\"service\": \"ramp\"}").unwrap()
+        );
+        assert_eq!(
+            ServiceWrapper {
+                service: ExternalServices::Zoom
+            },
+            serde_json::from_str::<ServiceWrapper>("{\"service\": \"zoom\"}").unwrap()
+        );
+
+        assert_eq!(
+            "{\"service\":\"airtable\"}",
+            serde_json::to_string(&ServiceWrapper {
+                service: ExternalServices::Airtable
+            })
+            .unwrap()
+            .as_str()
+        );
+        assert_eq!(
+            "{\"service\":\"github\"}",
+            serde_json::to_string(&ServiceWrapper {
+                service: ExternalServices::GitHub
+            })
+            .unwrap()
+            .as_str()
+        );
+        assert_eq!(
+            "{\"service\":\"google\"}",
+            serde_json::to_string(&ServiceWrapper {
+                service: ExternalServices::Google
+            })
+            .unwrap()
+            .as_str()
+        );
+        assert_eq!(
+            "{\"service\":\"okta\"}",
+            serde_json::to_string(&ServiceWrapper {
+                service: ExternalServices::Okta
+            })
+            .unwrap()
+            .as_str()
+        );
+        assert_eq!(
+            "{\"service\":\"ramp\"}",
+            serde_json::to_string(&ServiceWrapper {
+                service: ExternalServices::Ramp
+            })
+            .unwrap()
+            .as_str()
+        );
+        assert_eq!(
+            "{\"service\":\"zoom\"}",
+            serde_json::to_string(&ServiceWrapper {
+                service: ExternalServices::Zoom
+            })
+            .unwrap()
+            .as_str()
+        );
+    }
+
+    #[test]
+    fn test_deserializes_user_config() {
+        let user: UserConfig = toml::from_str(
+            r#"
+first_name = 'Test'
+last_name = 'User'
+username = 'test'
+is_group_admin = true
+aliases = [
+    "parse_test",
+]
+groups = [
+    'alpha',
+    'beta',
+    'gamma',
+]
+denied_services = [
+    'airtable',
+    'github',
+    'google',
+    'okta',
+    'ramp',
+    'zoom'
+]
+recovery_email = 'testuser@localhost'
+recovery_phone = '+15555555555'
+gender = ''
+github = 'github_username'
+chat = ''
+aws_role = 'arn:aws:iam::5555555:role/AnArbitraryAWSRole,arn:aws:iam::5555555:role/AnotherArbitraryAWSRole'
+department = 'aerospace'
+manager = 'orb'
+        "#,
+        )
+        .expect("Failed to parse user config");
+
+        assert_eq!(user.first_name, "Test");
+        assert_eq!(user.last_name, "User");
+        assert_eq!(
+            user.denied_services,
+            vec![
+                ExternalServices::Airtable,
+                ExternalServices::GitHub,
+                ExternalServices::Google,
+                ExternalServices::Okta,
+                ExternalServices::Ramp,
+                ExternalServices::Zoom
+            ]
+        );
+    }
+
+    #[test]
+    fn test_deserializes_user_config_without_denies() {
+        let user: UserConfig = toml::from_str(
+            r#"
+first_name = 'Test'
+last_name = 'User'
+username = 'test'
+is_group_admin = true
+aliases = [
+    "parse_test",
+]
+groups = [
+    'alpha',
+    'beta',
+    'gamma',
+]
+recovery_email = 'testuser@localhost'
+recovery_phone = '+15555555555'
+gender = ''
+github = 'github_username'
+chat = ''
+aws_role = 'arn:aws:iam::5555555:role/AnArbitraryAWSRole,arn:aws:iam::5555555:role/AnotherArbitraryAWSRole'
+department = 'aerospace'
+manager = 'orb'
+        "#,
+        )
+        .expect("Failed to parse user config");
+
+        assert_eq!(user.first_name, "Test");
+        assert_eq!(user.last_name, "User");
+        assert_eq!(user.denied_services, vec![]);
+    }
 }

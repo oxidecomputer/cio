@@ -61,8 +61,9 @@ Inflector = "^0.11.4"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 log = { version = "0.4", features = ["serde"] }
 macros = { path = "../macros" }
-mailchimp-api = "^0.1.15"
+# mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }
+mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
 names = "^0.13.0"
 nom_pem = "4"
 octorust = { version = "^0.1.35", features = ["httpcache"] }

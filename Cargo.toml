@@ -10,7 +10,7 @@ members = [
 	"dropshot-verify-request",
 	"google-geocode",
 	"macros",
-	"mailchimp",
+	"mailchimp-minimal-api",
 	"printy",
 	"quickbooks",
 	"shippo",

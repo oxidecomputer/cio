@@ -263,13 +263,8 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
         return Ok(());
     }
 
-    let mailchimp_auth = company.authenticate_mailchimp(db).await;
+    let mailchimp_auth = company.authenticate_mailchimp().await;
     if let Err(e) = mailchimp_auth {
-        if e.to_string().contains("no token") {
-            // Return early, this company does not use MailChimp.
-            return Ok(());
-        }
-
         bail!("authenticating mailchimp failed: {}", e);
     }
 
@@ -294,7 +289,7 @@ pub async fn refresh_db_mailing_list_subscribers(db: &Database, company: &Compan
 
 /// Convert to a signup data type.
 pub async fn as_mailing_list_subscriber(
-    webhook: mailchimp_api::Webhook,
+    webhook: mailchimp_minimal_api::Webhook,
     db: &Database,
 ) -> Result<NewMailingListSubscriber> {
     let mut signup: NewMailingListSubscriber = Default::default();
@@ -342,7 +337,7 @@ pub async fn as_mailing_list_subscriber(
     Ok(signup)
 }
 
-impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
+impl Into<NewMailingListSubscriber> for mailchimp_minimal_api::Member {
     fn into(self) -> NewMailingListSubscriber {
         let default_bool = false;
 
@@ -359,7 +354,7 @@ impl Into<NewMailingListSubscriber> for mailchimp_api::Member {
             timestamp = Utc.datetime_from_str(&self.timestamp_signup, "%+").unwrap();
         }
 
-        let address: mailchimp_api::Address =
+        let address: mailchimp_minimal_api::Address =
             serde_json::from_str(&self.merge_fields.address.to_string()).unwrap_or_default();
 
         let mut ns = NewMailingListSubscriber {

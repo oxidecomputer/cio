@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN denied_services TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
