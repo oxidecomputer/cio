@@ -6,6 +6,7 @@ use crate::{
     companies::Company,
     configs::{ExternalServices, Group, User},
     db::Database,
+    octorust_utils::{into_octorust_error, OctorustErrorKind}
 };
 
 /// This trait defines how to implement a provider for a vendor that manages users
@@ -501,19 +502,14 @@ impl ProviderWriteOps for octorust::Client {
                 // If the error from GitHub is a 404 NotFound then the user does not exist in our
                 // organization. This may be an attempt to remove a partially provisioned or
                 // deprovisioned user. This is not considered a failure.
+                let err = into_octorust_error(err);
 
-                // Errors from the GitHub client are anyhow::Error and we do not know what the
-                // underlying error actually is. As such the best we can do is to try and parse the
-                // string representation of the error. This is extremely brittle, and requires rework
-                // of the public API of octorust to resolve.
-                let msg = format!("{}", err);
-
-                if !msg.starts_with("code: 404 Not Found") {
-                    warn!("Failed to delete user {} from GitHub. err: {}", user.id, msg);
-                    Err(err)
-                } else {
-                    info!("Ignoring error for GitHub user {} delete", user.id);
+                if err.kind == OctorustErrorKind::NotFound {
+                    info!("Ignoring not found error for GitHub user {} delete", user.id);
                     Ok(())
+                } else {
+                    warn!("Failed to delete user {} from GitHub. err: {}", user.id, err);
+                    Err(err.into_inner())
                 }
             })
     }
