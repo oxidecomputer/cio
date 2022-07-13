@@ -350,15 +350,13 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         }
 
         // Let's download the contents of their materials locally.
-        download_materials_as_pdf(&drive_client, &employee.materials, &employee.username)
-            .await
-            .map_err(|err| {
-                log::error!(
-                    "Failed to download materials for employee {} when constructing interview packets",
-                    employee.id
-                );
+        if let Err(err) = download_materials_as_pdf(&drive_client, &employee.materials, &employee.username).await {
+            log::warn!(
+                "Failed to download materials for employee {} when constructing interview packets. err: {:?}",
+                employee.id,
                 err
-            })?;
+            );
+        }
     }
 
     let interviews = ApplicantInterviews::get_from_db(db, company.id).await?;
