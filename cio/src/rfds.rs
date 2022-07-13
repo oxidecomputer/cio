@@ -34,7 +34,7 @@ use crate::{
     core::{GitHubPullRequest, UpdateAirtableRecord},
     db::Database,
     features::Features,
-    octorust_utils::{OctorustErrorKind, into_octorust_error},
+    octorust_utils::{into_octorust_error, OctorustErrorKind},
     schema::rfds as r_f_ds,
     schema::rfds,
     utils::{
@@ -1305,8 +1305,8 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
                 let drive_files = drive_client
                     .files()
                     .list_all(
-                        "drive", // corpa
-                        &drive_id, // drive id
+                        "drive",                                                                           // corpa
+                        &drive_id,                                                                         // drive id
                         true,  // include items from all drives
                         "",    // include permissions for view
                         false, // include team drive items
@@ -1373,16 +1373,14 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
         }
         Err(err) => {
             if err.kind == OctorustErrorKind::NotFound {
-
                 // If the /pdf directory is not found then there is nothing to do
                 Ok(())
             } else {
-
                 // Otherwise something else has gone wrong and we need to return the original error
                 Err(err.into_inner())
             }
         }
-    }.into()
+    }
 }
 
 /// Create a changelog email for the RFDs.

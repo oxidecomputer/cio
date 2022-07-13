@@ -6,7 +6,7 @@ use crate::{
     companies::Company,
     configs::{ExternalServices, Group, User},
     db::Database,
-    octorust_utils::{into_octorust_error, OctorustErrorKind}
+    octorust_utils::{into_octorust_error, OctorustErrorKind},
 };
 
 /// This trait defines how to implement a provider for a vendor that manages users
@@ -498,7 +498,6 @@ impl ProviderWriteOps for octorust::Client {
                 )
             })
             .or_else(|err| {
-
                 // If the error from GitHub is a 404 NotFound then the user does not exist in our
                 // organization. This may be an attempt to remove a partially provisioned or
                 // deprovisioned user. This is not considered a failure.
@@ -1572,29 +1571,30 @@ impl ProviderWriteOps for airtable_api::Airtable {
         // If we have an enterprise airtable account, let's delete the user from
         // our Airtable.
         // We don't need a base id here since we are only using the enterprise api features.
-        self.delete_internal_user_by_email(&user.email).await.map(|_| {
-            info!("Deleted user {} from Airtable", user.id)
-        }).or_else(|err| {
-            let msg = format!("{:?}", err);
+        self.delete_internal_user_by_email(&user.email)
+            .await
+            .map(|_| info!("Deleted user {} from Airtable", user.id))
+            .or_else(|err| {
+                let msg = format!("{:?}", err);
 
-            // If the only error we encounter is that we failed to find an Airtable user to
-            // remove then it is likely that we are handling a user that was only partially
-            // provisioned or deprovisioned and therefore should not be considered an error.
+                // If the only error we encounter is that we failed to find an Airtable user to
+                // remove then it is likely that we are handling a user that was only partially
+                // provisioned or deprovisioned and therefore should not be considered an error.
 
-            // Errors from the Airtable client are anyhow::Error and we do not know what the
-            // underlying error actually is. As such the best we can do is to try and parse the
-            // string representation of the error. This is extremely brittle, and requires rework
-            // of the public API of the Airtable client to resolve. Additionally we can only perform
-            // this check at all because we are only trying to delete a single record. In the
-            // case of attempting to delete multiple records, this falls apart.
-            if !msg.contains("type_: \"NOT_FOUND\"") {
-                warn!("Failed to delete user {} from Airtable. err: {}", user.id, err);
-                Err(err)
-            } else {
-                info!("Ignoring error for Airtable user {} delete", user.id);
-                Ok(())
-            }
-        })
+                // Errors from the Airtable client are anyhow::Error and we do not know what the
+                // underlying error actually is. As such the best we can do is to try and parse the
+                // string representation of the error. This is extremely brittle, and requires rework
+                // of the public API of the Airtable client to resolve. Additionally we can only perform
+                // this check at all because we are only trying to delete a single record. In the
+                // case of attempting to delete multiple records, this falls apart.
+                if !msg.contains("type_: \"NOT_FOUND\"") {
+                    warn!("Failed to delete user {} from Airtable. err: {}", user.id, err);
+                    Err(err)
+                } else {
+                    info!("Ignoring error for Airtable user {} delete", user.id);
+                    Ok(())
+                }
+            })
     }
 
     async fn delete_group(&self, _company: &Company, _group: &Group) -> Result<()> {

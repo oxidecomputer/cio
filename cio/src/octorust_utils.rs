@@ -4,7 +4,7 @@ use std::{error::Error, fmt};
 pub struct OctorustError {
     pub kind: OctorustErrorKind,
     error: anyhow::Error,
-    display: String, 
+    display: String,
 }
 
 impl OctorustError {
@@ -17,7 +17,7 @@ impl OctorustError {
 pub enum OctorustErrorKind {
     NotFound,
     // Blanket catchall that can be broken down over time
-    Other
+    Other,
 }
 
 // Errors from the GitHub client are anyhow::Error and we do not know what the
@@ -36,7 +36,7 @@ pub fn into_octorust_error(error: anyhow::Error) -> OctorustError {
     OctorustError {
         kind,
         error,
-        display: displayed
+        display: displayed,
     }
 }
 
