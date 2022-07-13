@@ -23,6 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - uses: actions/setup-node@v2
+      - name: Cleanup unused space
+        shell: bash
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
