@@ -846,7 +846,10 @@ impl UserConfig {
                 self.materials = applicant.materials;
             } else {
                 // TODO: Change this so we are not logging usernames
-                log::info!("Unable to find matching applicant when attempting to assign materials to employee {}", self.username);
+                log::info!(
+                    "Unable to find matching applicant when attempting to assign materials to employee {}",
+                    self.username
+                );
             }
         }
     }
