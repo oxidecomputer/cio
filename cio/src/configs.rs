@@ -845,10 +845,11 @@ impl UserConfig {
             {
                 self.materials = applicant.materials;
             } else {
-                // TODO: Change this so we are not logging usernames
+                // TODO: When user structs are fixed so they always carry ids, this should be
+                // updated to log the user id instead
                 log::info!(
-                    "Unable to find matching applicant when attempting to assign materials to employee {}",
-                    self.username
+                    "Unable to find matching applicant when attempting to assign materials to employee starting on {}",
+                    self.start_date
                 );
             }
         }
