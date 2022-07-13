@@ -2186,21 +2186,7 @@ pub async fn sync_users(
                 info!("Deleted user {} from GitHub", username);
             }
             Err(err) => {
-                let msg = format!("{}", err);
-
-                // If the error from GitHub is a 404 NotFound then the user does not exist in our
-                // organization. This may be an attempt to remove a partially provisioned or
-                // deprovisioned user. This is not considered a failure.
-
-                // Errors from the GitHub client are stringy and do not return structured data.
-                // As a result this check is extremely brittle. We can not use its failure to
-                // authorize anything destructive.
-                if !msg.starts_with("code: 404 Not Found") {
-                    warn!("Failed to delete user {} from GitHub. err: {}", username, msg);
-                    has_failures = true;
-                } else {
-                    info!("Ignoring error for GitHub user {} delete", username);
-                }
+                warn!("Failed to delete user {} from GitHub. err: {:?}", username, err);
             }
         }
 
@@ -2234,23 +2220,7 @@ pub async fn sync_users(
                 info!("Deleted user {} from Airtable", username);
             }
             Err(err) => {
-                let msg = format!("{:?}", err);
-
-                // If the only error we encounter is that we failed to find an Airtable user to
-                // remove then it is likely that we are handling a user that was only partially
-                // provisioned or deprovisioned and therefore should not be considered an error.
-
-                // Errors from the Airtable client are stringy and do not return structured data.
-                // As a result this check is extremely brittle. We can not use its failure to
-                // authorize anything destructive. We can only perform this check at all because
-                // we are only trying to delete a single record.
-                if !msg.contains("type_: \"NOT_FOUND\"") {
-                    warn!("Failed to delete user {} from Airtable. err: {}", username, err);
-
-                    has_failures = true;
-                } else {
-                    info!("Ignoring error for Airtable user {} delete", username);
-                }
+                warn!("Failed to delete user {} from Airtable. err: {:?}", username, err);
             }
         }
 
