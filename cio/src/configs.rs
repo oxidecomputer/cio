@@ -816,14 +816,21 @@ impl UserConfig {
         self.work_address_formatted = self.work_address_formatted.replace('\n', "\\n");
     }
 
+    // Looks up an applicant record based on the users recovery_email. There is a historical
+    // implicit assumption here that employees use the email that they applied with as their
+    // recovery_email
+    async fn applicant_record(&self, db: &Database) ->  Result<Applicant> {
+        Ok(applicants::dsl::applicants
+            .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
+            .first_async::<Applicant>(db.pool())
+            .await?)
+    }
+
     pub async fn populate_start_date(&mut self, db: &Database) {
         // Only populate the start date, if we could not update it from Gusto.
         if self.start_date == crate::utils::default_date() {
-            if let Ok(a) = applicants::dsl::applicants
-                .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
-                .first_async::<Applicant>(db.pool())
-                .await
-            {
+            if let Ok(a) = self.applicant_record(db).await {
+
                 // Get their start date.
                 if a.start_date.is_some() {
                     self.start_date = a.start_date.unwrap();
@@ -838,11 +845,7 @@ impl UserConfig {
     // urls will need to be manually assigned
     pub async fn populate_materials(&mut self, db: &Database) {
         if self.materials.is_empty() {
-            if let Ok(applicant) = applicants::dsl::applicants
-                .filter(applicants::dsl::email.eq(self.recovery_email.to_string()))
-                .first_async::<Applicant>(db.pool())
-                .await
-            {
+            if let Ok(applicant) = self.applicant_record(db).await {
                 self.materials = applicant.materials;
             } else {
                 // TODO: When user structs are fixed so they always carry ids, this should be

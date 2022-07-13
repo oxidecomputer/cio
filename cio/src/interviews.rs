@@ -336,8 +336,10 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         .create_folder(&drive_id, "", "interview_packets")
         .await?;
 
-    // Iterate over each user we have in gsuite and download their materials
-    // locally.
+    // Iterate over each user we have in gsuite and download their materials locally.
+    // TODO: This function currently creates local copies of every employees materials prior to
+    // compiling interview packets. While this is efficient in terms of only requesting each
+    // materials document once, it is wasteful in that it downloads materials it does not need.
     let employees = Users::get_from_db(db, company.id).await?;
     for employee in employees {
         if employee.is_system_account() {
