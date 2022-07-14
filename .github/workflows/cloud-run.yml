@@ -10,6 +10,7 @@ on:
       - '.github/workflows/cloud-run.yml'
       - 'macros/**'
       - 'diesel-sentry/**'
+      - 'dropshot-verify-request/**'
       - 'zoho-client/**'
   workflow_dispatch:
     inputs:
