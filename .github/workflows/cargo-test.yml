@@ -22,6 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - name: Cleanup unused space
+        shell: bash
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
       - uses: actions/setup-node@v2
       - name: Cleanup unused space
         shell: bash

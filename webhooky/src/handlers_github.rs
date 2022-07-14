@@ -658,11 +658,6 @@ pub async fn handle_rfd_push(
             // Update the PDFs for the RFD.
             rfd.convert_and_upload_pdf(db, github, company).await?;
             rfd.update(db).await?;
-            a(&format!(
-                "[SUCCESS]: updated pdf `{}` for RFD {}",
-                rfd.get_pdf_filename(),
-                new_rfd.number_string,
-            ));
 
             // Check if the RFD state changed from what is currently in the
             // database.
