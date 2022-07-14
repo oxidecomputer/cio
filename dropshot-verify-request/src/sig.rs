@@ -137,6 +137,8 @@ where
                         rqctx.request_id,
                         signature
                     );
+                } else {
+                    log::info!("Successfully verified signature. req_id: {}", rqctx.request_id);
                 }
 
                 verified

@@ -67,8 +67,20 @@ where
             .map(|token| token.into_inner().token)
             .ok();
         let expected_token = T::token().await.map_err(|_| internal_error())?;
+
+        let verified = Some(expected_token) == req_token;
+
+        if verified {
+            log::info!(
+                "Successfully verified request via url token. req_id: {}",
+                rqctx.request_id
+            );
+        } else {
+            log::info!("Failed to verify request via url token. req_id: {}", rqctx.request_id);
+        }
+
         Ok(QueryTokenAudit {
-            verified: Some(expected_token) == req_token,
+            verified,
             _provider: PhantomData,
         })
     }

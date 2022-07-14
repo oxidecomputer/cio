@@ -123,8 +123,16 @@ where
             .map(|token| token.0)
             .unwrap_or(None);
 
+        let verified = Some(expected_token) == user_token;
+
+        if verified {
+            log::info!("Successfully verified request via bearer. req_id: {}", rqctx.request_id);
+        } else {
+            log::info!("Failed to verify request via bearer. req_id: {}", rqctx.request_id);
+        }
+
         Ok(BearerAudit {
-            verified: Some(expected_token) == user_token,
+            verified,
             _provider: PhantomData,
         })
     }
