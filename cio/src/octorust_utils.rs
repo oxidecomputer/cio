@@ -27,7 +27,7 @@ pub enum OctorustErrorKind {
 pub fn into_octorust_error(error: anyhow::Error) -> OctorustError {
     let displayed = format!("{}", error);
 
-    let kind = if !displayed.starts_with("code: 404 Not Found") {
+    let kind = if displayed.starts_with("code: 404 Not Found") {
         OctorustErrorKind::NotFound
     } else {
         OctorustErrorKind::Other
@@ -49,5 +49,20 @@ impl fmt::Display for OctorustError {
 impl Error for OctorustError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         Some(self.error.as_ref())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{into_octorust_error, OctorustErrorKind};
+
+    #[test]
+    fn test_parses_not_found_error() {
+        let error = anyhow::anyhow!(
+            r#"code: 404 Not Found, error: "{{\"message\":\"Cannot find username\",\"documentation_url\":\"https://docs.github.com/rest/reference/orgs#remove-an-organization-member\"}}"#
+        );
+        let octo_error = into_octorust_error(error);
+
+        assert_eq!(OctorustErrorKind::NotFound, octo_error.kind)
     }
 }
