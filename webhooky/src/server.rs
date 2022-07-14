@@ -1047,7 +1047,7 @@ async fn listen_application_files_upload_requests_cors(
     let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
     headers.insert("Access-Control-Allow-Headers", allowed_headers);
 
-    let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]).await?;
+    let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]);
     headers.insert("Access-Control-Allow-Method", allowed_methods);
 
     Ok(resp)

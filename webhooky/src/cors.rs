@@ -2,13 +2,13 @@ use dropshot::{HttpError, RequestContext, ServerContext};
 use http::{header::HeaderValue, StatusCode};
 use std::{collections::HashSet, sync::Arc};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum CorsFailure {
     InvalidValue(String),
     Missing,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CorsError {
     pub failures: Vec<CorsFailure>,
 }
@@ -45,17 +45,17 @@ pub async fn get_cors_headers_header<C: ServerContext>(
 }
 
 /// Constructs a header value to use in conjunction with a Access-Control-Allow-Methods header
-pub async fn get_cors_method_header(allowed_methods: &[http::Method]) -> Result<HeaderValue, CorsError> {
+pub fn get_cors_method_header(allowed_methods: &[http::Method]) -> HeaderValue {
     // This should never fail has we know that [`http::Method`] converts to valid str values and
     // joining those values with , remains valid
-    Ok(HeaderValue::from_str(
+    HeaderValue::from_str(
         &allowed_methods
             .iter()
             .map(|m| m.as_str())
             .collect::<Vec<&str>>()
             .join(", "),
     )
-    .expect("Converting method to str generated invalid string"))
+    .expect("Converting method to str generated invalid string")
 }
 
 pub async fn get_cors_header<C: ServerContext>(
@@ -73,9 +73,13 @@ pub async fn get_cors_header<C: ServerContext>(
             failures: vec![CorsFailure::Missing],
         })?;
 
+    validate_header(req_value, allowed)
+}
+
+pub fn validate_header(req_header: &str, allowed: &[&'static str]) -> Result<HeaderValue, CorsError> {
     // Split the header value on ", " to handle headers that pass in multiple values in a single
     // header like Access-Control-Request-Headers
-    let req_values: HashSet<&str> = req_value.split(", ").collect();
+    let req_values: HashSet<&str> = req_header.split(", ").collect();
     let allowed_values: HashSet<&str> = allowed.iter().copied().collect();
 
     // The remaining headers are those that the client requested, but are not allowed
@@ -86,7 +90,7 @@ pub async fn get_cors_header<C: ServerContext>(
     if diff.is_empty() {
         // This should never panic as we are reusing the str value that was taken from a HeaderValue
         // on the request
-        Ok(HeaderValue::from_str(req_value).expect("Rejoining passed in header values failed"))
+        Ok(HeaderValue::from_str(req_header).expect("Rejoining passed in header values failed"))
     } else {
         Err(CorsError {
             failures: diff
@@ -94,5 +98,69 @@ pub async fn get_cors_header<C: ServerContext>(
                 .map(|v| CorsFailure::InvalidValue(v.to_string()))
                 .collect::<Vec<CorsFailure>>(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{get_cors_method_header, validate_header, CorsError, CorsFailure};
+    use http::{header::HeaderValue, Method};
+
+    #[test]
+    fn test_cors_simple_origin() {
+        assert_eq!(
+            Ok(HeaderValue::from_static("https://website.com")),
+            validate_header("https://website.com", &["https://website.com"])
+        )
+    }
+
+    #[test]
+    fn test_cors_simple_methods_header() {
+        assert_eq!(
+            HeaderValue::from_static("POST, OPTIONS, GET"),
+            get_cors_method_header(&[Method::POST, Method::OPTIONS, Method::GET])
+        )
+    }
+
+    #[test]
+    fn test_cors_simple_content_type() {
+        assert_eq!(
+            Ok(HeaderValue::from_static("Content-Type")),
+            validate_header("Content-Type", &["Content-Type"])
+        )
+    }
+
+    #[test]
+    fn test_cors_returns_values_when_all_are_valid() {
+        assert_eq!(
+            Ok(HeaderValue::from_static("Content-Type, X-Nonstandard")),
+            validate_header("Content-Type, X-Nonstandard", &["Content-Type", "X-Nonstandard"])
+        )
+    }
+
+    #[test]
+    fn test_cors_handles_duplicate_valid_values() {
+        assert_eq!(
+            Ok(HeaderValue::from_static("Content-Type, Content-Type")),
+            validate_header("Content-Type, Content-Type", &["Content-Type"])
+        )
+    }
+
+    #[test]
+    fn test_cors_returns_subset_of_allowed_values() {
+        assert_eq!(
+            Ok(HeaderValue::from_static("Content-Type")),
+            validate_header("Content-Type", &["Content-Type", "X-Nonstandard"])
+        );
+    }
+
+    #[test]
+    fn test_cors_returns_invalid_error_when_missing() {
+        assert_eq!(
+            Err(CorsError {
+                failures: vec![CorsFailure::InvalidValue("X-Unsupported-Thing".to_string())]
+            }),
+            validate_header("X-Unsupported-Thing", &["Content-Type"])
+        )
     }
 }
