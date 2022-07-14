@@ -1044,11 +1044,11 @@ async fn listen_application_files_upload_requests_cors(
     .await?;
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
 
-    let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
-    headers.insert("Access-Control-Allow-Headers", allowed_headers);
+    // let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
+    headers.insert("Access-Control-Allow-Headers", "*");
 
-    let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]);
-    headers.insert("Access-Control-Allow-Method", allowed_methods);
+    // let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]);
+    headers.insert("Access-Control-Allow-Method", "*");
 
     Ok(resp)
 }
