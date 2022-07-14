@@ -1,6 +1,5 @@
-use std::{str::FromStr, sync::Arc};
-
 use anyhow::Result;
+use async_trait::async_trait;
 use chrono::offset::Utc;
 use cio_api::{
     companies::Company,
@@ -13,17 +12,53 @@ use cio_api::{
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
 };
-use dropshot::{RequestContext, TypedBody};
+use dropshot::{Extractor, RequestContext, ServerContext};
+use dropshot_verify_request::sig::HmacSignatureVerifier;
 use google_drive::traits::{DriveOps, FileOps};
+use hmac::Hmac;
 use log::{info, warn};
+use sha2::Sha256;
+use std::{str::FromStr, sync::Arc};
 
-use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context};
+use crate::{event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo, server::Context};
+
+#[derive(Debug)]
+pub struct GitHubWebhookVerification;
+
+#[async_trait]
+impl HmacSignatureVerifier for GitHubWebhookVerification {
+    type Algo = Hmac<Sha256>;
+
+    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+        Ok(std::env::var("GH_WH_KEY").map(|key| key.into_bytes()).map_err(|err| {
+            warn!("Failed to find webhook key for verifying GitHub webhooks");
+            err
+        })?)
+    }
+
+    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+        let headers = Headers::from_request(rqctx.clone()).await?;
+        let signature = headers
+            .0
+            .get("X-Hub-Signature-256")
+            .ok_or_else(|| anyhow::anyhow!("GitHub webhook is missing signature"))
+            .and_then(|header_value| Ok(header_value.to_str()?))
+            .and_then(|header| {
+                log::debug!("Found GitHub signature header {}", header);
+                Ok(hex::decode(header.trim_start_matches("sha256="))?)
+            })
+            .map_err(|err| {
+                info!("GitHub webhook is missing a well-formed signature: {}", err);
+                err
+            })?;
+
+        Ok(signature)
+    }
+}
 
 /// Handle a request to the /github endpoint.
-pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GitHubWebhook>) -> Result<()> {
+pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWebhook) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     // Parse the `X-GitHub-Event` header. Ensure the request lock is dropped once the
     // event_type has been extracted.

@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
+mod auth;
 #[macro_use]
 mod core;
 mod cors;
@@ -7,8 +8,13 @@ mod event_types;
 mod github_types;
 mod handlers;
 mod handlers_auth;
+mod handlers_checkr;
 mod handlers_cron;
+mod handlers_docusign;
 mod handlers_github;
+mod handlers_slack;
+// mod handlers_sendgrid;
+mod http;
 mod repos;
 mod sagas;
 mod server;

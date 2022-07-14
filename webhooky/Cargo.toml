@@ -14,6 +14,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1"
 async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
+async-trait = "0.1.56"
 checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.2.1"
@@ -26,7 +27,8 @@ clokwerk = "0.4.0-rc1"
 diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
 docusign = "^0.1.0"
 #dropshot = "^0.5.0"
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", branch = "clone" }
+dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
+dropshot-verify-request = { path = "../dropshot-verify-request" }
 duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
 formdata = "^0.13.0"
@@ -35,6 +37,8 @@ google-drive = "^0.4.0"
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
+hex = "0.4.3"
+hmac = "0.12.0"
 http = "0.2.6"
 hyperx = { package = "hyper", version = "0.10" }
 lazy_static = "^1.4.0"
@@ -78,6 +82,7 @@ tracing-subscriber = { version = "^0.3.9", features = ["registry", "std", "fmt",
 urlencoding = "2.1.0"
 uuid = { version = "^0.8", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"
+sha2 = "0.10.0"
 stacker = "0.1.14"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 

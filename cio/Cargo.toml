@@ -38,7 +38,7 @@ diesel-sentry = { path = "../diesel-sentry" }
 diffy = "^0.2.0"
 docusign = "^0.1.0"
 #docusign = { path = "../docusign" }
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", branch = "main" }
+dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
