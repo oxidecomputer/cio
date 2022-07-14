@@ -37,6 +37,7 @@ pub async fn get_cors_origin_header<C: ServerContext>(
 /// that list are allowed. If all of the requested headers are allowed, then a [`http::header::HeaderValue`]
 /// that should be used as the `Access-Control-Allow-Headers` header is returned. If the request
 /// headers is missing, malformed, or not valid a CORS error report is returned.
+#[allow(dead_code)]
 pub async fn get_cors_headers_header<C: ServerContext>(
     rqctx: Arc<RequestContext<C>>,
     allowed_headers: &[&'static str],
@@ -45,6 +46,7 @@ pub async fn get_cors_headers_header<C: ServerContext>(
 }
 
 /// Constructs a header value to use in conjunction with a Access-Control-Allow-Methods header
+#[allow(dead_code)]
 pub fn get_cors_method_header(allowed_methods: &[http::Method]) -> HeaderValue {
     // This should never fail has we know that [`http::Method`] converts to valid str values and
     // joining those values with , remains valid

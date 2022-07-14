@@ -13,7 +13,7 @@ use dropshot::{
 use dropshot_verify_request::{bearer::BearerAudit, query::QueryTokenAudit, sig::HmacVerifiedBodyAudit};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
-use http::{Method, StatusCode};
+use http::{header::HeaderValue, StatusCode};
 use log::{info, warn};
 use quickbooks::QuickBooks;
 use ramp_api::Client as Ramp;
@@ -1045,10 +1045,10 @@ async fn listen_application_files_upload_requests_cors(
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
 
     // let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
-    headers.insert("Access-Control-Allow-Headers", "*");
+    headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
 
     // let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]);
-    headers.insert("Access-Control-Allow-Method", "*");
+    headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
 
     Ok(resp)
 }
