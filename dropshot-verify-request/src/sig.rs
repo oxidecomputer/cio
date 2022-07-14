@@ -133,9 +133,10 @@ where
 
                 if !verified {
                     log::info!(
-                        "Failed to verify signature. req_id: {} sig: {:?}",
+                        "Failed to verify signature. req_id: {} sig: {:?} body: {:?}",
                         rqctx.request_id,
-                        signature
+                        signature,
+                        body.as_bytes()
                     );
                 } else {
                     log::info!("Successfully verified signature. req_id: {}", rqctx.request_id);
