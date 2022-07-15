@@ -12,7 +12,11 @@ use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseHeaders, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
-use dropshot_verify_request::{bearer::BearerAudit, query::QueryTokenAudit, sig::HmacVerifiedBodyAudit};
+use dropshot_verify_request::{
+    bearer::{Bearer, BearerAudit},
+    query::QueryTokenAudit,
+    sig::HmacVerifiedBodyAudit,
+};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use http::{header::HeaderValue, StatusCode};
@@ -963,7 +967,7 @@ struct ApplicantLoginParams {
 }]
 async fn listen_applicant_login(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<HiringToken>,
+    _auth: Bearer<HiringToken>,
     path_params: Path<ApplicantLoginParams>,
 ) -> Result<HttpResponseOk<ApplicantLogin>, HttpError> {
     let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
