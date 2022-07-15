@@ -55,6 +55,7 @@ gsuite-api = "^0.4.0"
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "4.2.2"
+hex = "0.4.3"
 http = "0.2.6"
 image = "^0.23.14"
 Inflector = "^0.11.4"
@@ -86,6 +87,7 @@ reqwest-retry = "0.1.4"
 reqwest-tracing = { version = "0.2.1", features = ["opentelemetry_0_17"] }
 revai = { version = "^0.3.0" }
 #revai = { path = "../../third-party-api-clients/rev.ai" }
+ring = "0.16.20"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sendgrid-api = "^0.2.0"
 #sendgrid-api = { path = "../../third-party-api-clients/sendgrid" }

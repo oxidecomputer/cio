@@ -3,7 +3,9 @@ use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
+use cio_api::{
+    analytics::NewPageView, applicant_uploads::UploadTokenStore, db::Database, functions::Function, swag_store::Order,
+};
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
@@ -28,8 +30,9 @@ use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
 use crate::{
-    auth::{AirtableToken, InternalToken, MailChimpToken, ShippoToken},
+    auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, ShippoToken},
     github_types::GitHubWebhook,
+    handlers_hiring::ApplicantLogin,
     handlers_slack::InteractiveEvent,
 };
 
@@ -91,12 +94,15 @@ pub async fn create_server(
     api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks)
         .unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
+
     api.register(listen_application_submit_requests).unwrap();
     api.register(listen_test_application_submit_requests).unwrap();
     api.register(listen_applicant_review_requests).unwrap();
     api.register(listen_application_files_upload_requests_cors).unwrap();
     api.register(listen_application_files_upload_requests).unwrap();
     api.register(listen_test_application_files_upload_requests).unwrap();
+    api.register(listen_applicant_login).unwrap();
+
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_docusign_consent).unwrap();
     api.register(listen_auth_github_callback).unwrap();
@@ -321,6 +327,8 @@ pub struct Context {
     pub sec: Arc<steno::SecClient>,
 
     pub schema: serde_json::Value,
+
+    pub upload_token_store: UploadTokenStore,
 }
 
 impl Context {
@@ -334,9 +342,10 @@ impl Context {
 
         // Create the context.
         Context {
-            db,
+            db: db.clone(),
             sec: Arc::new(sec),
             schema,
+            upload_token_store: UploadTokenStore::new(db, chrono::Duration::hours(24)),
         }
     }
 
@@ -939,6 +948,42 @@ async fn listen_applicant_review_requests(
     txn.finish(http::StatusCode::ACCEPTED);
 
     Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+#[derive(Deserialize, JsonSchema)]
+struct ApplicantLoginParams {
+    email: String,
+}
+
+// List for applicant login requests. This assume that the caller has performed the necessary
+// authentication to verify ownership of the email that we are being sent
+#[endpoint {
+    method = GET,
+    path = "/applicant/info/{email}",
+}]
+async fn listen_applicant_login(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: BearerAudit<HiringToken>,
+    path_params: Path<ApplicantLoginParams>,
+) -> Result<HttpResponseOk<ApplicantLogin>, HttpError> {
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+
+    log::info!("Running applicant info handler");
+
+    let result = txn
+        .run(|| crate::handlers_hiring::handle_applicant_login(rqctx, path_params.into_inner().email))
+        .await;
+
+    match result {
+        Ok(login) => {
+            txn.finish(http::StatusCode::OK);
+            Ok(HttpResponseOk(login))
+        }
+        Err(err) => {
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(err))
+        }
+    }
 }
 
 /**
