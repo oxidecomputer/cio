@@ -7,6 +7,7 @@ use cio_api::{
         get_configs_from_repo, sync_buildings, sync_certificates, sync_github_outside_collaborators, sync_groups,
         sync_links, sync_resources, sync_users,
     },
+    features::Features,
     repos::NewRepo,
     rfds::{is_image, NewRFD, RFD},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
@@ -804,54 +805,58 @@ pub async fn handle_rfd_push(
             // If the title of the RFD changed, delete the old PDF file so it
             // doesn't linger in GitHub and Google Drive.
             if !old_rfd_pdf.is_empty() && old_rfd_pdf != rfd.get_pdf_filename() {
-                let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
+                if Features::is_enabled("RFD_PDFS_IN_GITHUB") {
+                    let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
-                // First get the sha of the old pdf.
-                let (_, old_pdf_sha) =
-                    get_file_content_from_repo(github, owner, &repo, &event.repository.default_branch, &pdf_path)
-                        .await?;
+                    // First get the sha of the old pdf.
+                    let (_, old_pdf_sha) =
+                        get_file_content_from_repo(github, owner, &repo, &event.repository.default_branch, &pdf_path)
+                            .await?;
 
-                if !old_pdf_sha.is_empty() {
-                    // Delete the old filename from GitHub.
-                    github
-                        .repos()
-                        .delete_file(
-                            owner,
-                            &repo,
-                            pdf_path.trim_start_matches('/'),
-                            &octorust::types::ReposDeleteFileRequest {
-                                message: format!(
-                                    "Deleting file content {} programatically\n\nThis is done \
-                                     from the cio repo webhooky::listen_github_webhooks function.",
-                                    pdf_path
-                                ),
-                                sha: old_pdf_sha,
-                                committer: None,
-                                author: None,
-                                branch: event.repository.default_branch.to_string(),
-                            },
-                        )
+                    if !old_pdf_sha.is_empty() {
+                        // Delete the old filename from GitHub.
+                        github
+                            .repos()
+                            .delete_file(
+                                owner,
+                                &repo,
+                                pdf_path.trim_start_matches('/'),
+                                &octorust::types::ReposDeleteFileRequest {
+                                    message: format!(
+                                        "Deleting file content {} programatically\n\nThis is done \
+                                        from the cio repo webhooky::listen_github_webhooks function.",
+                                        pdf_path
+                                    ),
+                                    sha: old_pdf_sha,
+                                    committer: None,
+                                    author: None,
+                                    branch: event.repository.default_branch.to_string(),
+                                },
+                            )
+                            .await?;
+                        a(&format!(
+                            "[SUCCESS]: deleted old pdf file in GitHub {} since the new name is {}",
+                            old_rfd_pdf,
+                            rfd.get_pdf_filename()
+                        ));
+                    }
+                }
+
+                if Features::is_enabled("RFD_PDFS_IN_GOOGLE_DRIVE") {
+                    // Get the directory by the name.
+                    let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?;
+
+                    // Delete the old filename from drive.
+                    drive
+                        .files()
+                        .delete_by_name(&shared_drive.id, &parent_id, &old_rfd_pdf)
                         .await?;
                     a(&format!(
-                        "[SUCCESS]: deleted old pdf file in GitHub {} since the new name is {}",
+                        "[SUCCESS]: deleted old pdf file in Google Drive {} since the new name is {}",
                         old_rfd_pdf,
                         rfd.get_pdf_filename()
                     ));
                 }
-
-                // Get the directory by the name.
-                let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?;
-
-                // Delete the old filename from drive.
-                drive
-                    .files()
-                    .delete_by_name(&shared_drive.id, &parent_id, &old_rfd_pdf)
-                    .await?;
-                a(&format!(
-                    "[SUCCESS]: deleted old pdf file in Google Drive {} since the new name is {}",
-                    old_rfd_pdf,
-                    rfd.get_pdf_filename()
-                ));
             }
 
             a(&format!(
