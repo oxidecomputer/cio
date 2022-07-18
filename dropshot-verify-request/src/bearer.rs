@@ -9,6 +9,12 @@ use crate::http::{internal_error, unauthorized, Headers};
 /// A token used for bearer authorization
 pub struct BearerToken(Option<String>);
 
+impl BearerToken {
+    pub fn inner(&self) -> Option<&String> {
+        self.0.as_ref()
+    }
+}
+
 /// Extracting a bearer token should never fail, it should always return either `Ok(Some(BearerToken))`
 /// or `Ok(None)`. `None` will be returned in any of the cases that a valid string can not be extracted.
 /// This extractor is not responsible for checking the value of the token.
