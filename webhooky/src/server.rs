@@ -36,10 +36,7 @@ use zoom_api::Client as Zoom;
 use crate::{
     auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, ShippoToken},
     github_types::GitHubWebhook,
-    handlers_hiring::{
-        ApplicantInfo,
-        ApplicantUploadToken
-    },
+    handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
     handlers_slack::InteractiveEvent,
 };
 
@@ -1124,7 +1121,11 @@ async fn listen_application_files_upload_requests_cors(
 
     let allowed_origins = crate::cors::get_cors_origin_header(
         rqctx.clone(),
-        &["https://apply.oxide.computer", "https://oxide.computer", "http://localhost:3000"],
+        &[
+            "https://apply.oxide.computer",
+            "https://oxide.computer",
+            "http://localhost:3000",
+        ],
     )
     .await?;
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
@@ -1163,10 +1164,15 @@ async fn listen_test_application_files_upload_requests(
         //
         // We currently return a single error code, 409 Conflict so as not to expose which of these
         // cases occurred. In the future we may want to relax this and return individual error codes
-        let token_result = rqctx.context().upload_token_store.consume(&body.email, token).await.map_err(|err| {
-            log::info!("Failed to consume upload token due to {:?}", err);
-            HttpError::for_status(None, http::StatusCode::CONFLICT)
-        });
+        let token_result = rqctx
+            .context()
+            .upload_token_store
+            .consume(&body.email, token)
+            .await
+            .map_err(|err| {
+                log::info!("Failed to consume upload token due to {:?}", err);
+                HttpError::for_status(None, http::StatusCode::CONFLICT)
+            });
 
         match token_result {
             Ok(_) => {

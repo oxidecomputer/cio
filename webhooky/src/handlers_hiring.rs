@@ -17,7 +17,7 @@ pub struct ApplicationView {
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ApplicantInfo {
     email: String,
-    application: Option<ApplicationView>
+    application: Option<ApplicationView>,
 }
 
 pub async fn handle_applicant_info(rqctx: Arc<RequestContext<Context>>, email: String) -> Result<ApplicantInfo> {
@@ -31,7 +31,7 @@ pub async fn handle_applicant_info(rqctx: Arc<RequestContext<Context>>, email: S
         application: applicant.map(|applicant| ApplicationView {
             submitted_at: applicant.submitted_time,
             status: applicant.status,
-        })
+        }),
     })
 }
 
@@ -41,7 +41,10 @@ pub struct ApplicantUploadToken {
     token: String,
 }
 
-pub async fn handle_applicant_upload_token(rqctx: Arc<RequestContext<Context>>, email: String) -> Result<ApplicantUploadToken> {
+pub async fn handle_applicant_upload_token(
+    rqctx: Arc<RequestContext<Context>>,
+    email: String,
+) -> Result<ApplicantUploadToken> {
     let ctx = rqctx.context();
 
     // Third argument is a Google Sheet id. This is a no-longer supported argument
