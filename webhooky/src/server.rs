@@ -102,9 +102,11 @@ pub async fn create_server(
     api.register(listen_application_submit_requests).unwrap();
     api.register(listen_test_application_submit_requests).unwrap();
     api.register(listen_applicant_review_requests).unwrap();
+    api.register(listen_test_application_files_upload_requests_cors)
+        .unwrap();
+    api.register(listen_test_application_files_upload_requests).unwrap();
     api.register(listen_application_files_upload_requests_cors).unwrap();
     api.register(listen_application_files_upload_requests).unwrap();
-    api.register(listen_test_application_files_upload_requests).unwrap();
     api.register(listen_applicant_info).unwrap();
     api.register(listen_applicant_upload_token).unwrap();
 
@@ -1113,7 +1115,7 @@ pub struct ApplicationFileUploadData {
     method = OPTIONS,
     path = "/application-test/files/upload",
 }]
-async fn listen_application_files_upload_requests_cors(
+async fn listen_test_application_files_upload_requests_cors(
     rqctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
@@ -1207,6 +1209,39 @@ async fn listen_test_application_files_upload_requests(
         txn.finish(http::StatusCode::UNAUTHORIZED);
         Err(HttpError::for_status(None, http::StatusCode::UNAUTHORIZED))
     }
+}
+
+/**
+ * CORS functionality for file uploads
+ */
+#[endpoint {
+    method = OPTIONS,
+    path = "/application/files/upload",
+}]
+async fn listen_application_files_upload_requests_cors(
+    rqctx: Arc<RequestContext<Context>>,
+) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
+    let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
+    let headers = resp.headers_mut();
+
+    let allowed_origins = crate::cors::get_cors_origin_header(
+        rqctx.clone(),
+        &[
+            "https://apply.oxide.computer",
+            "https://oxide.computer",
+            "http://localhost:3000",
+        ],
+    )
+    .await?;
+    headers.insert("Access-Control-Allow-Origin", allowed_origins);
+
+    // let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
+    headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
+
+    // let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]);
+    headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
+
+    Ok(resp)
 }
 
 /**
