@@ -13,9 +13,8 @@ use dropshot::{
     HttpResponseHeaders, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
 use dropshot_verify_request::{
-    query::{QueryToken, QueryTokenAudit},
     bearer::{Bearer, BearerToken},
-    query::QueryTokenAudit,
+    query::{QueryToken, QueryTokenAudit},
     sig::HmacVerifiedBodyAudit,
 };
 use google_drive::Client as GoogleDrive;
