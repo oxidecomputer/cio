@@ -12,6 +12,7 @@ mod handlers_checkr;
 mod handlers_cron;
 mod handlers_docusign;
 mod handlers_github;
+mod handlers_hiring;
 mod handlers_slack;
 // mod handlers_sendgrid;
 mod http;

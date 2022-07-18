@@ -3,14 +3,20 @@ use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use cio_api::{analytics::NewPageView, db::Database, functions::Function, swag_store::Order};
+use cio_api::{
+    analytics::NewPageView, applicant_uploads::UploadTokenStore, db::Database, functions::Function, swag_store::Order,
+};
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseHeaders, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
 };
-use dropshot_verify_request::{bearer::BearerAudit, query::QueryTokenAudit, sig::HmacVerifiedBodyAudit};
+use dropshot_verify_request::{
+    bearer::{Bearer, BearerAudit, BearerToken},
+    query::QueryTokenAudit,
+    sig::HmacVerifiedBodyAudit,
+};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use http::{header::HeaderValue, StatusCode};
@@ -28,8 +34,9 @@ use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
 use crate::{
-    auth::{AirtableToken, InternalToken, MailChimpToken, ShippoToken},
+    auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, ShippoToken},
     github_types::GitHubWebhook,
+    handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
     handlers_slack::InteractiveEvent,
 };
 
@@ -91,12 +98,16 @@ pub async fn create_server(
     api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks)
         .unwrap();
     api.register(listen_analytics_page_view_webhooks).unwrap();
+
     api.register(listen_application_submit_requests).unwrap();
     api.register(listen_test_application_submit_requests).unwrap();
     api.register(listen_applicant_review_requests).unwrap();
     api.register(listen_application_files_upload_requests_cors).unwrap();
     api.register(listen_application_files_upload_requests).unwrap();
     api.register(listen_test_application_files_upload_requests).unwrap();
+    api.register(listen_applicant_info).unwrap();
+    api.register(listen_applicant_upload_token).unwrap();
+
     api.register(listen_auth_docusign_callback).unwrap();
     api.register(listen_auth_docusign_consent).unwrap();
     api.register(listen_auth_github_callback).unwrap();
@@ -321,6 +332,8 @@ pub struct Context {
     pub sec: Arc<steno::SecClient>,
 
     pub schema: serde_json::Value,
+
+    pub upload_token_store: UploadTokenStore,
 }
 
 impl Context {
@@ -334,9 +347,10 @@ impl Context {
 
         // Create the context.
         Context {
-            db,
+            db: db.clone(),
             sec: Arc::new(sec),
             schema,
+            upload_token_store: UploadTokenStore::new(db, chrono::Duration::minutes(10)),
         }
     }
 
@@ -941,6 +955,74 @@ async fn listen_applicant_review_requests(
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
+#[derive(Deserialize, JsonSchema)]
+struct ApplicantInfoParams {
+    email: String,
+}
+
+// Listen for applicant info requests. This assume that the caller has performed the necessary
+// authentication to verify ownership of the email that we are being sent
+#[endpoint {
+    method = GET,
+    path = "/applicant/info/{email}",
+}]
+async fn listen_applicant_info(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<HiringToken>,
+    path_params: Path<ApplicantInfoParams>,
+) -> Result<HttpResponseOk<ApplicantInfo>, HttpError> {
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+
+    log::info!("Running applicant info handler");
+
+    let result = txn
+        .run(|| crate::handlers_hiring::handle_applicant_info(rqctx, path_params.into_inner().email))
+        .await;
+
+    match result {
+        Ok(login) => {
+            txn.finish(http::StatusCode::OK);
+            Ok(HttpResponseOk(login))
+        }
+        Err(err) => {
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(err))
+        }
+    }
+}
+
+// Listen for applicant upload token requests. This returns a short-lived, one time token that can
+// be used to upload materials against the supplied email address. This assume that the caller has
+// performed the necessary authentication to verify ownership of the email that we are being sent
+#[endpoint {
+    method = GET,
+    path = "/applicant/info/{email}/upload-token",
+}]
+async fn listen_applicant_upload_token(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<HiringToken>,
+    path_params: Path<ApplicantInfoParams>,
+) -> Result<HttpResponseOk<ApplicantUploadToken>, HttpError> {
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+
+    log::info!("Running applicant upload token handler");
+
+    let result = txn
+        .run(|| crate::handlers_hiring::handle_applicant_upload_token(rqctx, path_params.into_inner().email))
+        .await;
+
+    match result {
+        Ok(login) => {
+            txn.finish(http::StatusCode::OK);
+            Ok(HttpResponseOk(login))
+        }
+        Err(err) => {
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(err))
+        }
+    }
+}
+
 /**
  * Listen for applications being submitted for incoming job applications */
 #[endpoint {
@@ -949,7 +1031,7 @@ async fn listen_applicant_review_requests(
 }]
 async fn listen_test_application_submit_requests(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: BearerAudit<InternalToken>,
+    _auth: BearerAudit<HiringToken>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1029,7 +1111,7 @@ pub struct ApplicationFileUploadData {
  */
 #[endpoint {
     method = OPTIONS,
-    path = "/application/files/upload",
+    path = "/application-test/files/upload",
 }]
 async fn listen_application_files_upload_requests_cors(
     rqctx: Arc<RequestContext<Context>>,
@@ -1039,7 +1121,11 @@ async fn listen_application_files_upload_requests_cors(
 
     let allowed_origins = crate::cors::get_cors_origin_header(
         rqctx.clone(),
-        &["https://apply.oxide.computer", "https://oxide.computer"],
+        &[
+            "https://apply.oxide.computer",
+            "https://oxide.computer",
+            "http://localhost:3000",
+        ],
     )
     .await?;
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
@@ -1061,30 +1147,65 @@ async fn listen_application_files_upload_requests_cors(
 }]
 async fn listen_test_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
+    bearer: BearerToken,
     body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
     let body = body_param.into_inner();
     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
 
-    match txn
-        .run(|| crate::handlers::handle_test_application_files_upload(rqctx, body))
-        .await
-    {
-        Ok(r) => {
-            txn.finish(http::StatusCode::OK);
+    // We require that the user has supplied an upload token in the bearer header
+    if let Some(token) = bearer.inner() {
+        // Attempt to consume the token marked it as unusable by other requests. A token may fail
+        // to be consumed due to:
+        //  1. Token was previously used
+        //  2. Token is invalid
+        //  3. Token does not match the email submitted
+        //  4. Token is expired
+        //
+        // We currently return a single error code, 409 Conflict so as not to expose which of these
+        // cases occurred. In the future we may want to relax this and return individual error codes
+        let token_result = rqctx
+            .context()
+            .upload_token_store
+            .consume(&body.email, token)
+            .await
+            .map_err(|err| {
+                log::info!("Failed to consume upload token due to {:?}", err);
+                HttpError::for_status(None, http::StatusCode::CONFLICT)
+            });
 
-            let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
+        match token_result {
+            Ok(_) => {
+                let upload_result = txn
+                    .run(|| crate::handlers::handle_test_application_files_upload(rqctx, body))
+                    .await;
 
-            let headers = resp.headers_mut();
-            headers.insert("Access-Control-Allow-Origin", http::HeaderValue::from_static("*"));
+                match upload_result {
+                    Ok(r) => {
+                        txn.finish(http::StatusCode::OK);
 
-            Ok(resp)
+                        let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
+
+                        let headers = resp.headers_mut();
+                        headers.insert("Access-Control-Allow-Origin", http::HeaderValue::from_static("*"));
+
+                        Ok(resp)
+                    }
+                    // Send the error to sentry.
+                    Err(e) => {
+                        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+                        Err(handle_anyhow_err_as_http_err(e))
+                    }
+                }
+            }
+            Err(err) => {
+                txn.finish(err.status_code);
+                Err(err)
+            }
         }
-        // Send the error to sentry.
-        Err(e) => {
-            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-            Err(handle_anyhow_err_as_http_err(e))
-        }
+    } else {
+        txn.finish(http::StatusCode::UNAUTHORIZED);
+        Err(HttpError::for_status(None, http::StatusCode::UNAUTHORIZED))
     }
 }
 
