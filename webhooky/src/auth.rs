@@ -18,6 +18,15 @@ impl QueryTokenProvider for InternalToken {
     }
 }
 
+pub struct HiringToken;
+
+#[async_trait]
+impl BearerProvider for HiringToken {
+    async fn token() -> Result<String> {
+        Ok(std::env::var("HIRING_AUTH_BEARER")?)
+    }
+}
+
 pub struct AirtableToken;
 
 #[async_trait]
