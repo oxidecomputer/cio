@@ -72,7 +72,7 @@ impl UploadTokenStore {
         Ok(upload_tokens::dsl::upload_tokens
             .filter(upload_tokens::dsl::email.eq(email))
             .filter(upload_tokens::dsl::token.eq(token))
-            .filter(upload_tokens::dsl::expires_at.lt(Utc::now()))
+            .filter(upload_tokens::dsl::expires_at.gt(Utc::now()))
             .filter(upload_tokens::dsl::used_at.is_null())
             .first_async::<UploadToken>(self.db.pool())
             .await
@@ -83,7 +83,7 @@ impl UploadTokenStore {
         let target = upload_tokens::dsl::upload_tokens
             .filter(upload_tokens::dsl::email.eq(email.to_string()))
             .filter(upload_tokens::dsl::token.eq(token.to_string()))
-            .filter(upload_tokens::dsl::expires_at.lt(Utc::now()))
+            .filter(upload_tokens::dsl::expires_at.gt(Utc::now()))
             .filter(upload_tokens::dsl::used_at.is_null());
 
         let token = diesel::update(target)
