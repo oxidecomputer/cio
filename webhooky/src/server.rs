@@ -15,7 +15,7 @@ use dropshot::{
 use dropshot_verify_request::{
     bearer::{Bearer, BearerToken},
     query::{QueryToken, QueryTokenAudit},
-    sig::HmacVerifiedBodyAudit,
+    sig::{HmacVerifiedBody, HmacVerifiedBodyAudit},
 };
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
@@ -449,7 +449,7 @@ async fn listen_products_sold_count_requests(
 }]
 async fn listen_github_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_github::GitHubWebhookVerification, GitHubWebhook>,
+    body: HmacVerifiedBody<crate::handlers_github::GitHubWebhookVerification, GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let webhook = body.into_inner()?;
 
