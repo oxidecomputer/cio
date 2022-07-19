@@ -22,7 +22,7 @@ use cio_api::{
     utils::{decode_base64, merge_json},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, QueryDsl};
-use dropshot::{Path, RequestContext, TypedBody, UntypedBody};
+use dropshot::{Path, RequestContext};
 use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
 use mailchimp_minimal_api::Webhook as MailChimpWebhook;
@@ -151,14 +151,10 @@ pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Re
 
 pub async fn handle_slack_commands(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
+    bot_command: BotCommand,
 ) -> Result<serde_json::Value> {
     let api_context = rqctx.context();
     let db = &api_context.db;
-
-    // We should have a string, which we will then parse into our args.
-    // Parse the request body as a Slack BotCommand.
-    let bot_command: BotCommand = serde_urlencoded::from_bytes(body_param.as_bytes())?;
 
     // Get the company from the Slack team id.
     let company = Company::get_from_slack_team_id(db, &bot_command.team_id).await?;
@@ -526,12 +522,10 @@ pub async fn handle_slack_commands(
 
 pub async fn handle_slack_interactive(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
+    body_param: String,
 ) -> Result<InteractiveResponse> {
-    let s = String::from_utf8(body_param.as_bytes().to_vec())?;
-
     // Decode the URL encoded struct.
-    let decoded = urlencoding::decode(s.trim_start_matches("payload="))?;
+    let decoded = urlencoding::decode(body_param.trim_start_matches("payload="))?;
 
     // We should have a string, which we will then parse into our args.
     // Parse the request body as a Slack InteractivePayload.
@@ -685,11 +679,9 @@ pub async fn handle_slack_interactive(
 
 pub async fn handle_airtable_employees_print_home_address_label(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
         bail!("record id is empty");
@@ -706,11 +698,9 @@ pub async fn handle_airtable_employees_print_home_address_label(
 
 pub async fn handle_airtable_certificates_renew(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
         bail!("record id is empty");
@@ -731,11 +721,9 @@ pub async fn handle_airtable_certificates_renew(
 
 pub async fn handle_airtable_assets_items_print_barcode_label(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
         bail!("record id is empty");
@@ -753,11 +741,9 @@ pub async fn handle_airtable_assets_items_print_barcode_label(
 
 pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
         bail!("record id is empty");
@@ -776,11 +762,9 @@ pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
 
 pub async fn handle_airtable_applicants_request_background_check(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     if event.record_id.is_empty() {
         bail!("record id is empty");
@@ -799,10 +783,8 @@ pub async fn handle_airtable_applicants_request_background_check(
 
 pub async fn handle_airtable_applicants_update(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     let api_context = rqctx.context();
 
     if event.record_id.is_empty() {
@@ -875,10 +857,8 @@ pub async fn handle_airtable_applicants_update(
 
 pub async fn handle_airtable_shipments_outbound_create(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     let api_context = rqctx.context();
 
     if event.record_id.is_empty() {
@@ -914,10 +894,8 @@ pub async fn handle_airtable_shipments_outbound_create(
 
 pub async fn handle_airtable_shipments_outbound_reprint_label(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     if event.record_id.is_empty() {
         bail!("got an empty email for row");
     }
@@ -943,10 +921,8 @@ pub async fn handle_airtable_shipments_outbound_reprint_label(
 
 pub async fn handle_airtable_shipments_outbound_reprint_receipt(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     if event.record_id.is_empty() {
         bail!("got an empty email for row");
     }
@@ -968,10 +944,8 @@ pub async fn handle_airtable_shipments_outbound_reprint_receipt(
 
 pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     if event.record_id.is_empty() {
         bail!("record id is empty");
     }
@@ -990,10 +964,8 @@ pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_
 
 pub async fn handle_airtable_shipments_outbound_schedule_pickup(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     if event.record_id.is_empty() {
         bail!("record id is empty");
     }
@@ -1008,11 +980,8 @@ pub async fn handle_airtable_shipments_outbound_schedule_pickup(
 
 pub async fn handle_emails_incoming_sendgrid_parse(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
+    mut body_param: &[u8],
 ) -> Result<()> {
-    // Parse the body as bytes.
-    let mut b = body_param.as_bytes();
-
     // Get the headers and parse the form data.
     let headers = rqctx.request.lock().await.headers().clone();
 
@@ -1022,7 +991,7 @@ pub async fn handle_emails_incoming_sendgrid_parse(
     h.set_raw("content-type", vec![content_type.as_bytes().to_vec()]);
     h.set_raw("content-length", vec![content_length.as_bytes().to_vec()]);
 
-    let form_data = formdata::read_formdata(&mut b, &h)?;
+    let form_data = formdata::read_formdata(&mut body_param, &h)?;
 
     // Start creating the new shipment.
     let mut i: NewInboundShipment = Default::default();
@@ -1105,10 +1074,9 @@ pub async fn handle_emails_incoming_sendgrid_parse(
 
 pub async fn handle_applicant_review(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
+    event: cio_api::applicant_reviews::NewApplicantReview,
 ) -> Result<()> {
     let api_context = rqctx.context();
-    let event = body_param.into_inner();
 
     if event.name.is_empty() || event.applicant.is_empty() || event.reviewer.is_empty() || event.evaluation.is_empty() {
         bail!("review is empty");
@@ -1146,10 +1114,8 @@ pub async fn handle_applicant_review(
 
 pub async fn handle_test_application_submit(
     _rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<cio_api::application_form::ApplicationForm>,
+    event: cio_api::application_form::ApplicationForm,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     event.test_form_submission().await?;
 
     info!(
@@ -1162,10 +1128,9 @@ pub async fn handle_test_application_submit(
 
 pub async fn handle_application_submit(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<cio_api::application_form::ApplicationForm>,
+    event: cio_api::application_form::ApplicationForm,
 ) -> Result<()> {
     let api_context = rqctx.context();
-    let event = body_param.into_inner();
 
     event.do_form(&api_context.db).await?;
 
@@ -1176,10 +1141,8 @@ pub async fn handle_application_submit(
 
 pub async fn handle_test_application_files_upload(
     _rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<ApplicationFileUploadData>,
+    data: ApplicationFileUploadData,
 ) -> Result<HashMap<String, String>> {
-    let data = body_param.into_inner();
-
     // We will return a key value of the name of file and the link in google drive.
     let mut response: HashMap<String, String> = Default::default();
 
@@ -1247,10 +1210,8 @@ pub async fn handle_test_application_files_upload(
 
 pub async fn handle_application_files_upload(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<ApplicationFileUploadData>,
+    data: ApplicationFileUploadData,
 ) -> Result<HashMap<String, String>> {
-    let data = body_param.into_inner();
-
     // We will return a key value of the name of file and the link in google drive.
     let mut response: HashMap<String, String> = Default::default();
 
@@ -1353,10 +1314,8 @@ fn get_extension_from_filename(filename: &str) -> Option<&str> {
 
 pub async fn handle_airtable_shipments_inbound_create(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<AirtableRowEvent>,
+    event: AirtableRowEvent,
 ) -> Result<()> {
-    let event = body_param.into_inner();
-
     if event.record_id.is_empty() {
         bail!("record id is empty");
     }
@@ -1389,13 +1348,9 @@ pub async fn handle_airtable_shipments_inbound_create(
     Ok(())
 }
 
-pub async fn handle_store_order_create(
-    rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<Order>,
-) -> Result<()> {
+pub async fn handle_store_order_create(rqctx: Arc<RequestContext<Context>>, event: Order) -> Result<()> {
     let api_context = rqctx.context();
 
-    let event = body_param.into_inner();
     event.do_order(&api_context.db).await?;
 
     info!("order for {} created successfully", event.email);
@@ -1404,11 +1359,9 @@ pub async fn handle_store_order_create(
 
 pub async fn handle_easypost_tracking_update(
     _rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<crate::server::EasyPostTrackingUpdateEvent>,
+    event: crate::server::EasyPostTrackingUpdateEvent,
 ) -> Result<()> {
     //let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     sentry::capture_message(&format!("easypost webhook: {:#?}", event), sentry::Level::Info);
 
@@ -1417,11 +1370,9 @@ pub async fn handle_easypost_tracking_update(
 
 pub async fn handle_shippo_tracking_update(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<serde_json::Value>,
+    event: serde_json::Value,
 ) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
     let body: ShippoTrackingUpdateEvent = match serde_json::from_str(&event.to_string()) {
         Ok(b) => b,
         Err(e) => bail!("decoding event body for shippo `{}` failed: {}", event.to_string(), e),
@@ -1461,10 +1412,9 @@ pub async fn handle_shippo_tracking_update(
 
 pub async fn handle_checkr_background_update(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<checkr::WebhookEvent>,
+    event: checkr::WebhookEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
-    let event = body_param.into_inner();
 
     // Run the update of the background checks.
     // If we have a candidate ID let's get them from checkr.
@@ -1534,12 +1484,10 @@ pub async fn handle_checkr_background_update(
 
 pub async fn handle_docusign_envelope_update(
     rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<docusign::Envelope>,
+    event: docusign::Envelope,
 ) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.db;
-
-    let event = body_param.into_inner();
 
     // We need to get the applicant for the envelope.
     // Check their offer first.
@@ -1603,14 +1551,9 @@ pub async fn handle_docusign_envelope_update(
     Ok(())
 }
 
-pub async fn handle_analytics_page_view(
-    rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<NewPageView>,
-) -> Result<()> {
+pub async fn handle_analytics_page_view(rqctx: Arc<RequestContext<Context>>, mut event: NewPageView) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.db;
-
-    let mut event = body_param.into_inner();
 
     // Expand the page_view.
     event.set_page_link();
@@ -1623,13 +1566,11 @@ pub async fn handle_analytics_page_view(
     Ok(())
 }
 
-pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
+pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, event_string: String) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
     // We should have a string, which we will then parse into our args.
-    let event_string = body_param.as_str().unwrap().to_string();
-
     info!("Handling MailChimp mailing_list webhook {}", event_string);
 
     let qs_non_strict = QSConfig::new(10, false);
@@ -1666,12 +1607,9 @@ pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, 
     Ok(())
 }
 
-pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, body_param: UntypedBody) -> Result<()> {
+pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, event_string: String) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.db;
-
-    // We should have a string, which we will then parse into our args.
-    let event_string = body_param.as_str().unwrap().to_string();
 
     info!("Handling MailChimp rack_line webhook {}", event_string);
 
@@ -1714,17 +1652,12 @@ pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, bod
     Ok(())
 }
 
-pub async fn handle_shipbob(
-    rqctx: Arc<RequestContext<Context>>,
-    body_param: TypedBody<serde_json::Value>,
-) -> Result<()> {
+pub async fn handle_shipbob(rqctx: Arc<RequestContext<Context>>, event: serde_json::Value) -> Result<()> {
     // We need to get the webhook type from the header.
     let headers = rqctx.request.lock().await.headers().clone();
 
     let shipbob_topic = headers.get("shipbob-topic").unwrap().to_str()?;
     let shipbob_subscription_id = headers.get("shipbob-subscription-id").unwrap().to_str()?;
-
-    let event = body_param.into_inner();
 
     sentry::capture_message(
         &format!(

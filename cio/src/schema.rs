@@ -173,6 +173,17 @@ table! {
 }
 
 table! {
+    upload_tokens (id) {
+        id -> Int4,
+        email -> Varchar,
+        token -> Varchar,
+        created_at -> Timestamptz,
+        expires_at -> Timestamptz,
+        used_at -> Nullable<Timestamptz>,
+    }
+}
+
+table! {
     asset_items (id) {
         id -> Int4,
         name -> Varchar,

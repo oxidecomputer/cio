@@ -1,6 +1,5 @@
-use std::{str::FromStr, sync::Arc};
-
 use anyhow::Result;
+use async_trait::async_trait;
 use chrono::offset::Utc;
 use cio_api::{
     companies::Company,
@@ -8,22 +7,59 @@ use cio_api::{
         get_configs_from_repo, sync_buildings, sync_certificates, sync_github_outside_collaborators, sync_groups,
         sync_links, sync_resources, sync_users,
     },
+    features::Features,
     repos::NewRepo,
     rfds::{is_image, NewRFD, RFD},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos, generate_shorturls_for_rfds},
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
 };
-use dropshot::{RequestContext, TypedBody};
+use dropshot::{Extractor, RequestContext, ServerContext};
+use dropshot_verify_request::sig::HmacSignatureVerifier;
 use google_drive::traits::{DriveOps, FileOps};
+use hmac::Hmac;
 use log::{info, warn};
+use sha2::Sha256;
+use std::{str::FromStr, sync::Arc};
 
-use crate::{event_types::EventType, github_types::GitHubWebhook, repos::Repo, server::Context};
+use crate::{event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo, server::Context};
+
+#[derive(Debug)]
+pub struct GitHubWebhookVerification;
+
+#[async_trait]
+impl HmacSignatureVerifier for GitHubWebhookVerification {
+    type Algo = Hmac<Sha256>;
+
+    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+        Ok(std::env::var("GH_WH_KEY").map(|key| key.into_bytes()).map_err(|err| {
+            warn!("Failed to find webhook key for verifying GitHub webhooks");
+            err
+        })?)
+    }
+
+    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+        let headers = Headers::from_request(rqctx.clone()).await?;
+        let signature = headers
+            .0
+            .get("X-Hub-Signature-256")
+            .ok_or_else(|| anyhow::anyhow!("GitHub webhook is missing signature"))
+            .and_then(|header_value| Ok(header_value.to_str()?))
+            .and_then(|header| {
+                log::debug!("Found GitHub signature header {}", header);
+                Ok(hex::decode(header.trim_start_matches("sha256="))?)
+            })
+            .map_err(|err| {
+                info!("GitHub webhook is missing a well-formed signature: {}", err);
+                err
+            })?;
+
+        Ok(signature)
+    }
+}
 
 /// Handle a request to the /github endpoint.
-pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, body_param: TypedBody<GitHubWebhook>) -> Result<()> {
+pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWebhook) -> Result<()> {
     let api_context = rqctx.context();
-
-    let event = body_param.into_inner();
 
     // Parse the `X-GitHub-Event` header. Ensure the request lock is dropped once the
     // event_type has been extracted.
@@ -769,54 +805,58 @@ pub async fn handle_rfd_push(
             // If the title of the RFD changed, delete the old PDF file so it
             // doesn't linger in GitHub and Google Drive.
             if !old_rfd_pdf.is_empty() && old_rfd_pdf != rfd.get_pdf_filename() {
-                let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
+                if Features::is_enabled("RFD_PDFS_IN_GITHUB") {
+                    let pdf_path = format!("/pdfs/{}", old_rfd_pdf);
 
-                // First get the sha of the old pdf.
-                let (_, old_pdf_sha) =
-                    get_file_content_from_repo(github, owner, &repo, &event.repository.default_branch, &pdf_path)
-                        .await?;
+                    // First get the sha of the old pdf.
+                    let (_, old_pdf_sha) =
+                        get_file_content_from_repo(github, owner, &repo, &event.repository.default_branch, &pdf_path)
+                            .await?;
 
-                if !old_pdf_sha.is_empty() {
-                    // Delete the old filename from GitHub.
-                    github
-                        .repos()
-                        .delete_file(
-                            owner,
-                            &repo,
-                            pdf_path.trim_start_matches('/'),
-                            &octorust::types::ReposDeleteFileRequest {
-                                message: format!(
-                                    "Deleting file content {} programatically\n\nThis is done \
-                                     from the cio repo webhooky::listen_github_webhooks function.",
-                                    pdf_path
-                                ),
-                                sha: old_pdf_sha,
-                                committer: None,
-                                author: None,
-                                branch: event.repository.default_branch.to_string(),
-                            },
-                        )
+                    if !old_pdf_sha.is_empty() {
+                        // Delete the old filename from GitHub.
+                        github
+                            .repos()
+                            .delete_file(
+                                owner,
+                                &repo,
+                                pdf_path.trim_start_matches('/'),
+                                &octorust::types::ReposDeleteFileRequest {
+                                    message: format!(
+                                        "Deleting file content {} programatically\n\nThis is done \
+                                        from the cio repo webhooky::listen_github_webhooks function.",
+                                        pdf_path
+                                    ),
+                                    sha: old_pdf_sha,
+                                    committer: None,
+                                    author: None,
+                                    branch: event.repository.default_branch.to_string(),
+                                },
+                            )
+                            .await?;
+                        a(&format!(
+                            "[SUCCESS]: deleted old pdf file in GitHub {} since the new name is {}",
+                            old_rfd_pdf,
+                            rfd.get_pdf_filename()
+                        ));
+                    }
+                }
+
+                if Features::is_enabled("RFD_PDFS_IN_GOOGLE_DRIVE") {
+                    // Get the directory by the name.
+                    let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?;
+
+                    // Delete the old filename from drive.
+                    drive
+                        .files()
+                        .delete_by_name(&shared_drive.id, &parent_id, &old_rfd_pdf)
                         .await?;
                     a(&format!(
-                        "[SUCCESS]: deleted old pdf file in GitHub {} since the new name is {}",
+                        "[SUCCESS]: deleted old pdf file in Google Drive {} since the new name is {}",
                         old_rfd_pdf,
                         rfd.get_pdf_filename()
                     ));
                 }
-
-                // Get the directory by the name.
-                let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?;
-
-                // Delete the old filename from drive.
-                drive
-                    .files()
-                    .delete_by_name(&shared_drive.id, &parent_id, &old_rfd_pdf)
-                    .await?;
-                a(&format!(
-                    "[SUCCESS]: deleted old pdf file in Google Drive {} since the new name is {}",
-                    old_rfd_pdf,
-                    rfd.get_pdf_filename()
-                ));
             }
 
             a(&format!(
