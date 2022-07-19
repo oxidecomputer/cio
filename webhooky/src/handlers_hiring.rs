@@ -10,6 +10,7 @@ use crate::server::Context;
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ApplicationView {
+    role: String,
     submitted_at: DateTime<Utc>,
     status: String,
 }
@@ -29,6 +30,7 @@ pub async fn handle_applicant_info(rqctx: Arc<RequestContext<Context>>, email: S
     Ok(ApplicantInfo {
         email,
         application: applicant.map(|applicant| ApplicationView {
+            role: applicant.role,
             submitted_at: applicant.submitted_time,
             status: applicant.status,
         }),
