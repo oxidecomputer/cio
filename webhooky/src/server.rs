@@ -1116,13 +1116,12 @@ pub struct ApplicationFileUploadData {
     path = "/application-test/files/upload",
 }]
 async fn listen_test_application_files_upload_requests_cors(
-    rqctx: Arc<RequestContext<Context>>,
+    _qctx: Arc<RequestContext<Context>>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
     let headers = resp.headers_mut();
 
-    let allowed_origins = crate::cors::get_cors_origin_header(rqctx.clone(), &["*"]).await?;
-    headers.insert("Access-Control-Allow-Origin", allowed_origins);
+    headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
     headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
     headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
 
