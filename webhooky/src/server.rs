@@ -1121,21 +1121,9 @@ async fn listen_test_application_files_upload_requests_cors(
     let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
     let headers = resp.headers_mut();
 
-    let allowed_origins = crate::cors::get_cors_origin_header(
-        rqctx.clone(),
-        &[
-            "https://apply.oxide.computer",
-            "https://oxide.computer",
-            "http://localhost:3000",
-        ],
-    )
-    .await?;
+    let allowed_origins = crate::cors::get_cors_origin_header(rqctx.clone(), &["*"]).await?;
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
-
-    // let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
     headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
-
-    // let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]);
     headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
 
     Ok(resp)
@@ -1226,19 +1214,11 @@ async fn listen_application_files_upload_requests_cors(
 
     let allowed_origins = crate::cors::get_cors_origin_header(
         rqctx.clone(),
-        &[
-            "https://apply.oxide.computer",
-            "https://oxide.computer",
-            "http://localhost:3000",
-        ],
+        &["https://apply.oxide.computer", "https://oxide.computer"],
     )
     .await?;
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
-
-    // let allowed_headers = crate::cors::get_cors_headers_header(rqctx.clone(), &["Content-Type"]).await?;
     headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
-
-    // let allowed_methods = crate::cors::get_cors_method_header(&[Method::POST, Method::OPTIONS]);
     headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
 
     Ok(resp)
