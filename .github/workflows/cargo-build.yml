@@ -25,6 +25,7 @@ jobs:
         run: |
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
       - name: Install latest nightly
         uses: oxidecomputer/actions-rs_toolchain@oxide/master
         with:
@@ -40,21 +41,21 @@ jobs:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-registry-master-break
+            ${{ runner.os }}-cargo-registry-master
       - name: Cache cargo index
         uses: actions/cache@v3
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-index-master-break
+            ${{ runner.os }}-cargo-index-master
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-build-target-master-break
+            ${{ runner.os }}-cargo-build-target-master
       - name: Run cargo build
         run: |
           cargo build
