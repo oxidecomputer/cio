@@ -1144,8 +1144,8 @@ async fn listen_test_application_files_upload_requests(
 
     // We require that the user has supplied an upload token in the bearer header
     if let Some(token) = bearer.inner() {
-        // Attempt to consume the token marked it as unusable by other requests. A token may fail
-        // to be consumed due to:
+        // Attempt to consume the token and mark it as unusable by other requests. A token may fail
+        // to be consumed due a number of reasons to:
         //  1. Token was previously used
         //  2. Token is invalid
         //  3. Token does not match the email submitted
@@ -1231,10 +1231,37 @@ async fn listen_application_files_upload_requests_cors(
 }]
 async fn listen_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
+    bearer: BearerToken,
     body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
     let body = body_param.into_inner();
     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+
+    // We require that the user has supplied an upload token in the bearer header
+    if let Some(token) = bearer.inner() {
+        // Attempt to consume the token marked it as unusable by other requests. A token may fail
+        // to be consumed due to:
+        //  1. Token was previously used
+        //  2. Token is invalid
+        //  3. Token does not match the email submitted
+        //  4. Token is expired
+        //
+        // We currently return a single error code, 409 Conflict so as not to expose which of these
+        // cases occurred. In the future we may want to relax this and return individual error codes
+        let token_result = rqctx
+            .context()
+            .upload_token_store
+            .consume(&body.email, token)
+            .await
+            .map_err(|err| {
+                log::info!("Failed to consume upload token due to {:?}", err);
+                HttpError::for_status(None, http::StatusCode::CONFLICT)
+            });
+
+        log::info!("Application materials upload token consume result {:?}", token_result);
+    } else {
+        log::info!("Application materials submission does not contain upload token");
+    }
 
     // Check the origin header. In the future this may be upgraded to a hard failure
     let origin_access = crate::cors::get_cors_origin_header(
@@ -1243,10 +1270,11 @@ async fn listen_application_files_upload_requests(
     )
     .await;
 
-    match txn
+    let upload_result = txn
         .run(|| crate::handlers::handle_application_files_upload(rqctx, body))
-        .await
-    {
+        .await;
+
+    match upload_result {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
 
@@ -1259,7 +1287,7 @@ async fn listen_application_files_upload_requests(
                 }
                 Err(err) => {
                     warn!(
-                        "Submission to /application/files/upload failed CORS simulation. Err {:?}",
+                        "Submission to /application/files/upload failed CORS check. Err {:?}",
                         err
                     );
                 }

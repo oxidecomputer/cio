@@ -25,8 +25,18 @@ jobs:
       - name: Cleanup unused space
         shell: bash
         run: |
+          set -x
+          df -h /
           sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/microsoft
           sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/share/swift
+          df -h /
       - uses: actions/setup-node@v2
       - name: Cleanup unused space
         shell: bash
@@ -68,21 +78,21 @@ jobs:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-registry-master
+            ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache cargo index
         uses: actions/cache@v3
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-index-master
+            ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-build-target-master
+            ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       - name: Install SQL proxy
         shell: bash
         run: |
@@ -117,3 +127,8 @@ jobs:
           GUSTO_CLIENT_SECRET: ${{secrets.GUSTO_CLIENT_SECRET}}
           GUSTO_REDIRECT_URI: ${{secrets.GUSTO_REDIRECT_URI}}
           RUST_BACKTRACE: 1
+      - name: Report remaining disk
+        shell: bash
+        run: |
+          set -x
+          df -h /
