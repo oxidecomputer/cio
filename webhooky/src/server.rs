@@ -37,6 +37,7 @@ use crate::{
     auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, ShippoToken},
     github_types::GitHubWebhook,
     handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
+    handlers_rfd::RFDIndex,
     handlers_slack::InteractiveEvent,
 };
 
@@ -143,6 +144,7 @@ pub async fn create_server(
     api.register(listen_store_order_create).unwrap();
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
+    api.register(listen_rfd_index).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(trigger_cleanup_create).unwrap();
 
@@ -2102,6 +2104,29 @@ async fn listen_shipbob_webhooks(
     txn.finish(http::StatusCode::OK);
 
     Ok(HttpResponseOk("ok".to_string()))
+}
+
+#[endpoint {
+    method = GET,
+    path = "/rfds",
+}]
+async fn listen_rfd_index(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: QueryToken<InternalToken>,
+) -> Result<HttpResponseOk<RFDIndex>, HttpError> {
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+
+    match txn.run(|| crate::handlers_rfd::handle_rfd_index(rqctx)).await {
+        Ok(index) => {
+            txn.finish(http::StatusCode::OK);
+            Ok(HttpResponseOk(index))
+        }
+        Err(err) => {
+            // Send the error to sentry.
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(err))
+        }
+    }
 }
 
 /** Listen for triggering a function run of sync repos. */
