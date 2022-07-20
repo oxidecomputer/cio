@@ -20,6 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - name: Cleanup unused space
+        shell: bash
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
       - name: Install latest nightly
         uses: oxidecomputer/actions-rs_toolchain@oxide/master
         with:
@@ -35,21 +40,21 @@ jobs:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-registry-master
+            ${{ runner.os }}-cargo-registry-master-break
       - name: Cache cargo index
         uses: actions/cache@v3
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-index-master
+            ${{ runner.os }}-cargo-index-master-break
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-build-target-master
+            ${{ runner.os }}-cargo-build-target-master-break
       - name: Run cargo build
         run: |
           cargo build
