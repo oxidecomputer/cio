@@ -25,9 +25,18 @@ jobs:
       - name: Cleanup unused space
         shell: bash
         run: |
+          set -x
+          df -h /
           sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/microsoft
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/share/swift
+          df -h /
       - uses: actions/setup-node@v2
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
@@ -113,3 +122,8 @@ jobs:
           GUSTO_CLIENT_SECRET: ${{secrets.GUSTO_CLIENT_SECRET}}
           GUSTO_REDIRECT_URI: ${{secrets.GUSTO_REDIRECT_URI}}
           RUST_BACKTRACE: 1
+      - name: Report remaining disk
+        shell: bash
+        run: |
+          set -x
+          df -h /

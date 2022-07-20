@@ -69,3 +69,8 @@ jobs:
         run: |
           cargo build
         shell: bash
+      - name: Report remaining disk
+        shell: bash
+        run: |
+          set -x
+          df -h /
