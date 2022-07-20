@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cio_api::rfds::{RFD, RFDs};
+use cio_api::rfds::{RFDs, RFD};
 use dropshot::RequestContext;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -10,14 +10,14 @@ use crate::server::Context;
 #[derive(Serialize, JsonSchema)]
 pub struct RFDIndex {
     rfds: Vec<RFDIndexEntry>,
-    pagination: Pagination
+    pagination: Pagination,
 }
 
 #[derive(Serialize, JsonSchema)]
 pub struct Pagination {
     page: u32,
     total_pages: u32,
-    has_next: bool
+    has_next: bool,
 }
 
 #[derive(Serialize, JsonSchema)]
@@ -50,14 +50,14 @@ pub async fn handle_rfd_index(rqctx: Arc<RequestContext<Context>>) -> Result<RFD
     let rfds = RFDs::get_from_db(&ctx.db, 1).await?;
 
     let entries: Vec<RFDIndexEntry> = rfds.into_iter().map(|rfd| rfd.into()).collect();
-    let pages = if entries.len() > 0 { 1 } else { 0 };
+    let pages = if !entries.is_empty() { 1 } else { 0 };
 
     Ok(RFDIndex {
         rfds: entries,
         pagination: Pagination {
             page: pages,
             total_pages: pages,
-            has_next: false
-        }
+            has_next: false,
+        },
     })
 }
