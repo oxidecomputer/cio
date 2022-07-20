@@ -848,7 +848,7 @@ dependencies = [
  "url 2.2.2",
  "uuid 0.8.2",
  "walkdir",
- "yup-oauth2 6.4.0",
+ "yup-oauth2 7.0.1",
  "zip",
  "zoho-api",
  "zoom-api",
@@ -2517,7 +2517,7 @@ dependencies = [
  "hyper 0.14.18",
  "log 0.4.16",
  "rustls 0.19.1",
- "rustls-native-certs",
+ "rustls-native-certs 0.5.0",
  "tokio",
  "tokio-rustls 0.22.0",
  "webpki 0.21.4",
@@ -2531,7 +2531,9 @@ checksum = "d87c48c02e0dc5e3b849a2041db3029fd066650f8f717c07bf8ed78ccb895cac"
 dependencies = [
  "http",
  "hyper 0.14.18",
+ "log 0.4.16",
  "rustls 0.20.6",
+ "rustls-native-certs 0.6.2",
  "tokio",
  "tokio-rustls 0.23.4",
 ]
@@ -4610,6 +4612,18 @@ checksum = "5a07b7c1885bd8ed3831c289b7870b13ef46fe0e856d288c30d9cc17d75a2092"
 dependencies = [
  "openssl-probe",
  "rustls 0.19.1",
+ "schannel",
+ "security-framework",
+]
+
+[[package]]
+name = "rustls-native-certs"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0167bac7a9f490495f3c33013e7722b53cb087ecbe082fb0c6387c96f634ea50"
+dependencies = [
+ "openssl-probe",
+ "rustls-pemfile 1.0.0",
  "schannel",
  "security-framework",
 ]
@@ -6945,9 +6959,9 @@ dependencies = [
 
 [[package]]
 name = "yup-oauth2"
-version = "6.4.0"
+version = "7.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60f4735745047b40de5b982ed1645b9c7b0508d12439302e596774ac4ba9f4c0"
+checksum = "98748970d2ddf05253e6525810d989740334aa7509457864048a829902db76f3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6955,16 +6969,18 @@ dependencies = [
  "futures",
  "http",
  "hyper 0.14.18",
- "hyper-rustls 0.22.1",
+ "hyper-rustls 0.23.0",
  "itertools 0.10.3",
  "log 0.4.16",
  "percent-encoding 2.1.0",
- "rustls 0.19.1",
+ "rustls 0.20.6",
+ "rustls-pemfile 0.3.0",
  "seahash",
  "serde",
  "serde_json",
  "time 0.3.9",
  "tokio",
+ "tower-service",
  "url 2.2.2",
 ]
 
