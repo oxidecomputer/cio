@@ -44,27 +44,27 @@ jobs:
         run: |
           sudo apt update -y && sudo apt install -y \
             libusb-1.0-0-dev
-      # - name: Cache cargo registry
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ~/.cargo/registry
-      #     key: ${{ runner.os }}-cargo-registry-${{ github.ref }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-cargo-registry-master
-      # - name: Cache cargo index
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ~/.cargo/git
-      #     key: ${{ runner.os }}-cargo-index-${{ github.ref }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-cargo-index-master
-      # - name: Cache cargo build
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: target
-      #     key: ${{ runner.os }}-cargo-build-target-${{ github.ref }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-cargo-build-target-master
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       - name: Run cargo clippy
         run: |
           cargo clippy
