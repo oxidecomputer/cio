@@ -34,7 +34,7 @@ use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
 use crate::{
-    auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, ShippoToken},
+    auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, RFDToken, ShippoToken},
     github_types::GitHubWebhook,
     handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
     handlers_rfd::RFDIndex,
@@ -2112,7 +2112,7 @@ async fn listen_shipbob_webhooks(
 }]
 async fn listen_rfd_index(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryToken<InternalToken>,
+    _auth: Bearer<RFDToken>,
 ) -> Result<HttpResponseOk<RFDIndex>, HttpError> {
     let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
