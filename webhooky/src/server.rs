@@ -1259,6 +1259,8 @@ async fn listen_application_files_upload_requests(
             });
 
         log::info!("Application materials upload token consume result {:?}", token_result);
+    } else {
+        log::info!("Application materials submission does not contain upload token");
     }
 
     // Check the origin header. In the future this may be upgraded to a hard failure
