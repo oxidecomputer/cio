@@ -1144,8 +1144,8 @@ async fn listen_test_application_files_upload_requests(
 
     // We require that the user has supplied an upload token in the bearer header
     if let Some(token) = bearer.inner() {
-        // Attempt to consume the token marked it as unusable by other requests. A token may fail
-        // to be consumed due to:
+        // Attempt to consume the token and mark it as unusable by other requests. A token may fail
+        // to be consumed due a number of reasons to:
         //  1. Token was previously used
         //  2. Token is invalid
         //  3. Token does not match the email submitted
