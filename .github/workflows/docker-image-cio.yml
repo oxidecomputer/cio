@@ -43,7 +43,7 @@ jobs:
           sudo rm -rf /usr/share/swift
           df -h /
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       - name: Cache Docker layers
         uses: actions/cache@v3
         with:
@@ -52,13 +52,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-cio-master
       - name: Login to GitHub Packages Docker Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push - cio
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           push: ${{ ! startsWith(github.ref, 'refs/heads/dependabot') && github.event_name != 'pull_request' }}
           file: ./cio/Dockerfile

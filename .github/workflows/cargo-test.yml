@@ -37,7 +37,7 @@ jobs:
           sudo rm -rf /usr/local/share/powershell
           sudo rm -rf /usr/share/swift
           df -h /
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3.1.0
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
