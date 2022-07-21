@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"
-async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
+async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git" }
 async-trait = "0.1.56"
 checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
@@ -24,7 +24,8 @@ cio-api = { path = "../cio" }
 clap = { version = "^3.2.13", features = ["cargo", "derive", "env", "unicode"] }
 clokwerk = "0.4.0-rc1"
 # Tracking pending 2.0 version.
-diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
+diesel = { version = "2.0.0-rc.0", default-features = false, features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"] }
+# diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "64-column-tables", "r2d2"]  }
 docusign = "^0.1.0"
 #dropshot = "^0.5.0"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
@@ -56,7 +57,8 @@ rand = "^0.8.5"
 regex = "^1.5.5"
 reqwest = { version = "0.11", features = ["json"] }
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
-sentry = { features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], version = "0.27.0" }
+sentry = { version = "0.27.0" }
+# sentry = { features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], version = "0.27.0" }
 # sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
 #sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"], path = "../../sentry-rust/sentry"  }
 serde = { version = "1.0", features = ["derive"] }

@@ -14,5 +14,5 @@ keycode = "^0.3.0"
 log = { version = "0.4", features = ["serde"] }
 pretty_env_logger = "0.4"
 sentry = { version = "^0.24.3", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "^1.19", features = ["full"] }
 uuid = { version = "^0.8.1", features = ["serde", "v4"] }
