@@ -65,6 +65,11 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ github.ref }}
           restore-keys: |
             ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - name: Report pre-build remaining disk
+        shell: bash
+        run: |
+          set -x
+          df -h /
       - name: Run cargo build
         run: |
           cargo build

@@ -104,6 +104,11 @@ jobs:
         run: |
           ./cloud_sql_proxy -instances=${{ secrets.INSTANCE_CONNECTION_NAME }}=tcp:5432 \
                   -credential_file=${{ github.workspace }}/sql_proxy_key &
+      - name: Report pre-test remaining disk
+        shell: bash
+        run: |
+          set -x
+          df -h /
       - name: Run cargo test
         run: |
           cargo test  -- --test-threads=1 --nocapture
