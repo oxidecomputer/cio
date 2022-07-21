@@ -21,4 +21,4 @@ tokio = { version = "1", features = ["full", "time"] }
 tracing = "0.1.29"
 
 [dev-dependencies]
-tracing-subscriber = "0.3.14"
+tracing-subscriber = "0.3.15"
