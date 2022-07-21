@@ -1061,7 +1061,7 @@ async fn listen_test_application_submit_requests(
 }]
 async fn listen_application_submit_requests(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: Bearer<InternalToken>,
+    _auth: Bearer<HiringToken>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1259,47 +1259,56 @@ async fn listen_application_files_upload_requests(
             });
 
         log::info!("Application materials upload token consume result {:?}", token_result);
-    } else {
-        log::info!("Application materials submission does not contain upload token");
-    }
 
-    // Check the origin header. In the future this may be upgraded to a hard failure
-    let origin_access = crate::cors::get_cors_origin_header(
-        rqctx.clone(),
-        &["https://apply.oxide.computer", "https://oxide.computer"],
-    )
-    .await;
+        match token_result {
+            Ok(_) => {
+                // Check the origin header. In the future this may be upgraded to a hard failure
+                let origin_access = crate::cors::get_cors_origin_header(
+                    rqctx.clone(),
+                    &["https://apply.oxide.computer", "https://oxide.computer"],
+                )
+                .await;
 
-    let upload_result = txn
-        .run(|| crate::handlers::handle_application_files_upload(rqctx, body))
-        .await;
+                let upload_result = txn
+                    .run(|| crate::handlers::handle_application_files_upload(rqctx, body))
+                    .await;
 
-    match upload_result {
-        Ok(r) => {
-            txn.finish(http::StatusCode::OK);
+                match upload_result {
+                    Ok(r) => {
+                        txn.finish(http::StatusCode::OK);
 
-            let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
+                        let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
 
-            match origin_access {
-                Ok(origin) => {
-                    let headers = resp.headers_mut();
-                    headers.insert("Access-Control-Allow-Origin", origin);
-                }
-                Err(err) => {
-                    warn!(
-                        "Submission to /application/files/upload failed CORS check. Err {:?}",
-                        err
-                    );
+                        match origin_access {
+                            Ok(origin) => {
+                                let headers = resp.headers_mut();
+                                headers.insert("Access-Control-Allow-Origin", origin);
+                            }
+                            Err(err) => {
+                                warn!(
+                                    "Submission to /application/files/upload failed CORS check. Err {:?}",
+                                    err
+                                );
+                            }
+                        }
+
+                        Ok(resp)
+                    }
+                    // Send the error to sentry.
+                    Err(e) => {
+                        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+                        Err(handle_anyhow_err_as_http_err(e))
+                    }
                 }
             }
-
-            Ok(resp)
+            Err(err) => {
+                txn.finish(err.status_code);
+                Err(err)
+            }
         }
-        // Send the error to sentry.
-        Err(e) => {
-            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-            Err(handle_anyhow_err_as_http_err(e))
-        }
+    } else {
+        txn.finish(http::StatusCode::UNAUTHORIZED);
+        Err(HttpError::for_status(None, http::StatusCode::UNAUTHORIZED))
     }
 }
 
