@@ -40,7 +40,7 @@ gusto-api = "^0.2.4"
 hex = "0.4.3"
 hmac = "0.12.0"
 http = "0.2.6"
-hyperx = { package = "hyper", version = "0.10" }
+hyperx = { package = "hyper", version = "0.14.5" }
 lazy_static = "^1.4.0"
 log = { version = "0.4", features = ["serde"] }
 # mailchimp-api = "^0.1.11"
@@ -78,7 +78,7 @@ slog-term = "2"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full", "time"] }
 urlencoding = "2.1.0"
-uuid = { version = "^0.8", features = ["serde", "v4"] }
+uuid = { version = "1.0", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"
 sha2 = "0.10.0"
 stacker = "0.1.14"
