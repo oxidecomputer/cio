@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports)]
+
 //! Add Sentry tracing probes to Diesel connections.
 //!
 //! The `diesel-sentry` crate provides a diesel [`Connection`] that includes Sentry tracing points.
@@ -5,55 +7,58 @@
 
 use std::sync::Arc;
 
-use diesel::backend::Backend;
-use diesel::connection::{AnsiTransactionManager, ConnectionGatWorkaround, SimpleConnection, TransactionManager, commit_error_processor::CommitErrorProcessor};
+use diesel::backend::{Backend, DieselReserveSpecialization};
+use diesel::{connection::{AnsiTransactionManager, ConnectionGatWorkaround, LoadRowIter, SimpleConnection, TransactionManager, commit_error_processor::{CommitErrorProcessor, CommitErrorOutcome}}, result::Error as DieselError};
 use diesel::debug_query;
 use diesel::expression::QueryMetadata;
 use diesel::prelude::*;
-use diesel::query_builder::{AsQuery, QueryFragment, QueryId};
+use diesel::query_builder::{AsQuery, QueryFragment, QueryId, Query};
 use diesel::r2d2::R2D2Connection;
 use sentry::Hub;
 use std::ops::{Deref, DerefMut};
 use uuid::Uuid;
+use std::marker::PhantomData;
 
 // https://www.postgresql.org/docs/12/functions-info.html
 // db.name
-diesel::sql_function!(fn current_database() -> diesel::sql_types::Text);
+// diesel::sql_function!(fn current_database() -> diesel::sql_types::Text);
 // db.version
 diesel::sql_function!(fn version() -> diesel::sql_types::Text);
 
 #[derive(Queryable, Clone, Debug, PartialEq, Default)]
 struct ConnectionInfo {
+    backend: String,
     current_database: String,
     version: String,
 }
 
 /// A [`Connection`] that includes Sentry tracing points.
 #[derive(Debug)]
-pub struct SentryConnection<C: Connection> {
+pub struct SentryConnection<C: Connection, B> {
     inner: C,
     id: Uuid,
     info: ConnectionInfo,
+    backend: PhantomData<B>
 }
 
-impl<C: Connection> Deref for SentryConnection<C> {
+impl<C, B> Deref for SentryConnection<C, B> where C: Connection::<Backend = B>, B: Backend {
     type Target = C;
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl<C: Connection> DerefMut for SentryConnection<C> {
+impl<C, B> DerefMut for SentryConnection<C, B> where C: Connection::<Backend = B>, B: Backend {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<C: Connection> SimpleConnection for SentryConnection<C> {
+impl<C, B> SimpleConnection for SentryConnection<C, B> where C: Connection::<Backend = B>, B: Backend {
     #[tracing::instrument(
         fields(
-            db.name=%self.info.current_database,
-            db.system="postgresql",
+            // db.name=%self.info.current_database,
+            db.system=self.info.backend,
             db.version=%self.info.version,
             db.statement=%query,
             otel.kind="client",
@@ -69,60 +74,72 @@ impl<C: Connection> SimpleConnection for SentryConnection<C> {
     }
 }
 
-impl<'conn, 'query, C: Connection> ConnectionGatWorkaround<'conn, 'query, C::Backend> for SentryConnection<C> {
+impl<'conn, 'query, C, B> ConnectionGatWorkaround<'conn, 'query, C::Backend> for SentryConnection<C, B> where C: Connection<Backend = B>, B: Backend {
     type Cursor = <C as ConnectionGatWorkaround<'conn, 'query, C::Backend>>::Cursor;
     type Row = <C as ConnectionGatWorkaround<'conn, 'query, C::Backend>>::Row;
 }
 
-impl<C> Connection for SentryConnection<C>
+impl<C, B> CommitErrorProcessor for SentryConnection<C, B> where C: Connection<Backend = B> + CommitErrorProcessor, B: Backend {
+    fn process_commit_error(&self, error: DieselError) -> CommitErrorOutcome {
+        self.inner.process_commit_error(error)
+    }
+}
+
+impl<C, B> Connection for SentryConnection<C, B>
 where
-    C: Connection<TransactionManager = AnsiTransactionManager, Backend = diesel::pg::Pg> + CommitErrorProcessor,
-    <C::Backend as Backend>::QueryBuilder: Default,
+    C: Connection<TransactionManager = AnsiTransactionManager, Backend = B> + CommitErrorProcessor,
+    B: Backend + DieselReserveSpecialization + Default + Send + Sync + std::fmt::Debug,
+    B::QueryBuilder: Default,
 {
-    type Backend = diesel::pg::Pg;
+    type Backend = C::Backend;
     type TransactionManager = C::TransactionManager;
 
     #[tracing::instrument(
         fields(
             db.name=tracing::field::Empty,
-            db.system="postgresql",
+            db.system=tracing::field::Empty,
             db.version=tracing::field::Empty,
             otel.kind="client",
         ),
         skip(database_url),
     )]
     fn establish(database_url: &str) -> ConnectionResult<Self> {
-        tracing::debug!("establishing postgresql connection");
+        tracing::debug!("establishing database connection");
         let conn_id = Uuid::new_v4();
         let mut txn = start_sentry_db_transaction("connection", "establish");
         let conn = C::establish(database_url);
-        let mut inner = conn?;
+        let inner = conn?;
 
-        tracing::debug!("querying postgresql connection information");
-        let info: ConnectionInfo = diesel::select((current_database(), version()))
+        // tracing::debug!("querying database connection information");
+        let version = diesel::select(version())
             .get_result(&mut inner)
             .map_err(ConnectionError::CouldntSetupConfiguration)?;
 
-        let span = tracing::Span::current();
-        span.record("db.name", &info.current_database.as_str());
-        span.record("db.version", &info.version.as_str());
+        // let span = tracing::Span::current();
+        // span.record("db.name", &info.current_database.as_str());
+        // span.record("db.version", &info.version.as_str());
 
-        tracing::debug!("db.name: {}", info.current_database);
-        tracing::debug!("db.version: {}", info.version);
+        // tracing::debug!("db.name: {}", info.current_database);
+        // tracing::debug!("db.version: {}", info.version);
 
         txn.finish();
 
         Ok(SentryConnection {
             inner,
             id: conn_id,
-            info,
+            info: ConnectionInfo {
+                backend: "foo".to_string(),
+                current_database: "foo".to_string(),
+                version: "1".to_string()
+            },
+            backend: PhantomData
         })
     }
 
     #[tracing::instrument(
         fields(
             db.name=%self.info.current_database,
-            db.system="postgresql",
+            db.system=self.info.backend,
             db.version=%self.info.version,
             otel.kind="client",
         ),
@@ -139,38 +156,19 @@ where
         result
     }
 
-    // #[tracing::instrument(
-    //     fields(
-    //         db.name=%self.info.current_database,
-    //         db.system="postgresql",
-    //         db.version=%self.info.version,
-    //         db.statement=%query,
-    //         otel.kind="client",
-    //     ),
-    //     skip(self),
-    // )]
-    // fn execute(&mut self, query: &str) -> QueryResult<usize> {
-    //     let mut txn = start_sentry_db_transaction("sql.query", query);
-
-    //     let result = self.inner.execute(query);
-    //     txn.finish();
-    //     result
-    // }
-
     #[tracing::instrument(
         fields(
             db.name=%self.info.current_database,
-            db.system="postgresql",
+            db.system=self.info.backend,
             db.version=%self.info.version,
             db.statement=tracing::field::Empty,
             otel.kind="client",
         ),
         skip(self, source),
     )]
-    fn load<T>(&mut self, source: T) -> QueryResult<<Self as ConnectionGatWorkaround<Self::Backend>>::Cursor>
+    fn load<'conn, 'query, T>(&'conn mut self, source: T) -> QueryResult<LoadRowIter<'conn, 'query, Self, Self::Backend>>
     where
-        T: AsQuery,
-        T::Query: QueryFragment<Self::Backend> + QueryId,
+        T: Query + QueryFragment<Self::Backend> + QueryId + 'query,
         Self::Backend: QueryMetadata<T::SqlType>,
     {
         let q = source.as_query();
@@ -188,7 +186,7 @@ where
     #[tracing::instrument(
         fields(
             db.name=%self.info.current_database,
-            db.system="postgresql",
+            db.system=self.info.backend,
             db.version=%self.info.version,
             db.statement=tracing::field::Empty,
             otel.kind="client",
@@ -212,7 +210,7 @@ where
     #[tracing::instrument(
         fields(
             db.name=%self.info.current_database,
-            db.system="postgresql",
+            db.system=self.info.backend,
             db.version=%self.info.version,
             otel.kind="client",
         ),
@@ -223,10 +221,11 @@ where
     }
 }
 
-impl<C> R2D2Connection for SentryConnection<C>
+impl<C, B> R2D2Connection for SentryConnection<C, B>
 where
-    C: R2D2Connection + Connection<TransactionManager = AnsiTransactionManager, Backend = diesel::pg::Pg> + CommitErrorProcessor,
-    <C::Backend as Backend>::QueryBuilder: Default,
+    C: R2D2Connection + Connection<TransactionManager = AnsiTransactionManager, Backend = B> + CommitErrorProcessor,
+    B: Backend + DieselReserveSpecialization + Default + Send + Sync + std::fmt::Debug,
+    B::QueryBuilder: Default,
 {
     fn ping(&mut self) -> QueryResult<()> {
         self.inner.ping()

@@ -8,10 +8,10 @@ repository = "https://github.com/oxidecomputer/cio.git"
 
 [dependencies]
 # diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420", features = [ "r2d2", "postgres"] }
-diesel = { version = "2.0.0-rc.0", default-features = false, features = ["serde_json", "postgres", "chrono", "r2d2", "i-implement-a-third-party-backend-and-opt-into-breaking-changes"] }
+diesel = { version = "2.0.0-rc.0", default-features = false, features = ["serde_json", "chrono", "r2d2", "i-implement-a-third-party-backend-and-opt-into-breaking-changes"] }
 serde = "1"
 # This HAS to match that in webhooky or else it won't work
 sentry = { features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], version = "0.27.0" }
 # sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
 tracing = "^0.1"
-uuid = { version = "^0.8", features = [ "v4", "serde" ] }
+uuid = { version = "^1.0", features = [ "v4", "serde" ] }

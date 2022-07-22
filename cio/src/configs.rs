@@ -14,7 +14,8 @@ use diesel::{
     pg::{Pg, PgValue},
     serialize::{self, Output, ToSql},
     sql_types::VarChar,
-    FromSqlRow,
+    expression::AsExpression,
+    deserialize::FromSqlRow
 };
 use google_calendar::types::{Event, EventAttendee, EventDateTime};
 use google_geocode::Geocode;
@@ -132,7 +133,7 @@ impl fmt::Display for ExternalServices {
 }
 
 impl ToSql<VarChar, Pg> for ExternalServices {
-    fn to_sql<W: std::io::Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+    fn to_sql<'a>(&'a self, out: &mut Output<'a, '_, Pg>) -> serialize::Result {
         <str as ToSql<VarChar, Pg>>::to_sql(self.as_str(), out)
     }
 }
@@ -1581,7 +1582,7 @@ impl ResourceCategory {
 }
 
 impl ToSql<VarChar, Pg> for ResourceCategory {
-    fn to_sql<W: std::io::Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+    fn to_sql<'a>(&'a self, out: &mut Output<'a, '_, Pg>) -> serialize::Result {
         <str as ToSql<VarChar, Pg>>::to_sql(self.as_str(), out)
     }
 }

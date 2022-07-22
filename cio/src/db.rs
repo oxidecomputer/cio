@@ -3,10 +3,10 @@ use std::{env, fmt};
 use anyhow::Result;
 use async_bb8_diesel::ConnectionManager;
 use async_trait::async_trait;
-use diesel::PgConnection;
+use diesel::{Connection, PgConnection};
 use diesel_sentry::SentryConnection;
 
-pub type DbConnection = SentryConnection<PgConnection>;
+pub type DbConnection = SentryConnection<PgConnection, <PgConnection as Connection>::Backend>;
 //pub type DbConnection = PgConnection;
 
 #[derive(Debug, Clone)]
