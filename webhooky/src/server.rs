@@ -131,7 +131,7 @@ pub async fn create_server(
     api.register(listen_auth_quickbooks_consent).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
-    api.register(listen_emails_incoming_sendgrid_parse_webhooks).unwrap();
+    // api.register(listen_emails_incoming_sendgrid_parse_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_mailing_list_webhooks).unwrap();
     api.register(listen_mailchimp_rack_line_webhooks).unwrap();
@@ -905,34 +905,36 @@ pub struct IncomingEmail {
     pub spf: String,
 }
 
+// Disabling as it has not been used for the past 30 days
+
 /**
  * Listen for emails coming inbound from SendGrid's parse API.
  * We use this for scanning for packages in emails.
  */
-#[endpoint {
-    method = POST,
-    path = "/emails/incoming/sendgrid/parse",
-}]
-async fn listen_emails_incoming_sendgrid_parse_webhooks(
-    rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let body = body_param.as_bytes();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(body)).await;
+// #[endpoint {
+//     method = POST,
+//     path = "/emails/incoming/sendgrid/parse",
+// }]
+// async fn listen_emails_incoming_sendgrid_parse_webhooks(
+//     rqctx: Arc<RequestContext<Context>>,
+//     body_param: UntypedBody,
+// ) -> Result<HttpResponseAccepted<String>, HttpError> {
+//     let body = body_param.as_bytes();
+//     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(body)).await;
 
-    if let Err(e) = txn
-        .run(|| crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body))
-        .await
-    {
-        // Send the error to sentry.
-        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-        return Err(handle_anyhow_err_as_http_err(e));
-    }
+//     if let Err(e) = txn
+//         .run(|| crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body))
+//         .await
+//     {
+//         // Send the error to sentry.
+//         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+//         return Err(handle_anyhow_err_as_http_err(e));
+//     }
 
-    txn.finish(http::StatusCode::ACCEPTED);
+//     txn.finish(http::StatusCode::ACCEPTED);
 
-    Ok(HttpResponseAccepted("ok".to_string()))
-}
+//     Ok(HttpResponseAccepted("ok".to_string()))
+// }
 
 /**
  * Listen for applicant reviews being submitted for job applicants */
@@ -1063,7 +1065,7 @@ async fn listen_test_application_submit_requests(
 }]
 async fn listen_application_submit_requests(
     rqctx: Arc<RequestContext<Context>>,
-    _auth: Bearer<InternalToken>,
+    _auth: Bearer<HiringToken>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
@@ -1146,8 +1148,8 @@ async fn listen_test_application_files_upload_requests(
 
     // We require that the user has supplied an upload token in the bearer header
     if let Some(token) = bearer.inner() {
-        // Attempt to consume the token marked it as unusable by other requests. A token may fail
-        // to be consumed due to:
+        // Attempt to consume the token and mark it as unusable by other requests. A token may fail
+        // to be consumed due a number of reasons to:
         //  1. Token was previously used
         //  2. Token is invalid
         //  3. Token does not match the email submitted
@@ -1233,47 +1235,84 @@ async fn listen_application_files_upload_requests_cors(
 }]
 async fn listen_application_files_upload_requests(
     rqctx: Arc<RequestContext<Context>>,
+    bearer: BearerToken,
     body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
     let body = body_param.into_inner();
     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
 
-    // Check the origin header. In the future this may be upgraded to a hard failure
-    let origin_access = crate::cors::get_cors_origin_header(
-        rqctx.clone(),
-        &["https://apply.oxide.computer", "https://oxide.computer"],
-    )
-    .await;
+    // We require that the user has supplied an upload token in the bearer header
+    if let Some(token) = bearer.inner() {
+        // Attempt to consume the token marked it as unusable by other requests. A token may fail
+        // to be consumed due to:
+        //  1. Token was previously used
+        //  2. Token is invalid
+        //  3. Token does not match the email submitted
+        //  4. Token is expired
+        //
+        // We currently return a single error code, 409 Conflict so as not to expose which of these
+        // cases occurred. In the future we may want to relax this and return individual error codes
+        let token_result = rqctx
+            .context()
+            .upload_token_store
+            .consume(&body.email, token)
+            .await
+            .map_err(|err| {
+                log::info!("Failed to consume upload token due to {:?}", err);
+                HttpError::for_status(None, http::StatusCode::CONFLICT)
+            });
 
-    match txn
-        .run(|| crate::handlers::handle_application_files_upload(rqctx, body))
-        .await
-    {
-        Ok(r) => {
-            txn.finish(http::StatusCode::OK);
+        log::info!("Application materials upload token consume result {:?}", token_result);
 
-            let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
+        match token_result {
+            Ok(_) => {
+                // Check the origin header. In the future this may be upgraded to a hard failure
+                let origin_access = crate::cors::get_cors_origin_header(
+                    rqctx.clone(),
+                    &["https://apply.oxide.computer", "https://oxide.computer"],
+                )
+                .await;
 
-            match origin_access {
-                Ok(origin) => {
-                    let headers = resp.headers_mut();
-                    headers.insert("Access-Control-Allow-Origin", origin);
-                }
-                Err(err) => {
-                    warn!(
-                        "Submission to /application/files/upload failed CORS simulation. Err {:?}",
-                        err
-                    );
+                let upload_result = txn
+                    .run(|| crate::handlers::handle_application_files_upload(rqctx, body))
+                    .await;
+
+                match upload_result {
+                    Ok(r) => {
+                        txn.finish(http::StatusCode::OK);
+
+                        let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
+
+                        match origin_access {
+                            Ok(origin) => {
+                                let headers = resp.headers_mut();
+                                headers.insert("Access-Control-Allow-Origin", origin);
+                            }
+                            Err(err) => {
+                                warn!(
+                                    "Submission to /application/files/upload failed CORS check. Err {:?}",
+                                    err
+                                );
+                            }
+                        }
+
+                        Ok(resp)
+                    }
+                    // Send the error to sentry.
+                    Err(e) => {
+                        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+                        Err(handle_anyhow_err_as_http_err(e))
+                    }
                 }
             }
-
-            Ok(resp)
+            Err(err) => {
+                txn.finish(err.status_code);
+                Err(err)
+            }
         }
-        // Send the error to sentry.
-        Err(e) => {
-            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-            Err(handle_anyhow_err_as_http_err(e))
-        }
+    } else {
+        txn.finish(http::StatusCode::UNAUTHORIZED);
+        Err(HttpError::for_status(None, http::StatusCode::UNAUTHORIZED))
     }
 }
 

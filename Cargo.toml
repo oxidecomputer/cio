@@ -1,7 +1,7 @@
 [workspace]
 members = [
 	"airtable",
-	"barcodey",
+	# "barcodey",
 	"checkr",
 	"cfcert",
 	"cio",
@@ -11,7 +11,7 @@ members = [
 	"google-geocode",
 	"macros",
 	"mailchimp-minimal-api",
-	"printy",
+	# "printy",
 	"quickbooks",
 	"shippo",
 	"slack",

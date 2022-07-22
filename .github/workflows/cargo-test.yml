@@ -25,14 +25,23 @@ jobs:
       - name: Cleanup unused space
         shell: bash
         run: |
+          set -x
+          df -h /
           sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/microsoft
           sudo rm -rf /usr/share/dotnet
-      - uses: actions/setup-node@v2
-      - name: Cleanup unused space
-        shell: bash
-        run: |
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/share/swift
+          df -h /
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10
+      - uses: actions/setup-node@v3.1.0
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
@@ -68,21 +77,21 @@ jobs:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-registry-master
+            ${{ runner.os }}-cargo-registry-${{ github.ref }}
       - name: Cache cargo index
         uses: actions/cache@v3
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-index-master
+            ${{ runner.os }}-cargo-index-${{ github.ref }}
       - name: Cache cargo build
         uses: actions/cache@v3
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ github.ref }}
           restore-keys: |
-            ${{ runner.os }}-cargo-build-target-master
+            ${{ runner.os }}-cargo-build-target-${{ github.ref }}
       - name: Install SQL proxy
         shell: bash
         run: |
@@ -99,9 +108,14 @@ jobs:
         run: |
           ./cloud_sql_proxy -instances=${{ secrets.INSTANCE_CONNECTION_NAME }}=tcp:5432 \
                   -credential_file=${{ github.workspace }}/sql_proxy_key &
+      - name: Report pre-test remaining disk
+        shell: bash
+        run: |
+          set -x
+          df -h /
       - name: Run cargo test
         run: |
-          cargo test  -- --test-threads=1 --nocapture
+          cargo test -- --test-threads=1 --nocapture
         shell: bash
         env:
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
@@ -117,3 +131,8 @@ jobs:
           GUSTO_CLIENT_SECRET: ${{secrets.GUSTO_CLIENT_SECRET}}
           GUSTO_REDIRECT_URI: ${{secrets.GUSTO_REDIRECT_URI}}
           RUST_BACKTRACE: 1
+      - name: Report remaining disk
+        shell: bash
+        run: |
+          set -x
+          df -h /

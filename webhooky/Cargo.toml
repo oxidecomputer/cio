@@ -21,7 +21,7 @@ chrono-humanize = "0.2.1"
 chrono-tz = { version = "0.6", features = ["serde"] }
 #cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "acc1c2365d81ef8be38b61db75fee5886b7fe6a6" }
 cio-api = { path = "../cio" }
-clap = { version = "^3.1.7", features = ["cargo", "derive", "env", "unicode"] }
+clap = { version = "^3.2.13", features = ["cargo", "derive", "env", "unicode"] }
 clokwerk = "0.4.0-rc1"
 # Tracking pending 2.0 version.
 diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
@@ -31,8 +31,8 @@ dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 dropshot-verify-request = { path = "../dropshot-verify-request" }
 duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
-formdata = "^0.13.0"
-futures-util = "0.3"
+# formdata = "^0.13.0"
+# futures-util = "0.3"
 google-drive = "^0.4.0"
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
 gusto-api = "^0.2.4"
@@ -40,7 +40,7 @@ gusto-api = "^0.2.4"
 hex = "0.4.3"
 hmac = "0.12.0"
 http = "0.2.6"
-hyperx = { package = "hyper", version = "0.10" }
+hyperx = { package = "hyper", version = "0.14.5" }
 lazy_static = "^1.4.0"
 log = { version = "0.4", features = ["serde"] }
 # mailchimp-api = "^0.1.11"
@@ -77,10 +77,8 @@ slog-stdlog = "4"
 slog-term = "2"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full", "time"] }
-tracing = "^0.1"
-tracing-subscriber = { version = "^0.3.9", features = ["registry", "std", "fmt", "smallvec", "ansi", "tracing-log", "json"] }
 urlencoding = "2.1.0"
-uuid = { version = "^0.8", features = ["serde", "v4"] }
+uuid = { version = "1.0", features = ["serde", "v4"] }
 zoom-api = "^0.2.1"
 sha2 = "0.10.0"
 stacker = "0.1.14"
