@@ -24,7 +24,7 @@ cio-api = { path = "../cio" }
 clap = { version = "^3.2.13", features = ["cargo", "derive", "env", "unicode"] }
 clokwerk = "0.4.0-rc1"
 # Tracking pending 2.0 version.
-diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
+diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "64-column-tables", "r2d2"]  }
 docusign = "^0.1.0"
 #dropshot = "^0.5.0"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
@@ -32,7 +32,7 @@ dropshot-verify-request = { path = "../dropshot-verify-request" }
 duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
 # formdata = "^0.13.0"
-futures-util = "0.3"
+# futures-util = "0.3"
 google-drive = "^0.4.0"
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
 gusto-api = "^0.2.4"

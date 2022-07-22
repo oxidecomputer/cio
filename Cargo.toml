@@ -20,5 +20,5 @@ members = [
 	"zoho-client",
 ]
 
-[profile.release]
-debug = true
+# [profile.release]
+# debug = true
