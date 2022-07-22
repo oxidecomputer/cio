@@ -130,7 +130,7 @@ pub async fn create_server(
     api.register(listen_auth_quickbooks_consent).unwrap();
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
-    api.register(listen_emails_incoming_sendgrid_parse_webhooks).unwrap();
+    // api.register(listen_emails_incoming_sendgrid_parse_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
     api.register(listen_mailchimp_mailing_list_webhooks).unwrap();
     api.register(listen_mailchimp_rack_line_webhooks).unwrap();
@@ -903,34 +903,36 @@ pub struct IncomingEmail {
     pub spf: String,
 }
 
+// Disabling as it has not been used for the past 30 days
+
 /**
  * Listen for emails coming inbound from SendGrid's parse API.
  * We use this for scanning for packages in emails.
  */
-#[endpoint {
-    method = POST,
-    path = "/emails/incoming/sendgrid/parse",
-}]
-async fn listen_emails_incoming_sendgrid_parse_webhooks(
-    rqctx: Arc<RequestContext<Context>>,
-    body_param: UntypedBody,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let body = body_param.as_bytes();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(body)).await;
+// #[endpoint {
+//     method = POST,
+//     path = "/emails/incoming/sendgrid/parse",
+// }]
+// async fn listen_emails_incoming_sendgrid_parse_webhooks(
+//     rqctx: Arc<RequestContext<Context>>,
+//     body_param: UntypedBody,
+// ) -> Result<HttpResponseAccepted<String>, HttpError> {
+//     let body = body_param.as_bytes();
+//     let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(body)).await;
 
-    if let Err(e) = txn
-        .run(|| crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body))
-        .await
-    {
-        // Send the error to sentry.
-        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-        return Err(handle_anyhow_err_as_http_err(e));
-    }
+//     if let Err(e) = txn
+//         .run(|| crate::handlers::handle_emails_incoming_sendgrid_parse(rqctx, body))
+//         .await
+//     {
+//         // Send the error to sentry.
+//         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+//         return Err(handle_anyhow_err_as_http_err(e));
+//     }
 
-    txn.finish(http::StatusCode::ACCEPTED);
+//     txn.finish(http::StatusCode::ACCEPTED);
 
-    Ok(HttpResponseAccepted("ok".to_string()))
-}
+//     Ok(HttpResponseAccepted("ok".to_string()))
+// }
 
 /**
  * Listen for applicant reviews being submitted for job applicants */

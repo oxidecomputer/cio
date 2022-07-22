@@ -31,7 +31,7 @@ dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 dropshot-verify-request = { path = "../dropshot-verify-request" }
 duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
-formdata = "^0.13.0"
+# formdata = "^0.13.0"
 futures-util = "0.3"
 google-drive = "^0.4.0"
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
