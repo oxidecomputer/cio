@@ -6265,7 +6265,6 @@ dependencies = [
  "dropshot",
  "dropshot-verify-request",
  "duct",
- "futures-util",
  "google-drive",
  "gusto-api",
  "hex",
