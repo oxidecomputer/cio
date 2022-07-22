@@ -6,13 +6,13 @@ on:
       - 'Cargo.lock'
       - .github/workflows/cargo-clippy.yml
       - rust-toolchain
-  # pull_request:
-  #   paths:
-  #     - '**.rs'
-  #     - '*/Cargo.toml'
-  #     - 'Cargo.lock'
-  #     - .github/workflows/cargo-clippy.yml
-  #     - rust-toolchain
+  pull_request:
+    paths:
+      - '**.rs'
+      - '*/Cargo.toml'
+      - 'Cargo.lock'
+      - .github/workflows/cargo-clippy.yml
+      - rust-toolchain
 name: cargo clippy
 jobs:
   cargoclippy:
@@ -35,6 +35,10 @@ jobs:
           sudo rm -rf /usr/local/share/powershell
           sudo rm -rf /usr/share/swift
           df -h /
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10
       - name: Install latest nightly
         uses: oxidecomputer/actions-rs_toolchain@oxide/master
         with:
