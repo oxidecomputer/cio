@@ -8,7 +8,18 @@
 use std::sync::Arc;
 
 use diesel::backend::{Backend, DieselReserveSpecialization};
-use diesel::{connection::{AnsiTransactionManager, ConnectionGatWorkaround, LoadRowIter, SimpleConnection, TransactionManager, commit_error_processor::{CommitErrorProcessor, CommitErrorOutcome}}, result::Error as DieselError};
+use diesel::{
+    connection::{
+        DefaultLoadingMode,
+        AnsiTransactionManager,
+        ConnectionGatWorkaround,
+        LoadConnection,
+        LoadRowIter,
+        SimpleConnection,
+        TransactionManager
+    },
+    result::Error as DieselError
+};
 use diesel::debug_query;
 use diesel::expression::QueryMetadata;
 use diesel::prelude::*;
@@ -79,15 +90,43 @@ impl<'conn, 'query, C, B> ConnectionGatWorkaround<'conn, 'query, C::Backend> for
     type Row = <C as ConnectionGatWorkaround<'conn, 'query, C::Backend>>::Row;
 }
 
-impl<C, B> CommitErrorProcessor for SentryConnection<C, B> where C: Connection<Backend = B> + CommitErrorProcessor, B: Backend {
-    fn process_commit_error(&self, error: DieselError) -> CommitErrorOutcome {
-        self.inner.process_commit_error(error)
+impl<C, B> LoadConnection<DefaultLoadingMode> for SentryConnection<C, B>
+where
+    C: Connection<TransactionManager = AnsiTransactionManager, Backend = B> + LoadConnection<DefaultLoadingMode>,
+    B: Backend + DieselReserveSpecialization + Default + Send + Sync + std::fmt::Debug,
+    B::QueryBuilder: Default,
+{
+    #[tracing::instrument(
+        fields(
+            db.name=%self.info.current_database,
+            db.system=self.info.backend,
+            db.version=%self.info.version,
+            db.statement=tracing::field::Empty,
+            otel.kind="client",
+        ),
+        skip(self, source),
+    )]
+    fn load<'conn, 'query, T>(&'conn mut self, source: T) -> QueryResult<LoadRowIter<'conn, 'query, Self, Self::Backend, DefaultLoadingMode>>
+    where
+        T: Query + QueryFragment<B> + QueryId + 'query,
+        Self::Backend: QueryMetadata<T::SqlType>,
+    {
+        let q = source.as_query();
+        let query = debug_query::<Self::Backend, _>(&q).to_string();
+
+        let mut txn = start_sentry_db_transaction("sql.query", &query);
+        let span = tracing::Span::current();
+        span.record("db.statement", &query.as_str());
+
+        let result = self.inner.load(q);
+        txn.finish();
+        result
     }
 }
 
 impl<C, B> Connection for SentryConnection<C, B>
 where
-    C: Connection<TransactionManager = AnsiTransactionManager, Backend = B> + CommitErrorProcessor,
+    C: Connection<TransactionManager = AnsiTransactionManager, Backend = B>,
     B: Backend + DieselReserveSpecialization + Default + Send + Sync + std::fmt::Debug,
     B::QueryBuilder: Default,
 {
@@ -111,9 +150,9 @@ where
         let inner = conn?;
 
         // tracing::debug!("querying database connection information");
-        let version = diesel::select(version())
-            .get_result(&mut inner)
-            .map_err(ConnectionError::CouldntSetupConfiguration)?;
+        // let version = diesel::select(version())
+        //     .get_result(&mut inner)
+        //     .map_err(ConnectionError::CouldntSetupConfiguration)?;
 
         // let span = tracing::Span::current();
         // span.record("db.name", &info.current_database.as_str());
@@ -156,32 +195,32 @@ where
         result
     }
 
-    #[tracing::instrument(
-        fields(
-            db.name=%self.info.current_database,
-            db.system=self.info.backend,
-            db.version=%self.info.version,
-            db.statement=tracing::field::Empty,
-            otel.kind="client",
-        ),
-        skip(self, source),
-    )]
-    fn load<'conn, 'query, T>(&'conn mut self, source: T) -> QueryResult<LoadRowIter<'conn, 'query, Self, Self::Backend>>
-    where
-        T: Query + QueryFragment<Self::Backend> + QueryId + 'query,
-        Self::Backend: QueryMetadata<T::SqlType>,
-    {
-        let q = source.as_query();
-        let query = debug_query::<Self::Backend, _>(&q).to_string();
+    // #[tracing::instrument(
+    //     fields(
+    //         db.name=%self.info.current_database,
+    //         db.system=self.info.backend,
+    //         db.version=%self.info.version,
+    //         db.statement=tracing::field::Empty,
+    //         otel.kind="client",
+    //     ),
+    //     skip(self, source),
+    // )]
+    // fn load<'conn, 'query, T>(&'conn mut self, source: T) -> QueryResult<LoadRowIter<'conn, 'query, Self, Self::Backend>>
+    // where
+    //     T: Query + QueryFragment<Self::Backend> + QueryId + 'query,
+    //     Self::Backend: QueryMetadata<T::SqlType>,
+    // {
+    //     let q = source.as_query();
+    //     let query = debug_query::<Self::Backend, _>(&q).to_string();
 
-        let mut txn = start_sentry_db_transaction("sql.query", &query);
-        let span = tracing::Span::current();
-        span.record("db.statement", &query.as_str());
+    //     let mut txn = start_sentry_db_transaction("sql.query", &query);
+    //     let span = tracing::Span::current();
+    //     span.record("db.statement", &query.as_str());
 
-        let result = self.inner.load(q);
-        txn.finish();
-        result
-    }
+    //     let result = self.inner.load(q);
+    //     txn.finish();
+    //     result
+    // }
 
     #[tracing::instrument(
         fields(
@@ -223,7 +262,7 @@ where
 
 impl<C, B> R2D2Connection for SentryConnection<C, B>
 where
-    C: R2D2Connection + Connection<TransactionManager = AnsiTransactionManager, Backend = B> + CommitErrorProcessor,
+    C: R2D2Connection + Connection<TransactionManager = AnsiTransactionManager, Backend = B>,
     B: Backend + DieselReserveSpecialization + Default + Send + Sync + std::fmt::Debug,
     B::QueryBuilder: Default,
 {
