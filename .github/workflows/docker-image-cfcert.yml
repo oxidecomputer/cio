@@ -1,13 +1,13 @@
 name: docker-image-cfcert
 on:
-  pull_request:
-    paths:
-      - 'cfcert/**.rs'
-      - 'cfcert/Cargo.toml'
-      - 'Cargo.lock'
-      - .github/workflows/docker-image-cfcert.yml
-      - rust-toolchain
-      - 'cfcert/Dockerfile'
+  # pull_request:
+  #   paths:
+  #     - 'cfcert/**.rs'
+  #     - 'cfcert/Cargo.toml'
+  #     - 'Cargo.lock'
+  #     - .github/workflows/docker-image-cfcert.yml
+  #     - rust-toolchain
+  #     - 'cfcert/Dockerfile'
   push:
     branches: master
     paths:

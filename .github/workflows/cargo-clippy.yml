@@ -6,13 +6,13 @@ on:
       - 'Cargo.lock'
       - .github/workflows/cargo-clippy.yml
       - rust-toolchain
-  pull_request:
-    paths:
-      - '**.rs'
-      - '*/Cargo.toml'
-      - 'Cargo.lock'
-      - .github/workflows/cargo-clippy.yml
-      - rust-toolchain
+  # pull_request:
+  #   paths:
+  #     - '**.rs'
+  #     - '*/Cargo.toml'
+  #     - 'Cargo.lock'
+  #     - .github/workflows/cargo-clippy.yml
+  #     - rust-toolchain
 name: cargo clippy
 jobs:
   cargoclippy:

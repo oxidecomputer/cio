@@ -6,13 +6,13 @@ on:
       - 'Cargo.lock'
       - .github/workflows/cargo-build.yml
       - rust-toolchain
-  pull_request:
-    paths:
-      - '**.rs'
-      - '*/Cargo.toml'
-      - 'Cargo.lock'
-      - .github/workflows/cargo-build.yml
-      - rust-toolchain
+  # pull_request:
+  #   paths:
+  #     - '**.rs'
+  #     - '*/Cargo.toml'
+  #     - 'Cargo.lock'
+  #     - .github/workflows/cargo-build.yml
+  #     - rust-toolchain
 name: cargo build
 jobs:
   cargobuild:
@@ -72,7 +72,7 @@ jobs:
           df -h /
       - name: Run cargo build
         run: |
-          RUSTFLAGS="-C debuginfo=0" cargo build --jobs 1
+          cargo build
         shell: bash
       - name: Report remaining disk
         shell: bash

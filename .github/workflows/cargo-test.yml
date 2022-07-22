@@ -6,13 +6,13 @@ on:
       - 'Cargo.lock'
       - .github/workflows/cargo-test.yml
       - rust-toolchain
-  pull_request:
-    paths:
-      - '**.rs'
-      - '*/Cargo.toml'
-      - 'Cargo.lock'
-      - .github/workflows/cargo-test.yml
-      - rust-toolchain
+  # pull_request:
+  #   paths:
+  #     - '**.rs'
+  #     - '*/Cargo.toml'
+  #     - 'Cargo.lock'
+  #     - .github/workflows/cargo-test.yml
+  #     - rust-toolchain
   workflow_dispatch:
     inputs:
 name: cargo test
@@ -111,7 +111,7 @@ jobs:
           df -h /
       - name: Run cargo test
         run: |
-          RUSTFLAGS="-C debuginfo=0" cargo test  -- --test-threads=1 --nocapture
+          cargo test -- --test-threads=1 --nocapture
         shell: bash
         env:
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}

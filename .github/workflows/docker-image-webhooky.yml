@@ -1,13 +1,13 @@
 name: docker-image-webhooky
 on:
-  pull_request:
-    paths:
-      - '**.rs'
-      - '*/Cargo.toml'
-      - 'Cargo.lock'
-      - .github/workflows/docker-image-webhooky.yml
-      - rust-toolchain
-      - '*/Dockerfile'
+  # pull_request:
+  #   paths:
+  #     - '**.rs'
+  #     - '*/Cargo.toml'
+  #     - 'Cargo.lock'
+  #     - .github/workflows/docker-image-webhooky.yml
+  #     - rust-toolchain
+  #     - '*/Dockerfile'
   push:
     branches: master
     paths:
