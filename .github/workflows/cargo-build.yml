@@ -72,7 +72,7 @@ jobs:
           df -h /
       - name: Run cargo build
         run: |
-          cargo build
+          RUSTFLAGS="-C debuginfo=0" cargo build --jobs 1
         shell: bash
       - name: Report remaining disk
         shell: bash

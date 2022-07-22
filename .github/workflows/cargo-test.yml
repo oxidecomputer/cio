@@ -111,7 +111,7 @@ jobs:
           df -h /
       - name: Run cargo test
         run: |
-          cargo test  -- --test-threads=1 --nocapture
+          RUSTFLAGS="-C debuginfo=0" cargo test  -- --test-threads=1 --nocapture
         shell: bash
         env:
           CIO_DATABASE_URL: ${{ secrets.CIO_DATABASE_URL }}
