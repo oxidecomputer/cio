@@ -32,7 +32,10 @@ impl HmacSignatureVerifier for DocusignWebhookVerification {
             .get("X-DocuSign-Signature-1")
             .ok_or_else(|| anyhow::anyhow!("DocuSign webhook is missing signature"))
             .and_then(|header_value| Ok(header_value.to_str()?))
-            .and_then(|header| Ok(hex::decode(header)?))
+            .and_then(|header| {
+                info!("Comparing against DocuSign header {:?}", header);
+                Ok(base64::decode(header)?)
+            })
             .map_err(|err| {
                 info!("DocuSign webhook is missing a well-formed signature: {}", err);
                 err

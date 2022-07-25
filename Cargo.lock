@@ -6222,6 +6222,7 @@ dependencies = [
  "anyhow",
  "async-bb8-diesel",
  "async-trait",
+ "base64 0.13.0",
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
  "chrono-humanize",
