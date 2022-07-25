@@ -127,6 +127,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5d78ce20460b82d3fa150275ed9d55e21064fc7951177baacf86a145c4a4b1f"
 
 [[package]]
+name = "arraydeque"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0ffd3d69bd89910509a5d31d1f1353f38ccffdd116dd0099bbd6627f7bd8ad8"
+
+[[package]]
+name = "arrayvec"
+version = "0.4.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd9fd44efafa8690358b7408d253adf110036b88f55672a933f01d616ad9b1b9"
+dependencies = [
+ "nodrop",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -379,6 +394,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "298326aba91e0dd1acba62767652c7c9f4d45ada6804110278680c4f0c6e8ab7"
 dependencies = [
  "image 0.22.5",
+]
+
+[[package]]
+name = "barcodey"
+version = "0.1.0"
+dependencies = [
+ "cio-api",
+ "hidapi",
+ "keycode",
+ "log",
+ "pretty_env_logger",
+ "sentry 0.24.3",
+ "tokio",
+ "uuid 1.1.2",
 ]
 
 [[package]]
@@ -853,7 +882,7 @@ version = "3.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "759bf187376e1afa7b85b959e6a664a3e7a95203415dba952ad19139e798f902"
 dependencies = [
- "heck",
+ "heck 0.4.0",
  "proc-macro-error",
  "proc-macro2 1.0.40",
  "quote 1.0.20",
@@ -2198,6 +2227,15 @@ checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
 name = "heck"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
+dependencies = [
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "heck"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
@@ -2216,6 +2254,17 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hidapi"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38b1717343691998deb81766bfcd1dce6df0d5d6c37070b5a3de2bb6d39f7822"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+]
 
 [[package]]
 name = "hmac"
@@ -2611,6 +2660,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "keycode"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62a2e321168faccd78d918d74559679e0e51c9f87989b6d58057c0a783721937"
+dependencies = [
+ "arraydeque",
+ "arrayvec 0.4.12",
+ "bitflags",
+ "keycode_macro",
+]
+
+[[package]]
+name = "keycode_macro"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f13c65ae4c1a08b7081d6c25eeb200f603d1985fbe60cadc6c0aee8fb2e4921f"
+dependencies = [
+ "anyhow",
+ "heck 0.3.3",
+ "proc-macro2 1.0.40",
+ "quote 1.0.20",
+]
+
+[[package]]
 name = "kv-log-macro"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2681,7 +2754,7 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6607c62aa161d23d17a9072cc5da0be67cdfc89d3afb1e8d9c842bebc2525ffe"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.5.2",
  "bitflags",
  "cfg-if 1.0.0",
  "ryu",
@@ -2974,6 +3047,12 @@ checksum = "ac8cd24d9f185bb7223958d8c1ff7a961b74b1953fd05dba7cc568a63b3861ec"
 dependencies = [
  "rustc_version 0.1.7",
 ]
+
+[[package]]
+name = "nodrop"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 
 [[package]]
 name = "nom"
@@ -3716,6 +3795,21 @@ dependencies = [
  "lopdf 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "owned_ttf_parser",
  "time 0.2.27",
+]
+
+[[package]]
+name = "printy"
+version = "0.1.0"
+dependencies = [
+ "cio-api",
+ "dropshot",
+ "http",
+ "log",
+ "pretty_env_logger",
+ "reqwest",
+ "sentry 0.24.3",
+ "tokio",
+ "uuid 1.1.2",
 ]
 
 [[package]]
@@ -4510,6 +4604,7 @@ dependencies = [
  "sentry-backtrace 0.24.3",
  "sentry-contexts 0.24.3",
  "sentry-core 0.24.3",
+ "sentry-debug-images 0.24.3",
  "sentry-log 0.24.3",
  "sentry-panic 0.24.3",
  "sentry-tracing 0.24.3",
@@ -4528,7 +4623,7 @@ dependencies = [
  "sentry-backtrace 0.27.0",
  "sentry-contexts 0.27.0",
  "sentry-core 0.27.0",
- "sentry-debug-images",
+ "sentry-debug-images 0.27.0",
  "sentry-log 0.27.0",
  "sentry-panic 0.27.0",
  "sentry-slog",
@@ -4632,6 +4727,17 @@ dependencies = [
  "sentry-types 0.27.0",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "sentry-debug-images"
+version = "0.24.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea36c7a590134c080ca678729c0898a5d9b97f62abd4c0b63113010d3e0466ac"
+dependencies = [
+ "findshlibs",
+ "lazy_static",
+ "sentry-core 0.24.3",
 ]
 
 [[package]]
@@ -5992,6 +6098,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "unicode-segmentation"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e8820f5d777f6224dc4be3632222971ac30164d4a258d595640799554ebfd99"
+
+[[package]]
 name = "unicode-width"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6270,7 +6382,6 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "http",
- "hyper",
  "lazy_static",
  "log",
  "mailchimp-minimal-api",

@@ -61,6 +61,7 @@ async fn main() -> Result<(), String> {
     let config_dropshot = ConfigDropshot {
         bind_address: service_address.parse().unwrap(),
         request_body_max_bytes: 100000000,
+        tls: None,
     };
 
     /*
@@ -83,6 +84,7 @@ async fn main() -> Result<(), String> {
      * allowing this metadata to live right alongside the handler function.
      */
     api.register(ping).unwrap();
+    api.register(api_get_schema).unwrap();
     api.register(listen_print_receipt_requests).unwrap();
     api.register(listen_print_rollo_requests).unwrap();
     api.register(listen_print_zebra_requests).unwrap();
