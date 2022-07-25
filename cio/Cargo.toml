@@ -65,7 +65,7 @@ macros = { path = "../macros" }
 # mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
-names = "^0.13.0"
+names = "^0.14.0"
 nom_pem = "4"
 octorust = { version = "^0.1.35", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
@@ -91,7 +91,7 @@ ring = "0.16.20"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sendgrid-api = "^0.2.0"
 #sendgrid-api = { path = "../../third-party-api-clients/sendgrid" }
-sentry = { version = "^0.24.3", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "tracing"] }
+sentry = { version = "^0.27.0", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sheets = "^0.4.0"
