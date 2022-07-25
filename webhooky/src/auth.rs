@@ -36,6 +36,15 @@ impl BearerProvider for AirtableToken {
     }
 }
 
+pub struct RFDToken;
+
+#[async_trait]
+impl BearerProvider for RFDToken {
+    async fn token() -> Result<String> {
+        Ok(std::env::var("RFD_AUTH_BEARER")?)
+    }
+}
+
 pub struct ShippoToken;
 
 #[async_trait]
