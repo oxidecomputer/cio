@@ -65,7 +65,7 @@ macros = { path = "../macros" }
 # mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
-names = "^0.13.0"
+names = "^0.14.0"
 nom_pem = "4"
 octorust = { version = "^0.1.35", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
