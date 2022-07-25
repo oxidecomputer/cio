@@ -11,6 +11,7 @@ members = [
 	"google-geocode",
 	"macros",
 	"mailchimp-minimal-api",
+	"partial-struct",
 	"printy",
 	"quickbooks",
 	"shippo",

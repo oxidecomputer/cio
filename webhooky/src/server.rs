@@ -5,12 +5,14 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use cio_api::{
     analytics::NewPageView, applicant_uploads::UploadTokenStore, db::Database, functions::Function, swag_store::Order,
+    rfds::RFDIndexEntry,
 };
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseHeaders, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
+    ResultsPage, PaginationParams, WhichPage, PaginationOrder
 };
 use dropshot_verify_request::{
     bearer::{Bearer, BearerToken},
@@ -37,7 +39,6 @@ use crate::{
     auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, RFDToken, ShippoToken},
     github_types::GitHubWebhook,
     handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
-    handlers_rfd::RFDIndex,
     handlers_slack::InteractiveEvent,
 };
 
@@ -2113,6 +2114,47 @@ async fn listen_shipbob_webhooks(
     Ok(HttpResponseOk("ok".to_string()))
 }
 
+#[derive(Deserialize, JsonSchema, Clone)]
+enum RFDSortMode {
+    NumberAscending,
+    NumberDescending,
+}
+
+#[derive(Deserialize, JsonSchema)]
+struct RFDIndexScanParam {
+    sort: RFDSortMode
+}
+
+#[derive(Deserialize, Serialize, JsonSchema)]
+enum RFDIndexPageSelector {
+    Number(PaginationOrder, i32)
+}
+
+fn rfd_scan_params(params: &WhichPage<RFDIndexScanParam, RFDIndexPageSelector>) -> RFDIndexScanParam {
+    RFDIndexScanParam {
+        sort: match params {
+            WhichPage::First(RFDIndexScanParam { sort }) => sort.clone(),
+            WhichPage::Next(RFDIndexPageSelector::Number(PaginationOrder::Ascending, ..)) => {
+                RFDSortMode::NumberAscending
+            }
+            WhichPage::Next(RFDIndexPageSelector::Number(PaginationOrder::Descending, ..)) => {
+                RFDSortMode::NumberDescending
+            }
+        }
+    }
+}
+
+fn rfd_page_selector(item: &RFDIndexEntry, scan_params: &RFDIndexScanParam) -> RFDIndexPageSelector {
+    match scan_params {
+        RFDIndexScanParam { sort: RFDSortMode::NumberAscending } => {
+            RFDIndexPageSelector::Number(PaginationOrder::Ascending, item.number)
+        }
+        RFDIndexScanParam { sort: RFDSortMode::NumberDescending } => {
+            RFDIndexPageSelector::Number(PaginationOrder::Descending, item.number)
+        }
+    }
+}
+
 #[endpoint {
     method = GET,
     path = "/rfds",
@@ -2120,13 +2162,18 @@ async fn listen_shipbob_webhooks(
 async fn listen_rfd_index(
     rqctx: Arc<RequestContext<Context>>,
     _auth: Bearer<RFDToken>,
-) -> Result<HttpResponseOk<RFDIndex>, HttpError> {
+    query: Query<PaginationParams<RFDIndexScanParam, RFDIndexPageSelector>>,
+) -> Result<HttpResponseOk<ResultsPage<RFDIndexEntry>>, HttpError> {
     let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
+    let params = query.into_inner();
+    let limit = rqctx.page_limit(&params)?.get() as usize;
+    let scan_params = rfd_scan_params(&params.page);
+
     match txn.run(|| crate::handlers_rfd::handle_rfd_index(rqctx)).await {
-        Ok(index) => {
+        Ok(entries) => {
             txn.finish(http::StatusCode::OK);
-            Ok(HttpResponseOk(index))
+            Ok(HttpResponseOk(ResultsPage::new(entries, &scan_params, rfd_page_selector)?))
         }
         Err(err) => {
             // Send the error to sentry.
