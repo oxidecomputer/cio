@@ -420,7 +420,7 @@ const DOCUSIGN_TEST_BODY: &str = r#"{"fairly":false,"wait":2046690168,"influence
 async fn test_docusign_hmac_passes() {
     let (port, _server) = make_server();
 
-    let test_signature = "45f3fa45a13a02bc3331ad1fe034c9ba2a0fe2d186f1bca5c1e56319bf626469";
+    let test_signature = "RfP6RaE6ArwzMa0f4DTJuioP4tGG8bylweVjGb9iZGk=";
 
     // Make the post API call.
     let client = reqwest::Client::new();
