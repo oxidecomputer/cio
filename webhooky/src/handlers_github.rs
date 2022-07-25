@@ -170,9 +170,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                         scope.set_tag("github.event.type", &event_type_string);
                     });
                     match handle_rfd_push(&github, api_context, event.clone(), &company).await {
-                        Ok(message) => {
-                            event.create_comment(&github, &message).await?;
-                        }
+                        Ok(_) => ( /* Silence */ ),
                         Err(e) => {
                             event
                                 .create_comment(&github, &event.get_error_string("updating RFD on `push`", e))
@@ -413,7 +411,7 @@ pub async fn handle_rfd_push(
     api_context: &Context,
     event: GitHubWebhook,
     company: &Company,
-) -> Result<String> {
+) -> Result<()> {
     info!("[rfd.push] Remaining stack size: {:?}", stacker::remaining_stack());
 
     let db = &api_context.db;
@@ -433,7 +431,7 @@ pub async fn handle_rfd_push(
         // Return early that there are no commits.
         // IDK how we got here, since we check this above in the main github handler.
         warn!("rfd `push` event had no commits");
-        return Ok(String::new());
+        return Ok(());
     }
 
     // Get the commit.
@@ -449,24 +447,19 @@ pub async fn handle_rfd_push(
             "`push` event commit `{}` does not include any changes to the `{}` directory",
             commit.id, dir
         );
-        return Ok(String::new());
+        return Ok(());
     }
 
     // Get the branch name.
     let branch = event.refv.trim_start_matches("refs/heads/");
 
-    let mut message = String::new();
-
-    let mut a = |s: &str| {
-        info!("[rfd] {}", s);
-        message.push_str(&format!("[{}] ", Utc::now().format("%+")));
-        message.push_str(s);
-        message.push('\n');
+    let log_message = |s: &str| {
+        info!("[rfd] [{}] {}", commit.sha, s);
     };
 
     // Iterate over the removed files and remove any images that we no longer
     // need for the HTML rendered RFD website.
-    for file in commit.removed {
+    for file in &commit.removed {
         // Make sure the file has a prefix of "rfd/".
         if !file.starts_with("rfd/") {
             // Continue through the loop early.
@@ -474,7 +467,7 @@ pub async fn handle_rfd_push(
             continue;
         }
 
-        if is_image(&file) {
+        if is_image(file) {
             // Remove the image from the `src/public/static/images` path since we no
             // longer need it.
             // We delete these on the default branch ONLY.
@@ -511,7 +504,7 @@ pub async fn handle_rfd_push(
                         },
                     )
                     .await?;
-                a(&format!(
+                log_message(&format!(
                     "[SUCCESS]: deleted file `{}` since it was removed in this push",
                     website_file,
                 ));
@@ -552,7 +545,7 @@ pub async fn handle_rfd_push(
                 gh_file_content,
             )
             .await?;
-            a(&format!(
+            log_message(&format!(
                 "[SUCCESS]: updated file `{}` since it was modified in this push",
                 website_file,
             ));
@@ -578,12 +571,12 @@ pub async fn handle_rfd_push(
             // number like `0001-some-change`, we want to skip those changes as
             // they are not named explicitly `0001`.
             if branch != new_rfd.number_string {
-                a(&format!(
+                log_message(&format!(
                     "Skipping updates to RFD in database since branch name `{}` \
                     does not equal RFD number `{}` explicitly.",
                     branch, new_rfd.number_string
                 ));
-                return Ok(message);
+                return Ok(());
             }
 
             // Ensure the branch exists.
@@ -593,12 +586,12 @@ pub async fn handle_rfd_push(
             // - The branch no longer exists, but we try to get the branch here.
             if let Err(e) = github.repos().get_branch(owner, &repo, branch).await {
                 // If we get an error here, we need to return early.
-                a(&format!(
+                log_message(&format!(
                     "Skipping updates to RFD in database since branch name `{}` \
                     does not exist anymore. Likely this branch was already merged. Error getting branch: `{}`",
                     branch, e
                 ));
-                return Ok(message);
+                return Ok(());
             }
 
             // Get the old RFD from the database.
@@ -638,23 +631,23 @@ pub async fn handle_rfd_push(
             // Update all the fields for the RFD.
             rfd.expand(github, company).await?;
             rfd.update(db).await?;
-            a(&format!(
+            log_message(&format!(
                 "[SUCCESS]: updated RFD {} in the database",
                 new_rfd.number_string
             ));
-            a(&format!(
+            log_message(&format!(
                 "[SUCCESS]: updated airtable for RFD {}",
                 new_rfd.number_string
             ));
 
             // Now that the database is updated, update the search index.
             rfd.update_search_index().await?;
-            a("[SUCCESS]: triggered update of the search index");
+            log_message("[SUCCESS]: triggered update of the search index");
 
             // Create all the shorturls for the RFD if we need to,
             // this would be on added files, only.
             generate_shorturls_for_rfds(db, github, company, &company.authenticate_cloudflare()?, "configs").await?;
-            a("[SUCCESS]: updated shorturls for the rfds");
+            log_message("[SUCCESS]: updated shorturls for the rfds");
 
             // Update the PDFs for the RFD.
             rfd.convert_and_upload_pdf(db, github, company).await?;
@@ -694,7 +687,7 @@ pub async fn handle_rfd_push(
                         )
                         .await?;
 
-                    a(&format!(
+                    log_message(&format!(
                         "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, opened pull request {}",
                         rfd.number_string, old_rfd_state, rfd.state, branch, pull.number,
                     ));
@@ -709,7 +702,7 @@ pub async fn handle_rfd_push(
                     let pull = &pull_requests[0];
 
                     if old_rfd_state != rfd.state {
-                        a(&format!(
+                        log_message(&format!(
                             "[SUCCESS]: RFD {} has moved from state {} -> {}, on branch {}, we already have a pull request: {}",
                             rfd.number_string,
                             old_rfd_state,
@@ -724,7 +717,7 @@ pub async fn handle_rfd_push(
                         // diverged from our expected value
                         match rfd.update_pull_request(github, company, pull).await {
                             Ok(_) => {
-                                a("[SUCCESS]: update pull request title and labels");
+                                log_message("[SUCCESS]: update pull request title and labels");
                             }
                             Err(e) => {
                                 warn!(
@@ -732,7 +725,7 @@ pub async fn handle_rfd_push(
                                     event.pull_request.number, e,
                                 );
 
-                                a(&format!(
+                                log_message(&format!(
                                     "[ERROR]: update pull request title and labels: {} cc @augustuswm",
                                     e
                                 ));
@@ -763,10 +756,10 @@ pub async fn handle_rfd_push(
                         //     rfd.content.as_bytes().to_vec(),
                         // )
                         // .await?;
-                        // a("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
+                        // log_message("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
 
                         // if let Err(err) = rfd.update(db).await {
-                        //     a(&format!(
+                        //     log_message(&format!(
                         //         "[ERROR]: failed to update disucussion url: {} cc @augustuswm",
                         //         err
                         //     ));
@@ -796,7 +789,7 @@ pub async fn handle_rfd_push(
                     rfd_mut.content.as_bytes().to_vec(),
                 )
                 .await?;
-                a(&format!(
+                log_message(&format!(
                     "[SUCCESS]: updated state to `published` for RFD {}, since it was merged into branch {}",
                     new_rfd.number_string, event.repository.default_branch
                 ));
@@ -834,7 +827,7 @@ pub async fn handle_rfd_push(
                                 },
                             )
                             .await?;
-                        a(&format!(
+                        log_message(&format!(
                             "[SUCCESS]: deleted old pdf file in GitHub {} since the new name is {}",
                             old_rfd_pdf,
                             rfd.get_pdf_filename()
@@ -851,7 +844,7 @@ pub async fn handle_rfd_push(
                         .files()
                         .delete_by_name(&shared_drive.id, &parent_id, &old_rfd_pdf)
                         .await?;
-                    a(&format!(
+                    log_message(&format!(
                         "[SUCCESS]: deleted old pdf file in Google Drive {} since the new name is {}",
                         old_rfd_pdf,
                         rfd.get_pdf_filename()
@@ -859,7 +852,7 @@ pub async fn handle_rfd_push(
                 }
             }
 
-            a(&format!(
+            log_message(&format!(
                 "[SUCCESS]: RFD {} `push` operations completed",
                 new_rfd.number_string
             ));
@@ -867,7 +860,7 @@ pub async fn handle_rfd_push(
     }
 
     // TODO: should we do something if the file gets deleted (?)
-    Ok(message)
+    Ok(())
 }
 
 /// Handle a `push` event for the configs repo.
