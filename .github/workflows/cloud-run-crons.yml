@@ -5,6 +5,7 @@ on:
     branches:
     - master
     paths:
+      - 'Cargo.lock'
       - 'webhooky/**'
       - 'cio/**'
       - '.github/workflows/cloud-run-crons.yml'
