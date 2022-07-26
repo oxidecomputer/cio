@@ -216,7 +216,6 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
 
     match additional_structs {
         Ok(mut additional_structs) => {
-
             // Construct the full list of structs that need to be created. This list needs to
             // include the original struct (without modification) as well
             let mut new_structs = vec![
@@ -230,7 +229,6 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
             new_structs.append(&mut additional_structs);
 
             let result = match input.data {
-
                 // This macro is only defined for structs. Usage on any other data type will
                 // fail with a panic
                 syn::Data::Struct(ref s) => {
@@ -259,7 +257,6 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                     let mut expanded_structs = vec![];
 
                     if let syn::Fields::Named(ref fields) = s.fields {
-
                         // Generate each of the requested structs
                         for new_struct in new_structs {
                             let NewStruct { name, with, without } = new_struct;
@@ -273,7 +270,6 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                                 .filter(|field| {
                                     !field.attrs.iter().any(|attr| {
                                         if attr.path.is_ident("partial") {
-                                            
                                             // This ideally would be a helpful error message instead
                                             // of a panic
                                             let parsed: FieldCommands =
@@ -322,7 +318,6 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                             let derives: Option<syn::Attribute> = orig_derives.map(|d| d.to_owned());
 
                             let derive_attr = if let Some(derives) = derives {
-
                                 // Add in and/or remove the additional derives defined by the caller.
                                 // Adding derives may result in further compilation errors in the
                                 // fields in the original struct are not compatible with the new
