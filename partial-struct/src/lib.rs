@@ -180,9 +180,9 @@ fn compute_derives(
 /// #[partial(NewStruct, with(Debug), without(Default))]
 /// #[derive(Default)]
 /// struct OldStruct {
-///    a: u32,
-///    #[partial(NewStruct(skip))]
-///    b: u32,
+///     a: u32,
+///     #[partial(NewStruct(skip))]
+///     b: u32,
 /// }
 ///
 /// // will generate
