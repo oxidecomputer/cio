@@ -173,22 +173,24 @@ fn compute_derives(
 /// Examples:
 ///
 /// ```
+/// use partial_struct::partial;
+///
 /// // Using all of the macro features
 ///
 /// #[partial(NewStruct, with(Debug), without(Default))]
 /// #[derive(Default)]
 /// struct OldStruct {
-///    a: u32
+///    a: u32,
 ///    #[partial(NewStruct(skip))]
-///    b: u32
+///    b: u32,
 /// }
 ///
 /// // will generate
 ///
-/// #[derive(Debug)]
-/// struct NewStruct {
-///    a: u32
-/// }
+/// // #[derive(Debug)]
+/// // struct NewStruct {
+/// //    a: u32
+/// // }
 /// ```
 #[proc_macro_attribute]
 pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
