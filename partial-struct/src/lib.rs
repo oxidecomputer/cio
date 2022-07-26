@@ -5,7 +5,7 @@ extern crate proc_macro;
 extern crate quote;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Span, Group, Delimiter};
+use proc_macro2::{Delimiter, Group, Span};
 use quote::ToTokens;
 use syn::{
     bracketed,
@@ -18,7 +18,7 @@ use syn::{
 #[derive(Debug)]
 struct FieldCommands {
     name: Ident,
-    skip: bool
+    skip: bool,
 }
 
 impl Parse for FieldCommands {
@@ -31,17 +31,14 @@ impl Parse for FieldCommands {
         let commands: Punctuated<Ident, Token![,]> = content.parse_terminated(Ident::parse)?;
 
         let skip = commands.iter().any(|c| c == "skip");
-        
-        Ok(FieldCommands {
-            name,
-            skip
-        })
+
+        Ok(FieldCommands { name, skip })
     }
 }
 
 #[derive(Debug, Clone)]
 struct TraitOptions {
-    traits: Vec<Ident>
+    traits: Vec<Ident>,
 }
 
 impl Parse for TraitOptions {
@@ -56,9 +53,7 @@ impl Parse for TraitOptions {
             let _: Result<Token![,]> = input.parse();
         }
 
-        Ok(TraitOptions {
-            traits
-        })
+        Ok(TraitOptions { traits })
     }
 }
 
@@ -76,11 +71,10 @@ impl Parse for NewStruct {
         let mut new_struct = NewStruct {
             name,
             with: None,
-            without: None
+            without: None,
         };
 
         while !input.is_empty() {
-
             // If there are remaining tokens then the next token must be a comma
             let _: Token![,] = input.parse()?;
 
@@ -108,14 +102,14 @@ impl Parse for NewStruct {
 
 #[derive(Debug)]
 struct Derives {
-    derives: Vec<Ident>
+    derives: Vec<Ident>,
 }
 
 impl Parse for Derives {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
         syn::parenthesized!(content in input);
-        
+
         let mut derives: Vec<Ident> = vec![];
 
         while !content.is_empty() {
@@ -125,13 +119,15 @@ impl Parse for Derives {
             derives.push(derive);
         }
 
-        Ok(Derives {
-            derives
-        })
+        Ok(Derives { derives })
     }
 }
 
-fn compute_derives(mut attr: syn::Attribute, with: Option<TraitOptions>, without: Option<TraitOptions>) -> syn::Attribute {
+fn compute_derives(
+    mut attr: syn::Attribute,
+    with: Option<TraitOptions>,
+    without: Option<TraitOptions>,
+) -> syn::Attribute {
     let derives: Result<Derives> = syn::parse2(attr.tokens);
     let mut derive_list = derives.map(|d| d.derives).unwrap_or_else(|_| vec![]);
 
@@ -159,13 +155,17 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
     let original_name = input.ident.clone();
 
     let first_new_struct = parse_macro_input!(attr as NewStruct);
-    let additional_structs: Result<Vec<NewStruct>> = input.attrs.iter().filter_map(|attr| {
-        if attr.path.is_ident("partial") {
-            Some(attr.parse_args())
-        } else {
-            None
-        }
-    }).collect();
+    let additional_structs: Result<Vec<NewStruct>> = input
+        .attrs
+        .iter()
+        .filter_map(|attr| {
+            if attr.path.is_ident("partial") {
+                Some(attr.parse_args())
+            } else {
+                None
+            }
+        })
+        .collect();
 
     match additional_structs {
         Ok(mut additional_structs) => {
@@ -173,9 +173,9 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                 NewStruct {
                     name: original_name.clone(),
                     with: None,
-                    without: None
+                    without: None,
                 },
-                first_new_struct
+                first_new_struct,
             ];
             new_structs.append(&mut additional_structs);
 
@@ -184,17 +184,19 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                     let visibility = input.vis;
                     let generics = input.generics;
 
-                    let attr_without_partials: Vec<&syn::Attribute> = input.attrs.iter().filter(|attr| {
-                        !attr.path.is_ident("partial")
-                    }).collect();
+                    let attr_without_partials: Vec<&syn::Attribute> = input
+                        .attrs
+                        .iter()
+                        .filter(|attr| !attr.path.is_ident("partial"))
+                        .collect();
 
-                    let struct_attrs: Vec<&syn::Attribute> = attr_without_partials.into_iter().filter(|attr| {
-                        !attr.path.is_ident("derive")
-                    }).collect();
+                    let struct_attrs: Vec<&syn::Attribute> = attr_without_partials
+                        .into_iter()
+                        .filter(|attr| !attr.path.is_ident("derive"))
+                        .collect();
 
-                    let orig_derives: Option<&syn::Attribute> = input.attrs.iter().filter(|attr| {
-                        attr.path.is_ident("derive")
-                    }).nth(0);
+                    let orig_derives: Option<&syn::Attribute> =
+                        input.attrs.iter().filter(|attr| attr.path.is_ident("derive")).nth(0);
 
                     let mut expanded_structs = vec![];
 
@@ -204,12 +206,14 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                             let visibility = visibility.clone();
                             let generics = generics.clone();
 
-                            let filtered_fields: Vec<syn::Field> = fields.named
+                            let filtered_fields: Vec<syn::Field> = fields
+                                .named
                                 .iter()
                                 .filter(|field| {
                                     !field.attrs.iter().any(|attr| {
                                         if attr.path.is_ident("partial") {
-                                            let parsed: FieldCommands = attr.parse_args().expect("Failed to parse field args");
+                                            let parsed: FieldCommands =
+                                                attr.parse_args().expect("Failed to parse field args");
                                             parsed.name == name && parsed.skip
                                         } else {
                                             false
@@ -219,9 +223,11 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                                 .map(|f| {
                                     let mut f = f.to_owned();
 
-                                    f.attrs = f.attrs.into_iter().filter(|attr| {
-                                        !attr.path.is_ident("partial")
-                                    }).collect();
+                                    f.attrs = f
+                                        .attrs
+                                        .into_iter()
+                                        .filter(|attr| !attr.path.is_ident("partial"))
+                                        .collect();
 
                                     f
                                 })
@@ -230,7 +236,10 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                             // If there were no additional derives added to the new struct than we
                             // can add a From impl to convert from the original struct to the partial
                             let from_impl = if name != original_name && with.is_none() {
-                                let field_names = filtered_fields.iter().map(|field| field.ident.as_ref()).collect::<Vec<Option<&Ident>>>();
+                                let field_names = filtered_fields
+                                    .iter()
+                                    .map(|field| field.ident.as_ref())
+                                    .collect::<Vec<Option<&Ident>>>();
 
                                 quote! {
                                     impl #generics From<#original_name #generics> for #name #generics {
@@ -242,7 +251,7 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                                     }
                                 }
                             } else {
-                                quote! { }
+                                quote! {}
                             };
 
                             let derives: Option<syn::Attribute> = orig_derives.map(|d| d.to_owned());
@@ -250,9 +259,9 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                                 let computed = compute_derives(derives, with, without);
                                 quote! { #computed }
                             } else {
-                                quote! { }
+                                quote! {}
                             };
-    
+
                             expanded_structs.push(quote! {
                                 #derive_attr
                                 #( #struct_attrs )*
@@ -268,14 +277,15 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                     proc_macro::TokenStream::from(quote! {
                         #( #expanded_structs )*
                     })
-                },
-                other => panic!("Partial can only be defined on structs. Attempted to define on {:#?}", other),
+                }
+                other => panic!(
+                    "Partial can only be defined on structs. Attempted to define on {:#?}",
+                    other
+                ),
             };
 
             result
-        },
-        Err(err) => {
-            err.to_compile_error().into()
         }
+        Err(err) => err.to_compile_error().into(),
     }
 }

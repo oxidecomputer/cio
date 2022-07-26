@@ -39,7 +39,6 @@ pub fn db(attr: proc_macro::TokenStream, item: proc_macro::TokenStream) -> proc_
 }
 
 fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
-
     // Get the data from the parameters.
     let params = from_tokenstream::<Params>(&attr).unwrap();
 
@@ -47,7 +46,6 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
     let og_struct: ItemStruct = syn::parse2(item.clone()).unwrap();
 
     if params.target_struct.is_none() || params.target_struct.unwrap() == og_struct.ident.to_string() {
-
         // Get the names of the new structs.
         let new_struct_name = format_ident!("{}", params.new_struct_name);
         // We also get the name of the new struct in it's plural form so we can generate

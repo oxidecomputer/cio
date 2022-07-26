@@ -4,15 +4,15 @@ use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use cio_api::{
-    analytics::NewPageView, applicant_uploads::UploadTokenStore, db::Database, functions::Function, swag_store::Order,
-    rfds::RFDIndexEntry,
+    analytics::NewPageView, applicant_uploads::UploadTokenStore, db::Database, functions::Function,
+    rfds::RFDIndexEntry, swag_store::Order,
 };
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
-    ResultsPage, PaginationParams, WhichPage, PaginationOrder
+    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, PaginationOrder, PaginationParams, Path, Query,
+    RequestContext, ResultsPage, TypedBody, UntypedBody, WhichPage,
 };
 use dropshot_verify_request::{
     bearer::{Bearer, BearerToken},
@@ -2114,47 +2114,25 @@ async fn listen_shipbob_webhooks(
     Ok(HttpResponseOk("ok".to_string()))
 }
 
-#[derive(Deserialize, JsonSchema, Clone)]
-enum RFDSortMode {
-    NumberAscending,
-    NumberDescending,
-}
+// The RFD index does not support any sorting mechanisms
+#[derive(Debug, Deserialize, JsonSchema)]
+struct RFDIndexScanParam {}
 
-#[derive(Deserialize, JsonSchema)]
-struct RFDIndexScanParam {
-    sort: RFDSortMode
-}
-
-#[derive(Deserialize, Serialize, JsonSchema)]
+// The RFD index is always sorted by number in ascending order
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 enum RFDIndexPageSelector {
-    Number(PaginationOrder, i32)
+    Number(PaginationOrder, i32),
 }
 
-fn rfd_scan_params(params: &WhichPage<RFDIndexScanParam, RFDIndexPageSelector>) -> RFDIndexScanParam {
-    RFDIndexScanParam {
-        sort: match params {
-            WhichPage::First(RFDIndexScanParam { sort }) => sort.clone(),
-            WhichPage::Next(RFDIndexPageSelector::Number(PaginationOrder::Ascending, ..)) => {
-                RFDSortMode::NumberAscending
-            }
-            WhichPage::Next(RFDIndexPageSelector::Number(PaginationOrder::Descending, ..)) => {
-                RFDSortMode::NumberDescending
-            }
-        }
-    }
+fn rfd_index_scan_params(params: &WhichPage<RFDIndexScanParam, RFDIndexPageSelector>) -> RFDIndexScanParam {
+    RFDIndexScanParam {}
 }
 
-fn rfd_page_selector(item: &RFDIndexEntry, scan_params: &RFDIndexScanParam) -> RFDIndexPageSelector {
-    match scan_params {
-        RFDIndexScanParam { sort: RFDSortMode::NumberAscending } => {
-            RFDIndexPageSelector::Number(PaginationOrder::Ascending, item.number)
-        }
-        RFDIndexScanParam { sort: RFDSortMode::NumberDescending } => {
-            RFDIndexPageSelector::Number(PaginationOrder::Descending, item.number)
-        }
-    }
+fn rfd_index_page_selector(item: &RFDIndexEntry, scan_params: &RFDIndexScanParam) -> RFDIndexPageSelector {
+    RFDIndexPageSelector::Number(PaginationOrder::Ascending, item.number)
 }
 
+/// List metadata of all RFDs
 #[endpoint {
     method = GET,
     path = "/rfds",
@@ -2167,13 +2145,24 @@ async fn listen_rfd_index(
     let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
 
     let params = query.into_inner();
-    let limit = rqctx.page_limit(&params)?.get() as usize;
-    let scan_params = rfd_scan_params(&params.page);
+    let offset = match params.page {
+        WhichPage::First(_) => 0,
+        WhichPage::Next(RFDIndexPageSelector::Number(_dir, offset)) => offset,
+    };
+    let limit = rqctx.page_limit(&params)?.get();
+    let scan_params = rfd_index_scan_params(&params.page);
 
-    match txn.run(|| crate::handlers_rfd::handle_rfd_index(rqctx)).await {
+    match txn
+        .run(|| crate::handlers_rfd::handle_rfd_index(rqctx, offset, limit))
+        .await
+    {
         Ok(entries) => {
             txn.finish(http::StatusCode::OK);
-            Ok(HttpResponseOk(ResultsPage::new(entries, &scan_params, rfd_page_selector)?))
+            Ok(HttpResponseOk(ResultsPage::new(
+                entries,
+                &scan_params,
+                rfd_index_page_selector,
+            )?))
         }
         Err(err) => {
             // Send the error to sentry.
