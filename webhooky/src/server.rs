@@ -1909,7 +1909,7 @@ async fn listen_auth_docusign_callback(
 }]
 async fn listen_docusign_envelope_update_webhooks(
     rqctx: Arc<RequestContext<Context>>,
-    body: HmacVerifiedBodyAudit<crate::handlers_docusign::DocusignWebhookVerification, docusign::Envelope>,
+    body: HmacVerifiedBody<crate::handlers_docusign::DocusignWebhookVerification, docusign::Envelope>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let webhook = body.into_inner()?;
 
