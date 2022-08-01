@@ -84,10 +84,12 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> 
                     let topic: Record<DiscussionTopic> =
                         airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, id).await?;
 
-                    discussion_topics = format!(
-                        "{}\n- {} from {}",
-                        discussion_topics, topic.fields.topic, topic.fields.submitter.name
-                    );
+                    if !topic.fields.topic.is_empty() {
+                        discussion_topics = format!(
+                            "{}\n- {} from {}",
+                            discussion_topics, topic.fields.topic, topic.fields.submitter.name
+                        );
+                    }
                 }
                 discussion_topics = discussion_topics.trim().to_string();
                 if !discussion_topics.is_empty() {
@@ -324,8 +326,11 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<(
                     // Get the topic from Airtable.
                     let topic: Record<DiscussionTopic> =
                         airtable.get_record(AIRTABLE_DISCUSSION_TOPICS_TABLE, id).await?;
-                    // Add it to our list for the email.
-                    email_data.topics.push(topic.fields);
+
+                    if !topic.fields.topic.is_empty() {
+                        // Add it to our list for the email.
+                        email_data.topics.push(topic.fields);
+                    }
                 }
 
                 email_data.time = pacific_time.format("%r %Z").to_string();

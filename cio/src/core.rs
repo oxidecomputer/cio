@@ -39,7 +39,7 @@ pub struct CustomerInteraction {
 /// This is inline with our Airtable workspace.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DiscussionTopic {
-    #[serde(rename = "Topic")]
+    #[serde(rename = "Topic", default)]
     pub topic: String,
     #[serde(default, rename = "Submitter")]
     pub submitter: AirtableUser,
