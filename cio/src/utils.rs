@@ -218,6 +218,14 @@ pub async fn create_or_update_file_in_github_repo(
         }
     }
 
+    info!(
+        "[github content] Writing file to GitHub repo: {} / path: {} / content_length: {} / existing_content_length: {}",
+        repo,
+        file_path,
+        content.len(),
+        existing_content.len()
+    );
+
     // We need to create or update the file.
     match github
         .repos()
