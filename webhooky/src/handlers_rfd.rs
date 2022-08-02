@@ -1,13 +1,11 @@
 use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use cio_api::{
-    rfds::{NewRFD, RFDIndexEntry, RFD},
+    rfds::{NewRFD, RFDEntry, RFDIndexEntry, RFD},
     schema::rfds,
 };
 use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::RequestContext;
-use schemars::JsonSchema;
-use serde::Serialize;
 use std::sync::Arc;
 
 use crate::server::Context;
@@ -35,4 +33,20 @@ pub async fn handle_rfd_index(
         .collect();
 
     Ok(entries)
+}
+
+pub async fn handle_rfd_view(rqctx: Arc<RequestContext<Context>>, num: i32) -> Result<Option<RFDEntry>> {
+    let ctx = rqctx.context();
+
+    let mut rfd = rfds::dsl::rfds
+        .filter(rfds::dsl::number.eq(num))
+        .load_async::<RFD>(ctx.db.pool())
+        .await?;
+
+    if !rfd.is_empty() {
+        let new_rfd: NewRFD = rfd.pop().unwrap().into();
+        Ok(Some(new_rfd.into()))
+    } else {
+        Ok(None)
+    }
 }

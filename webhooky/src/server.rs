@@ -4,8 +4,12 @@ use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use cio_api::{
-    analytics::NewPageView, applicant_uploads::UploadTokenStore, db::Database, functions::Function,
-    rfds::RFDIndexEntry, swag_store::Order,
+    analytics::NewPageView,
+    applicant_uploads::UploadTokenStore,
+    db::Database,
+    functions::Function,
+    rfds::{RFDEntry, RFDIndexEntry},
+    swag_store::Order,
 };
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
@@ -145,6 +149,7 @@ pub async fn create_server(
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(listen_rfd_index).unwrap();
+    api.register(listen_rfd_view).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(trigger_cleanup_create).unwrap();
 
@@ -2124,11 +2129,11 @@ enum RFDIndexPageSelector {
     Number(PaginationOrder, i32),
 }
 
-fn rfd_index_scan_params(params: &WhichPage<RFDIndexScanParam, RFDIndexPageSelector>) -> RFDIndexScanParam {
+fn rfd_index_scan_params(_params: &WhichPage<RFDIndexScanParam, RFDIndexPageSelector>) -> RFDIndexScanParam {
     RFDIndexScanParam {}
 }
 
-fn rfd_index_page_selector(item: &RFDIndexEntry, scan_params: &RFDIndexScanParam) -> RFDIndexPageSelector {
+fn rfd_index_page_selector(item: &RFDIndexEntry, _scan_params: &RFDIndexScanParam) -> RFDIndexPageSelector {
     RFDIndexPageSelector::Number(PaginationOrder::Ascending, item.number)
 }
 
@@ -2163,6 +2168,38 @@ async fn listen_rfd_index(
                 &scan_params,
                 rfd_index_page_selector,
             )?))
+        }
+        Err(err) => {
+            // Send the error to sentry.
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(err))
+        }
+    }
+}
+
+/// Get an rfd
+#[endpoint {
+    method = GET,
+    path = "/rfd/{num}",
+}]
+async fn listen_rfd_view(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<RFDToken>,
+    path_params: Path<RFDPathParams>,
+) -> Result<HttpResponseOk<RFDEntry>, HttpError> {
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+
+    match txn
+        .run(|| crate::handlers_rfd::handle_rfd_view(rqctx, path_params.into_inner().num))
+        .await
+    {
+        Ok(Some(rfd)) => {
+            txn.finish(http::StatusCode::OK);
+            Ok(HttpResponseOk(rfd))
+        }
+        Ok(None) => {
+            txn.finish(http::StatusCode::NOT_FOUND);
+            Err(HttpError::for_not_found(None, "".to_string()))
         }
         Err(err) => {
             // Send the error to sentry.

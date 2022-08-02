@@ -4,6 +4,8 @@ extern crate proc_macro;
 #[macro_use]
 extern crate quote;
 
+use std::result::Iter;
+
 use proc_macro::TokenStream;
 use proc_macro2::{Delimiter, Group, Span};
 use quote::ToTokens;
@@ -239,11 +241,7 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
 
                     // Create the list of all attribute macros that need to be applied to the
                     // generated structs
-                    let attr_without_partials: Vec<&syn::Attribute> = input
-                        .attrs
-                        .iter()
-                        .filter(|attr| !attr.path.is_ident("partial"))
-                        .collect();
+                    let attr_without_partials = input.attrs.iter().filter(|attr| !attr.path.is_ident("partial"));
 
                     // From the list of attributes, find all of the non-derive attributes
                     let struct_attrs: Vec<&syn::Attribute> = attr_without_partials
@@ -253,7 +251,7 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
 
                     // Find the derive attribute if one exists
                     let orig_derives: Option<&syn::Attribute> =
-                        input.attrs.iter().filter(|attr| attr.path.is_ident("derive")).nth(0);
+                        input.attrs.iter().find(|attr| attr.path.is_ident("derive"));
 
                     // Keep track of all of the structs to output
                     let mut expanded_structs = vec![];

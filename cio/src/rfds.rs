@@ -46,6 +46,7 @@ use crate::{
 
 /// The data type for an RFD.
 #[partial(RFDIndexEntry)]
+#[partial(RFDEntry)]
 #[db {
     target_struct = "NewRFD",
     new_struct_name = "RFD",
@@ -104,13 +105,16 @@ pub struct NewRFD {
     pub relevant_components: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     #[partial(RFDIndexEntry(skip))]
+    #[partial(RFDEntry(skip))]
     pub pdf_link_github: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     #[partial(RFDIndexEntry(skip))]
+    #[partial(RFDEntry(skip))]
     pub pdf_link_google_drive: String,
     /// The CIO company ID.
     #[serde(default)]
     #[partial(RFDIndexEntry(skip))]
+    #[partial(RFDEntry(skip))]
     pub cio_company_id: i32,
 }
 
