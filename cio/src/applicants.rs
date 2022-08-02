@@ -2876,6 +2876,7 @@ mod tests {
         schema::applicants,
     };
 
+    #[ignore]
     #[tokio::test(flavor = "multi_thread")]
     async fn test_serialize_deserialize_applicants() {
         crate::utils::setup_logger();
