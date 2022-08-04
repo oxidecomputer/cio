@@ -1,3 +1,4 @@
+#[ignore]
 #[tokio::test]
 async fn test_admin() {
     let db = cio_api::db::Database::new().await;
@@ -8,6 +9,7 @@ async fn test_admin() {
     assert!(company.authenticate_google_admin(&db).await.is_ok());
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_calendar() {
     let db = cio_api::db::Database::new().await;
@@ -18,6 +20,7 @@ async fn test_calendar() {
     assert!(company.authenticate_google_calendar(&db).await.is_ok());
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_calendar_service_account() {
     let db = cio_api::db::Database::new().await;
@@ -31,6 +34,7 @@ async fn test_calendar_service_account() {
         .is_ok());
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_drive() {
     let db = cio_api::db::Database::new().await;
@@ -41,6 +45,7 @@ async fn test_drive() {
     assert!(company.authenticate_google_drive(&db).await.is_ok());
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_drive_service_account() {
     let db = cio_api::db::Database::new().await;
@@ -51,6 +56,7 @@ async fn test_drive_service_account() {
     assert!(company.authenticate_google_drive_with_service_account("").await.is_ok());
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_group_settings() {
     let db = cio_api::db::Database::new().await;
@@ -61,6 +67,7 @@ async fn test_group_settings() {
     assert!(company.authenticate_google_groups_settings(&db).await.is_ok());
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_sheets() {
     let db = cio_api::db::Database::new().await;
