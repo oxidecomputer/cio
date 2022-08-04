@@ -43,6 +43,8 @@ COPY cio/src/dummy.rs ./src/dummy.rs
 
 COPY cio/Cargo.toml ./Cargo.toml
 
+COPY Cargo.lock ./Cargo.lock
+
 COPY rust-toolchain ./rust-toolchain
 
 COPY macros ../macros
