@@ -20,6 +20,7 @@ use google_drive::{
 use log::{info, warn};
 use macros::db;
 use octorust::Client as Octorust;
+use partial_struct::partial;
 use regex::Regex;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
@@ -44,7 +45,10 @@ use crate::{
 };
 
 /// The data type for an RFD.
+#[partial(RFDIndexEntry)]
+#[partial(RFDEntry)]
 #[db {
+    target_struct = "NewRFD",
     new_struct_name = "RFD",
     airtable_base = "roadmap",
     airtable_table = "AIRTABLE_RFD_TABLE",
@@ -82,8 +86,10 @@ pub struct NewRFD {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub authors: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[partial(RFDIndexEntry(skip))]
     pub html: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[partial(RFDIndexEntry(skip))]
     pub content: String,
     /// sha is the SHA of the last commit that modified the file
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -98,11 +104,17 @@ pub struct NewRFD {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub relevant_components: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[partial(RFDIndexEntry(skip))]
+    #[partial(RFDEntry(skip))]
     pub pdf_link_github: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[partial(RFDIndexEntry(skip))]
+    #[partial(RFDEntry(skip))]
     pub pdf_link_google_drive: String,
     /// The CIO company ID.
     #[serde(default)]
+    #[partial(RFDIndexEntry(skip))]
+    #[partial(RFDEntry(skip))]
     pub cio_company_id: i32,
 }
 

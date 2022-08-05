@@ -787,6 +787,7 @@ dependencies = [
  "octorust",
  "okta",
  "openssl",
+ "partial-struct",
  "phonenumber",
  "pretty_env_logger",
  "printpdf",
@@ -3437,6 +3438,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c705f256449c60da65e11ff6626e0c16a0a0b96aaa348de61376b249bc340f41"
 dependencies = [
  "regex",
+]
+
+[[package]]
+name = "partial-struct"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2 1.0.41",
+ "quote 1.0.20",
+ "serde",
+ "serde_json",
+ "syn 1.0.98",
 ]
 
 [[package]]

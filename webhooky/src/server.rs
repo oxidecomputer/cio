@@ -4,13 +4,19 @@ use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use cio_api::{
-    analytics::NewPageView, applicant_uploads::UploadTokenStore, db::Database, functions::Function, swag_store::Order,
+    analytics::NewPageView,
+    applicant_uploads::UploadTokenStore,
+    db::Database,
+    functions::Function,
+    rfds::{RFDEntry, RFDIndexEntry},
+    swag_store::Order,
 };
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, Path, Query, RequestContext, TypedBody, UntypedBody,
+    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, PaginationOrder, PaginationParams, Path, Query,
+    RequestContext, ResultsPage, TypedBody, UntypedBody, WhichPage,
 };
 use dropshot_verify_request::{
     bearer::{Bearer, BearerToken},
@@ -34,7 +40,7 @@ use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
 use crate::{
-    auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, ShippoToken},
+    auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, RFDToken, ShippoToken},
     github_types::GitHubWebhook,
     handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
     handlers_slack::InteractiveEvent,
@@ -142,6 +148,8 @@ pub async fn create_server(
     api.register(listen_store_order_create).unwrap();
     api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
     api.register(ping_mailchimp_rack_line_webhooks).unwrap();
+    api.register(listen_rfd_index).unwrap();
+    api.register(listen_rfd_view).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
     api.register(trigger_cleanup_create).unwrap();
 
@@ -2109,6 +2117,96 @@ async fn listen_shipbob_webhooks(
     txn.finish(http::StatusCode::OK);
 
     Ok(HttpResponseOk("ok".to_string()))
+}
+
+// The RFD index does not support any sorting mechanisms
+#[derive(Debug, Deserialize, JsonSchema)]
+struct RFDIndexScanParam {}
+
+// The RFD index is always sorted by number in ascending order
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+enum RFDIndexPageSelector {
+    Number(PaginationOrder, i32),
+}
+
+fn rfd_index_scan_params(_params: &WhichPage<RFDIndexScanParam, RFDIndexPageSelector>) -> RFDIndexScanParam {
+    RFDIndexScanParam {}
+}
+
+fn rfd_index_page_selector(item: &RFDIndexEntry, _scan_params: &RFDIndexScanParam) -> RFDIndexPageSelector {
+    RFDIndexPageSelector::Number(PaginationOrder::Ascending, item.number)
+}
+
+/// List metadata of all RFDs
+#[endpoint {
+    method = GET,
+    path = "/rfds",
+}]
+async fn listen_rfd_index(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<RFDToken>,
+    query: Query<PaginationParams<RFDIndexScanParam, RFDIndexPageSelector>>,
+) -> Result<HttpResponseOk<ResultsPage<RFDIndexEntry>>, HttpError> {
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+
+    let params = query.into_inner();
+    let offset = match params.page {
+        WhichPage::First(_) => 0,
+        WhichPage::Next(RFDIndexPageSelector::Number(_dir, offset)) => offset,
+    };
+    let limit = rqctx.page_limit(&params)?.get();
+    let scan_params = rfd_index_scan_params(&params.page);
+
+    match txn
+        .run(|| crate::handlers_rfd::handle_rfd_index(rqctx, offset, limit))
+        .await
+    {
+        Ok(entries) => {
+            txn.finish(http::StatusCode::OK);
+            Ok(HttpResponseOk(ResultsPage::new(
+                entries,
+                &scan_params,
+                rfd_index_page_selector,
+            )?))
+        }
+        Err(err) => {
+            // Send the error to sentry.
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(err))
+        }
+    }
+}
+
+/// Get an rfd
+#[endpoint {
+    method = GET,
+    path = "/rfd/{num}",
+}]
+async fn listen_rfd_view(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<RFDToken>,
+    path_params: Path<RFDPathParams>,
+) -> Result<HttpResponseOk<RFDEntry>, HttpError> {
+    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+
+    match txn
+        .run(|| crate::handlers_rfd::handle_rfd_view(rqctx, path_params.into_inner().num))
+        .await
+    {
+        Ok(Some(rfd)) => {
+            txn.finish(http::StatusCode::OK);
+            Ok(HttpResponseOk(rfd))
+        }
+        Ok(None) => {
+            txn.finish(http::StatusCode::NOT_FOUND);
+            Err(HttpError::for_not_found(None, "".to_string()))
+        }
+        Err(err) => {
+            // Send the error to sentry.
+            txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+            Err(handle_anyhow_err_as_http_err(err))
+        }
+    }
 }
 
 /** Listen for triggering a function run of sync repos. */

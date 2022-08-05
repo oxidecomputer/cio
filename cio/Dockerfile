@@ -43,11 +43,15 @@ COPY cio/src/dummy.rs ./src/dummy.rs
 
 COPY cio/Cargo.toml ./Cargo.toml
 
+COPY Cargo.lock ./Cargo.lock
+
 COPY rust-toolchain ./rust-toolchain
 
 COPY macros ../macros
 
 COPY mailchimp-minimal-api ../mailchimp-minimal-api
+
+COPY partial-struct ../partial-struct
 
 COPY diesel-sentry ../diesel-sentry
 

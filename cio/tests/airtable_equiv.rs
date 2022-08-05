@@ -1,5 +1,6 @@
 use cio_api::recorded_meetings::RecordedMeeting;
 
+#[ignore]
 #[tokio::test]
 async fn test_airtable_row_equivalence() {
     let db = cio_api::db::Database::new().await;

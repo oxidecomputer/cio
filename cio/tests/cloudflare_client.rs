@@ -9,6 +9,7 @@ fn setup() {
     });
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_inner_client_call() {
     setup();
@@ -37,6 +38,7 @@ async fn test_inner_client_call() {
     assert_eq!(123, dns_records.len());
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_zone_identifier_lookup_uses_cache() {
     setup();
@@ -54,6 +56,7 @@ async fn test_zone_identifier_lookup_uses_cache() {
     assert_eq!(zone_req1.expires_at, zone_req2.expires_at);
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_populates_zone_cache() {
     setup();
@@ -82,6 +85,7 @@ async fn test_populates_zone_cache() {
     assert_eq!(1, records_found);
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_auto_populates_zone_cache() {
     setup();
@@ -108,6 +112,7 @@ async fn test_auto_populates_zone_cache() {
     assert!(cf.cache_size(&zone_req.id) > 0);
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_uses_new_cache_after_expiration() {
     setup();
