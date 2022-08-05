@@ -287,7 +287,7 @@ impl Function {
         };
 
         let nf = NewFunction {
-            name: saga.template_name.to_string(),
+            name: saga.name.to_string(),
             status: status.to_string(),
             conclusion: octorust::types::Conclusion::Noop.to_string(),
             created_at: Utc::now(),

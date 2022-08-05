@@ -17,7 +17,7 @@ use std::io::BufRead;
 #[derive(Debug)]
 pub struct Saga;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Params {
     cmd_name: String,
     saga_id: uuid::Uuid,
@@ -45,24 +45,17 @@ async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> 
 pub async fn do_saga(
     db: &Database,
     sec: &steno::SecClient,
-    id: &uuid::Uuid,
-    template: steno::SagaTemplate<Saga>,
-    cmd_name: &str,
+    dag: Arc<steno::SagaDag>,
+    registry: steno::ActionRegistry,
     background: bool,
 ) -> Result<()> {
     let context = Arc::new(Context { db: db.clone() });
-    let params = Params {
-        cmd_name: cmd_name.to_string(),
-        saga_id: *id,
-    };
-
-    let saga_template = Arc::new(template);
-
-    let saga_id = steno::SagaId(*id);
+    let saga_id = steno::SagaId(params.id);
+    let dag = create_exec_dag(params.clone());
 
     // Create the saga.
     let saga_future = sec
-        .saga_create(saga_id, Arc::new(context), saga_template, cmd_name.to_string(), params)
+        .saga_create(saga_id, Arc::new(context), dag, registry)
         .await?;
 
     // Set it running.
@@ -78,7 +71,7 @@ pub async fn do_saga(
         // Note that the SEC will run all this regardless of whether you wait for it
         // here.  This is just a handle for you to know when the saga has finished.
         let result = saga_future.await;
-        on_saga_complete(db, &saga_id, &result, cmd_name).await?;
+        on_saga_complete(db, &saga_id, &result, &params.cmd_name).await?;
     }
 
     Ok(())
@@ -121,6 +114,21 @@ pub async fn on_saga_complete(
     Ok(())
 }
 
+lazy_static! {
+    static ref EXEC_CMD: Arc<dyn Action<Saga>> =
+        steno::new_action_noop_undo("exec", action_run_cmd);
+}
+
+pub fn create_exec_dag(params: Params) -> Arc<SagaDag> {
+    let mut builder = steno::DagBuilder::new(SagaName::new(cmd_name));
+    builder.append(cmd_name, cmd_name, EXEC_CMD);
+
+    Arc::new(SagaDag::new(
+        builder.build().expect("Failed to build DAG for execution saga"),
+        serde_json::to_value(params).unwrap(),
+    ))
+}
+
 pub async fn run_cmd(
     db: &Database,
     sec: &steno::SecClient,
@@ -128,21 +136,29 @@ pub async fn run_cmd(
     cmd_name: &str,
     background: bool,
 ) -> Result<()> {
-    let mut builder = steno::SagaTemplateBuilder::new();
-    builder.append(
-        // name of this action's output (can be used in subsequent actions)
-        cmd_name,
-        // human-readable label for the action
-        cmd_name,
-        steno::ActionFunc::new_action(
-            // action function
-            action_run_cmd,
-            // undo function
-            undo_action,
-        ),
-    );
+    let mut builder = steno::DagBuilder::new(SagaName::new(cmd_name));
+    builder.append(cmd_name, cmd_name, EXEC_CMD);
 
-    do_saga(db, sec, id, builder.build(), cmd_name, background).await
+    // let mut builder = steno::SagaTemplateBuilder::new();
+    // builder.append(
+    //     // name of this action's output (can be used in subsequent actions)
+    //     cmd_name,
+    //     // human-readable label for the action
+    //     cmd_name,
+    //     steno::ActionFunc::new_action(
+    //         // action function
+    //         action_run_cmd,
+    //         // undo function
+    //         undo_action,
+    //     ),
+    // );
+
+    Arc::new(SagaDag::new(
+        builder.build().expect("Failed to build DAG for execution saga"),
+        serde_json::to_value(params).unwrap(),
+    ));
+
+    do_saga(db, sec, id, builder.build().unwrap(), cmd_name, background).await
 }
 
 async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<FnOutput, steno::ActionError> {
