@@ -340,8 +340,6 @@ pub struct Context {
 
     pub sec: Arc<steno::SecClient>,
 
-    pub action_registry: steno::ActionRegistry,
-
     pub schema: serde_json::Value,
 
     pub upload_token_store: UploadTokenStore,
@@ -355,13 +353,11 @@ impl Context {
         let db = Database::new().await;
 
         let sec = steno::sec(logger, Arc::new(db.clone()));
-        let registry = steno::ActionRegistry::new();
 
         // Create the context.
         Context {
             db: db.clone(),
             sec: Arc::new(sec),
-            action_registry: registry,
             schema,
             upload_token_store: UploadTokenStore::new(db, chrono::Duration::minutes(10)),
         }
