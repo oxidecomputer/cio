@@ -36,11 +36,6 @@ impl steno::SagaType for Saga {
     type ExecContextType = Arc<Context>;
 }
 
-async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> {
-    // This is a noop, we don't have to undo anything.
-    Ok(())
-}
-
 pub async fn on_saga_complete(
     db: &Database,
     saga_id: &steno::SagaId,
@@ -83,16 +78,21 @@ lazy_static! {
         steno::new_action_noop_undo("exec", action_run_cmd);
 }
 
+pub fn create_registry() -> steno::ActionRegistry<Saga> {
+    let mut registry = steno::ActionRegistry::<Saga>::new();
+    registry.register(EXEC_CMD.clone());
+
+    registry
+}
+
 pub async fn run_cmd(
     db: &Database,
     sec: &steno::SecClient,
+    registry: Arc<steno::ActionRegistry<Saga>>,
     id: &uuid::Uuid,
     cmd_name: &str,
     background: bool,
 ) -> Result<()> {
-    let mut registry = steno::ActionRegistry::<Saga>::new();
-    registry.register(EXEC_CMD.clone());
-
     let params = Params {
         cmd_name: cmd_name.to_string(),
         saga_id: *id,
@@ -111,7 +111,7 @@ pub async fn run_cmd(
 
     // Create the saga.
     let saga_future = sec
-        .saga_create(saga_id, Arc::new(context), dag, Arc::new(registry))
+        .saga_create(saga_id, Arc::new(context), dag, registry)
         .await?;
 
     // Set it running.

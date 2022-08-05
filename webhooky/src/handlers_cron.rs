@@ -41,7 +41,7 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str, background
     let id = uuid::Uuid::new_v4();
 
     // Run the saga.
-    crate::sagas::run_cmd(db, &api_context.sec, &id, cmd_name, background).await?;
+    crate::sagas::run_cmd(db, &api_context.sec, api_context.exec_registry.clone(), &id, cmd_name, background).await?;
 
     Ok(id)
 }

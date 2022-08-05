@@ -44,6 +44,7 @@ use crate::{
     github_types::GitHubWebhook,
     handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
     handlers_slack::InteractiveEvent,
+    sagas::{Saga, create_registry}
 };
 
 pub async fn create_server(
@@ -339,6 +340,7 @@ pub struct Context {
     pub db: Database,
 
     pub sec: Arc<steno::SecClient>,
+    pub exec_registry: Arc<steno::ActionRegistry<Saga>>,
 
     pub schema: serde_json::Value,
 
@@ -358,6 +360,7 @@ impl Context {
         Context {
             db: db.clone(),
             sec: Arc::new(sec),
+            exec_registry: Arc::new(create_registry()),
             schema,
             upload_token_store: UploadTokenStore::new(db, chrono::Duration::minutes(10)),
         }
