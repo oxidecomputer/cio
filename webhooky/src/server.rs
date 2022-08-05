@@ -44,7 +44,7 @@ use crate::{
     github_types::GitHubWebhook,
     handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
     handlers_slack::InteractiveEvent,
-    sagas::{Saga, create_registry}
+    sagas::{create_registry, Saga},
 };
 
 pub async fn create_server(

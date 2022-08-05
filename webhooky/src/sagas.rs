@@ -74,8 +74,7 @@ pub async fn on_saga_complete(
 }
 
 lazy_static! {
-    static ref EXEC_CMD: Arc<dyn steno::Action<Saga>> =
-        steno::new_action_noop_undo("exec", action_run_cmd);
+    static ref EXEC_CMD: Arc<dyn steno::Action<Saga>> = steno::new_action_noop_undo("exec", action_run_cmd);
 }
 
 pub fn create_registry() -> steno::ActionRegistry<Saga> {
@@ -110,9 +109,7 @@ pub async fn run_cmd(
     let saga_id = steno::SagaId(params.saga_id);
 
     // Create the saga.
-    let saga_future = sec
-        .saga_create(saga_id, Arc::new(context), dag, registry)
-        .await?;
+    let saga_future = sec.saga_create(saga_id, Arc::new(context), dag, registry).await?;
 
     // Set it running.
     sec.saga_start(saga_id).await?;
