@@ -132,9 +132,17 @@ where
         let verified = Some(expected_token) == user_token;
 
         if verified {
-            log::info!("Successfully verified request via bearer. req_id: {}", rqctx.request_id);
+            log::info!(
+                "Successfully verified request via bearer. req_id: {} uri: {}",
+                rqctx.request_id,
+                rqctx.request.lock().await.uri()
+            );
         } else {
-            log::info!("Failed to verify request via bearer. req_id: {}", rqctx.request_id);
+            log::info!(
+                "Failed to verify request via bearer. req_id: {} uri: {}",
+                rqctx.request_id,
+                rqctx.request.lock().await.uri()
+            );
         }
 
         Ok(BearerAudit {

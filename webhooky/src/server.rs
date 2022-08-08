@@ -1285,6 +1285,8 @@ async fn listen_application_files_upload_requests(
             }
         }
     } else {
+        log::info!("Applicant upload request is missing a bearer token");
+
         txn.finish(http::StatusCode::UNAUTHORIZED);
         Err(HttpError::for_status(None, http::StatusCode::UNAUTHORIZED))
     }

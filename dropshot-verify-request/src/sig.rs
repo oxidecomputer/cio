@@ -122,6 +122,7 @@ where
         let body = UntypedBody::from_request(rqctx.clone()).await?;
         let content = T::content(&rqctx, &body).await.map_err(|_| internal_error())?;
         let key = T::key(rqctx.clone()).await.map_err(|_| internal_error())?;
+        let req_uri = rqctx.request.lock().await.uri().clone();
 
         let signature = T::signature(rqctx.clone()).await;
         let mac = <T::Algo as Mac>::new_from_slice(&*key);
@@ -133,21 +134,27 @@ where
 
                 if !verified {
                     log::info!(
-                        "Failed to verify signature. req_id: {} sig: {:?} body: {:?}",
+                        "Failed to verify signature. req_id: {} uri: {} sig: {:?} body: {:?}",
                         rqctx.request_id,
+                        req_uri,
                         signature,
                         body.as_bytes()
                     );
                 } else {
-                    log::info!("Successfully verified signature. req_id: {}", rqctx.request_id);
+                    log::info!(
+                        "Successfully verified signature. req_id: {} uri: {}",
+                        rqctx.request_id,
+                        req_uri
+                    );
                 }
 
                 verified
             }
             (signature_res, mac_res) => {
                 log::info!(
-                    "Unable to test signature. req_id: {} sig: {:?} mac_err: {:?}",
+                    "Unable to test signature. req_id: {} uri: {} sig: {:?} mac_err: {:?}",
                     rqctx.request_id,
+                    req_uri,
                     signature_res,
                     mac_res.err()
                 );

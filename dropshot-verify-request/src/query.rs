@@ -72,11 +72,16 @@ where
 
         if verified {
             log::info!(
-                "Successfully verified request via url token. req_id: {}",
-                rqctx.request_id
+                "Successfully verified request via url token. req_id: {} uri: {}",
+                rqctx.request_id,
+                rqctx.request.lock().await.uri()
             );
         } else {
-            log::info!("Failed to verify request via url token. req_id: {}", rqctx.request_id);
+            log::info!(
+                "Failed to verify request via url token. req_id: {} uri: {}",
+                rqctx.request_id,
+                rqctx.request.lock().await.uri()
+            );
         }
 
         Ok(QueryTokenAudit {
