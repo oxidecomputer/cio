@@ -21,18 +21,26 @@ pub async fn handle_rfd_index(
         .order_by(rfds::dsl::number)
         .offset(offset as i64)
         .limit(limit as i64)
-        .load_async::<RFD>(ctx.db.pool())
+        .select((
+            rfds::dsl::number,
+            rfds::dsl::number_string,
+            rfds::dsl::title,
+            rfds::dsl::name,
+            rfds::dsl::state,
+            rfds::dsl::link,
+            rfds::dsl::short_link,
+            rfds::dsl::rendered_link,
+            rfds::dsl::discussion,
+            rfds::dsl::authors,
+            rfds::dsl::sha,
+            rfds::dsl::commit_date,
+            rfds::dsl::milestones,
+            rfds::dsl::relevant_components,
+        ))
+        .load_async::<RFDIndexEntry>(ctx.db.pool())
         .await?;
 
-    let entries: Vec<RFDIndexEntry> = rfds
-        .into_iter()
-        .map(|rfd| {
-            let new_rfd: NewRFD = rfd.into();
-            new_rfd.into()
-        })
-        .collect();
-
-    Ok(entries)
+    Ok(rfds)
 }
 
 pub async fn handle_rfd_view(rqctx: Arc<RequestContext<Context>>, num: i32) -> Result<Option<RFDEntry>> {

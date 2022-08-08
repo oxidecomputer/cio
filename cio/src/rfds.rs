@@ -45,7 +45,7 @@ use crate::{
 };
 
 /// The data type for an RFD.
-#[partial(RFDIndexEntry)]
+#[partial(RFDIndexEntry, with(Queryable), without(Insertable, AsChangeset))]
 #[partial(RFDEntry)]
 #[db {
     target_struct = "NewRFD",
