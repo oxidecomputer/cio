@@ -307,6 +307,7 @@ fn get_color_based_on_status(s: &str) -> String {
         crate::applicant_status::Status::NeedsToBeTriaged => crate::colors::Colors::Yellow,
         crate::applicant_status::Status::Interviewing => crate::colors::Colors::Blue,
         crate::applicant_status::Status::Onboarding => crate::colors::Colors::Green,
+        crate::applicant_status::Status::Withdrawn => crate::colors::Colors::Red,
     };
 
     color.to_string()

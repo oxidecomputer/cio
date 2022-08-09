@@ -276,6 +276,8 @@ pub async fn handle_slack_commands(
                 status = cio_api::applicant_status::Status::Deferred;
             } else if text.to_lowercase() == "declined" {
                 status = cio_api::applicant_status::Status::Declined;
+            } else if text.to_lowercase() == "withdrawn" {
+                status = cio_api::applicant_status::Status::Withdrawn;
             }
 
             // Get the applicants that need to be triaged.

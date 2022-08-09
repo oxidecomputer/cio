@@ -6,7 +6,7 @@ pub enum Status {
     /// The applicant has been hired.
     Hired,
 
-    /// The appicant has signed their offer and is ready to be onboarded before
+    /// The applicant has signed their offer and is ready to be onboarded before
     /// their first day.
     Onboarding,
 
@@ -31,6 +31,9 @@ pub enum Status {
 
     /// The applicant has been hired as a contractor.
     Contractor,
+
+    /// The applicant has withdrawn their application
+    Withdrawn,
 }
 
 impl Default for Status {
@@ -61,6 +64,8 @@ impl FromStr for Status {
             Ok(Status::GivingOffer)
         } else if s.contains("contractor") || s.contains("consulting") {
             Ok(Status::Contractor)
+        } else if s.contains("withdrawn") {
+            Ok(Status::Withdrawn)
         } else {
             Ok(Status::NeedsToBeTriaged)
         }
@@ -79,6 +84,7 @@ impl ToString for Status {
             Status::NeedsToBeTriaged => "Needs to be triaged".to_string(),
             Status::Interviewing => "Interviewing".to_string(),
             Status::Onboarding => "Onboarding".to_string(),
+            Status::Withdrawn => "Withdrawn".to_string(),
         }
     }
 }
