@@ -254,6 +254,35 @@ impl Airtable {
         Ok(())
     }
 
+    /// Delete multiple records from a table.
+    ///
+    /// Due to limitations on the Airtable API, you can only bulk delete 10
+    /// records at a time.
+    pub async fn delete_records(&self, table: &str, record_ids: impl IntoIterator<Item = &str>) -> Result<()> {
+        // Build the request.
+        let request = self.request(
+            Method::DELETE,
+            table.to_string(),
+            (),
+            Some(
+                record_ids
+                    .into_iter()
+                    .map(|record_id| ("records[]", record_id.to_string()))
+                    .collect(),
+            ),
+        )?;
+
+        let resp = self.client.execute(request).await?;
+        match resp.status() {
+            StatusCode::OK => (),
+            s => {
+                bail!("status code: {}, body: {}", s, resp.text().await?);
+            }
+        };
+
+        Ok(())
+    }
+
     /// Bulk create records in a table.
     ///
     /// Due to limitations on the Airtable API, you can only bulk create 10
