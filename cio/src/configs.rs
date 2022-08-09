@@ -1467,7 +1467,7 @@ impl GroupConfig {
         )
     }
 
-    pub fn allowed_for(&self, service: &ExternalServices) -> bool {
+    pub fn supports_provisioning_in(&self, service: &ExternalServices) -> bool {
         self.restricted_to.is_empty() || self.restricted_to.contains(service)
     }
 
@@ -1479,7 +1479,7 @@ impl GroupConfig {
 }
 
 impl Group {
-    pub fn allowed_for(&self, service: &ExternalServices) -> bool {
+    pub fn supports_provisioning_in(&self, service: &ExternalServices) -> bool {
         self.restricted_to.is_empty() || self.restricted_to.contains(service)
     }
 }
@@ -2572,16 +2572,16 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // Iterate over all the groups in our database.
     // TODO: delete any groups that are not in the database for each vendor.
     for g in db_groups {
-        if g.allowed_for(&ExternalServices::GitHub) {
+        if g.supports_provisioning_in(&ExternalServices::GitHub) {
             github.ensure_group(db, company, &g).await?;
         }
 
-        if g.allowed_for(&ExternalServices::Google) {
+        if g.supports_provisioning_in(&ExternalServices::Google) {
             gsuite.ensure_group(db, company, &g).await?;
         }
 
         if let Some(ref okta) = okta_auth {
-            if g.allowed_for(&ExternalServices::Okta) {
+            if g.supports_provisioning_in(&ExternalServices::Okta) {
                 okta.ensure_group(db, company, &g).await?;
             }
         }
