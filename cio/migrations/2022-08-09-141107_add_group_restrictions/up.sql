@@ -1,0 +1,1 @@
+ALTER TABLE groups ADD COLUMN restricted_to TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
