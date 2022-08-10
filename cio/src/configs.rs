@@ -1333,6 +1333,11 @@ pub struct GroupConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub members: Vec<String>,
 
+    /// Restricts this group to a subset of the external services we use. If this is left empty
+    /// then it is assumed that the group is valid for all services
+    #[serde(default)]
+    pub restricted_to: Vec<ExternalServices>,
+
     /// Specific repos this group should have access to.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub repos: Vec<String>,
@@ -1462,10 +1467,20 @@ impl GroupConfig {
         )
     }
 
+    pub fn supports_provisioning_in(&self, service: &ExternalServices) -> bool {
+        self.restricted_to.is_empty() || self.restricted_to.contains(service)
+    }
+
     pub fn expand(&mut self, company: &Company) {
         self.link = self.get_link(company);
 
         self.cio_company_id = company.id;
+    }
+}
+
+impl Group {
+    pub fn supports_provisioning_in(&self, service: &ExternalServices) -> bool {
+        self.restricted_to.is_empty() || self.restricted_to.contains(service)
     }
 }
 
@@ -2557,12 +2572,18 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // Iterate over all the groups in our database.
     // TODO: delete any groups that are not in the database for each vendor.
     for g in db_groups {
-        github.ensure_group(db, company, &g).await?;
+        if g.supports_provisioning_in(&ExternalServices::GitHub) {
+            github.ensure_group(db, company, &g).await?;
+        }
 
-        gsuite.ensure_group(db, company, &g).await?;
+        if g.supports_provisioning_in(&ExternalServices::Google) {
+            gsuite.ensure_group(db, company, &g).await?;
+        }
 
         if let Some(ref okta) = okta_auth {
-            okta.ensure_group(db, company, &g).await?;
+            if g.supports_provisioning_in(&ExternalServices::Okta) {
+                okta.ensure_group(db, company, &g).await?;
+            }
         }
     }
 

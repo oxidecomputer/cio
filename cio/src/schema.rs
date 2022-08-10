@@ -560,6 +560,7 @@ table! {
         link -> Varchar,
         aliases -> Array<Text>,
         members -> Array<Text>,
+        restricted_to -> Array<Text>,
         repos -> Array<Text>,
         allow_external_members -> Bool,
         allow_web_posting -> Bool,
