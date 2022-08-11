@@ -1495,7 +1495,7 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
     }
 }
 
-pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company, config: AppConfig) -> Result<()> {
+pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company, config: &AppConfig) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
         return Ok(());
@@ -2549,7 +2549,11 @@ The applicants Airtable \
     }
 }
 
-pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company, app_config: AppConfig) -> Result<()> {
+pub async fn refresh_new_applicants_and_reviews(
+    db: &Database,
+    company: &Company,
+    app_config: &AppConfig,
+) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
         return Ok(());

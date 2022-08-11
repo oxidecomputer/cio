@@ -180,11 +180,11 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
 
             // Do the new applicants.
             let app_config = app_config.read().unwrap().clone();
-            cio_api::applicants::refresh_new_applicants_and_reviews(&db, &company, app_config.clone()).await?;
+            cio_api::applicants::refresh_new_applicants_and_reviews(&db, &company, &app_config).await?;
             cio_api::applicant_reviews::refresh_reviews(&db, &company).await?;
 
             // Refresh DocuSign for the applicants.
-            cio_api::applicants::refresh_docusign_for_applicants(&db, &company, app_config).await?;
+            cio_api::applicants::refresh_docusign_for_applicants(&db, &company, &app_config).await?;
         }
         crate::core::SubCommand::SyncAssetInventory(_) => {
             let Context { db, company, .. } = context;
