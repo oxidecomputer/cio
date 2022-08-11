@@ -34,6 +34,7 @@ use crate::{
         AIRTABLE_BUILDINGS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE,
         AIRTABLE_RESOURCES_TABLE,
     },
+    app_config::AppConfig,
     applicants::Applicant,
     certs::{Certificate, Certificates, NewCertificate},
     companies::Company,
@@ -47,10 +48,13 @@ use crate::{
 };
 
 /// The data type for our configuration files.
-#[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct Config {
+    pub app_config: AppConfig,
+
     #[serde(default)]
     pub users: BTreeMap<String, UserConfig>,
+
     #[serde(default)]
     pub groups: BTreeMap<String, GroupConfig>,
 

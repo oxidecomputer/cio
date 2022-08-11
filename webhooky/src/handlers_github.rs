@@ -21,7 +21,7 @@ use log::{info, warn};
 use sha2::Sha256;
 use std::{str::FromStr, sync::Arc};
 
-use crate::{event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo, server::Context};
+use crate::{context::Context, {event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo}};
 
 #[derive(Debug)]
 pub struct GitHubWebhookVerification;

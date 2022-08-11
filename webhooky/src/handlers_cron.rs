@@ -6,7 +6,7 @@ use cio_api::{functions::Function, schema::functions};
 use diesel::{ExpressionMethods, QueryDsl};
 use log::info;
 
-use crate::server::Context;
+use crate::context::Context;
 
 pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str, background: bool) -> Result<uuid::Uuid> {
     let db = &api_context.db;

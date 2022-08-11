@@ -1,6 +1,7 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
 pub mod auth;
+pub mod context;
 #[macro_use]
 pub mod core;
 mod cors;

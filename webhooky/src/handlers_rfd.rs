@@ -8,7 +8,7 @@ use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::RequestContext;
 use std::sync::Arc;
 
-use crate::server::Context;
+use crate::context::Context;
 
 pub async fn handle_rfd_index(
     rqctx: Arc<RequestContext<Context>>,

@@ -32,6 +32,7 @@ pub struct Opts {
 pub enum SubCommand {
     Server(Server),
 
+    CreateServerSpec(SpecOut),
     SendRFDChangelog(SendRFDChangelog),
     SyncAnalytics(SyncAnalytics),
     #[clap(name = "sync-api-tokens")]
@@ -65,13 +66,18 @@ pub struct Server {
     #[clap(short, long, default_value = "0.0.0.0:8080")]
     pub address: String,
 
-    /// Sets an optional output file for the API spec
-    #[clap(short, long, parse(from_os_str), value_hint = clap::ValueHint::FilePath)]
-    pub spec_file: Option<std::path::PathBuf>,
-
     /// Sets if the server should run cron jobs in the background
     #[clap(long)]
     pub do_cron: bool,
+}
+
+/// A subcommand for outputting the Open API spec file for the server
+#[derive(Parser, Clone, Debug)]
+pub struct SpecOut {
+
+    /// Sets an optional output file for the API spec
+    #[clap(parse(from_os_str), value_hint = clap::ValueHint::FilePath)]
+    pub spec_file: std::path::PathBuf,
 }
 
 /// A subcommand for sending the RFD changelog.

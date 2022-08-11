@@ -1,6 +1,7 @@
 #![recursion_limit = "256"]
 #![feature(async_closure)]
 mod auth;
+mod context;
 #[macro_use]
 mod core;
 mod cors;
@@ -34,11 +35,16 @@ use std::env;
 use anyhow::{bail, Result};
 use cio_api::{companies::Companys, db::Database};
 use clap::Parser;
+use log::info;
 use sentry::{
-    protocol::{Context, Event},
+    protocol::{Context as SentryContext, Event},
     IntoDsn,
 };
 use slog::Drain;
+use std::fs::File;
+
+use crate::context::Context;
+use crate::server::API;
 
 fn main() -> Result<()> {
     tokio::runtime::Builder::new_multi_thread()
@@ -64,7 +70,7 @@ async fn tokio_main() -> Result<()> {
         // Define custom rate limiting for database query events. Without aggressive rate limiting
         // these will far exceed any transactions limits we are allowed.
         before_send: Some(std::sync::Arc::new(|event: Event<'static>| {
-            if let Some(Context::Trace(trace_ctx)) = event.contexts.get("trace") {
+            if let Some(SentryContext::Trace(trace_ctx)) = event.contexts.get("trace") {
                 if let Some(ref op) = trace_ctx.op {
                     if op == "db.sql.query" && rand::random::<f32>() > 0.001 {
                         return None;
@@ -122,7 +128,11 @@ async fn tokio_main() -> Result<()> {
     }
     let _log_guard = slog_stdlog::init_with_level(log_level)?;
 
-    if let Err(err) = run_cmd(opts.clone(), logger).await {
+    let api = API::new()?;
+
+    let context = Context::new(1, api.schema.clone(), logger).await?;
+
+    if let Err(err) = run_cmd(opts.clone(), api, context).await {
         sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
         bail!("running cmd `{:?}` failed: {:?}", &opts.subcmd, err);
     }
@@ -130,7 +140,7 @@ async fn tokio_main() -> Result<()> {
     Ok(())
 }
 
-async fn run_cmd(opts: crate::core::Opts, logger: slog::Logger) -> Result<()> {
+async fn run_cmd(opts: crate::core::Opts, api: API, context: Context) -> Result<()> {
     sentry::configure_scope(|scope| {
         scope.set_tag("command", &std::env::args().collect::<Vec<String>>().join(" "));
     });
@@ -140,7 +150,14 @@ async fn run_cmd(opts: crate::core::Opts, logger: slog::Logger) -> Result<()> {
             sentry::configure_scope(|scope| {
                 scope.set_tag("do-cron", s.do_cron.to_string());
             });
-            crate::server::server(s, logger, opts.debug).await?;
+
+            crate::server::server(s, api.api, context, opts.debug).await?;
+        }
+        crate::core::SubCommand::CreateServerSpec(spec) => {
+            let spec_file = spec.spec_file;
+            info!("writing OpenAPI spec to {}...", spec_file.to_str().unwrap());
+            let mut buffer = File::create(spec_file)?;
+            api.open_api().write(&mut buffer)?;
         }
         crate::core::SubCommand::SendRFDChangelog(_) => {
             let db = Database::new().await;
