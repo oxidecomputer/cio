@@ -10,7 +10,7 @@ pub struct DocuSignConfig {
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct OnboardingConfig {
-    pub new_hire_issues: NewHireIssue,
+    pub new_hire_issue: NewHireIssue,
     pub welcome_letter: Letter
 }
 
@@ -26,7 +26,7 @@ pub struct NewHireIssue {
 pub struct Letter {
     pub subject: String,
     pub body: String,
-    pub from: Vec<String>,
+    pub from: String,
     #[serde(default)]
     pub cc: Vec<String>,
     #[serde(default)]
