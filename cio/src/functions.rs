@@ -388,10 +388,7 @@ impl Function {
     }
 }
 
-pub async fn refresh_functions() -> Result<()> {
-    let db = Database::new().await;
-    let company = Company::get_by_id(&db, 1).await?;
-
+pub async fn refresh_functions(db: &Database, company: &Company) -> Result<()> {
     let hours_ago = Utc::now().checked_sub_signed(chrono::Duration::days(1)).unwrap();
 
     // List all functions that are not "Completed".

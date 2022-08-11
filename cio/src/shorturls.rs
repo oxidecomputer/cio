@@ -3,7 +3,7 @@ use cloudflare::endpoints::dns;
 use serde::Serialize;
 
 use crate::{
-    companies::{Company, Companys},
+    companies::Company,
     configs::Links,
     db::Database,
     dns_providers::DNSProviderOps,
@@ -249,27 +249,18 @@ where
 }
 
 /// Update all the short URLs and DNS.
-pub async fn refresh_shorturls() -> Result<()> {
-    let db = Database::new().await;
+pub async fn refresh_shorturls(db: &Database, company: &Company) -> Result<()> {
+    let github = company.authenticate_github()?;
+    let cloudflare = company.authenticate_cloudflare()?;
 
-    let companies = Companys::get_from_db(&db, 1).await?;
+    generate_shorturls_for_repos(&db, &github, &company, &cloudflare, "configs").await?;
+    generate_shorturls_for_rfds(&db, &github, &company, &cloudflare, "configs").await?;
+    generate_shorturls_for_configs_links(&db, &github, &company, &cloudflare, "configs").await?;
 
-    // Iterate over the companies and update.
-    for company in companies {
-        let github = company.authenticate_github()?;
-        let cloudflare = company.authenticate_cloudflare()?;
-
-        generate_shorturls_for_repos(&db, &github, &company, &cloudflare, "configs").await?;
-        generate_shorturls_for_rfds(&db, &github, &company, &cloudflare, "configs").await?;
-        generate_shorturls_for_configs_links(&db, &github, &company, &cloudflare, "configs").await?;
-
-        // Only do this if we can auth with Tailscale.
-        if !company.tailscale_api_key.is_empty() {
-            generate_dns_for_tailscale_devices(&company, &cloudflare).await?;
-        }
+    // Only do this if we can auth with Tailscale.
+    if !company.tailscale_api_key.is_empty() {
+        generate_dns_for_tailscale_devices(&company, &cloudflare).await?;
     }
-
-    // TODO: cleanup any DNS records that no longer need to exist.
 
     Ok(())
 }

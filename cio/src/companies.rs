@@ -1053,8 +1053,7 @@ pub struct RFDRepo {
     pub default_branch: String,
 }
 
-pub async fn refresh_companies() -> Result<()> {
-    let db = Database::new().await;
+pub async fn refresh_companies(db: &Database) -> Result<()> {
 
     // This should forever only be Oxide.
     let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
