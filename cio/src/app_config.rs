@@ -40,8 +40,16 @@ pub struct ApplyConfig {
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
-pub struct VendorConfig {
-    pub alias: HashMap<String, String>,
+pub struct LegacyExpensifyConfig {
+    pub aliases: HashMap<String, String>,
+    pub emails_to_exclude: Vec<String>,
+}
+
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+pub struct FinanceConfig {
+    pub legacy_expensify: LegacyExpensifyConfig,
+    pub merchant_aliases: HashMap<String, String>,
+    pub vendor_aliases: HashMap<String, String>,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
@@ -49,5 +57,5 @@ pub struct AppConfig {
     pub envelopes: DocuSignConfig,
     pub onboarding: OnboardingConfig,
     pub apply: ApplyConfig,
-    pub vendors: VendorConfig,
+    pub finance: FinanceConfig,
 }

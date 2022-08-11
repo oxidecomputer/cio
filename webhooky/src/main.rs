@@ -199,8 +199,14 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
             cio_api::configs::refresh_db_configs_and_airtable(&db, &company).await?;
         }
         crate::core::SubCommand::SyncFinance(_) => {
-            let Context { db, company, .. } = context;
-            cio_api::finance::refresh_all_finance(&db, &company).await?;
+            let Context {
+                app_config,
+                db,
+                company,
+                ..
+            } = context;
+            let app_config = app_config.read().unwrap().clone();
+            cio_api::finance::refresh_all_finance(&db, &company, &app_config.finance).await?;
         }
         crate::core::SubCommand::SyncFunctions(_) => {
             let Context { db, company, .. } = context;
