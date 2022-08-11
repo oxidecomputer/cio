@@ -43,7 +43,7 @@ use slog::Drain;
 use std::fs::File;
 
 use crate::context::Context;
-use crate::server::API;
+use crate::server::APIConfig;
 
 fn main() -> Result<()> {
     tokio::runtime::Builder::new_multi_thread()
@@ -127,7 +127,7 @@ async fn tokio_main() -> Result<()> {
     }
     let _log_guard = slog_stdlog::init_with_level(log_level)?;
 
-    let api = API::new()?;
+    let api = APIConfig::new()?;
 
     let context = Context::new(1, api.schema.clone(), logger).await?;
 
@@ -139,7 +139,7 @@ async fn tokio_main() -> Result<()> {
     Ok(())
 }
 
-async fn run_cmd(opts: crate::core::Opts, api: API, context: Context) -> Result<()> {
+async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> Result<()> {
     sentry::configure_scope(|scope| {
         scope.set_tag("command", &std::env::args().collect::<Vec<String>>().join(" "));
     });
@@ -179,13 +179,12 @@ async fn run_cmd(opts: crate::core::Opts, api: API, context: Context) -> Result<
             } = context;
 
             // Do the new applicants.
-            cio_api::applicants::refresh_new_applicants_and_reviews(&db, &company, app_config.read().unwrap().clone())
-                .await?;
+            let app_config = app_config.read().unwrap().clone();
+            cio_api::applicants::refresh_new_applicants_and_reviews(&db, &company, app_config.clone()).await?;
             cio_api::applicant_reviews::refresh_reviews(&db, &company).await?;
 
             // Refresh DocuSign for the applicants.
-            cio_api::applicants::refresh_docusign_for_applicants(&db, &company, app_config.read().unwrap().clone())
-                .await?;
+            cio_api::applicants::refresh_docusign_for_applicants(&db, &company, app_config).await?;
         }
         crate::core::SubCommand::SyncAssetInventory(_) => {
             let Context { db, company, .. } = context;

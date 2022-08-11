@@ -403,9 +403,9 @@ pub async fn refresh_functions(db: &Database, company: &Company) -> Result<()> {
         f.status = octorust::types::JobStatus::Completed.to_string();
         f.conclusion = octorust::types::Conclusion::TimedOut.to_string();
 
-        let new = f.update(&db).await?;
+        let new = f.update(db).await?;
 
-        new.send_slack_notification(&db, &company).await?;
+        new.send_slack_notification(db, company).await?;
     }
 
     // List all functions that are "Completed", but have no conclusion.
@@ -419,9 +419,9 @@ pub async fn refresh_functions(db: &Database, company: &Company) -> Result<()> {
         // Set the function as Neutral.
         f.conclusion = octorust::types::Conclusion::Neutral.to_string();
 
-        let new = f.update(&db).await?;
+        let new = f.update(db).await?;
 
-        new.send_slack_notification(&db, &company).await?;
+        new.send_slack_notification(db, company).await?;
     }
 
     // AM: Disabling the bulk function updates. There are too many to actually update this way.

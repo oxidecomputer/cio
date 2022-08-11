@@ -248,13 +248,13 @@ pub async fn refresh_shorturls(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let cloudflare = company.authenticate_cloudflare()?;
 
-    generate_shorturls_for_repos(&db, &github, &company, &cloudflare, "configs").await?;
-    generate_shorturls_for_rfds(&db, &github, &company, &cloudflare, "configs").await?;
-    generate_shorturls_for_configs_links(&db, &github, &company, &cloudflare, "configs").await?;
+    generate_shorturls_for_repos(db, &github, company, &cloudflare, "configs").await?;
+    generate_shorturls_for_rfds(db, &github, company, &cloudflare, "configs").await?;
+    generate_shorturls_for_configs_links(db, &github, company, &cloudflare, "configs").await?;
 
     // Only do this if we can auth with Tailscale.
     if !company.tailscale_api_key.is_empty() {
-        generate_dns_for_tailscale_devices(&company, &cloudflare).await?;
+        generate_dns_for_tailscale_devices(company, &cloudflare).await?;
     }
 
     Ok(())

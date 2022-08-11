@@ -45,18 +45,18 @@ use crate::{
     handlers_slack::InteractiveEvent,
 };
 
-pub struct API {
+pub struct APIConfig {
     pub api: ApiDescription<Context>,
     pub schema: serde_json::Value,
 }
 
-impl API {
+impl APIConfig {
     pub fn new() -> Result<Self> {
         let api = create_api();
         let open_api = create_open_api(&api);
         let schema = open_api.json()?;
 
-        Ok(API { api, schema })
+        Ok(APIConfig { api, schema })
     }
 
     pub fn open_api(&self) -> OpenApiDefinition<Context> {

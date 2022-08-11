@@ -1055,7 +1055,7 @@ pub struct RFDRepo {
 
 pub async fn refresh_companies(db: &Database) -> Result<()> {
     // This should forever only be Oxide.
-    let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
+    let oxide = Company::get_from_db(db, "Oxide".to_string()).await.unwrap();
 
     let is: Vec<airtable_api::Record<Company>> = oxide
         .authenticate_airtable(&oxide.airtable_base_id_cio)
@@ -1070,15 +1070,15 @@ pub async fn refresh_companies(db: &Database) -> Result<()> {
 
         let new_company: NewCompany = record.fields.into();
 
-        let mut company = new_company.upsert_in_db(&db).await?;
+        let mut company = new_company.upsert_in_db(db).await?;
         if company.airtable_record_id.is_empty() {
             company.airtable_record_id = record.id;
         }
         company.cio_company_id = oxide.id;
-        company.update(&db).await?;
+        company.update(db).await?;
     }
     // Companies are only stored with Oxide.
-    Companys::get_from_db(&db, 1).await?.update_airtable(&db).await?;
+    Companys::get_from_db(db, 1).await?.update_airtable(db).await?;
 
     Ok(())
 }
