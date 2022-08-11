@@ -492,7 +492,8 @@ impl Applicant {
         self.send_email_follow_up_if_necessary(db, app_config.apply).await?;
 
         // Create the GitHub onboarding issue if we need to.
-        self.create_github_onboarding_issue(db, github, configs_issues, app_config.onboarding).await?;
+        self.create_github_onboarding_issue(db, github, configs_issues, app_config.onboarding)
+            .await?;
 
         // Update the interviews start and end time if we have interviews.
         self.update_interviews_start_end_time(db).await;
@@ -1104,8 +1105,20 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
 
         let label = "hiring".to_string();
         let title = format!("Onboarding: {}", self.name);
-        let alerts = onboarding.new_hire_issue.alerts.iter().map(|a| format!("cc @{}", a)).collect::<Vec<String>>().join("\n");
-        let default_groups = onboarding.new_hire_issue.default_groups.iter().map(|g| format!("'{}'", g)).collect::<Vec<String>>().join(",\n");
+        let alerts = onboarding
+            .new_hire_issue
+            .alerts
+            .iter()
+            .map(|a| format!("cc @{}", a))
+            .collect::<Vec<String>>()
+            .join("\n");
+        let default_groups = onboarding
+            .new_hire_issue
+            .default_groups
+            .iter()
+            .map(|g| format!("'{}'", g))
+            .collect::<Vec<String>>()
+            .join(",\n");
         let aws_role = onboarding.new_hire_issue.aws_roles.join(",");
 
         let body = format!(
@@ -1509,7 +1522,9 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company, c
             .do_docusign_offer(db, &ds, company, config.envelopes.offer.clone())
             .await?;
 
-        applicant.do_docusign_piia(db, &ds, company, config.envelopes.piia.clone()).await?;
+        applicant
+            .do_docusign_piia(db, &ds, company, config.envelopes.piia.clone())
+            .await?;
     }
 
     Ok(())
@@ -1618,7 +1633,6 @@ impl Applicant {
         };
 
         if let Some(letter) = letter {
-
             // Initialize the SendGrid client.
             let sendgrid_client = SendGrid::new_from_env();
 
@@ -1631,7 +1645,7 @@ impl Applicant {
                     &[self.email.to_string()],
                     &letter.cc,
                     &letter.bcc,
-                    &letter.from
+                    &letter.from,
                 )
                 .await?;
 
@@ -1644,7 +1658,11 @@ impl Applicant {
 
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Failed to send rejection letter to {} with status {}", self.id, self.raw_status))
+            Err(anyhow::anyhow!(
+                "Failed to send rejection letter to {} with status {}",
+                self.id,
+                self.raw_status
+            ))
         }
     }
 
@@ -1664,7 +1682,8 @@ impl Applicant {
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
             // Send them an email.
-            self.send_email_recieved_application_to_applicant(&config.received).await?;
+            self.send_email_recieved_application_to_applicant(&config.received)
+                .await?;
             self.sent_email_received = true;
             // Update it in the database just in case.
             self.update(db).await?;
@@ -1808,12 +1827,15 @@ The applicants Airtable \
         sendgrid_client
             .mail_send()
             .send_plain_text(
-                &letter.subject.replace("{applicant_role}", &self.role).replace("{applicant_name}", &self.name),
+                &letter
+                    .subject
+                    .replace("{applicant_role}", &self.role)
+                    .replace("{applicant_name}", &self.name),
                 &letter.body.replace("{applicant_name}", &self.name),
                 &[self.email.to_string()],
                 &letter.cc,
                 &letter.bcc,
-                &letter.from
+                &letter.from,
             )
             .await?;
 
@@ -2090,7 +2112,7 @@ The applicants Airtable \
         db: &Database,
         ds: &DocuSign,
         company: &Company,
-        mut new_envelope: docusign::Envelope
+        mut new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
@@ -2336,7 +2358,7 @@ The applicants Airtable \
         db: &Database,
         ds: &DocuSign,
         company: &Company,
-        mut new_envelope: docusign::Envelope
+        mut new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
@@ -2581,9 +2603,11 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
             .skip(skip)
             .take(take)
             .map(|mut applicant| {
-                tokio::spawn(enclose! { (db, company, github, configs_issues, app_config) async move {
-                    applicant.refresh(&db, &company, &github, &configs_issues, app_config).await
-                }})
+                tokio::spawn(
+                    enclose! { (db, company, github, configs_issues, app_config) async move {
+                        applicant.refresh(&db, &company, &github, &configs_issues, app_config).await
+                    }},
+                )
             })
             .collect();
 

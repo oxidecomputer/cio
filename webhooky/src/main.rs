@@ -153,7 +153,6 @@ async fn run_cmd(opts: crate::core::Opts, api: API, context: Context) -> Result<
             crate::server::server(s, api.api, context, opts.debug).await?;
         }
         crate::core::SubCommand::CreateServerSpec(spec) => {
-            
             let spec_file = spec.spec_file;
             info!("writing OpenAPI spec to {}...", spec_file.to_str().unwrap());
             let mut buffer = File::create(spec_file)?;
@@ -172,14 +171,21 @@ async fn run_cmd(opts: crate::core::Opts, api: API, context: Context) -> Result<
             cio_api::api_tokens::refresh_api_tokens(&db, &company).await?;
         }
         crate::core::SubCommand::SyncApplications(_) => {
-            let Context { app_config, db, company, .. } = context;
+            let Context {
+                app_config,
+                db,
+                company,
+                ..
+            } = context;
 
             // Do the new applicants.
-            cio_api::applicants::refresh_new_applicants_and_reviews(&db, &company, app_config.read().unwrap().clone()).await?;
+            cio_api::applicants::refresh_new_applicants_and_reviews(&db, &company, app_config.read().unwrap().clone())
+                .await?;
             cio_api::applicant_reviews::refresh_reviews(&db, &company).await?;
 
             // Refresh DocuSign for the applicants.
-            cio_api::applicants::refresh_docusign_for_applicants(&db, &company, app_config.read().unwrap().clone()).await?;
+            cio_api::applicants::refresh_docusign_for_applicants(&db, &company, app_config.read().unwrap().clone())
+                .await?;
         }
         crate::core::SubCommand::SyncAssetInventory(_) => {
             let Context { db, company, .. } = context;
@@ -228,10 +234,10 @@ async fn run_cmd(opts: crate::core::Opts, api: API, context: Context) -> Result<
             cio_api::recorded_meetings::refresh_google_recorded_meetings(&db, &company).await?;
         }
         crate::core::SubCommand::SyncRepos(_) => {
-            let Context { db, company, .. } = context;    
+            let Context { db, company, .. } = context;
             let sync_result = cio_api::repos::sync_all_repo_settings(&db, &company).await;
             let refresh_result = cio_api::repos::refresh_db_github_repos(&db, &company).await;
-            
+
             if let Err(ref e) = sync_result {
                 log::error!("Failed syncing repo settings {:?}", e);
             }

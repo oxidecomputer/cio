@@ -11,7 +11,7 @@ pub struct DocuSignConfig {
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct OnboardingConfig {
     pub new_hire_issue: NewHireIssue,
-    pub welcome_letter: Letter
+    pub welcome_letter: Letter,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
@@ -41,7 +41,7 @@ pub struct ApplyConfig {
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct VendorConfig {
-    pub alias: HashMap<String, String>
+    pub alias: HashMap<String, String>,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
@@ -49,5 +49,5 @@ pub struct AppConfig {
     pub envelopes: DocuSignConfig,
     pub onboarding: OnboardingConfig,
     pub apply: ApplyConfig,
-    pub vendors: VendorConfig
+    pub vendors: VendorConfig,
 }

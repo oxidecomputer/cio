@@ -3,12 +3,7 @@ use cloudflare::endpoints::dns;
 use serde::Serialize;
 
 use crate::{
-    companies::Company,
-    configs::Links,
-    db::Database,
-    dns_providers::DNSProviderOps,
-    repos::GithubRepos,
-    rfds::RFDs,
+    companies::Company, configs::Links, db::Database, dns_providers::DNSProviderOps, repos::GithubRepos, rfds::RFDs,
     templates::generate_nginx_files_for_shorturls,
 };
 

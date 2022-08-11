@@ -74,7 +74,6 @@ pub struct Server {
 /// A subcommand for outputting the Open API spec file for the server
 #[derive(Parser, Clone, Debug)]
 pub struct SpecOut {
-
     /// Sets an optional output file for the API spec
     #[clap(parse(from_os_str), value_hint = clap::ValueHint::FilePath)]
     pub spec_file: std::path::PathBuf,

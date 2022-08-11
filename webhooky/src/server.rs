@@ -13,8 +13,8 @@ use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, PaginationOrder, PaginationParams, Path, Query,
-    RequestContext, ResultsPage, TypedBody, UntypedBody, WhichPage, OpenApiDefinition
+    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, OpenApiDefinition, PaginationOrder, PaginationParams, Path,
+    Query, RequestContext, ResultsPage, TypedBody, UntypedBody, WhichPage,
 };
 use dropshot_verify_request::{
     bearer::{Bearer, BearerToken},
@@ -47,7 +47,7 @@ use crate::{
 
 pub struct API {
     pub api: ApiDescription<Context>,
-    pub schema: serde_json::Value
+    pub schema: serde_json::Value,
 }
 
 impl API {
@@ -56,10 +56,7 @@ impl API {
         let open_api = create_open_api(&api);
         let schema = open_api.json()?;
 
-        Ok(API {
-            api,
-            schema
-        })
+        Ok(API { api, schema })
     }
 
     pub fn open_api(&self) -> OpenApiDefinition<Context> {
@@ -68,7 +65,6 @@ impl API {
 }
 
 fn create_api() -> ApiDescription<Context> {
-
     // Describe the API.
     let mut api = ApiDescription::new();
 
@@ -178,7 +174,6 @@ fn create_api() -> ApiDescription<Context> {
 }
 
 fn create_open_api(api: &ApiDescription<Context>) -> OpenApiDefinition<Context> {
-
     // Create the API schema.
     let mut api_definition = api.openapi(&"Webhooks API", &clap::crate_version!());
     api_definition
@@ -226,7 +221,12 @@ pub async fn create_server(
     Ok(server)
 }
 
-pub async fn server(s: crate::core::Server, api: ApiDescription<Context>, api_context: Context, debug: bool) -> Result<()> {
+pub async fn server(
+    s: crate::core::Server,
+    api: ApiDescription<Context>,
+    api_context: Context,
+    debug: bool,
+) -> Result<()> {
     let server = create_server(&s, api, api_context.clone(), debug).await?;
 
     // This really only applied for when we are running with `do-cron` but we need the variable

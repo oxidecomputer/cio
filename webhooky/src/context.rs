@@ -1,5 +1,11 @@
 use anyhow::Result;
-use cio_api::{applicant_uploads::UploadTokenStore, companies::{Company, Companys}, configs::get_configs_from_repo, app_config::AppConfig, db::Database};
+use cio_api::{
+    app_config::AppConfig,
+    applicant_uploads::UploadTokenStore,
+    companies::{Company, Companys},
+    configs::get_configs_from_repo,
+    db::Database,
+};
 use std::sync::{Arc, RwLock};
 
 #[derive(Clone, Debug)]
@@ -14,13 +20,17 @@ pub struct Context {
 
 impl Context {
     /**
-    * Return a new Context.
-    */
+     * Return a new Context.
+     */
     pub async fn new(company_id: i32, schema: serde_json::Value, logger: slog::Logger) -> Result<Context> {
         let db = Database::new().await;
         let sec = steno::sec(logger, Arc::new(db.clone()));
 
-        let company = Companys::get_from_db(&db, company_id).await?.0.pop().ok_or_else(|| anyhow::anyhow!("Failed to find company record"))?;
+        let company = Companys::get_from_db(&db, company_id)
+            .await?
+            .0
+            .pop()
+            .ok_or_else(|| anyhow::anyhow!("Failed to find company record"))?;
         let github = company.authenticate_github()?;
         let configs = get_configs_from_repo(&github, &company).await?;
 
