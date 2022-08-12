@@ -2,7 +2,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use chrono::offset::Utc;
 use cio_api::{
-    app_config::AppConfig,
     companies::Company,
     configs::{
         get_configs_from_repo, sync_buildings, sync_certificates, sync_github_outside_collaborators, sync_groups,
@@ -64,7 +63,6 @@ impl HmacSignatureVerifier for GitHubWebhookVerification {
 /// Handle a request to the /github endpoint.
 pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWebhook) -> Result<()> {
     let api_context = rqctx.context();
-    let config = rqctx.context().app_config.read().unwrap().clone();
 
     // Parse the `X-GitHub-Event` header. Ensure the request lock is dropped once the
     // event_type has been extracted.
@@ -220,7 +218,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                         scope.set_tag("github.event.type", &event_type_string);
                     });
 
-                    match handle_configs_push(&github, api_context, event.clone(), &company, &config).await {
+                    match handle_configs_push(&github, api_context, event.clone(), &company).await {
                         Ok(message) => {
                             info!("{}", message);
                             event.create_comment(&github, &message).await?;
@@ -874,7 +872,6 @@ pub async fn handle_configs_push(
     api_context: &Context,
     event: GitHubWebhook,
     company: &Company,
-    config: &AppConfig,
 ) -> Result<String> {
     // Get the repo.
     let repo = event.repository.name.to_string();
@@ -929,6 +926,13 @@ pub async fn handle_configs_push(
 
     log::info!("configs `push` event: after get_configs_from_repo");
 
+    // Check inf the cio.toml file has changed. This contains app configuration data and should be
+    // used to overwrite the existing app config
+    if commit.file_changed("configs/cio.toml") {
+        let mut app_config = api_context.app_config.write().unwrap();
+        *app_config = configs.app_config;
+    }
+
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
         // Update our links in the database.
@@ -957,7 +961,8 @@ pub async fn handle_configs_push(
 
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
-        sync_users(&api_context.db, github, configs.users, company, config).await?;
+        let config = api_context.app_config.read().unwrap().clone();
+        sync_users(&api_context.db, github, configs.users, company, &config).await?;
         a("[SUCCESS]: users");
     }
 
