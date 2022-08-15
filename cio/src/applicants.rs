@@ -2112,7 +2112,7 @@ The applicants Airtable \
         db: &Database,
         ds: &DocuSign,
         company: &Company,
-        mut new_envelope: docusign::Envelope,
+        new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
@@ -2134,23 +2134,6 @@ The applicants Airtable \
                 "applicant has status giving offer: {}, generating offer in docusign for them!",
                 self.name
             );
-
-            for template_role in new_envelope.template_roles.iter_mut() {
-                template_role.name = template_role.name.replace("{applicant_name}", &self.name);
-                template_role.email = template_role.email.replace("{applicant_email}", &self.email);
-                template_role.signer_name = template_role.signer_name.replace("{applicant_name}", &self.name);
-
-                template_role.email_notification.email_subject = template_role
-                    .email_notification
-                    .email_subject
-                    .replace("{applicant_name}", &self.name);
-
-                template_role.email_notification.email_subject = template_role
-                    .email_notification
-                    .email_body
-                    .replace("{applicant_name}", &self.name)
-                    .replace("{applicant_email}", &self.email);
-            }
 
             // Let's create the envelope.
             let envelope = ds.create_envelope(new_envelope).await?;
