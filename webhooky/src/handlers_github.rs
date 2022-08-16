@@ -926,7 +926,7 @@ pub async fn handle_configs_push(
 
     log::info!("configs `push` event: after get_configs_from_repo");
 
-    // Check inf the cio.toml file has changed. This contains app configuration data and should be
+    // Check if the cio.toml file has changed. This contains app configuration data and should be
     // used to overwrite the existing app config
     if commit.file_changed("configs/cio.toml") {
         let mut app_config = api_context.app_config.write().unwrap();
