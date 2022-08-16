@@ -49,7 +49,7 @@ impl DocuSignConfig {
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct OnboardingConfig {
     pub new_hire_issue: NewHireIssue,
-    pub welcome_letter: Letter,
+    welcome_letter: Letter,
 }
 
 impl OnboardingConfig {
@@ -97,8 +97,8 @@ pub struct Letter {
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct ApplyConfig {
-    pub received: Letter,
-    pub rejection: HashMap<String, Letter>,
+    received: Letter,
+    rejection: HashMap<String, Letter>,
 }
 
 impl ApplyConfig {
