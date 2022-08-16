@@ -26,7 +26,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{
     airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_REVIEWER_LEADERBOARD_TABLE},
-    app_config::{AppConfig, ApplyConfig, Letter, OnboardingConfig},
+    app_config::{AppConfig, ApplyConfig, Letter, NewHireIssue},
     applicant_reviews::ApplicantReview,
     companies::Company,
     configs::User,
@@ -492,7 +492,7 @@ impl Applicant {
         self.send_email_follow_up_if_necessary(db, app_config.apply).await?;
 
         // Create the GitHub onboarding issue if we need to.
-        self.create_github_onboarding_issue(db, github, configs_issues, app_config.onboarding)
+        self.create_github_onboarding_issue(db, github, configs_issues, &app_config.onboarding.new_hire_issue)
             .await?;
 
         // Update the interviews start and end time if we have interviews.
@@ -1070,12 +1070,41 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         msg
     }
 
+    fn first_name(&self) -> String {
+        let split = self.name.splitn(2, ' ');
+        let parts: Vec<&str> = split.collect();
+        parts[0].to_string()
+    }
+
+    fn last_name(&self) -> String {
+        let split = self.name.splitn(2, ' ');
+        let parts: Vec<&str> = split.collect();
+        parts[1].to_string()
+    }
+
+    async fn compute_username(&self, db: &Database, company: &Company) -> String {
+        let first_name = self.first_name();
+        let last_name = self.last_name();
+
+        // Let's check the user's database to see if we can give this person the
+        // {first_name}@ email.
+        let mut username = first_name.to_lowercase().to_string();
+        let existing_user = User::get_from_db(db, company.id, username.to_string()).await;
+        if existing_user.is_some() {
+            username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
+        }
+        // Make sure it's lowercase.
+        username = username.to_lowercase();
+
+        username
+    }
+
     pub async fn create_github_onboarding_issue(
         &self,
         db: &Database,
         github: &octorust::Client,
         configs_issues: &[octorust::types::IssueSimple],
-        onboarding: OnboardingConfig,
+        new_hire_issue: &NewHireIssue,
     ) -> Result<()> {
         let company = self.company(db).await?;
 
@@ -1088,86 +1117,11 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         let owner = &company.github_org;
         let repo = "configs";
 
-        let split = self.name.splitn(2, ' ');
-        let parts: Vec<&str> = split.collect();
-        let first_name = parts[0];
-        let last_name = parts[1];
-
-        // Let's check the user's database to see if we can give this person the
-        // {first_name}@ email.
-        let mut username = first_name.to_lowercase().to_string();
-        let existing_user = User::get_from_db(db, company.id, username.to_string()).await;
-        if existing_user.is_some() {
-            username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
-        }
-        // Make sure it's lowercase.
-        username = username.to_lowercase();
-
         let label = "hiring".to_string();
         let title = format!("Onboarding: {}", self.name);
-        let alerts = onboarding
-            .new_hire_issue
-            .alerts
-            .iter()
-            .map(|a| format!("cc @{}", a))
-            .collect::<Vec<String>>()
-            .join("\n");
-        let default_groups = onboarding
-            .new_hire_issue
-            .default_groups
-            .iter()
-            .map(|g| format!("'{}'", g))
-            .collect::<Vec<String>>()
-            .join(",\n");
-        let aws_role = onboarding.new_hire_issue.aws_roles.join(",");
+        let username = self.compute_username(db, &company).await;
 
-        let body = format!(
-            r#"- [ ] Add to users.toml
-- [ ] Provision user in Airtable
-- [ ] Add to matrix chat
-
-Start Date: {}
-Personal Email: {}
-Twitter: [TWITTER HANDLE]
-GitHub: {}
-Phone: {}
-Location: {}
-{}
-
-```
-[users.{}]
-first_name = '{}'
-last_name = '{}'
-username = '{}'
-aliases = []
-groups = [
-    {}
-]
-recovery_email = '{}'
-recovery_phone = '{}'
-gender = ''
-github = '{}'
-chat = ''
-aws_role = '{}'
-department = ''
-manager = ''
-```"#,
-            self.start_date.unwrap().format("%A, %B %-d, %C%y"),
-            self.email,
-            self.github,
-            self.phone,
-            self.location,
-            alerts,
-            username.replace('.', "-"),
-            first_name,
-            last_name,
-            username,
-            default_groups,
-            self.email,
-            self.phone.replace('-', "").replace(' ', ""),
-            self.github.replace('@', ""),
-            aws_role,
-        );
+        let body = self.create_new_hire_issue_body(username.as_str(), new_hire_issue);
 
         // Check if we already have an issue for this user.
         let issue = check_if_github_issue_exists(configs_issues, &self.name);
@@ -1212,7 +1166,7 @@ Notes:
                             title: Some(title.into()),
                             body: Default::default(),
                             assignee: "".to_string(),
-                            assignees: onboarding.new_hire_issue.assignees,
+                            assignees: new_hire_issue.assignees.clone(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
                             state: Some(octorust::types::State::Closed),
@@ -1244,7 +1198,7 @@ Notes:
                             title: Some(title.into()),
                             body: body.to_string(),
                             assignee: "".to_string(),
-                            assignees: onboarding.new_hire_issue.assignees,
+                            assignees: new_hire_issue.assignees.clone(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
                             state: Some(octorust::types::State::Open),
@@ -1266,7 +1220,7 @@ Notes:
                                 title: Some(title.into()),
                                 body: body.to_string(),
                                 assignee: "".to_string(),
-                                assignees: onboarding.new_hire_issue.assignees,
+                                assignees: new_hire_issue.assignees.clone(),
                                 labels: vec![label.into()],
                                 milestone: Default::default(),
                                 state: Some(octorust::types::State::Open),
@@ -1291,7 +1245,7 @@ Notes:
                     title: title.into(),
                     body,
                     assignee: "".to_string(),
-                    assignees: onboarding.new_hire_issue.assignees,
+                    assignees: new_hire_issue.assignees.clone(),
                     labels: vec![label.into()],
                     milestone: Default::default(),
                 },
@@ -1301,6 +1255,73 @@ Notes:
         info!("created onboarding issue for {}", self.email);
 
         Ok(())
+    }
+
+    fn create_new_hire_issue_body(&self, username: &str, config: &NewHireIssue) -> String {
+        let first_name = self.first_name();
+        let last_name = self.last_name();
+
+        let alerts = config
+            .alerts
+            .iter()
+            .map(|a| format!("cc @{}", a))
+            .collect::<Vec<String>>()
+            .join("\n");
+        let default_groups = config
+            .default_groups
+            .iter()
+            .map(|g| format!("    '{}'", g))
+            .collect::<Vec<String>>()
+            .join(",\n");
+        let aws_role = config.aws_roles.join(",");
+
+        format!(
+            r#"- [ ] Add to users.toml
+- [ ] Provision user in Airtable
+- [ ] Add to matrix chat
+
+Start Date: {}
+Personal Email: {}
+Twitter: [TWITTER HANDLE]
+GitHub: {}
+Phone: {}
+Location: {}
+{}
+
+```
+[users.{}]
+first_name = '{}'
+last_name = '{}'
+username = '{}'
+aliases = []
+groups = [
+{}
+]
+recovery_email = '{}'
+recovery_phone = '{}'
+gender = ''
+github = '{}'
+chat = ''
+aws_role = '{}'
+department = ''
+manager = ''
+```"#,
+            self.start_date.unwrap().format("%A, %B %-d, %C%y"),
+            self.email,
+            self.github,
+            self.phone,
+            self.location,
+            alerts,
+            username.replace('.', "-"),
+            first_name,
+            last_name,
+            username,
+            default_groups,
+            self.email,
+            self.phone.replace('-', "").replace(' ', ""),
+            self.github.replace('@', ""),
+            aws_role,
+        )
     }
 }
 
@@ -1624,15 +1645,15 @@ impl Applicant {
         }
 
         // Check if we have sent the follow up email to them.unwrap_or_default().
-        let letter = if self.raw_status.contains("did not do materials") {
-            config.rejection.get("no-materials")
+        let letter_key = if self.raw_status.contains("did not do materials") {
+            "no-materials"
         } else if self.raw_status.contains("junior") {
-            config.rejection.get("junior")
+            "junior"
         } else {
-            config.rejection.get("timing")
+            "timing"
         };
 
-        if let Some(letter) = letter {
+        if let Some(letter) = config.create_rejection_letter(letter_key, self) {
             // Initialize the SendGrid client.
             let sendgrid_client = SendGrid::new_from_env();
 
@@ -1640,8 +1661,8 @@ impl Applicant {
             sendgrid_client
                 .mail_send()
                 .send_plain_text(
-                    &letter.subject.replace("{applicant_name}", &self.name),
-                    &letter.body.replace("{applicant_name}", &self.name),
+                    &letter.subject,
+                    &letter.body,
                     &[self.email.to_string()],
                     &letter.cc,
                     &letter.bcc,
@@ -1681,9 +1702,10 @@ impl Applicant {
 
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
+            let letter = config.create_received_letter(self);
+
             // Send them an email.
-            self.send_email_recieved_application_to_applicant(&config.received)
-                .await?;
+            self.send_email_recieved_application_to_applicant(&letter).await?;
             self.sent_email_received = true;
             // Update it in the database just in case.
             self.update(db).await?;
@@ -1827,11 +1849,8 @@ The applicants Airtable \
         sendgrid_client
             .mail_send()
             .send_plain_text(
-                &letter
-                    .subject
-                    .replace("{applicant_role}", &self.role)
-                    .replace("{applicant_name}", &self.name),
-                &letter.body.replace("{applicant_name}", &self.name),
+                &letter.subject,
+                &letter.body,
                 &[self.email.to_string()],
                 &letter.cc,
                 &letter.bcc,
@@ -2620,16 +2639,100 @@ pub async fn refresh_new_applicants_and_reviews(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use async_bb8_diesel::AsyncRunQueryDsl;
+    use chrono::{NaiveDate, Utc};
     use diesel::prelude::*;
     use serde_json::json;
 
     use crate::{
+        app_config::NewHireIssue,
         applicants::{Applicant, Applicants},
         db::Database,
         schema::applicants,
     };
+
+    pub fn mock_applicant() -> Applicant {
+        Applicant {
+            id: 0,
+            name: "Test User".to_string(),
+            role: "Engineering".to_string(),
+            sheet_id: String::default(),
+            status: String::default(),
+            raw_status: String::default(),
+            submitted_time: Utc::now(),
+            email: "random-test@testemaildomain.com".to_string(),
+            phone: String::default(),
+            country_code: String::default(),
+            location: String::default(),
+            latitude: 0.0,
+            longitude: 0.0,
+            github: String::default(),
+            gitlab: String::default(),
+            linkedin: String::default(),
+            portfolio: String::default(),
+            portfolio_pdf: String::default(),
+            website: String::default(),
+            resume: String::default(),
+            materials: String::default(),
+            sent_email_received: false,
+            sent_email_follow_up: false,
+            rejection_sent_date_time: None,
+            value_reflected: String::default(),
+            value_violated: String::default(),
+            values_in_tension: vec![],
+            resume_contents: String::default(),
+            materials_contents: String::default(),
+            work_samples: String::default(),
+            writing_samples: String::default(),
+            analysis_samples: String::default(),
+            presentation_samples: String::default(),
+            exploratory_samples: String::default(),
+            question_technically_challenging: String::default(),
+            question_proud_of: String::default(),
+            question_happiest: String::default(),
+            question_unhappiest: String::default(),
+            question_value_reflected: String::default(),
+            question_value_violated: String::default(),
+            question_values_in_tension: String::default(),
+            question_why_oxide: String::default(),
+            interview_packet: String::default(),
+            interviews: vec![],
+            interviews_started: None,
+            interviews_completed: None,
+            scorers: vec![],
+            scorers_completed: vec![],
+            scoring_form_id: String::default(),
+            scoring_form_url: String::default(),
+            scoring_form_responses_url: String::default(),
+            scoring_evaluations_count: 0,
+            scoring_enthusiastic_yes_count: 0,
+            scoring_yes_count: 0,
+            scoring_pass_count: 0,
+            scoring_no_count: 0,
+            scoring_not_applicable_count: 0,
+            scoring_insufficient_experience_count: 0,
+            scoring_inapplicable_experience_count: 0,
+            scoring_job_function_yet_needed_count: 0,
+            scoring_underwhelming_materials_count: 0,
+            criminal_background_check_status: String::default(),
+            motor_vehicle_background_check_status: String::default(),
+            start_date: Some(NaiveDate::from_ymd(2092, 01, 01)),
+            interested_in: vec![],
+            geocode_cache: String::default(),
+            docusign_envelope_id: String::default(),
+            docusign_envelope_status: String::default(),
+            offer_created: None,
+            offer_completed: None,
+            docusign_piia_envelope_id: String::default(),
+            docusign_piia_envelope_status: String::default(),
+            piia_envelope_created: None,
+            piia_envelope_completed: None,
+            link_to_reviews: vec![],
+            cio_company_id: 0,
+            airtable_record_id: String::default(),
+        }
+    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
@@ -2656,5 +2759,58 @@ mod tests {
             let a: Applicant = serde_json::from_str(&scorers).unwrap();
             assert_eq!(applicant, a);
         }
+    }
+
+    fn mock_new_hire_issue() -> NewHireIssue {
+        NewHireIssue {
+            assignees: vec!["assign1".to_string(), "assign2".to_string()],
+            alerts: vec!["alert1".to_string(), "alert2".to_string()],
+            default_groups: vec!["group1".to_string(), "group2".to_string()],
+            aws_roles: vec!["role1".to_string(), "role2".to_string()],
+        }
+    }
+
+    #[test]
+    fn test_creates_new_hire_issue_body() {
+        let applicant = mock_applicant();
+        let config = mock_new_hire_issue();
+
+        let body = applicant.create_new_hire_issue_body("test-username", &config);
+
+        assert_eq!(
+            r#"- [ ] Add to users.toml
+- [ ] Provision user in Airtable
+- [ ] Add to matrix chat
+
+Start Date: Tuesday, January 1, 2092
+Personal Email: random-test@testemaildomain.com
+Twitter: [TWITTER HANDLE]
+GitHub: 
+Phone: 
+Location: 
+cc @alert1
+cc @alert2
+
+```
+[users.test-username]
+first_name = 'Test'
+last_name = 'User'
+username = 'test-username'
+aliases = []
+groups = [
+    'group1',
+    'group2'
+]
+recovery_email = 'random-test@testemaildomain.com'
+recovery_phone = ''
+gender = ''
+github = ''
+chat = ''
+aws_role = 'role1,role2'
+department = ''
+manager = ''
+```"#,
+            body
+        );
     }
 }

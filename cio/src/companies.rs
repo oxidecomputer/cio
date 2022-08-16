@@ -1138,3 +1138,58 @@ pub struct UserInfo {
     #[serde(default)]
     pub verified_email: bool,
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::Company;
+
+    pub fn mock_company() -> Company {
+        Company {
+            id: 1,
+            name: String::default(),
+            gsuite_domain: String::default(),
+            github_org: "super_computer_org".to_string(),
+            website: String::default(),
+            domain: "super.computer".to_string(),
+            gsuite_account_id: String::default(),
+            gsuite_subject: String::default(),
+            phone: String::default(),
+            okta_domain: String::default(),
+            okta_api_key: String::default(),
+            mailchimp_list_id: String::default(),
+            github_app_installation_id: 0,
+            cloudflare_api_key: String::default(),
+            checkr_api_key: String::default(),
+            printer_url: String::default(),
+            tailscale_api_key: String::default(),
+            shipbob_pat: String::default(),
+            tripactions_client_id: String::default(),
+            tripactions_client_secret: String::default(),
+            airtable_api_key: String::default(),
+            airtable_enterprise_account_id: String::default(),
+            airtable_workspace_id: String::default(),
+            airtable_workspace_read_only_id: String::default(),
+            airtable_base_id_customer_leads: String::default(),
+            airtable_base_id_directory: String::default(),
+            airtable_base_id_misc: String::default(),
+            airtable_base_id_roadmap: String::default(),
+            airtable_base_id_hiring: String::default(),
+            airtable_base_id_shipments: String::default(),
+            airtable_base_id_finance: String::default(),
+            airtable_base_id_swag: String::default(),
+            airtable_base_id_assets: String::default(),
+            airtable_base_id_travel: String::default(),
+            airtable_base_id_cio: String::default(),
+            slack_channel_applicants: String::default(),
+            slack_channel_swag: String::default(),
+            slack_channel_shipments: String::default(),
+            slack_channel_mailing_lists: String::default(),
+            slack_channel_finance: String::default(),
+            slack_channel_debug: String::default(),
+            google_service_account: String::default(),
+            nginx_ip: String::default(),
+            cio_company_id: 0,
+            airtable_record_id: String::default(),
+        }
+    }
+}

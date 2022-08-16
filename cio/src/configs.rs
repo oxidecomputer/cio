@@ -1032,30 +1032,17 @@ xoxo,
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
 
-        // Get the user's aliases if they have one.
-        let aliases = self.aliases.join(", ");
-
-        let mut cc = vec![self.email.to_string()];
-        cc.append(&mut config.welcome_letter.cc.clone());
+        let letter = config.create_welcome_letter(&company, self, password);
 
         sendgrid
             .mail_send()
             .send_plain_text(
-                &config.welcome_letter.subject.replace("{user_email}", &self.email),
-                &config
-                    .welcome_letter
-                    .body
-                    .replace("{user_name}", &self.first_name)
-                    .replace("{company_domain}", &company.domain)
-                    .replace("{user_email}", &self.email)
-                    .replace("{user_password}", password)
-                    .replace("{user_aliases}", &aliases)
-                    .replace("{user_github}", &self.github)
-                    .replace("{company_github}", &company.github_org),
+                &letter.subject,
+                &letter.body,
                 &[self.recovery_email.to_string()],
-                &cc,
-                &config.welcome_letter.bcc,
-                &config.welcome_letter.from,
+                &letter.cc,
+                &letter.bcc,
+                &letter.from,
             )
             .await?;
 
@@ -2905,11 +2892,71 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
+    use chrono::NaiveDate;
     use serde::{Deserialize, Serialize};
     use serde_json;
 
-    use super::{ExternalServices, UserConfig};
+    use super::{ExternalServices, User, UserConfig};
+
+    pub fn mock_user() -> User {
+        User {
+            id: 1,
+            first_name: "random".to_string(),
+            last_name: String::default(),
+            username: String::default(),
+            aliases: vec!["al1".to_string(), "al2".to_string()],
+            recovery_email: String::default(),
+            recovery_phone: String::default(),
+            gender: String::default(),
+            chat: String::default(),
+            github: "random_github_user".to_string(),
+            twitter: String::default(),
+            department: String::default(),
+            manager: String::default(),
+            link_to_manager: vec![],
+            groups: vec![],
+            is_group_admin: false,
+            building: String::default(),
+            link_to_building: vec![],
+            aws_role: String::default(),
+            denied_services: vec![],
+            home_address_street_1: String::default(),
+            home_address_street_2: String::default(),
+            home_address_city: String::default(),
+            home_address_state: String::default(),
+            home_address_zipcode: String::default(),
+            home_address_country: String::default(),
+            home_address_country_code: String::default(),
+            home_address_formatted: String::default(),
+            home_address_latitude: 0.0,
+            home_address_longitude: 0.0,
+            work_address_street_1: String::default(),
+            work_address_street_2: String::default(),
+            work_address_city: String::default(),
+            work_address_state: String::default(),
+            work_address_zipcode: String::default(),
+            work_address_country: String::default(),
+            work_address_country_code: String::default(),
+            work_address_formatted: String::default(),
+            start_date: NaiveDate::from_ymd(2092, 01, 01),
+            birthday: NaiveDate::from_ymd(2092, 01, 01),
+            public_ssh_keys: vec![],
+            typev: String::default(),
+            google_anniversary_event_id: String::default(),
+            email: "random-test@testemaildomain.com".to_string(),
+            gusto_id: String::default(),
+            okta_id: String::default(),
+            google_id: String::default(),
+            airtable_id: String::default(),
+            ramp_id: String::default(),
+            zoom_id: String::default(),
+            geocode_cache: String::default(),
+            working_on: vec![],
+            cio_company_id: 1,
+            airtable_record_id: String::default(),
+        }
+    }
 
     #[derive(Debug, PartialEq, Deserialize, Serialize)]
     struct ServiceWrapper {
