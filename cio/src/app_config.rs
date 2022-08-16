@@ -6,13 +6,20 @@ use crate::{applicants::Applicant, companies::Company, configs::User};
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct DocuSignConfig {
-    pub offer: Envelope,
-    pub piia: Envelope,
+    offer: Envelope,
+    piia: Envelope,
 }
 
 impl DocuSignConfig {
     pub fn create_offer_letter(&self, applicant: &Applicant) -> Envelope {
         let mut envelope = self.offer.clone();
+        DocuSignConfig::fill_envelope(&mut envelope, applicant);
+
+        envelope
+    }
+
+    pub fn create_piia_letter(&self, applicant: &Applicant) -> Envelope {
+        let mut envelope = self.piia.clone();
         DocuSignConfig::fill_envelope(&mut envelope, applicant);
 
         envelope

@@ -829,12 +829,22 @@ pub async fn handle_airtable_applicants_update(
         let company = db_applicant.company(&api_context.db).await?;
         let dsa = company.authenticate_docusign(&api_context.db).await;
         if let Ok(ds) = dsa {
-            let offer_letter = api_context.app_config.read().unwrap().envelopes.offer.clone();
+            let offer_letter = api_context
+                .app_config
+                .read()
+                .unwrap()
+                .envelopes
+                .create_offer_letter(&db_applicant);
             db_applicant
                 .do_docusign_offer(&api_context.db, &ds, &company, offer_letter)
                 .await?;
 
-            let piia_letter = api_context.app_config.read().unwrap().envelopes.piia.clone();
+            let piia_letter = api_context
+                .app_config
+                .read()
+                .unwrap()
+                .envelopes
+                .create_piia_letter(&db_applicant);
             db_applicant
                 .do_docusign_piia(&api_context.db, &ds, &company, piia_letter)
                 .await?;
