@@ -574,12 +574,7 @@ impl ProviderWriteOps for gsuite_api::Client {
                 match self.users().update(&gsuite_user.id, &gsuite_user).await {
                     Ok(_) => {}
                     Err(e) => {
-                        bail!(
-                            "failed to update user `{}` in gsuite: {}\n{:?}",
-                            user.email,
-                            e,
-                            gsuite_user
-                        );
+                        bail!("failed to update user `{}` in gsuite: {:?}\n", user.id, e);
                     }
                 };
 
@@ -588,7 +583,7 @@ impl ProviderWriteOps for gsuite_api::Client {
                 // Add the user to their teams and groups.
                 crate::gsuite::update_user_google_groups(self, user, company).await?;
 
-                info!("updated user `{}` in GSuite", user.email);
+                info!("updated user `{}` in GSuite", user.id);
 
                 // Return the ID.
                 return Ok(gsuite_user.id);
