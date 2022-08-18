@@ -6,7 +6,7 @@ use chrono::{TimeZone, Utc};
 use chrono_humanize::HumanTime;
 use cio_api::{
     analytics::NewPageView,
-    applicants::{get_docusign_template_id, Applicant},
+    applicants::Applicant,
     asset_inventory::AssetItem,
     certs::Certificate,
     companies::Company,
@@ -35,8 +35,9 @@ use slack_chat_api::{
 };
 
 use crate::{
+    context::Context,
     server::{
-        AirtableRowEvent, ApplicationFileUploadData, Context, CounterResponse, GitHubRateLimit, RFDPathParams,
+        AirtableRowEvent, ApplicationFileUploadData, CounterResponse, GitHubRateLimit, RFDPathParams,
         ShippoTrackingUpdateEvent,
     },
     slack_commands::SlackCommand,
@@ -828,16 +829,24 @@ pub async fn handle_airtable_applicants_update(
         let company = db_applicant.company(&api_context.db).await?;
         let dsa = company.authenticate_docusign(&api_context.db).await;
         if let Ok(ds) = dsa {
-            // Get the template we need.
-            let offer_template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_OFFER_TEMPLATE).await;
-
+            let offer_letter = api_context
+                .app_config
+                .read()
+                .unwrap()
+                .envelopes
+                .create_offer_letter(&db_applicant);
             db_applicant
-                .do_docusign_offer(&api_context.db, &ds, &offer_template_id, &company)
+                .do_docusign_offer(&api_context.db, &ds, &company, offer_letter)
                 .await?;
 
-            let piia_template_id = get_docusign_template_id(&ds, cio_api::applicants::DOCUSIGN_PIIA_TEMPLATE).await;
+            let piia_letter = api_context
+                .app_config
+                .read()
+                .unwrap()
+                .envelopes
+                .create_piia_letter(&db_applicant);
             db_applicant
-                .do_docusign_piia(&api_context.db, &ds, &piia_template_id, &company)
+                .do_docusign_piia(&api_context.db, &ds, &company, piia_letter)
                 .await?;
         }
     }
@@ -1040,7 +1049,8 @@ pub async fn handle_application_submit(
 ) -> Result<()> {
     let api_context = rqctx.context();
 
-    event.do_form(&api_context.db).await?;
+    let app_config = api_context.app_config.read().unwrap().clone();
+    event.do_form(&api_context.db, app_config).await?;
 
     info!("application for {} {} created successfully", event.email, event.role);
 

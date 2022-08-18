@@ -21,7 +21,10 @@ use log::{info, warn};
 use sha2::Sha256;
 use std::{str::FromStr, sync::Arc};
 
-use crate::{event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo, server::Context};
+use crate::{
+    context::Context,
+    {event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo},
+};
 
 #[derive(Debug)]
 pub struct GitHubWebhookVerification;
@@ -923,6 +926,13 @@ pub async fn handle_configs_push(
 
     log::info!("configs `push` event: after get_configs_from_repo");
 
+    // Check if the cio.toml file has changed. This contains app configuration data and should be
+    // used to overwrite the existing app config
+    if commit.file_changed("configs/cio.toml") {
+        let mut app_config = api_context.app_config.write().unwrap();
+        *app_config = configs.app_config;
+    }
+
     // Check if the links.toml file changed.
     if commit.file_changed("configs/links.toml") || commit.file_changed("configs/huddles.toml") {
         // Update our links in the database.
@@ -951,7 +961,8 @@ pub async fn handle_configs_push(
 
     // Check if the users.toml file changed.
     if commit.file_changed("configs/users.toml") {
-        sync_users(&api_context.db, github, configs.users, company).await?;
+        let config = api_context.app_config.read().unwrap().clone();
+        sync_users(&api_context.db, github, configs.users, company, &config).await?;
         a("[SUCCESS]: users");
     }
 

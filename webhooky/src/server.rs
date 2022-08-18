@@ -1,12 +1,10 @@
 #![allow(clippy::type_complexity)]
-use std::{collections::HashMap, env, fs::File, pin::Pin, sync::Arc};
+use std::{collections::HashMap, env, pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use cio_api::{
     analytics::NewPageView,
-    applicant_uploads::UploadTokenStore,
-    db::Database,
     functions::Function,
     rfds::{RFDEntry, RFDIndexEntry},
     swag_store::Order,
@@ -15,8 +13,8 @@ use clokwerk::{AsyncScheduler, Job, TimeUnits};
 use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
-    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, PaginationOrder, PaginationParams, Path, Query,
-    RequestContext, ResultsPage, TypedBody, UntypedBody, WhichPage,
+    HttpResponseHeaders, HttpResponseOk, HttpServerStarter, OpenApiDefinition, PaginationOrder, PaginationParams, Path,
+    Query, RequestContext, ResultsPage, TypedBody, UntypedBody, WhichPage,
 };
 use dropshot_verify_request::{
     bearer::{Bearer, BearerToken},
@@ -41,40 +39,35 @@ use zoom_api::Client as Zoom;
 
 use crate::{
     auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, RFDToken, ShippoToken},
+    context::Context,
     github_types::GitHubWebhook,
     handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
     handlers_slack::InteractiveEvent,
 };
 
-pub async fn create_server(
-    s: &crate::core::Server,
-    logger: slog::Logger,
-    debug: bool,
-) -> Result<(dropshot::HttpServer<Context>, Context)> {
-    /*
-     * We must specify a configuration with a bind address.  We'll use 127.0.0.1
-     * since it's available and won't expose this server outside the host.  We
-     * request port 8080.
-     */
-    let config_dropshot = ConfigDropshot {
-        bind_address: s.address.parse()?,
-        request_body_max_bytes: 107374182400, // 100 Gigiabytes.
-        tls: None,
-    };
+pub struct APIConfig {
+    pub api: ApiDescription<Context>,
+    pub schema: serde_json::Value,
+}
 
-    /*
-     * For simplicity, we'll configure an "info"-level logger that writes to
-     * stderr assuming that it's a terminal.
-     */
-    let mut log_level = ConfigLoggingLevel::Info;
-    if debug {
-        log_level = ConfigLoggingLevel::Debug;
+impl APIConfig {
+    pub fn new() -> Result<Self> {
+        let api = create_api();
+        let open_api = create_open_api(&api);
+        let schema = open_api.json()?;
+
+        Ok(APIConfig { api, schema })
     }
-    let config_logging = ConfigLogging::StderrTerminal { level: log_level };
-    let log = config_logging.to_logger("webhooky-server")?;
 
+    pub fn open_api(&self) -> OpenApiDefinition<Context> {
+        create_open_api(&self.api)
+    }
+}
+
+fn create_api() -> ApiDescription<Context> {
     // Describe the API.
     let mut api = ApiDescription::new();
+
     /*
      * Register our endpoint and its handler function.  The "endpoint" macro
      * specifies the HTTP method and URI path that identify the endpoint,
@@ -177,37 +170,64 @@ pub async fn create_server(
 
     api.register(api_get_schema).unwrap();
 
+    api
+}
+
+fn create_open_api(api: &ApiDescription<Context>) -> OpenApiDefinition<Context> {
     // Create the API schema.
-    let mut api_definition = &mut api.openapi(&"Webhooks API", &clap::crate_version!());
-    api_definition = api_definition
+    let mut api_definition = api.openapi(&"Webhooks API", &clap::crate_version!());
+    api_definition
         .description("Internal webhooks server for listening to several third party webhooks")
         .contact_url("https://oxide.computer")
         .contact_email("webhooks@oxide.computer");
-    let schema = api_definition.json()?;
 
-    if let Some(spec_file) = &s.spec_file {
-        info!("writing OpenAPI spec to {}...", spec_file.to_str().unwrap());
-        let mut buffer = File::create(spec_file)?;
-        api_definition.write(&mut buffer)?;
-    }
+    api_definition
+}
+
+pub async fn create_server(
+    s: &crate::core::Server,
+    api: ApiDescription<Context>,
+    api_context: Context,
+    debug: bool,
+) -> Result<dropshot::HttpServer<Context>> {
+    /*
+     * We must specify a configuration with a bind address.  We'll use 127.0.0.1
+     * since it's available and won't expose this server outside the host.  We
+     * request port 8080.
+     */
+    let config_dropshot = ConfigDropshot {
+        bind_address: s.address.parse()?,
+        request_body_max_bytes: 107374182400, // 100 Gigiabytes.
+        tls: None,
+    };
 
     /*
-     * The functions that implement our API endpoints will share this context.
+     * For simplicity, we'll configure an "info"-level logger that writes to
+     * stderr assuming that it's a terminal.
      */
-    let api_context = Context::new(schema, logger).await;
-
+    let mut log_level = ConfigLoggingLevel::Info;
+    if debug {
+        log_level = ConfigLoggingLevel::Debug;
+    }
+    let config_logging = ConfigLogging::StderrTerminal { level: log_level };
+    let log = config_logging.to_logger("webhooky-server")?;
     /*
      * Set up the server.
      */
-    let server = HttpServerStarter::new(&config_dropshot, api, api_context.clone(), &log)
+    let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
         .map_err(|error| anyhow!("failed to create server: {}", error))?
         .start();
 
-    Ok((server, api_context))
+    Ok(server)
 }
 
-pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -> Result<()> {
-    let (server, api_context) = create_server(&s, logger, debug).await?;
+pub async fn server(
+    s: crate::core::Server,
+    api: ApiDescription<Context>,
+    api_context: Context,
+    debug: bool,
+) -> Result<()> {
+    let server = create_server(&s, api, api_context.clone(), debug).await?;
 
     // This really only applied for when we are running with `do-cron` but we need the variable
     // for the scheduler to be in the top level so we can run as async later based on the options.
@@ -220,73 +240,73 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
          */
         scheduler
             .every(1.day())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-analytics")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-analytics")});
         scheduler
             .every(23.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-api-tokens")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-api-tokens")});
         scheduler
             .every(6.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-applications")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-applications")});
         scheduler
             .every(2.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-asset-inventory")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-asset-inventory")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-companies")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-companies")});
         scheduler
             .every(1.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-configs")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-configs")});
         scheduler
             .every(6.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-finance")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-finance")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-functions")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-functions")});
         scheduler
             .every(1.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-huddles")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-huddles")});
         scheduler
             .every(4.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-interviews")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-interviews")});
         scheduler
             .every(12.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-journal-clubs")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-journal-clubs")});
         scheduler
             .every(20.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-mailing-lists")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-mailing-lists")});
         scheduler
             .every(18.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-other")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-other")});
         scheduler
             .every(3.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-recorded-meetings")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-recorded-meetings")});
         scheduler
             .every(16.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-repos")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-repos")});
         scheduler
             .every(14.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-rfds")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-rfds")});
         scheduler
             .every(2.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-shipments")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-shipments")});
         scheduler
             .every(3.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-shorturls")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-shorturls")});
         scheduler
             .every(9.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-swag-inventory")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-swag-inventory")});
         scheduler
             .every(5.hours())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-travel")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-travel")});
         scheduler
             .every(15.minutes())
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("sync-zoho")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-zoho")});
 
         // Run the RFD changelog.
         scheduler
             .every(clokwerk::Interval::Monday)
             .at("8:00 am")
-            .run(enclose! { (api_context) move || api_context.create_do_job_fn("send-rfd-changelog")});
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "send-rfd-changelog")});
     }
 
     // For Cloud run & ctrl+c, shutdown gracefully.
@@ -331,41 +351,8 @@ pub async fn server(s: crate::core::Server, logger: slog::Logger, debug: bool) -
     Ok(())
 }
 
-/**
- * Application-specific context (state shared by handler functions)
- */
-#[derive(Clone, Debug)]
-pub struct Context {
-    pub db: Database,
-
-    pub sec: Arc<steno::SecClient>,
-
-    pub schema: serde_json::Value,
-
-    pub upload_token_store: UploadTokenStore,
-}
-
-impl Context {
-    /**
-     * Return a new Context.
-     */
-    pub async fn new(schema: serde_json::Value, logger: slog::Logger) -> Context {
-        let db = Database::new().await;
-
-        let sec = steno::sec(logger, Arc::new(db.clone()));
-
-        // Create the context.
-        Context {
-            db: db.clone(),
-            sec: Arc::new(sec),
-            schema,
-            upload_token_store: UploadTokenStore::new(db, chrono::Duration::minutes(10)),
-        }
-    }
-
-    pub fn create_do_job_fn(&self, job: &str) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
-        Box::pin(do_job(self.clone(), job.to_string()))
-    }
+pub fn create_do_job_fn(ctx: Context, job: &str) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    Box::pin(do_job(ctx, job.to_string()))
 }
 
 pub async fn do_job(ctx: Context, job: String) {

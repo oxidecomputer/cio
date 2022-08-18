@@ -26,9 +26,10 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{
     airtable::{AIRTABLE_APPLICATIONS_TABLE, AIRTABLE_REVIEWER_LEADERBOARD_TABLE},
+    app_config::{AppConfig, ApplyConfig, Letter, NewHireIssue},
     applicant_reviews::ApplicantReview,
     companies::Company,
-    configs::{User, Users},
+    configs::User,
     core::UpdateAirtableRecord,
     db::Database,
     enclose,
@@ -51,13 +52,6 @@ static QUESTION_VALUE_VIOLATED: &str = r"F(?s:.*)r one of Oxide(?s:.*)s values(?
 static QUESTION_VALUES_IN_TENSION: &str = r"F(?s:.*)r a pair of Oxide(?s:.*)s values(?s:.*)describe a time in whic(?s:.*)the tw(?s:.*)values(?s:.*)tensio(?s:.*)for(?s:.*)your(?s:.*)and how yo(?s:.*)resolved it\.";
 static QUESTION_WHY_OXIDE: &str =
     r"W(?s:.*)y(?s:.*)do(?s:.*)you(?s:.*)want(?s:.*)to(?s:.*)work(?s:.*)for(?s:.*)Oxide\?";
-
-pub static DOCUSIGN_OFFER_TEMPLATE: &str = "Employee Offer Letter (US)";
-pub static DOCUSIGN_OFFER_SUBJECT: &str = "Sign your Oxide Computer Company Offer Letter";
-pub static DOCUSIGN_PIIA_TEMPLATE: &str = "Employee Agreements (Mediation, PIIA)";
-pub static DOCUSIGN_PIIA_SUBJECT: &str = "Sign your Oxide Computer Company Employee Agreements";
-
-static ONBOARDING_ASSIGNEES: OnboardingAssignees = OnboardingAssignees(["augustuswm", "jclulow"]);
 
 struct OnboardingAssignees([&'static str; 2]);
 
@@ -472,6 +466,7 @@ impl Applicant {
         company: &Company,
         github: &octorust::Client,
         configs_issues: &[octorust::types::IssueSimple],
+        app_config: AppConfig,
     ) -> Result<()> {
         // Initialize the GSuite sheets client.
         let drive_client = company.authenticate_google_drive(db).await?;
@@ -479,7 +474,7 @@ impl Applicant {
         self.keep_fields_from_airtable(db).await;
 
         // Expand the application.
-        if let Err(e) = self.expand(db, &drive_client).await {
+        if let Err(e) = self.expand(db, &drive_client, &app_config.apply).await {
             warn!("expanding applicant `{}` failed: {}", self.email, e);
 
             // Return early.
@@ -494,10 +489,11 @@ impl Applicant {
         self.update(db).await?;
 
         // Send the follow up email if we need to, this will also update the database.
-        self.send_email_follow_up_if_necessary(db).await?;
+        self.send_email_follow_up_if_necessary(db, app_config.apply).await?;
 
         // Create the GitHub onboarding issue if we need to.
-        self.create_github_onboarding_issue(db, github, configs_issues).await?;
+        self.create_github_onboarding_issue(db, github, configs_issues, &app_config.onboarding.new_hire_issue)
+            .await?;
 
         // Update the interviews start and end time if we have interviews.
         self.update_interviews_start_end_time(db).await;
@@ -1074,11 +1070,41 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         msg
     }
 
+    fn first_name(&self) -> String {
+        let split = self.name.splitn(2, ' ');
+        let parts: Vec<&str> = split.collect();
+        parts[0].to_string()
+    }
+
+    fn last_name(&self) -> String {
+        let split = self.name.splitn(2, ' ');
+        let parts: Vec<&str> = split.collect();
+        parts[1].to_string()
+    }
+
+    async fn compute_username(&self, db: &Database, company: &Company) -> String {
+        let first_name = self.first_name();
+        let last_name = self.last_name();
+
+        // Let's check the user's database to see if we can give this person the
+        // {first_name}@ email.
+        let mut username = first_name.to_lowercase().to_string();
+        let existing_user = User::get_from_db(db, company.id, username.to_string()).await;
+        if existing_user.is_some() {
+            username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
+        }
+        // Make sure it's lowercase.
+        username = username.to_lowercase();
+
+        username
+    }
+
     pub async fn create_github_onboarding_issue(
         &self,
         db: &Database,
         github: &octorust::Client,
         configs_issues: &[octorust::types::IssueSimple],
+        new_hire_issue: &NewHireIssue,
     ) -> Result<()> {
         let company = self.company(db).await?;
 
@@ -1091,71 +1117,11 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         let owner = &company.github_org;
         let repo = "configs";
 
-        let split = self.name.splitn(2, ' ');
-        let parts: Vec<&str> = split.collect();
-        let first_name = parts[0];
-        let last_name = parts[1];
-
-        // Let's check the user's database to see if we can give this person the
-        // {first_name}@ email.
-        let mut username = first_name.to_lowercase().to_string();
-        let existing_user = User::get_from_db(db, company.id, username.to_string()).await;
-        if existing_user.is_some() {
-            username = format!("{}.{}", first_name.replace(' ', "-"), last_name.replace(' ', "-"));
-        }
-        // Make sure it's lowercase.
-        username = username.to_lowercase();
-
         let label = "hiring".to_string();
         let title = format!("Onboarding: {}", self.name);
-        let body = format!(
-            r#"- [ ] Add to users.toml
-- [ ] Provision user in Airtable
-- [ ] Add to matrix chat
+        let username = self.compute_username(db, &company).await;
 
-Start Date: {}
-Personal Email: {}
-Twitter: [TWITTER HANDLE]
-GitHub: {}
-Phone: {}
-Location: {}
-cc @augustuswm
-
-```
-[users.{}]
-first_name = '{}'
-last_name = '{}'
-username = '{}'
-aliases = []
-groups = [
-    'all',
-    'friends-of-oxide',
-    'hardware',
-    'manufacturing',
-    'pci-sig',
-]
-recovery_email = '{}'
-recovery_phone = '{}'
-gender = ''
-github = '{}'
-chat = ''
-aws_role = 'arn:aws:iam::128433874814:role/GSuiteSSO,arn:aws:iam::128433874814:saml-provider/GoogleApps'
-department = ''
-manager = ''
-```"#,
-            self.start_date.unwrap().format("%A, %B %-d, %C%y"),
-            self.email,
-            self.github,
-            self.phone,
-            self.location,
-            username.replace('.', "-"),
-            first_name,
-            last_name,
-            username,
-            self.email,
-            self.phone.replace('-', "").replace(' ', ""),
-            self.github.replace('@', ""),
-        );
+        let body = self.create_new_hire_issue_body(username.as_str(), new_hire_issue);
 
         // Check if we already have an issue for this user.
         let issue = check_if_github_issue_exists(configs_issues, &self.name);
@@ -1200,7 +1166,7 @@ Notes:
                             title: Some(title.into()),
                             body: Default::default(),
                             assignee: "".to_string(),
-                            assignees: (&ONBOARDING_ASSIGNEES).into(),
+                            assignees: new_hire_issue.assignees.clone(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
                             state: Some(octorust::types::State::Closed),
@@ -1232,7 +1198,7 @@ Notes:
                             title: Some(title.into()),
                             body: body.to_string(),
                             assignee: "".to_string(),
-                            assignees: (&ONBOARDING_ASSIGNEES).into(),
+                            assignees: new_hire_issue.assignees.clone(),
                             labels: vec![label.into()],
                             milestone: Default::default(),
                             state: Some(octorust::types::State::Open),
@@ -1254,7 +1220,7 @@ Notes:
                                 title: Some(title.into()),
                                 body: body.to_string(),
                                 assignee: "".to_string(),
-                                assignees: (&ONBOARDING_ASSIGNEES).into(),
+                                assignees: new_hire_issue.assignees.clone(),
                                 labels: vec![label.into()],
                                 milestone: Default::default(),
                                 state: Some(octorust::types::State::Open),
@@ -1279,7 +1245,7 @@ Notes:
                     title: title.into(),
                     body,
                     assignee: "".to_string(),
-                    assignees: (&ONBOARDING_ASSIGNEES).into(),
+                    assignees: new_hire_issue.assignees.clone(),
                     labels: vec![label.into()],
                     milestone: Default::default(),
                 },
@@ -1291,115 +1257,71 @@ Notes:
         Ok(())
     }
 
-    /// Send an email to the applicant that we love them but they are too junior.
-    pub async fn send_email_rejection_junior_but_we_love_you(&self, db: &Database) -> Result<()> {
-        let company = self.company(db).await?;
-        // Initialize the SendGrid client.
-        let sendgrid_client = SendGrid::new_from_env();
+    fn create_new_hire_issue_body(&self, username: &str, config: &NewHireIssue) -> String {
+        let first_name = self.first_name();
+        let last_name = self.last_name();
 
-        // Send the message.
-        sendgrid_client
-            .mail_send()
-            .send_plain_text(
-                &format!("Thank you for your application, {}", self.name),
-                &format!(
-                    "Dear {},
+        let alerts = config
+            .alerts
+            .iter()
+            .map(|a| format!("cc @{}", a))
+            .collect::<Vec<String>>()
+            .join("\n");
+        let default_groups = config
+            .default_groups
+            .iter()
+            .map(|g| format!("    '{}'", g))
+            .collect::<Vec<String>>()
+            .join(",\n");
+        let aws_role = config.aws_roles.join(",");
 
-Thank you for your application to join Oxide Computer Company. At this point
-in time, we are focusing on hiring engineers with professional experience,
-who have a track record of self-directed contributions to a team.
+        format!(
+            r#"- [ ] Add to users.toml
+- [ ] Provision user in Airtable
+- [ ] Add to matrix chat
 
-We are grateful you took the time to apply and put so much thought into
-your candidate materials, we loved reading them. Although engineers at the
-early stages of their career are unlikely to be a fit for us right now, we
-are growing, and encourage you to consider re-applying in the future.
+Start Date: {}
+Personal Email: {}
+Twitter: [TWITTER HANDLE]
+GitHub: {}
+Phone: {}
+Location: {}
+{}
 
-We would absolutely love to work with you in the future and cannot wait for
-that stage of the company!
-
-All the best,
-The Oxide Team",
-                    self.name
-                ),
-                &[self.email.to_string()],
-                &[format!("careers@{}", company.gsuite_domain)],
-                &[],
-                &format!("careers@{}", company.gsuite_domain),
-            )
-            .await?;
-
-        Ok(())
-    }
-
-    /// Send an email to the applicant that they did not provide materials.
-    pub async fn send_email_rejection_did_not_provide_materials(&self, db: &Database) -> Result<()> {
-        let company = self.company(db).await?;
-        // Initialize the SendGrid client.
-        let sendgrid_client = SendGrid::new_from_env();
-
-        // Send the message.
-        sendgrid_client
-            .mail_send()
-            .send_plain_text(
-                &format!("Thank you for your application, {}", self.name),
-                &format!(
-                    "Dear {},
-
-Unfortunately, we cannot accept it at this time since you failed to provide the
-requested materials.
-
-All the best,
-The Oxide Team",
-                    self.name
-                ),
-                &[self.email.to_string()],
-                &[format!("careers@{}", company.gsuite_domain)],
-                &[],
-                &format!("careers@{}", company.gsuite_domain),
-            )
-            .await?;
-
-        Ok(())
-    }
-
-    /// Send an email to the applicant about timing.
-    pub async fn send_email_rejection_timing(&self, db: &Database) -> Result<()> {
-        let company = self.company(db).await?;
-        // Initialize the SendGrid client.
-        let sendgrid_client = SendGrid::new_from_env();
-
-        // Send the message.
-        sendgrid_client
-            .mail_send()
-            .send_plain_text(
-                &format!("Thank you for your application, {}", self.name),
-                &format!(
-                    "Dear {},
-
-We are so humbled by your application to join Oxide Computer Company.  We
-are grateful you took the time to apply and put so much thought into the
-candidate materials; we loved reading them.
-
-That said, we have many more applicants than we can accommodate at this
-stage of the company, and we are afraid that we cannot move forward with you
-at this time.  We don't anticipate being a small company forever, however,
-and we envision an Oxide that is one day big enough to be an excellent
-potential fit for you.  We encourage you to stay tuned and stay close, with
-our thanks once again for the time and thought you put into your application
-to Oxide!
-
-All the best,
-The Oxide Team",
-                    self.name
-                ),
-                &[self.email.to_string()],
-                &[format!("careers@{}", company.gsuite_domain)],
-                &[],
-                &format!("careers@{}", company.gsuite_domain),
-            )
-            .await?;
-
-        Ok(())
+```
+[users.{}]
+first_name = '{}'
+last_name = '{}'
+username = '{}'
+aliases = []
+groups = [
+{}
+]
+recovery_email = '{}'
+recovery_phone = '{}'
+gender = ''
+github = '{}'
+chat = ''
+aws_role = '{}'
+department = ''
+manager = ''
+```"#,
+            self.start_date.unwrap().format("%A, %B %-d, %C%y"),
+            self.email,
+            self.github,
+            self.phone,
+            self.location,
+            alerts,
+            username.replace('.', "-"),
+            first_name,
+            last_name,
+            username,
+            default_groups,
+            self.email,
+            self.phone.replace('-', "").replace(' ', ""),
+            self.github.replace('@', ""),
+            aws_role,
+        )
     }
 }
 
@@ -1548,25 +1470,6 @@ async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     Ok(result)
 }
 
-pub async fn get_reviewer_pool(db: &Database, company: &Company) -> Result<Vec<String>> {
-    let users = Users::get_from_db(db, company.id).await?;
-
-    let mut reviewers: Vec<String> = Default::default();
-    for user in users {
-        if user.typev == "full-time"
-            && user.username != "robert.keith"
-            && user.username != "robert"
-            && user.username != "keith"
-            && user.username != "thomas"
-            && user.username != "arjen"
-        {
-            reviewers.push(user.email);
-        }
-    }
-
-    Ok(reviewers)
-}
-
 /// The data type for a ApplicantReviewer.
 #[db {
     new_struct_name = "ApplicantReviewer",
@@ -1613,7 +1516,7 @@ impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
     }
 }
 
-pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company, config: &AppConfig) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
         return Ok(());
@@ -1631,20 +1534,18 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company) -
     }
     let ds = dsa.unwrap();
 
-    // Get the template we need.
-    let offer_template_id = get_docusign_template_id(&ds, DOCUSIGN_OFFER_TEMPLATE).await;
-    let piia_template_id = get_docusign_template_id(&ds, DOCUSIGN_PIIA_TEMPLATE).await;
-
     // TODO: we could actually query the DB by status, but whatever.
     let applicants = Applicants::get_from_db(db, company.id).await?;
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
         applicant
-            .do_docusign_offer(db, &ds, &offer_template_id, company)
+            .do_docusign_offer(db, &ds, company, config.envelopes.create_offer_letter(&applicant))
             .await?;
 
-        applicant.do_docusign_piia(db, &ds, &piia_template_id, company).await?;
+        applicant
+            .do_docusign_piia(db, &ds, company, config.envelopes.create_piia_letter(&applicant))
+            .await?;
     }
 
     Ok(())
@@ -1708,7 +1609,7 @@ impl Applicant {
     }
 
     /// Send a rejection email if we need to.
-    pub async fn send_email_follow_up_if_necessary(&mut self, db: &Database) -> Result<()> {
+    pub async fn send_email_follow_up_if_necessary(&mut self, db: &Database, config: ApplyConfig) -> Result<()> {
         // Send an email follow up if we should.
         if self.sent_email_follow_up {
             // We have already followed up with the candidate.
@@ -1744,38 +1645,50 @@ impl Applicant {
         }
 
         // Check if we have sent the follow up email to them.unwrap_or_default().
-        if self.raw_status.contains("did not do materials") {
-            // Send the email.
-            self.send_email_rejection_did_not_provide_materials(db).await?;
-
-            info!("sent email to {} tell them they did not do the materials", self.email);
+        let letter_key = if self.raw_status.contains("did not do materials") {
+            "no-materials"
         } else if self.raw_status.contains("junior") {
-            // Send the email.
-            self.send_email_rejection_junior_but_we_love_you(db).await?;
-
-            info!(
-                "sent email to {} tell them we can't hire them at this stage",
-                self.email
-            );
+            "junior"
         } else {
-            // Send the email.
-            self.send_email_rejection_timing(db).await?;
+            "timing"
+        };
 
-            info!("sent email to {} tell them about timing", self.email);
+        if let Some(letter) = config.create_rejection_letter(letter_key, self) {
+            // Initialize the SendGrid client.
+            let sendgrid_client = SendGrid::new_from_env();
+
+            // Send the message.
+            sendgrid_client
+                .mail_send()
+                .send_plain_text(
+                    &letter.subject,
+                    &letter.body,
+                    &[self.email.to_string()],
+                    &letter.cc,
+                    &letter.bcc,
+                    &letter.from,
+                )
+                .await?;
+
+            // Mark the time we sent the email.
+            self.rejection_sent_date_time = Some(Utc::now());
+
+            self.sent_email_follow_up = true;
+            // Update the database.
+            self.update(db).await?;
+
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Failed to send rejection letter to {} with status {}",
+                self.id,
+                self.raw_status
+            ))
         }
-
-        // Mark the time we sent the email.
-        self.rejection_sent_date_time = Some(Utc::now());
-
-        self.sent_email_follow_up = true;
-        // Update the database.
-        self.update(db).await?;
-
-        Ok(())
     }
 
     /// Expand the applicants materials and do any automation that needs to be done.
-    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive) -> Result<()> {
+    pub async fn expand(&mut self, db: &Database, drive_client: &GoogleDrive, config: &ApplyConfig) -> Result<()> {
         self.cleanup_phone();
         self.parse_github_gitlab();
         self.cleanup_linkedin();
@@ -1789,8 +1702,10 @@ impl Applicant {
 
         // Check if we have sent them an email that we received their application.
         if !self.sent_email_received {
+            let letter = config.create_received_letter(self);
+
             // Send them an email.
-            self.send_email_recieved_application_to_applicant(db).await?;
+            self.send_email_recieved_application_to_applicant(&letter).await?;
             self.sent_email_received = true;
             // Update it in the database just in case.
             self.update(db).await?;
@@ -1926,8 +1841,7 @@ The applicants Airtable \
     }
 
     /// Send an email to the applicant that we recieved their application.
-    async fn send_email_recieved_application_to_applicant(&self, db: &Database) -> Result<()> {
-        let company = self.company(db).await?;
+    async fn send_email_recieved_application_to_applicant(&self, letter: &Letter) -> Result<()> {
         // Initialize the SendGrid client.
         let sendgrid_client = SendGrid::new_from_env();
 
@@ -1935,26 +1849,12 @@ The applicants Airtable \
         sendgrid_client
             .mail_send()
             .send_plain_text(
-                &format!(
-                    "Oxide Computer Company {} Application Received for {}",
-                    self.role, self.name
-                ),
-                &format!(
-                    "Dear {},
-
-Thank you for submitting your application materials! We really appreciate all
-the time and thought everyone puts into their application. We will be in touch
-within the next few weeks with more information. Just a heads up this could take
-up to 4-6 weeks.
-
-Sincerely,
-  The Oxide Team",
-                    self.name
-                ),
+                &letter.subject,
+                &letter.body,
                 &[self.email.to_string()],
-                &[format!("careers@{}", company.gsuite_domain)],
-                &[],
-                &format!("careers@{}", company.gsuite_domain),
+                &letter.cc,
+                &letter.bcc,
+                &letter.from,
             )
             .await?;
 
@@ -2230,8 +2130,8 @@ Sincerely,
         &mut self,
         db: &Database,
         ds: &DocuSign,
-        template_id: &str,
         company: &Company,
+        new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
@@ -2253,77 +2153,9 @@ Sincerely,
                 "applicant has status giving offer: {}, generating offer in docusign for them!",
                 self.name
             );
-            // We haven't sent their offer yet, so let's do that.
-            // Let's create a new envelope for the user.
-            let mut new_envelope: docusign::Envelope = Default::default();
-
-            // Sent the status to `sent` so it sends.
-            // To save it as a draft set the status as `created`.
-            new_envelope.status = "sent".to_string();
-
-            // Set the email subject.
-            new_envelope.email_subject = DOCUSIGN_OFFER_SUBJECT.to_string();
-
-            // Set the template id to that of our template.
-            new_envelope.template_id = template_id.to_string();
-
-            // Set the recipients of the template.
-            // The first recipient needs to be the CEO (or whoever is going to do the mad lib for
-            // the offer.
-            // The second recipient needs to be the Applicant.
-            new_envelope.template_roles = vec![
-                docusign::TemplateRole {
-                    name: "Steve Tuck".to_string(),
-                    role_name: "CEO".to_string(),
-                    email: format!("steve@{}", company.gsuite_domain),
-                    signer_name: "Steve Tuck".to_string(),
-                    routing_order: "1".to_string(),
-                    // Make Steve's email notification different than the actual applicant.
-                    email_notification: docusign::EmailNotification {
-                        email_subject: format!("Complete the offer letter for {}", self.name),
-                        email_body: format!(
-                            "The status for the applicant, {}, has been changed to `Giving \
-                             offer`. Therefore, we are sending you an offer letter to complete, \
-                             as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! After you \
-                             finish, we will send the offer letter to {} at {} to sign and date! \
-                             Thanks!",
-                            self.name, self.name, self.email
-                        ),
-                        language: Default::default(),
-                    },
-                },
-                docusign::TemplateRole {
-                    name: self.name.to_string(),
-                    role_name: "Applicant".to_string(),
-                    email: self.email.to_string(),
-                    signer_name: self.name.to_string(),
-                    routing_order: "2".to_string(),
-                    email_notification: docusign::EmailNotification {
-                        email_subject: DOCUSIGN_OFFER_SUBJECT.to_string(),
-                        email_body: "We are very excited to offer you a position at the Oxide \
-                                     Computer Company!"
-                            .to_string(),
-                        language: Default::default(),
-                    },
-                },
-                docusign::TemplateRole {
-                    name: "Ruth Alexander".to_string(),
-                    role_name: "HR".to_string(),
-                    email: "ruth@mindsharegroup.com".to_string(),
-                    signer_name: "Ruth Alexander".to_string(),
-                    routing_order: "3".to_string(),
-                    email_notification: docusign::EmailNotification {
-                        email_subject: "Oxide Computer Company Offer Letter Signed".to_string(),
-                        email_body: "Attached is a newly signed offer letter, please set up \
-                                     benefits. Thank you!"
-                            .to_string(),
-                        language: Default::default(),
-                    },
-                },
-            ];
 
             // Let's create the envelope.
-            let envelope = ds.create_envelope(new_envelope.clone()).await?;
+            let envelope = ds.create_envelope(new_envelope).await?;
 
             // Set the id of the envelope.
             self.docusign_envelope_id = envelope.envelope_id.to_string();
@@ -2527,8 +2359,8 @@ Sincerely,
         &mut self,
         db: &Database,
         ds: &DocuSign,
-        template_id: &str,
         company: &Company,
+        new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
         self.keep_fields_from_airtable(db).await;
@@ -2550,91 +2382,9 @@ Sincerely,
                 "applicant has status giving offer: {}, generating employee agreements in docusign for them!",
                 self.name
             );
-            // We haven't sent their employee agreements yet, so let's do that.
-            // Let's create a new envelope for the user.
-            let mut new_envelope: docusign::Envelope = Default::default();
-
-            // Sent the status to `sent` so it sends.
-            // To save it as a draft set the status as `created`.
-            new_envelope.status = "sent".to_string();
-
-            // Set the email subject.
-            new_envelope.email_subject = DOCUSIGN_PIIA_SUBJECT.to_string();
-
-            // Set the template id to that of our template.
-            new_envelope.template_id = template_id.to_string();
-
-            // Set the recipients of the template.
-            // The first recipient needs to be the CEO (or whoever is going to do the mad lib for
-            // the offer.
-            // The second recipient needs to be the Applicant.
-            new_envelope.template_roles = vec![
-                docusign::TemplateRole {
-                    name: "Steve Tuck".to_string(),
-                    role_name: "CEO".to_string(),
-                    email: format!("steve@{}", company.gsuite_domain),
-                    signer_name: "Steve Tuck".to_string(),
-                    routing_order: "1".to_string(),
-                    // Make Steve's email notification different than the actual applicant.
-                    email_notification: docusign::EmailNotification {
-                        email_subject: format!("Complete the employee agreements for {}", self.name),
-                        email_body: format!(
-                            "The status for the applicant, {}, has been changed to `Giving \
-                             offer`. Therefore, we are sending you employee agreements to \
-                             complete, as Jess calls, the 'Mad Libs'. GO COMPLETE THE MAD LIBS! \
-                             After you finish, we will send the employee agreements to {} at {} \
-                             to sign and date! Thanks!",
-                            self.name, self.name, self.email
-                        ),
-                        language: Default::default(),
-                    },
-                },
-                docusign::TemplateRole {
-                    name: self.name.to_string(),
-                    role_name: "Applicant".to_string(),
-                    email: self.email.to_string(),
-                    signer_name: self.name.to_string(),
-                    routing_order: "2".to_string(),
-                    email_notification: docusign::EmailNotification {
-                        email_subject: DOCUSIGN_PIIA_SUBJECT.to_string(),
-                        email_body: "Here are the PIIA (Employee Proprietary Information and \
-                                     Invention Agreement) and Mediation documents. These do not \
-                                     need to be returned with the offer letter (sent in a \
-                                     separate DocuSign), but they need to be returned by your \
-                                     start date. Please let Steve know if you have any questions!"
-                            .to_string(),
-                        language: Default::default(),
-                    },
-                },
-                docusign::TemplateRole {
-                    name: "Steve Tuck".to_string(),
-                    role_name: "CEO (2)".to_string(),
-                    email: format!("steve@{}", company.gsuite_domain),
-                    signer_name: "Steve Tuck".to_string(),
-                    routing_order: "3".to_string(),
-                    // Make Steve's email notification different than the actual applicant.
-                    email_notification: docusign::EmailNotification {
-                        email_subject: format!("Sign the PIIA agreements for {}", self.name),
-                        email_body: "This is the last step before we send to HR.".to_string(),
-                        language: Default::default(),
-                    },
-                },
-                docusign::TemplateRole {
-                    name: "Ruth Alexander".to_string(),
-                    role_name: "HR".to_string(),
-                    email: "ruth@mindsharegroup.com".to_string(),
-                    signer_name: "Ruth Alexander".to_string(),
-                    routing_order: "4".to_string(),
-                    email_notification: docusign::EmailNotification {
-                        email_subject: "Oxide Computer Company Employee Agreements Signed".to_string(),
-                        email_body: "Attached are newly signed employee agreements. Thank you!".to_string(),
-                        language: Default::default(),
-                    },
-                },
-            ];
 
             // Let's create the envelope.
-            let envelope = ds.create_envelope(new_envelope.clone()).await?;
+            let envelope = ds.create_envelope(new_envelope).await?;
 
             // Set the id of the envelope.
             self.docusign_piia_envelope_id = envelope.envelope_id.to_string();
@@ -2784,7 +2534,11 @@ Sincerely,
     }
 }
 
-pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_new_applicants_and_reviews(
+    db: &Database,
+    company: &Company,
+    app_config: &AppConfig,
+) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
         return Ok(());
@@ -2838,9 +2592,11 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
             .skip(skip)
             .take(take)
             .map(|mut applicant| {
-                tokio::spawn(enclose! { (db, company, github, configs_issues) async move {
-                    applicant.refresh(&db, &company, &github, &configs_issues).await
-                }})
+                tokio::spawn(
+                    enclose! { (db, company, github, configs_issues, app_config) async move {
+                        applicant.refresh(&db, &company, &github, &configs_issues, app_config).await
+                    }},
+                )
             })
             .collect();
 
@@ -2866,16 +2622,100 @@ pub async fn refresh_new_applicants_and_reviews(db: &Database, company: &Company
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use async_bb8_diesel::AsyncRunQueryDsl;
+    use chrono::{NaiveDate, Utc};
     use diesel::prelude::*;
     use serde_json::json;
 
     use crate::{
+        app_config::NewHireIssue,
         applicants::{Applicant, Applicants},
         db::Database,
         schema::applicants,
     };
+
+    pub fn mock_applicant() -> Applicant {
+        Applicant {
+            id: 0,
+            name: "Test User".to_string(),
+            role: "Engineering".to_string(),
+            sheet_id: String::default(),
+            status: String::default(),
+            raw_status: String::default(),
+            submitted_time: Utc::now(),
+            email: "random-test@testemaildomain.com".to_string(),
+            phone: String::default(),
+            country_code: String::default(),
+            location: String::default(),
+            latitude: 0.0,
+            longitude: 0.0,
+            github: String::default(),
+            gitlab: String::default(),
+            linkedin: String::default(),
+            portfolio: String::default(),
+            portfolio_pdf: String::default(),
+            website: String::default(),
+            resume: String::default(),
+            materials: String::default(),
+            sent_email_received: false,
+            sent_email_follow_up: false,
+            rejection_sent_date_time: None,
+            value_reflected: String::default(),
+            value_violated: String::default(),
+            values_in_tension: vec![],
+            resume_contents: String::default(),
+            materials_contents: String::default(),
+            work_samples: String::default(),
+            writing_samples: String::default(),
+            analysis_samples: String::default(),
+            presentation_samples: String::default(),
+            exploratory_samples: String::default(),
+            question_technically_challenging: String::default(),
+            question_proud_of: String::default(),
+            question_happiest: String::default(),
+            question_unhappiest: String::default(),
+            question_value_reflected: String::default(),
+            question_value_violated: String::default(),
+            question_values_in_tension: String::default(),
+            question_why_oxide: String::default(),
+            interview_packet: String::default(),
+            interviews: vec![],
+            interviews_started: None,
+            interviews_completed: None,
+            scorers: vec![],
+            scorers_completed: vec![],
+            scoring_form_id: String::default(),
+            scoring_form_url: String::default(),
+            scoring_form_responses_url: String::default(),
+            scoring_evaluations_count: 0,
+            scoring_enthusiastic_yes_count: 0,
+            scoring_yes_count: 0,
+            scoring_pass_count: 0,
+            scoring_no_count: 0,
+            scoring_not_applicable_count: 0,
+            scoring_insufficient_experience_count: 0,
+            scoring_inapplicable_experience_count: 0,
+            scoring_job_function_yet_needed_count: 0,
+            scoring_underwhelming_materials_count: 0,
+            criminal_background_check_status: String::default(),
+            motor_vehicle_background_check_status: String::default(),
+            start_date: Some(NaiveDate::from_ymd(2092, 01, 01)),
+            interested_in: vec![],
+            geocode_cache: String::default(),
+            docusign_envelope_id: String::default(),
+            docusign_envelope_status: String::default(),
+            offer_created: None,
+            offer_completed: None,
+            docusign_piia_envelope_id: String::default(),
+            docusign_piia_envelope_status: String::default(),
+            piia_envelope_created: None,
+            piia_envelope_completed: None,
+            link_to_reviews: vec![],
+            cio_company_id: 0,
+            airtable_record_id: String::default(),
+        }
+    }
 
     #[ignore]
     #[tokio::test(flavor = "multi_thread")]
@@ -2902,5 +2742,58 @@ mod tests {
             let a: Applicant = serde_json::from_str(&scorers).unwrap();
             assert_eq!(applicant, a);
         }
+    }
+
+    fn mock_new_hire_issue() -> NewHireIssue {
+        NewHireIssue {
+            assignees: vec!["assign1".to_string(), "assign2".to_string()],
+            alerts: vec!["alert1".to_string(), "alert2".to_string()],
+            default_groups: vec!["group1".to_string(), "group2".to_string()],
+            aws_roles: vec!["role1".to_string(), "role2".to_string()],
+        }
+    }
+
+    #[test]
+    fn test_creates_new_hire_issue_body() {
+        let applicant = mock_applicant();
+        let config = mock_new_hire_issue();
+
+        let body = applicant.create_new_hire_issue_body("test-username", &config);
+
+        assert_eq!(
+            r#"- [ ] Add to users.toml
+- [ ] Provision user in Airtable
+- [ ] Add to matrix chat
+
+Start Date: Tuesday, January 1, 2092
+Personal Email: random-test@testemaildomain.com
+Twitter: [TWITTER HANDLE]
+GitHub: 
+Phone: 
+Location: 
+cc @alert1
+cc @alert2
+
+```
+[users.test-username]
+first_name = 'Test'
+last_name = 'User'
+username = 'test-username'
+aliases = []
+groups = [
+    'group1',
+    'group2'
+]
+recovery_email = 'random-test@testemaildomain.com'
+recovery_phone = ''
+gender = ''
+github = ''
+chat = ''
+aws_role = 'role1,role2'
+department = ''
+manager = ''
+```"#,
+            body
+        );
     }
 }

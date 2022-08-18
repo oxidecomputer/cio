@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use std::sync::Arc;
 
-use crate::server::Context;
+use crate::context::Context;
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ApplicationView {

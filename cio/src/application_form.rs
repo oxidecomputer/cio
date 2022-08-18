@@ -4,7 +4,7 @@ use chrono::Utc;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{applicants::NewApplicant, companies::Company, db::Database};
+use crate::{app_config::AppConfig, applicants::NewApplicant, companies::Company, db::Database};
 
 #[derive(Debug, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct ApplicationForm {
@@ -70,7 +70,7 @@ impl ApplicationForm {
         Ok(())
     }
 
-    pub async fn do_form(&self, db: &Database) -> Result<()> {
+    pub async fn do_form(&self, db: &Database, config: AppConfig) -> Result<()> {
         // If their email is empty return early.
         if self.email.is_empty()
             || self.name.is_empty()
@@ -106,7 +106,7 @@ impl ApplicationForm {
         let drive_client = company.authenticate_google_drive(db).await?;
 
         // Expand the application.
-        applicant.expand(db, &drive_client).await?;
+        applicant.expand(db, &drive_client, &config.apply).await?;
 
         // Update airtable and the database again.
         applicant.update(db).await?;

@@ -34,6 +34,7 @@ use crate::{
         AIRTABLE_BUILDINGS_TABLE, AIRTABLE_EMPLOYEES_TABLE, AIRTABLE_GROUPS_TABLE, AIRTABLE_LINKS_TABLE,
         AIRTABLE_RESOURCES_TABLE,
     },
+    app_config::{AppConfig, OnboardingConfig},
     applicants::Applicant,
     certs::{Certificate, Certificates, NewCertificate},
     companies::Company,
@@ -47,10 +48,13 @@ use crate::{
 };
 
 /// The data type for our configuration files.
-#[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct Config {
+    pub app_config: AppConfig,
+
     #[serde(default)]
     pub users: BTreeMap<String, UserConfig>,
+
     #[serde(default)]
     pub groups: BTreeMap<String, GroupConfig>,
 
@@ -370,6 +374,7 @@ impl UserConfig {
         &mut self,
         db: &Database,
         company: &Company,
+        config: &AppConfig,
         github: &octorust::Client,
         gsuite_users_map: &BTreeMap<String, GSuiteUser>,
         okta_users: &HashMap<String, okta::types::User>,
@@ -488,7 +493,7 @@ impl UserConfig {
             // ONLY DO THIS IF WE USE OKTA FOR CONFIGURATION,
             // OTHERWISE THE GSUITE CODE WILL SEND ITS OWN EMAIL.
             // Ensure the okta user.
-            let okta_id = okta.ensure_user(db, company, &new_user).await?;
+            let okta_id = okta.ensure_user(db, company, &new_user, config).await?;
             // Set the GSuite ID for the user.
             new_user.okta_id = okta_id.to_string();
             // Update the user in the database.
@@ -496,7 +501,7 @@ impl UserConfig {
         } else {
             // Update the user in GSuite.
             // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-            let gsuite_id = gsuite.ensure_user(db, company, &new_user).await?;
+            let gsuite_id = gsuite.ensure_user(db, company, &new_user, config).await?;
             // Set the GSuite ID for the user.
             new_user.google_id = gsuite_id.to_string();
             // Update the user in the database.
@@ -507,7 +512,7 @@ impl UserConfig {
             // Otherwise update the zoom user.
             // We only do this if not managed by Okta.
             if let Ok(ref zoom) = zoom_auth {
-                match zoom.ensure_user(db, company, &new_user).await {
+                match zoom.ensure_user(db, company, &new_user, config).await {
                     Ok(zoom_id) => {
                         // Set the Zoom ID for the user.
                         new_user.zoom_id = zoom_id.to_string();
@@ -525,7 +530,7 @@ impl UserConfig {
         if !new_user.github.is_empty() {
             // Add them to the org and any teams they need to be added to.
             // We don't return an id here.
-            match github.ensure_user(db, company, &new_user).await {
+            match github.ensure_user(db, company, &new_user, config).await {
                 Ok(id) => Ok(id),
                 Err(err) => {
                     warn!("Failed to ensure GitHub user `{}`: {}", new_user.id, err);
@@ -535,7 +540,7 @@ impl UserConfig {
         }
 
         if let Ok(ref ramp) = ramp_auth {
-            match ramp.ensure_user(db, company, &new_user).await {
+            match ramp.ensure_user(db, company, &new_user, config).await {
                 Ok(ramp_id) => {
                     // Set the Ramp ID for the user.
                     new_user.ramp_id = ramp_id.to_string();
@@ -549,7 +554,7 @@ impl UserConfig {
         }
 
         // Get the Airtable information for the user.
-        match airtable_auth.ensure_user(db, company, &new_user).await {
+        match airtable_auth.ensure_user(db, company, &new_user, config).await {
             Ok(airtable_id) => {
                 new_user.airtable_id = airtable_id;
 
@@ -1016,61 +1021,28 @@ xoxo,
     }
 
     /// Send an email to the GSuite user about their account.
-    pub async fn send_email_new_gsuite_user(&self, db: &Database, password: &str) -> Result<()> {
+    pub async fn send_email_new_gsuite_user(
+        &self,
+        db: &Database,
+        password: &str,
+        config: &OnboardingConfig,
+    ) -> Result<()> {
         let company = self.company(db).await?;
 
         // Initialize the SendGrid client.
         let sendgrid = SendGrid::new_from_env();
 
-        // Get the user's aliases if they have one.
-        let aliases = self.aliases.join(", ");
+        let letter = config.create_welcome_letter(&company, self, password);
 
-        // Send the message.
         sendgrid
             .mail_send()
             .send_plain_text(
-                &format!("Your New Email Account: {}", self.email),
-                &format!(
-                    "Yoyoyo {},
-
-We have set up your account on mail.corp.{}. Details for accessing
-are below. You will be required to reset your password the next time you login.
-
-Website for Login: https://mail.corp.{}
-Email: {}
-Password: {}
-Aliases: {}
-
-Make sure you set up two-factor authentication for your account, or in one week
-you will be locked out.
-
-Your GitHub @{} has been added to our organization (https://github.com/{}) and
-various teams within it. GitHub should have sent an email with instructions on
-accepting the invitation to our organization to the email you used
-when you signed up for GitHub. Or you can alternatively accept our invitation
-by going to https://github.com/{}.
-
-If you have any questions or your email does not work please email your
-administrator, who is cc-ed on this email. Spoiler alert it's Jess...
-jess@{}. If you want other email aliases, let Jess know as well.
-
-xoxo,
-  The Onboarding Bot",
-                    self.first_name,
-                    company.domain,
-                    company.domain,
-                    self.email,
-                    password,
-                    aliases,
-                    self.github,
-                    company.github_org,
-                    company.github_org,
-                    company.gsuite_domain,
-                ),
+                &letter.subject,
+                &letter.body,
                 &[self.recovery_email.to_string()],
-                &[self.email.to_string(), format!("jess@{}", company.gsuite_domain)],
-                &[],
-                &format!("admin@{}", company.gsuite_domain),
+                &letter.cc,
+                &letter.bcc,
+                &letter.from,
             )
             .await?;
 
@@ -1926,6 +1898,7 @@ pub async fn sync_users(
     github: &octorust::Client,
     users: BTreeMap<String, UserConfig>,
     company: &Company,
+    config: &AppConfig,
 ) -> Result<()> {
     // Get everything we need to authenticate with GSuite.
     // Initialize the GSuite client.
@@ -2064,10 +2037,11 @@ pub async fn sync_users(
             .skip(skip)
             .take(take)
             .map(|(_, mut user)| {
-                tokio::spawn(crate::enclose! { (db, company, github, gsuite_users_map, okta_users, ramp_users, zoom_users, zoom_users_pending, gusto_users, gusto_users_by_id) async move {
+                tokio::spawn(crate::enclose! { (db, company, config, github, gsuite_users_map, okta_users, ramp_users, zoom_users, zoom_users_pending, gusto_users, gusto_users_by_id) async move {
                 user.sync(
                     &db,
                     &company,
+                    &config,
                     &github,
                     &gsuite_users_map,
                     &okta_users,
@@ -2740,7 +2714,7 @@ pub async fn sync_certificates(
     Ok(())
 }
 
-pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company, config: &AppConfig) -> Result<()> {
     let github = company.authenticate_github()?;
 
     let configs = get_configs_from_repo(&github, company).await?;
@@ -2757,7 +2731,7 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company) -
     sync_groups(db, configs.groups, company).await?;
 
     // Sync users.
-    sync_users(db, &github, configs.users, company).await?;
+    sync_users(db, &github, configs.users, company, config).await?;
 
     // Sync links.
     let (links, certs, ghout, ann) = tokio::join!(
@@ -2918,11 +2892,71 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
+    use chrono::NaiveDate;
     use serde::{Deserialize, Serialize};
     use serde_json;
 
-    use super::{ExternalServices, UserConfig};
+    use super::{ExternalServices, User, UserConfig};
+
+    pub fn mock_user() -> User {
+        User {
+            id: 1,
+            first_name: "random".to_string(),
+            last_name: String::default(),
+            username: String::default(),
+            aliases: vec!["al1".to_string(), "al2".to_string()],
+            recovery_email: String::default(),
+            recovery_phone: String::default(),
+            gender: String::default(),
+            chat: String::default(),
+            github: "random_github_user".to_string(),
+            twitter: String::default(),
+            department: String::default(),
+            manager: String::default(),
+            link_to_manager: vec![],
+            groups: vec![],
+            is_group_admin: false,
+            building: String::default(),
+            link_to_building: vec![],
+            aws_role: String::default(),
+            denied_services: vec![],
+            home_address_street_1: String::default(),
+            home_address_street_2: String::default(),
+            home_address_city: String::default(),
+            home_address_state: String::default(),
+            home_address_zipcode: String::default(),
+            home_address_country: String::default(),
+            home_address_country_code: String::default(),
+            home_address_formatted: String::default(),
+            home_address_latitude: 0.0,
+            home_address_longitude: 0.0,
+            work_address_street_1: String::default(),
+            work_address_street_2: String::default(),
+            work_address_city: String::default(),
+            work_address_state: String::default(),
+            work_address_zipcode: String::default(),
+            work_address_country: String::default(),
+            work_address_country_code: String::default(),
+            work_address_formatted: String::default(),
+            start_date: NaiveDate::from_ymd(2092, 01, 01),
+            birthday: NaiveDate::from_ymd(2092, 01, 01),
+            public_ssh_keys: vec![],
+            typev: String::default(),
+            google_anniversary_event_id: String::default(),
+            email: "random-test@testemaildomain.com".to_string(),
+            gusto_id: String::default(),
+            okta_id: String::default(),
+            google_id: String::default(),
+            airtable_id: String::default(),
+            ramp_id: String::default(),
+            zoom_id: String::default(),
+            geocode_cache: String::default(),
+            working_on: vec![],
+            cio_company_id: 1,
+            airtable_record_id: String::default(),
+        }
+    }
 
     #[derive(Debug, PartialEq, Deserialize, Serialize)]
     struct ServiceWrapper {

@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use log::{info, warn};
 
 use crate::{
+    app_config::AppConfig,
     companies::Company,
     configs::{ExternalServices, Group, User},
     db::Database,
@@ -14,7 +15,7 @@ use crate::{
 #[async_trait]
 pub trait ProviderWriteOps {
     /// Ensure the user exists and has the correct information.
-    async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String>;
+    async fn ensure_user(&self, db: &Database, company: &Company, user: &User, config: &AppConfig) -> Result<String>;
 
     /// Ensure the group exists and has the correct information.
     async fn ensure_group(&self, db: &Database, company: &Company, group: &Group) -> Result<()>;
@@ -41,7 +42,7 @@ pub trait ProviderReadOps {
 
 #[async_trait]
 impl ProviderWriteOps for ramp_api::Client {
-    async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
+    async fn ensure_user(&self, db: &Database, _company: &Company, user: &User, _config: &AppConfig) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Ramp) {
             log::info!(
                 "User {} is denied access to {}. Exiting provisioning.",
@@ -213,7 +214,7 @@ impl ProviderReadOps for ramp_api::Client {
 
 #[async_trait]
 impl ProviderWriteOps for octorust::Client {
-    async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
+    async fn ensure_user(&self, _db: &Database, company: &Company, user: &User, _config: &AppConfig) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::GitHub) {
             log::info!(
                 "User {} is denied access to {}. Exiting provisioning.",
@@ -546,7 +547,7 @@ impl ProviderReadOps for octorust::Client {
 
 #[async_trait]
 impl ProviderWriteOps for gsuite_api::Client {
-    async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
+    async fn ensure_user(&self, db: &Database, company: &Company, user: &User, config: &AppConfig) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Google) {
             log::info!(
                 "User {} is denied access to {}. Exiting provisioning.",
@@ -608,7 +609,8 @@ impl ProviderWriteOps for gsuite_api::Client {
 
         // Send an email to the new user.
         // Do this here in case another step fails.
-        user.send_email_new_gsuite_user(db, &gsuite_user.password).await?;
+        user.send_email_new_gsuite_user(db, &gsuite_user.password, &config.onboarding)
+            .await?;
 
         crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
 
@@ -869,7 +871,7 @@ impl ProviderReadOps for gsuite_api::Client {
 
 #[async_trait]
 impl ProviderWriteOps for okta::Client {
-    async fn ensure_user(&self, db: &Database, company: &Company, user: &User) -> Result<String> {
+    async fn ensure_user(&self, db: &Database, company: &Company, user: &User, _config: &AppConfig) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Okta) {
             log::info!(
                 "User {} is denied access to {}. Exiting provisioning.",
@@ -1262,7 +1264,7 @@ impl ProviderReadOps for okta::Client {
 
 #[async_trait]
 impl ProviderWriteOps for zoom_api::Client {
-    async fn ensure_user(&self, db: &Database, _company: &Company, user: &User) -> Result<String> {
+    async fn ensure_user(&self, db: &Database, _company: &Company, user: &User, _config: &AppConfig) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Zoom) {
             log::info!(
                 "User {} is denied access to {}. Exiting provisioning.",
@@ -1465,7 +1467,7 @@ impl ProviderReadOps for zoom_api::Client {
 
 #[async_trait]
 impl ProviderWriteOps for airtable_api::Airtable {
-    async fn ensure_user(&self, _db: &Database, company: &Company, user: &User) -> Result<String> {
+    async fn ensure_user(&self, _db: &Database, company: &Company, user: &User, _config: &AppConfig) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Airtable) {
             log::info!(
                 "User {} is denied access to {}. Exiting provisioning.",

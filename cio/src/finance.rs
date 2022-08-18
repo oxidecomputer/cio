@@ -17,6 +17,7 @@ use crate::{
         AIRTABLE_ACCOUNTS_PAYABLE_TABLE, AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE, AIRTABLE_EXPENSED_ITEMS_TABLE,
         AIRTABLE_SOFTWARE_VENDORS_TABLE,
     },
+    app_config::FinanceConfig,
     companies::Company,
     configs::{Group, User},
     core::UpdateAirtableRecord,
@@ -386,7 +387,7 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
     }
 }
 
-pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_ramp_transactions(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     // Create the Ramp client.
     let r = company.authenticate_ramp(db).await;
     if let Err(e) = r {
@@ -443,7 +444,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
             .unwrap();
 
         let mut link_to_vendor: Vec<String> = Default::default();
-        let vendor = clean_vendor_name(&transaction.merchant_name);
+        let vendor = clean_vendor_name(&transaction.merchant_name, config);
         // Try to find the merchant in our list of vendors.
         match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
@@ -483,7 +484,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company) -> Resu
     Ok(())
 }
 
-pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     // Create the Ramp client.
     let r = company.authenticate_ramp(db).await;
     if let Err(e) = r {
@@ -517,7 +518,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
         let email = ramp_users.get(&reimbursement.user_id).unwrap();
 
         let mut link_to_vendor: Vec<String> = Default::default();
-        let vendor = clean_vendor_name(&reimbursement.merchant);
+        let vendor = clean_vendor_name(&reimbursement.merchant, config);
         // Try to find the merchant in our list of vendors.
         match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
@@ -558,314 +559,17 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company) -> Re
 }
 
 // Changes the vendor name to one that matches our existing list.
-fn clean_vendor_name(s: &str) -> String {
-    if s == "Clara Labs" {
-        "Claralabs".to_string()
-    } else if s == "StickyLife" {
-        "Sticky Life".to_string()
-    } else if ((s.contains("Paypal") || s.contains("PayPal"))
-        && (s.ends_with("Eb") || s.contains("Ebay") || s.ends_with("Eba")))
-        || s == "Ebay"
-        || s == "Paypal Transaction Allknagoods"
-        || s == "Paypal Transaction Intuitimage"
-        || s == "Paypal Transaction Djjrubs"
-        || s == "PayPal Transaction - Frantiques"
-        || s == "shengmingelectronics via ebay/paypal"
-    {
-        "eBay".to_string()
-    } else if s == "Staybridge Suites Roch" {
-        "Staybridge Suites".to_string()
-    } else if s == "Rocket EMS, Inc" {
-        "Rocket EMS".to_string()
-    } else if s == "Gumroad" {
-        "Chart".to_string()
-    } else if s == "Creative Safety Supply LLC" {
-        "Creative Safety Supply".to_string()
-    } else if s == "USENIX Association" {
-        "USENIX".to_string()
-    } else if s == "Grubhub" {
-        "GrubHub".to_string()
-    } else if s == "Amazon Web Services" {
-        "AWS".to_string()
-    } else if s == "American National Stand" {
-        "ANSI".to_string()
-    } else if s == "Iec" {
-        "IEC".to_string()
-    } else if s == "Ubiquiti Labs, Llc" || s == "Ubiquiti Inc." || s == "Ubiquiti Networks" {
-        "Ubiquiti".to_string()
-    } else if s == "Hioki USA" {
-        "Hioki".to_string()
-    } else if s == "Uber Trip" {
-        "Uber".to_string()
-    } else if s == "IEEE Standards Association" || s == "IEEE SA - Products & Services" {
-        "IEEE".to_string()
-    } else if s == "Solarwinds" {
-        "Pingdom".to_string()
-    } else if s == "GoTanscript" || s == "PAYPAL *GOTRANSCRIP" {
-        "GoTranscript".to_string()
-    } else if s == "Chelsio Communications" || s == "Chelsio Web Store" {
-        "Chelsio".to_string()
-    } else if s == "Elliott Ace Hardware" {
-        "Ace Hardware".to_string()
-    } else if s == "The Linux Foundation" {
-        "Linux Foundation".to_string()
-    } else if s == "SparkFun Electronics" {
-        "SparkFun".to_string()
-    } else if s == "Google G Suite" || s == "Google" {
-        "Google Workspace".to_string()
-    } else if s == "Atlassian" || s == "Atlassian Statuspage" {
-        "Statuspage.io".to_string()
-    } else if s == "Digitalocean" {
-        "DigitalOcean".to_string()
-    } else if s == "Rev.com" {
-        "Rev.ai".to_string()
-    } else if s == "TTI, Inc." {
-        "TTI".to_string()
-    } else if s == "Intuit Quickbooks" || s == "Intuit" {
-        "QuickBooks".to_string()
-    } else if s == "Electronics Online" {
-        "Maplin".to_string()
-    } else if s == "Github" {
-        "GitHub".to_string()
-    } else if s == "Texas Instruments Incorpo" {
-        "Texas Instruments".to_string()
-    } else if s == "Packlane, Inc." {
-        "Packlane".to_string()
-    } else if s == "Yeti" {
-        "YETI".to_string()
-    } else if s == "keychron.com" {
-        "Keychron".to_string()
-    } else if s == "Uline" {
-        "ULINE".to_string()
-    } else if s == "Openphone" {
-        "OpenPhone".to_string()
-    } else if s == "TaskRabbit Support" || s == "Paypal Transaction - Fadi_jaber88" || s == "Venmo" {
-        "TaskRabbit".to_string()
-    } else if s == "Dell Inc" {
-        "Dell".to_string()
-    } else if s == "Sonix AI" {
-        "Sonix.ai".to_string()
-    } else if s == "WPG Americas Inc" {
-        "WPG Americas".to_string()
-    } else if s == "PAYPAL *PC ENGINES" {
-        "PC Engines".to_string()
-    } else if s == "The Linley Group" {
-        "Linley Group".to_string()
-    } else if s == "Finisar Corporation" {
-        "Finisar".to_string()
-    } else if s == "AISense, Inc." {
-        "Otter.ai".to_string()
-    } else if s == "Amazon Business Prime"
-        || s == "Amzn Mktp Uk"
-        || s == "Amazon Digital Services"
-        || s == "Amazon.com"
-        || s == "Amazon.co.uk"
-    {
-        "Amazon".to_string()
-    } else if s == "Walmart Supercenter" {
-        "Walmart".to_string()
-    } else if s == "dmarcian" {
-        "Dmarcian".to_string()
-    } else if s == "Paypal Transaction - Thing" || s == "Paypal" {
-        "PayPal".to_string()
-    } else if s == "Arrow Electronics" {
-        "Arrow".to_string()
-    } else if s == "Adafruit Industries" {
-        "Adafruit".to_string()
-    } else if s == "Various" {
-        "Travel Expense".to_string()
-    } else if s == "JSX Air" {
-        "JSX".to_string()
-    } else if s == "Sublime Hq" {
-        "Sublime".to_string()
-    } else if s == "Dunkin" || s == "Dunkin Donuts" {
-        "Dunkin' Donuts".to_string()
-    } else if s == "National Rental Car" {
-        "National".to_string()
-    } else if s == "Benjamin Leonard Limited" {
-        "Benjamin Leonard".to_string()
-    } else if s == "Friendly Machines LLC" {
-        "Danny Milosavljevic".to_string()
-    } else if s == "Chroma Systems Solutions, Inc." {
-        "Chroma".to_string()
-    } else if s == "IOActive, Inc." {
-        "IOActive".to_string()
-    } else if s == "GoEngineer" {
-        "SolidWorks".to_string()
-    } else if s == "Lattice Store" {
-        "Lattice".to_string()
-    } else if s == "Duro Labs" {
-        "Duro".to_string()
-    } else if s == "TripActions, Inc" {
-        "TripActions".to_string()
-    } else if s == "Hotel Indigo Rochester" {
-        "Hotel Indigo".to_string()
-    } else if s == "TestEquity LLC" {
-        "TestEquity".to_string()
-    } else if s == "FS.COM - Fiberstore" {
-        "Fiber Store".to_string()
-    } else if s == "FAX.PLUS" || s == "FAXPLUS" {
-        "Fax.plus".to_string()
-    } else if s == "The Container Store" {
-        "Container Store".to_string()
-    } else if s == "Avnet Electronics" {
-        "Avnet".to_string()
-    } else if s == "lululemon" {
-        "Lululemon".to_string()
-    } else if s == "HP Store" || s == "HP" {
-        "Hewlett Packard".to_string()
-    } else if s == "The UPS Store" {
-        "UPS".to_string()
-    } else if s == "Microchip Technology" {
-        "Microchip".to_string()
-    } else if s == "Mouser Electronics" {
-        "Mouser".to_string()
-    } else if s == "Amphenol Cables on Demand" {
-        "Amphenol".to_string()
-    } else if s == "Pcbway" || s == "pcbway" {
-        "PCBWay".to_string()
-    } else if s == "Pccablescom Inc" {
-        "PC Cables".to_string()
-    } else if s == "UL Standards Sales Site" {
-        "UL Standards".to_string()
-    } else if s == "Elektronik Billiger Ug" {
-        "Elektronik Billiger".to_string()
-    } else if s == "Dribbble Holdings Ltd." {
-        "Dribbble".to_string()
-    } else if s == "Saleae, Inc." || s == "SALEAE" {
-        "Saleae".to_string()
-    } else if s == "DigiKey Electronics" {
-        "Digi-Key".to_string()
-    } else if s == "McAfee Software" {
-        "McAfee".to_string()
-    } else if s == "GANDI.net" {
-        "Gandi.net".to_string()
-    } else if s == "Buywee.com" {
-        "BuyWee".to_string()
-    } else if s == "Temi.com" {
-        "Temi".to_string()
-    } else if s == "Tequipment" || s == "Tequipment.net" {
-        "TEquipment".to_string()
-    } else if s == "1-800-GOT-JUNK?" {
-        "Junk Removal".to_string()
-    } else if s == "Intuit Transaction - Fiberopticcablesho" {
-        "Fiber Optic Cable Shop".to_string()
-    } else if s == "ZEIT" {
-        "Vercel".to_string()
-    } else if s == "FTDI Chipshop USA" {
-        "FTDI Chip".to_string()
-    } else if s == "RS COMPONENTS LTD" {
-        "RS Components".to_string()
-    } else if s == "Pearson Education" {
-        "Pearson".to_string()
-    } else if s == "Paypal - Sensepeekab" {
-        "Sensepeek".to_string()
-    } else if s == "TAILSCALE" {
-        "Tailscale".to_string()
-    } else if s == "Formidable Labs, LLC" {
-        "Formidable".to_string()
-    } else if s == "YouTube Premium" {
-        "YouTube".to_string()
-    } else if s == "Mindshare Benefits & Insurance Service, Inc" {
-        "Mindshare".to_string()
-    } else if s == "Future Electronics Corp (MA)" || s == "Future Electronics (IL)" {
-        "Future Electronics".to_string()
-    } else if s == "Fifth Column Ltd" {
-        "Fifth Column".to_string()
-    } else if s == "Zoom.us" || s == "Zoom Video Communications" {
-        "Zoom".to_string()
-    } else if s == "Lenovo Group" {
-        "Lenovo".to_string()
-    } else if s == "Hardware Security Training and Research" {
-        "Hardware Security Training".to_string()
-    } else if s == "Rudys Cant Fail Cafe" {
-        "Rudy's Can't Fail Cafe".to_string()
-    } else if s == "The Home Depot" {
-        "Home Depot".to_string()
-    } else if s == "Eventbrite - Ba-1111 Online Int" {
-        "Barefoot Networks Tofino Class".to_string()
-    } else if s == "Owl Lads" {
-        "Owl Labs".to_string()
-    } else if s == "PITCH.COM" {
-        "Pitch".to_string()
-    } else if s == "Microsoft Store" || s == "Microsoft Office / Azure" {
-        "Microsoft".to_string()
-    } else if s == "Intel Corporation" {
-        "Intel".to_string()
-    } else if s == "Advanced Micro Devices, Inc." {
-        "AMD".to_string()
-    } else if s == "Benchmark Electronics, Inc." {
-        "Benchmark".to_string()
-    } else if s == "HumblePod LLC" || s == "HumblePod" {
-        "Chris Hill".to_string()
-    } else if s == "Kruze Consulting, Inc." {
-        "Kruze".to_string()
-    } else if s == "Okta Inc" {
-        "Okta".to_string()
-    } else if s == "EMA Design Automation" {
-        "Cadence".to_string()
-    } else if s == "FOLGER LEVIN LLP" {
-        "Folger Levin".to_string()
-    } else if s == "Sager Electronics" {
-        "Sager".to_string()
-    } else if s == "Morrison & Foerster LLP" {
-        "Morrison & Foerster".to_string()
-    } else if s == "Spec" {
-        "John McMaster".to_string()
-    } else if s == "JN Engineering LLC" {
-        "Jon Nydell".to_string()
-    } else if s == "Wiwynn International Corp" {
-        "Wiwynn".to_string()
-    } else if s == "Tyan Computer Corporation" {
-        "TYAN".to_string()
-    } else if s == "510 Investments LLC" {
-        "510 Investments".to_string()
-    } else if s == "The Association for Computing Machinery" || s == "Association for Computing Machinery" {
-        "ACM".to_string()
-    } else if s == "LATHAM&WATKINS" {
-        "Latham & Watkins".to_string()
-    } else if s == "cleverbridge" || s == "Cleverbridge" {
-        "Parallels".to_string()
-    } else if s == "Expensify, Inc." {
-        "Expensify".to_string()
-    } else if s == "Apple Inc." {
-        "Apple".to_string()
-    } else if s == "Little Snitch Mac Tool" {
-        "Little Snitch".to_string()
-    } else if s == "VMware" {
-        "VMWare".to_string()
-    } else if s == "Bakesale Betty's" {
-        "Bakesale Betty".to_string()
-    } else if s == "Bed Bath and Beyond #26" {
-        "Bed Bath and Beyond".to_string()
-    } else if s == "Delta Air Lines" || s == "Delta" {
-        "Delta Airlines".to_string()
-    } else if s == "National Passenger Rail Corporation" || s == "National Passenger Railroad Corporation" {
-        "Amtrak".to_string()
-    } else if s == "TRINET" || s == "Trinet Cobra" {
-        "TriNet".to_string()
-    } else if s == "Four Points By Sheraton" || s == "Sheraton Hotels and Resorts" {
-        "Four Points by Sheraton San Francisco Bay Bridge".to_string()
-    } else if s == "Clipper card" {
-        "Clipper".to_string()
-    } else if s == "LinkedIn Corporation" {
-        "LinkedIn".to_string()
-    } else if s == "American Portwell Technology, Inc" {
-        "Portwell".to_string()
-    } else if s == "PAYPAL *QUICKLUTION QU" {
-        "Mail Merge for Avery Labels".to_string()
-    } else if s == "Pentagram Design LTD" {
-        "Pentagram".to_string()
-    } else if s == "Blackfish Sourcing Inc." {
-        "Blackfish".to_string()
+fn clean_vendor_name(vendor_name: &str, config: &FinanceConfig) -> String {
+    if let Some(alias) = config.vendor_aliases.get(vendor_name) {
+        alias.to_string()
     } else {
-        s.to_string()
+        vendor_name.to_string()
     }
 }
 
 /// Read the Brex transactions from a csv.
 /// We don't run this except locally.
-pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_brex_transactions(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     let mut path = env::current_dir()?;
     path.push("brex.csv");
 
@@ -909,12 +613,10 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
                 record.employee_email = user.email;
             }
             Err(e) => {
-                if last_name == "Volpe" {
-                    record.employee_email = "jared@oxidecomputer.com".to_string();
-                } else if last_name == "Randal" {
-                    record.employee_email = "allison@oxidecomputer.com".to_string();
+                if let Some(email) = config.legacy_expensify.aliases.get(&last_name) {
+                    record.employee_email = email.to_string();
                 } else {
-                    info!(
+                    warn!(
                         "could not find user with name `{}` last name `{}`: {}",
                         name, last_name, e
                     );
@@ -930,7 +632,7 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company) -> Resu
         }
 
         // Try to link to the correct vendor.
-        let vendor = clean_vendor_name(&record.merchant_name);
+        let vendor = clean_vendor_name(&record.merchant_name, config);
         // Try to find the merchant in our list of vendors.
         match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
@@ -1026,7 +728,7 @@ pub mod bill_com_date_format {
 }
 
 /// Sync accounts payable.
-pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_accounts_payable(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<AccountsPayable>> = company
         .authenticate_airtable(&company.airtable_base_id_finance)
@@ -1035,7 +737,7 @@ pub async fn refresh_accounts_payable(db: &Database, company: &Company) -> Resul
     for bill_record in results {
         let mut bill: NewAccountsPayable = bill_record.fields.into();
 
-        let vendor = clean_vendor_name(&bill.vendor);
+        let vendor = clean_vendor_name(&bill.vendor, config);
         // Try to find the merchant in our list of vendors.
         match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
@@ -1132,7 +834,7 @@ impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
 
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
-pub async fn refresh_expensify_transactions(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_expensify_transactions(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     ExpensedItems::get_from_db(db, company.id)
         .await?
         .update_airtable(db)
@@ -1186,10 +888,8 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
                 record.employee_email = user.email;
             }
             Err(e) => {
-                if last_name == "Volpe" || last_name == "jared" {
-                    record.employee_email = "jared@oxidecomputer.com".to_string();
-                } else if last_name == "Randal" || last_name == "allison" {
-                    record.employee_email = "allison@oxidecomputer.com".to_string();
+                if let Some(email) = config.legacy_expensify.aliases.get(&last_name) {
+                    record.employee_email = email.to_string();
                 } else {
                     warn!(
                         "could not find user with name `{}` last name `{}`: {}",
@@ -1200,7 +900,12 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
         }
 
         // Grab the card_id and set it as part of receipts.
-        if !record.card_id.is_empty() && record.employee_email != "allison@oxidecomputer.com" {
+        if !record.card_id.is_empty()
+            && !config
+                .legacy_expensify
+                .emails_to_exclude
+                .contains(&record.employee_email)
+        {
             // Get the URL.
             let body = reqwest::get(&record.card_id).await?.text().await?;
             let split = body.split(' ');
@@ -1233,7 +938,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
         }
 
         // Try to link to the correct vendor.
-        let vendor = clean_vendor_name(&record.merchant_name);
+        let vendor = clean_vendor_name(&record.merchant_name, config);
         // Try to find the merchant in our list of vendors.
         match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
@@ -1253,7 +958,7 @@ pub async fn refresh_expensify_transactions(db: &Database, company: &Company) ->
 
 /// Read the Bill.com payments from a csv.
 /// We don't run this except locally.
-pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_bill_com_transactions(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     let mut path = env::current_dir()?;
     path.push("bill.com.csv");
 
@@ -1285,7 +990,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
         }
 
         // Try to link to the correct vendor.
-        let vendor = clean_vendor_name(&record.vendor);
+        let vendor = clean_vendor_name(&record.vendor, config);
         // Try to find the merchant in our list of vendors.
         match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
@@ -1305,7 +1010,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company) -> 
     Ok(())
 }
 
-pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
+pub async fn sync_quickbooks(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     // Authenticate QuickBooks.
     let qba = company.authenticate_quickbooks(db).await;
     if let Err(e) = qba {
@@ -1392,7 +1097,7 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
                 .and_time(time_start);
             let time_end = NaiveTime::from_hms_milli(23, 59, 59, 59);
             let edt = purchase.txn_date.and_time(time_end);
-            let merchant_name = clean_merchant_name(&purchase.entity_ref.name);
+            let merchant_name = clean_merchant_name(&purchase.entity_ref.name, config);
             match credit_card_transactions::dsl::credit_card_transactions
                 .filter(
                     credit_card_transactions::dsl::merchant_name
@@ -1428,53 +1133,21 @@ pub async fn sync_quickbooks(db: &Database, company: &Company) -> Result<()> {
     Ok(())
 }
 
-fn clean_merchant_name(s: &str) -> String {
-    if s == "Rudys Cant Fail Cafe" {
-        "Rudy's Can't Fail Cafe".to_string()
-    } else if s == "IKEA" {
-        "Ikea".to_string()
-    } else if s == "Zoomus" {
-        "Zoom.us".to_string()
-    } else if s == "MailChimp" {
-        "Mailchimp".to_string()
-    } else if s == "PAYPAL QUICKLUTION QU" {
-        "PAYPAL *QUICKLUTION QU".to_string()
-    } else if s == "PCISIG" {
-        "PCI-SIG".to_string()
-    } else if s == "PAYPAL PC ENGINES" {
-        "PAYPAL *PC ENGINES".to_string()
-    } else if s == "Paypal Transaction  Eventjarcom Eb" {
-        "Paypal Transaction - Eventjarcom Eb".to_string()
-    } else if s == "IEEE SA  Products  Services" {
-        "IEEE SA - Products & Services".to_string()
-    } else if s == "Zeit" {
-        "ZEIT".to_string()
-    } else if s == "FSCOM  Fiberstore" {
-        "FS.COM - Fiberstore".to_string()
-    } else if s == "keychroncom" {
-        "keychron.com".to_string()
-    } else if s == "DURO ENTERPRISE" {
-        "Duro".to_string()
-    } else if s == "PITCHCOM" {
-        "PITCH.COM".to_string()
-    } else if s == "SP  CHELSIO WEB STORE" {
-        "Chelsio Communications".to_string()
-    } else if s == "Temicom" {
-        "Temi.com".to_string()
-    } else if s == "Ubiquity Global Services Inc" {
-        "Ubiquiti Inc.".to_string()
+fn clean_merchant_name(merchant_name: &str, config: &FinanceConfig) -> String {
+    if let Some(alias) = config.merchant_aliases.get(merchant_name) {
+        alias.to_string()
     } else {
-        s.to_string()
+        merchant_name.to_string()
     }
 }
 
-pub async fn refresh_all_finance(db: &Database, company: &Company) -> Result<()> {
+pub async fn refresh_all_finance(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     let (sv, reim, trans, ap, qb) = tokio::join!(
         refresh_software_vendors(db, company),
-        refresh_ramp_reimbursements(db, company),
-        refresh_ramp_transactions(db, company),
-        refresh_accounts_payable(db, company),
-        sync_quickbooks(db, company),
+        refresh_ramp_reimbursements(db, company, config),
+        refresh_ramp_transactions(db, company, config),
+        refresh_accounts_payable(db, company, config),
+        sync_quickbooks(db, company, config),
     );
 
     sv?;
@@ -1484,55 +1157,4 @@ pub async fn refresh_all_finance(db: &Database, company: &Company) -> Result<()>
     qb?;
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        companies::Company,
-        db::Database,
-        finance::{refresh_bill_com_transactions, refresh_brex_transactions, refresh_expensify_transactions},
-    };
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_finance_bill_com() {
-        crate::utils::setup_logger();
-
-        let db = Database::new().await;
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
-
-        refresh_bill_com_transactions(&db, &oxide).await.unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_finance_expensify() {
-        crate::utils::setup_logger();
-
-        let db = Database::new().await;
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
-
-        refresh_expensify_transactions(&db, &oxide).await.unwrap();
-    }
-
-    #[ignore]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_finance_brex() {
-        crate::utils::setup_logger();
-
-        let db = Database::new().await;
-
-        // Get the company id for Oxide.
-        // TODO: split this out per company.
-        let oxide = Company::get_from_db(&db, "Oxide".to_string()).await.unwrap();
-
-        refresh_brex_transactions(&db, &oxide).await.unwrap();
-    }
 }
