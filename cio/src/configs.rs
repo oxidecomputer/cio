@@ -2904,7 +2904,7 @@ pub mod tests {
             id: 1,
             first_name: "random".to_string(),
             last_name: String::default(),
-            username: String::default(),
+            username: "random_username".to_string(),
             aliases: vec!["al1".to_string(), "al2".to_string()],
             recovery_email: String::default(),
             recovery_phone: String::default(),

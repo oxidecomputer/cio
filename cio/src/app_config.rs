@@ -62,7 +62,8 @@ impl OnboardingConfig {
         letter.subject = letter.subject.replace("{user_email}", &user.email);
         letter.body = letter
             .body
-            .replace("{user_name}", &user.first_name)
+            .replace("{user_first_name}", &user.first_name)
+            .replace("{user_name}", &user.username)
             .replace("{company_domain}", &company.domain)
             .replace("{user_email}", &user.email)
             .replace("{user_password}", password)
@@ -301,7 +302,7 @@ aws_roles = []
 
 [welcome_letter]
 subject = 'Welcome {user_email}'
-body = """Welcome {user_name}. Here is your information
+body = """Welcome {user_first_name}. Here is your information
 username: {user_name}
 domain: {company_domain}
 email: {user_email}
@@ -325,7 +326,7 @@ cc = ['first@testemaildomain.com']
         assert_eq!("Welcome random-test@testemaildomain.com", letter.subject);
         assert_eq!(
             r#"Welcome random. Here is your information
-username: random
+username: random_username
 domain: super.computer
 email: random-test@testemaildomain.com
 password: new_user_password
