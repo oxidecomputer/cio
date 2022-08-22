@@ -301,6 +301,9 @@ pub async fn server(
         scheduler
             .every(15.minutes())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-zoho")});
+        scheduler
+            .every(5.minutes())
+            .run(|| async { log::info!("Scheduler heartbeat") });
 
         // Run the RFD changelog.
         scheduler
