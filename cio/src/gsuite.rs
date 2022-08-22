@@ -267,13 +267,16 @@ pub async fn update_user_aliases(
 
 /// Update a user's groups in GSuite to match our database.
 pub async fn update_user_google_groups(gsuite: &GSuite, user: &User, company: &Company) -> Result<()> {
-    // Iterate over the groups and add the user as a member to it.
-    for group in &user.groups {
-        gsuite.add_user_to_group(company, user, group).await?;
-    }
-
     // Get all the GSuite groups.
     let gsuite_groups = gsuite.list_provider_groups(company).await?;
+
+    // Iterate over the groups and add the user as a member to it.
+    for group in &user.groups {
+        // Ensure that this is a valid group before performing operations
+        if let Some(gsuite_group) = gsuite_groups.iter().find(|g| &g.name == group) {
+            gsuite.add_user_to_group(company, user, &gsuite_group.name).await?;
+        }
+    }
 
     // Iterate over all the groups and if the user is a member and should not
     // be, remove them from the group.
