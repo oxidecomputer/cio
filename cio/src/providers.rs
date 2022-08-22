@@ -296,18 +296,23 @@ impl ProviderWriteOps for octorust::Client {
             );
         }
 
-        // Now we need to ensure our user is a member of all the correct groups.
-        for group in &user.groups {
-            let is_member = self.check_user_is_member_of_group(company, user, group).await?;
-
-            if !is_member {
-                // We need to add the user to the team or update their role, do it now.
-                self.add_user_to_group(company, user, group).await?;
-            }
-        }
-
         // Get all the GitHub teams.
         let gh_teams = self.list_provider_groups(company).await?;
+
+        // Now we need to ensure our user is a member of all the correct groups.
+        for group in &user.groups {
+            // Ensure that this is a valid group before performing operations
+            if let Some(github_team) = gh_teams.iter().find(|team| &team.name == group) {
+                let is_member = self
+                    .check_user_is_member_of_group(company, user, &github_team.name)
+                    .await?;
+
+                if !is_member {
+                    // We need to add the user to the team or update their role, do it now.
+                    self.add_user_to_group(company, user, &github_team.name).await?;
+                }
+            }
+        }
 
         // Iterate over all the teams and if the user is a member and should not
         // be, remove them from the team.
@@ -997,19 +1002,31 @@ impl ProviderWriteOps for okta::Client {
         // Set the okta id so we can perform operations on groups more easily.
         user.okta_id = user_id.to_string();
 
-        // Add the user to their groups.
-        for group in &user.groups {
-            // Check if the user is a member of the group.
-            let is_member = self.check_user_is_member_of_group(company, &user, group).await?;
-
-            if !is_member {
-                // Add the user to the group.
-                self.add_user_to_group(company, &user, group).await?;
-            }
-        }
-
         // Get all the Okta groups.
         let okta_groups = self.list_provider_groups(company).await?;
+
+        // Add the user to their groups.
+        for group in &user.groups {
+            // Ensure that this is a valid group before performing operations
+            if let Some(okta_group) = okta_groups
+                .iter()
+                .find(|o| o.profile.as_ref().map(|profile| &profile.name) == Some(group))
+            {
+                // It is same to unwrap as this block can only be reached if the group bound to
+                // okta_group has a profile field
+                let profile = okta_group.profile.as_ref().unwrap();
+
+                // Check if the user is a member of the group.
+                let is_member = self
+                    .check_user_is_member_of_group(company, &user, &profile.name)
+                    .await?;
+
+                if !is_member {
+                    // Add the user to the group.
+                    self.add_user_to_group(company, &user, &profile.name).await?;
+                }
+            }
+        }
 
         // Iterate over all the groups and if the user is a member and should not
         // be, remove them from the group.
