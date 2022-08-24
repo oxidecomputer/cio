@@ -50,7 +50,7 @@ use std::sync::Arc;
 
 mod error;
 mod inner;
-mod scim;
+pub mod scim;
 
 use crate::inner::{Inner, InnerClient};
 use crate::scim::AirtableScimClient;

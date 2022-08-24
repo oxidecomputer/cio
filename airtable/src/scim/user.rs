@@ -31,11 +31,15 @@ impl AirtableScimUserClient {
         }
     }
 
-    /// From: https://airtable.com/api/enterprise#scimUsersGet
-    pub async fn list(&self) -> Result<ScimListResponse<ScimUser>, ScimError> {
+    /// Lists users as [SCIM User](https://datatracker.ietf.org/doc/html/rfc7643#section-4.1) objects
+    ///
+    /// From: <https://airtable.com/api/enterprise#scimUsersGet>
+    pub async fn list(&self, filter: Option<&ScimListUserOptions>) -> Result<ScimListResponse<ScimUser>, ScimError> {
+        let query_args = filter.map(|options| options.to_query_args());
+
         let req = self
             .inner
-            .request(Method::GET, Self::url(Self::base_endpoint(), None)?, None)?
+            .request(Method::GET, Self::url(Self::base_endpoint(), None)?, query_args)?
             .body("")
             .build()?;
         let resp = self.inner.execute(req).await?;
@@ -43,7 +47,9 @@ impl AirtableScimUserClient {
         to_client_response(resp).await
     }
 
-    /// From: https://airtable.com/api/enterprise#scimUsersGetById
+    /// Get a single user as a [SCIM User](https://datatracker.ietf.org/doc/html/rfc7643#section-4.1) object
+    ///
+    /// From: <https://airtable.com/api/enterprise#scimUsersGetById>
     pub async fn get<T: AsRef<str>>(&self, id: T) -> Result<Option<ScimUser>, ScimError> {
         let req = self
             .inner
@@ -55,7 +61,7 @@ impl AirtableScimUserClient {
         to_client_response(resp).await
     }
 
-    /// From: https://airtable.com/api/enterprise#scimUserCreate
+    /// From: <https://airtable.com/api/enterprise#scimUserCreate>
     pub async fn create(&self, new_user: &ScimCreateUser) -> Result<ScimUser, ScimError> {
         let req = self
             .inner
@@ -67,7 +73,7 @@ impl AirtableScimUserClient {
         to_client_response(resp).await
     }
 
-    /// From: https://airtable.com/api/enterprise#scimUserUpdate
+    /// From: <https://airtable.com/api/enterprise#scimUserUpdate>
     pub async fn update<T: AsRef<str>>(&self, id: T, user: &ScimUpdateUser) -> Result<ScimUser, ScimError> {
         let req = self
             .inner
@@ -79,10 +85,50 @@ impl AirtableScimUserClient {
         to_client_response(resp).await
     }
 
-    // /// From: https://airtable.com/api/enterprise#scimUserPatch
+    // /// From: <https://airtable.com/api/enterprise#scimUserPatch>
     // pub async fn patch<T: AsRef<str>>(&self, id: T, operation: ScimPatchOp) -> Result<ScimUser, ScimError> {
     //     unimplemented!()
     // }
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
+pub struct ScimListUserOptions {
+    pub start_index: Option<u32>,
+    pub count: Option<u32>,
+    pub filter: Option<ScimListUserFilter>,
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
+pub struct ScimListUserFilter {
+    pub user_name: Option<String>,
+}
+
+impl ScimListUserOptions {
+    pub fn to_query_args(&self) -> Vec<(&str, String)> {
+        let mut args = vec![];
+
+        if let Some(start_index) = self.start_index {
+            args.push(("startIndex", start_index.to_string()));
+        }
+
+        if let Some(count) = self.count {
+            args.push(("count", count.to_string()));
+        }
+
+        if let Some(filter) = &self.filter {
+            let mut filter_conditions = String::default();
+
+            if let Some(user_name) = &filter.user_name {
+                filter_conditions.push_str(&format!(r#"userName+eq+"{}""#, user_name));
+            }
+
+            if !filter_conditions.is_empty() {
+                args.push(("fitler", filter_conditions));
+            }
+        }
+
+        args
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]

@@ -173,7 +173,7 @@ mod tests {
             "",
         );
 
-        let resp = client.user().list().await;
+        let resp = client.user().list(None).await;
 
         match resp {
             Err(ScimError::Api(AirtableScimError {
@@ -226,7 +226,7 @@ mod tests {
 }"#,
         );
 
-        let users = client.user().list().await.unwrap();
+        let users = client.user().list(None).await.unwrap();
 
         let expected = ScimListResponse {
             schemas: vec!["urn:ietf:params:scim:api:messages:2.0:ListResponse".to_string()],
