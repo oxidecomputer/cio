@@ -1,9 +1,6 @@
-use chrono::{DateTime, Utc};
-use reqwest::{Method, Response, StatusCode, Url};
-use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+
+use crate::error::AirtableError;
 
 #[derive(Debug)]
 pub enum ScimError {
@@ -41,9 +38,9 @@ impl From<serde_json::Error> for ScimError {
     }
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct AirtableScimError {
-    schemas: Vec<String>,
-    status: u16,
-    detail: String,
+    pub schemas: Vec<String>,
+    pub status: u16,
+    pub detail: String,
 }

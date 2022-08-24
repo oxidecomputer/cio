@@ -1,8 +1,19 @@
+use reqwest::{Method, StatusCode, Url};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+use super::{to_client_response, ScimError, ScimListResponse};
+use crate::Inner;
+
 pub struct AirtableScimGroupClient {
     inner: Inner,
 }
 
 impl AirtableScimGroupClient {
+    pub(super) fn new(inner: Inner) -> Self {
+        Self { inner }
+    }
+
     fn singular_endpoint() -> &'static str {
         "https://airtable.com/scim/v2/Group"
     }

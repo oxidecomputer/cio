@@ -1,9 +1,22 @@
+use chrono::{DateTime, Utc};
+use reqwest::{Method, Url};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
+
+use super::{to_client_response, ScimError, ScimListResponse};
+use crate::Inner;
 
 pub struct AirtableScimUserClient {
     inner: Inner,
 }
 
 impl AirtableScimUserClient {
+    pub(super) fn new(inner: Inner) -> Self {
+        Self { inner }
+    }
+
     fn base_endpoint() -> &'static str {
         "https://airtable.com/scim/v2/Users"
     }
@@ -109,29 +122,29 @@ pub struct ScimUserEmail {
 
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimCreateUser {
-    schemas: Vec<String>,
+    pub schemas: Vec<String>,
     #[serde(rename = "userName")]
-    user_name: String,
-    name: ScimName,
+    pub user_name: String,
+    pub name: ScimName,
     /// The title field is available in create and update requests, but it is not returned in
     /// retrieval responses
     /// See: https://airtable.com/api/enterprise#scimUserFieldTypes
-    title: String,
+    pub title: String,
     #[serde(flatten)]
-    extensions: HashMap<String, HashMap<String, Value>>,
+    pub extensions: HashMap<String, HashMap<String, Value>>,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimUpdateUser {
-    schemas: Option<Vec<String>>,
+    pub schemas: Option<Vec<String>>,
     #[serde(rename = "userName")]
-    user_name: Option<String>,
-    name: Option<ScimName>,
+    pub user_name: Option<String>,
+    pub name: Option<ScimName>,
     /// The title field is available in create and update requests, but it is not returned in
     /// retrieval responses
     /// See: https://airtable.com/api/enterprise#scimUserFieldTypes
-    title: Option<String>,
-    active: Option<bool>,
+    pub title: Option<String>,
+    pub active: Option<bool>,
     #[serde(flatten)]
-    extensions: Option<HashMap<String, HashMap<String, Value>>>,
+    pub extensions: Option<HashMap<String, HashMap<String, Value>>>,
 }

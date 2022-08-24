@@ -1,21 +1,16 @@
-use chrono::{DateTime, Utc};
-use reqwest::{Method, Response, StatusCode, Url};
+use reqwest::{Response, StatusCode};
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::HashMap;
 
-use crate::{
-    error::{
-        AirtableError,
-        AirtableEnterpriseError,
-    },
-    inner::Inner
-};
+use crate::{error::AirtableEnterpriseError, inner::Inner};
 
-mod group;
-pub mod error;
-mod user;
+mod error;
+pub mod group;
+pub mod user;
+
+pub use error::{AirtableScimError, ClientError, ScimError};
+pub use group::AirtableScimGroupClient;
+pub use user::AirtableScimUserClient;
 
 #[derive(Clone)]
 pub struct AirtableScimClient {
@@ -28,15 +23,11 @@ impl AirtableScimClient {
     }
 
     pub fn user(&self) -> AirtableScimUserClient {
-        AirtableScimUserClient {
-            inner: self.inner.clone(),
-        }
+        AirtableScimUserClient::new(self.inner.clone())
     }
 
     pub fn group(&self) -> AirtableScimGroupClient {
-        AirtableScimGroupClient {
-            inner: self.inner.clone(),
-        }
+        AirtableScimGroupClient::new(self.inner.clone())
     }
 }
 
@@ -79,13 +70,14 @@ pub struct ScimListResponse<T> {
 #[cfg(test)]
 mod tests {
     use async_trait::async_trait;
+    use chrono::{DateTime, Utc};
     use http::{header::HeaderValue, Response as HttpResponse, StatusCode};
-    use reqwest::{Client, Method, Request, Response};
+    use reqwest::{Client, Method, Request, Response, Url};
     use reqwest_middleware::{ClientBuilder, ClientWithMiddleware, RequestBuilder};
     use serde_json::{Map, Value};
-    use std::sync::Arc;
+    use std::{collections::HashMap, sync::Arc};
 
-    use super::*;
+    use super::{group::*, user::*, AirtableScimClient, AirtableScimError, ScimError, ScimListResponse};
     use crate::{error::AirtableError, inner::ApiClient};
 
     struct MockClient<T> {
@@ -399,7 +391,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_users_ok() {
-        let client = ok_client(r#"{
+        let client = ok_client(
+            r#"{
     "schemas": [
         "urn:ietf:params:scim:schemas:core:2.0:User"
     ],
@@ -420,7 +413,8 @@ mod tests {
             "value": "foo@bar.com"
         }
     ]
-}"#);
+}"#,
+        );
 
         let mut extensions = HashMap::new();
         let mut user_ext = HashMap::new();
@@ -466,9 +460,7 @@ mod tests {
         let user = client.user().create(&create_user).await.unwrap();
 
         let expected = ScimUser {
-            schemas: vec![
-                "urn:ietf:params:scim:schemas:core:2.0:User".to_string(),
-            ],
+            schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:User".to_string()],
             id: "usr00000000000000".to_string(),
             username: "foo@bar.com".to_string(),
             name: ScimName {
@@ -483,11 +475,9 @@ mod tests {
                 resource_type: "User".to_string(),
                 location: "/scim/v2/Users/usr00000000000000".to_string(),
             },
-            emails: vec![
-                ScimUserEmail {
-                    value: "foo@bar.com".to_string(),
-                },
-            ],
+            emails: vec![ScimUserEmail {
+                value: "foo@bar.com".to_string(),
+            }],
             extensions: HashMap::new(),
         };
 
@@ -561,7 +551,9 @@ mod tests {
             "value": "foo@bam.com"
         }
     }
-}"#).unwrap();
+}"#,
+        )
+        .unwrap();
 
         assert_eq!(
             expected,
@@ -571,7 +563,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_users_ok() {
-        let client = ok_client(r#"{
+        let client = ok_client(
+            r#"{
     "schemas": [
         "urn:ietf:params:scim:schemas:core:2.0:User"
     ],
@@ -592,7 +585,8 @@ mod tests {
             "value": "foo@bar.com"
         }
     ]
-}"#);
+}"#,
+        );
 
         let mut extensions = HashMap::new();
         let mut user_ext = HashMap::new();
@@ -639,9 +633,7 @@ mod tests {
         let user = client.user().update("usr00000000000000", &update_user).await.unwrap();
 
         let expected = ScimUser {
-            schemas: vec![
-                "urn:ietf:params:scim:schemas:core:2.0:User".to_string(),
-            ],
+            schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:User".to_string()],
             id: "usr00000000000000".to_string(),
             username: "foo@bar.com".to_string(),
             name: ScimName {
@@ -656,11 +648,9 @@ mod tests {
                 resource_type: "User".to_string(),
                 location: "/scim/v2/Users/usr00000000000000".to_string(),
             },
-            emails: vec![
-                ScimUserEmail {
-                    value: "foo@bar.com".to_string(),
-                },
-            ],
+            emails: vec![ScimUserEmail {
+                value: "foo@bar.com".to_string(),
+            }],
             extensions: HashMap::new(),
         };
 
