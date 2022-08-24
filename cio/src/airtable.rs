@@ -17,19 +17,19 @@ pub struct AirtableLocation {
 pub struct WorkspaceConfig {
     pub id: String,
     pub group_permissions: Option<Vec<GroupPermission>>,
-    pub bases: HashMap<String, BaseConfig>
+    pub bases: HashMap<String, BaseConfig>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct BaseConfig {
     pub id: String,
     pub group_permissions: Option<Vec<GroupPermission>>,
-    pub tables: HashMap<String, TableConfig>
+    pub tables: HashMap<String, TableConfig>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct TableConfig {
-    pub id: String
+    pub id: String,
 }
 
 #[derive(Debug, Deserialize)]
