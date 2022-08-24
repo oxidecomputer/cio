@@ -628,7 +628,7 @@ pub async fn handle_slack_interactive(
                 oxide_tracking_link: Default::default(),
                 shipped_time: Default::default(),
             };
-            shipment.expand(db, &company).await?;
+            shipment.expand().await?;
 
             // Upsert it into the database.
             shipment.upsert(db).await?;
@@ -836,7 +836,7 @@ pub async fn handle_airtable_applicants_update(
                 .envelopes
                 .create_offer_letter(&db_applicant);
             db_applicant
-                .do_docusign_offer(&api_context.db, &ds, &company, offer_letter)
+                .do_docusign_offer(&api_context.db, &ds, offer_letter)
                 .await?;
 
             let piia_letter = api_context
@@ -845,22 +845,12 @@ pub async fn handle_airtable_applicants_update(
                 .unwrap()
                 .envelopes
                 .create_piia_letter(&db_applicant);
-            db_applicant
-                .do_docusign_piia(&api_context.db, &ds, &company, piia_letter)
-                .await?;
+            db_applicant.do_docusign_piia(&api_context.db, &ds, piia_letter).await?;
         }
     }
 
     // Update the row in our database.
     db_applicant.update(&api_context.db).await?;
-
-    if status_changed {
-        let company = db_applicant.company(&api_context.db).await?;
-
-        db_applicant
-            .send_slack_notification_status_changed(&api_context.db, &company)
-            .await?;
-    }
 
     info!("applicant {} updated successfully", applicant.email);
     Ok(())
@@ -1250,11 +1240,9 @@ pub async fn handle_airtable_shipments_inbound_create(
         return Ok(());
     }
 
-    let company = record.company(db).await?;
-
     let mut new_shipment: NewInboundShipment = record.into();
 
-    new_shipment.expand(db, &company).await?;
+    new_shipment.expand().await?;
     let mut shipment = new_shipment.upsert_in_db(db).await?;
     if shipment.airtable_record_id.is_empty() {
         shipment.airtable_record_id = event.record_id;
@@ -1308,9 +1296,7 @@ pub async fn handle_shippo_tracking_update(
     if let Some(mut shipment) =
         InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()).await
     {
-        let company = shipment.company(&api_context.db).await?;
-
-        shipment.expand(&api_context.db, &company).await?;
+        shipment.expand(&api_context.db).await?;
     }
 
     // Update the outbound shipment if it exists.
@@ -1373,14 +1359,8 @@ pub async fn handle_checkr_background_update(
         // Keep the fields from Airtable we need just in case they changed.
         applicant.keep_fields_from_airtable(&api_context.db).await;
 
-        let company = applicant.company(&api_context.db).await?;
-
-        let mut send_notification = false;
-
         // Set the status for the report.
         if event.data.object.package.contains("premium_criminal") {
-            send_notification = applicant.criminal_background_check_status != event.data.object.status;
-
             applicant.criminal_background_check_status = event.data.object.status.to_string();
         }
         if event.data.object.package.contains("motor_vehicle") {
@@ -1389,12 +1369,6 @@ pub async fn handle_checkr_background_update(
 
         // Update the applicant.
         applicant.update(&api_context.db).await?;
-
-        if send_notification {
-            applicant
-                .send_slack_notification_background_check_status_changed(&api_context.db, &company)
-                .await?;
-        }
     }
 
     Ok(())

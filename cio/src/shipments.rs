@@ -106,16 +106,6 @@ impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
 }
 
 impl NewInboundShipment {
-    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
-        let mut msg: FormattedMessage = self.clone().into();
-        // Set the channel.
-        msg.channel = company.slack_channel_shipments.to_string();
-        // Post the message.
-        company.post_to_slack_channel(db, &msg).await?;
-
-        Ok(())
-    }
-
     pub fn oxide_tracking_link(&self) -> String {
         format!("https://track.oxide.computer/{}/{}", self.carrier, self.tracking_number)
     }
@@ -146,7 +136,7 @@ impl NewInboundShipment {
     }
 
     /// Get the details about the shipment from the tracking API.
-    pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
+    pub async fn expand(&mut self) -> Result<()> {
         // Create the shippo client.
         let shippo = Shippo::new_from_env();
 
@@ -199,14 +189,8 @@ impl NewInboundShipment {
             .register_tracking_webhook(&carrier, &self.tracking_number)
             .await?;
 
-        let send_notification = self.tracking_status != status.status;
-
         // Set the new status.
         self.tracking_status = status.status.to_string();
-
-        if send_notification && !self.tracking_status.is_empty() {
-            self.send_slack_notification(db, company).await?;
-        }
 
         Ok(())
     }
@@ -214,16 +198,11 @@ impl NewInboundShipment {
 
 impl InboundShipment {
     /// Get the details about the shipment from the tracking API.
-    pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
+    pub async fn expand(&mut self, db: &Database) -> Result<()> {
         let mut ns: NewInboundShipment = self.clone().into();
-        ns.expand(db, company).await?;
+        ns.expand().await?;
         ns.upsert(db).await?;
         Ok(())
-    }
-
-    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
-        let n: NewInboundShipment = self.into();
-        n.send_slack_notification(db, company).await
     }
 }
 
@@ -629,18 +608,6 @@ impl From<shipbob::types::OrderStatus> for crate::shipment_status::Status {
     }
 }
 
-impl NewOutboundShipment {
-    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
-        let mut msg: FormattedMessage = self.clone().into();
-        // Set the channel.
-        msg.channel = company.slack_channel_shipments.to_string();
-        // Post the message.
-        company.post_to_slack_channel(db, &msg).await?;
-
-        Ok(())
-    }
-}
-
 /// Convert the outbound shipment into a Slack message.
 impl From<NewOutboundShipment> for FormattedMessage {
     fn from(item: NewOutboundShipment) -> Self {
@@ -895,7 +862,7 @@ impl OutboundShipments {
         for mut shipment in shipments {
             shipment.pickup_date = Some(pickup_date);
             shipment
-                .set_status(db, crate::shipment_status::Status::WaitingForPickup, company)
+                .set_status(crate::shipment_status::Status::WaitingForPickup)
                 .await?;
             shipment.update(db).await?;
         }
@@ -979,11 +946,6 @@ impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
 }
 
 impl OutboundShipment {
-    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
-        let n: NewOutboundShipment = self.into();
-        n.send_slack_notification(db, company).await
-    }
-
     fn populate_formatted_address(&mut self) {
         let mut street_address = self.street_1.to_string();
         if !self.street_2.is_empty() {
@@ -1237,20 +1199,9 @@ The Shipping Bot",
 
     /// Sends a Slack notification if the status of the shipment changed.
     /// And changes the status of the shipment.
-    pub async fn set_status(
-        &mut self,
-        db: &Database,
-        status: crate::shipment_status::Status,
-        company: &Company,
-    ) -> Result<()> {
-        let send_notification = self.status != status.to_string();
-
+    pub async fn set_status(&mut self, status: crate::shipment_status::Status) -> Result<()> {
         // Set the new status.
         self.status = status.to_string();
-
-        if send_notification {
-            self.send_slack_notification(db, company).await?;
-        }
 
         Ok(())
     }
@@ -1273,7 +1224,7 @@ The Shipping Bot",
         Ok(())
     }
 
-    pub async fn expand(&mut self, db: &Database, company: &Company) -> Result<()> {
+    pub async fn expand(&mut self, db: &Database) -> Result<()> {
         // Update the formatted address.
         self.populate_formatted_address();
 
@@ -1336,17 +1287,11 @@ The Shipping Bot",
             .register_tracking_webhook(&carrier, &self.tracking_number)
             .await?;
 
-        let send_notification = self.tracking_status != status.status;
-
         // Set the new status.
         self.tracking_status = status.status.to_string();
 
         // Update in the database.
         self.update(db).await?;
-
-        if send_notification && !self.tracking_status.is_empty() {
-            self.send_slack_notification(db, company).await?;
-        }
 
         Ok(())
     }
@@ -1371,8 +1316,7 @@ The Shipping Bot",
 
         // If we did local_pickup, we can return early here.
         if self.local_pickup {
-            self.set_status(db, crate::shipment_status::Status::PickedUp, &company)
-                .await?;
+            self.set_status(crate::shipment_status::Status::PickedUp).await?;
             self.update(db).await?;
             // Return early.
             return Ok(());
@@ -1435,21 +1379,17 @@ The Shipping Bot",
                     self.shipped_time = tracking_status.status_date;
                 }
 
-                self.set_status(db, crate::shipment_status::Status::Shipped, &company)
-                    .await?;
+                self.set_status(crate::shipment_status::Status::Shipped).await?;
             }
             if tracking_status.status == *"DELIVERED" {
                 self.delivered_time = tracking_status.status_date;
-                self.set_status(db, crate::shipment_status::Status::Delivered, &company)
-                    .await?;
+                self.set_status(crate::shipment_status::Status::Delivered).await?;
             }
             if tracking_status.status == *"RETURNED" {
-                self.set_status(db, crate::shipment_status::Status::Returned, &company)
-                    .await?;
+                self.set_status(crate::shipment_status::Status::Returned).await?;
             }
             if tracking_status.status == *"FAILURE" {
-                self.set_status(db, crate::shipment_status::Status::Failure, &company)
-                    .await?;
+                self.set_status(crate::shipment_status::Status::Failure).await?;
             }
 
             // Return early.
@@ -1582,8 +1522,7 @@ The Shipping Bot",
                     }
                     self.messages = messages.trim().to_string();
                 } else {
-                    self.set_status(db, crate::shipment_status::Status::LabelCreated, &company)
-                        .await?;
+                    self.set_status(crate::shipment_status::Status::LabelCreated).await?;
                 }
 
                 // Save it in Airtable here, in case one of the below steps fails.
@@ -1598,8 +1537,7 @@ The Shipping Bot",
                 self.print_label(db).await?;
                 // Print the receipt.
                 self.print_receipt(db).await?;
-                self.set_status(db, crate::shipment_status::Status::LabelPrinted, &company)
-                    .await?;
+                self.set_status(crate::shipment_status::Status::LabelPrinted).await?;
 
                 // Send an email to us that we need to package the shipment.
                 self.send_email_internally(db).await?;
@@ -1650,7 +1588,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
 
                     // Expand the shipment.
                     // This will also update the database.
-                    s.expand(db, company).await?;
+                    s.expand(db).await?;
                 }
             }
             Err(e) => {
@@ -1777,8 +1715,7 @@ async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Res
 
         // The shipment is actually new, lets send the notification for the status
         // as queued then.
-        s.set_status(db, crate::shipment_status::Status::Queued, company)
-            .await?;
+        s.set_status(crate::shipment_status::Status::Queued).await?;
 
         // Update the shipment from shippo.
         s.create_or_get_shippo_shipment(db).await?;
@@ -1808,7 +1745,7 @@ pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Resu
         }
 
         let mut new_shipment: NewInboundShipment = record.fields.into();
-        new_shipment.expand(db, company).await?;
+        new_shipment.expand().await?;
         new_shipment.cio_company_id = company.id;
         let mut shipment = new_shipment.upsert_in_db(db).await?;
         if shipment.airtable_record_id.is_empty() {

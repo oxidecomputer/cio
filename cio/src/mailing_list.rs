@@ -129,12 +129,7 @@ impl From<NewMailingListSubscriber> for FormattedMessage {
     fn from(item: NewMailingListSubscriber) -> Self {
         let time = item.human_duration();
 
-        let mut msg: String = Default::default();
-        if !item.name.trim().is_empty() {
-            msg += &format!("*{}*", item.name);
-        }
-        msg += &format!(" <mailto:{}|{}>", item.email, item.email);
-        msg = msg.trim().to_string();
+        let msg: String = Default::default();
 
         let mut interest: MessageBlock = Default::default();
         if !item.interest.is_empty() {

@@ -90,7 +90,7 @@ impl From<NewRackLineSubscriber> for FormattedMessage {
     fn from(item: NewRackLineSubscriber) -> Self {
         let time = item.human_duration();
 
-        let msg = format!("*{}* <mailto:{}|{}>", item.name, item.email, item.email);
+        let msg = String::default();
 
         let mut interest: MessageBlock = Default::default();
         if !item.interest.is_empty() {
