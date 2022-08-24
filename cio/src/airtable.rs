@@ -1,3 +1,53 @@
+use serde::Deserialize;
+use std::collections::HashMap;
+
+#[derive(Debug, Deserialize)]
+pub struct AirtableConfig {
+    pub account_id: String,
+    pub workspaces: HashMap<String, WorkspaceConfig>,
+}
+
+pub struct AirtableLocation {
+    pub workspace_id: String,
+    pub base_id: String,
+    pub table_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorkspaceConfig {
+    pub id: String,
+    pub group_permissions: Option<Vec<GroupPermission>>,
+    pub bases: HashMap<String, BaseConfig>
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BaseConfig {
+    pub id: String,
+    pub group_permissions: Option<Vec<GroupPermission>>,
+    pub tables: HashMap<String, TableConfig>
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TableConfig {
+    pub id: String
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GroupPermission {
+    pub group: String,
+    pub permission: AirtablePermission,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AirtablePermission {
+    Create,
+    Edit,
+    Comment,
+    Read,
+}
+
+// Legacy table definitions
 pub static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 pub static AIRTABLE_RACK_LINE_SIGNUPS_TABLE: &str = "Rack Line Signups";
 pub static AIRTABLE_CUSTOMER_INTERACTIONS_TABLE: &str = "Interactions";

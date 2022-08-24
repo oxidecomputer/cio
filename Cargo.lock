@@ -75,7 +75,9 @@ name = "airtable-api"
 version = "0.1.36"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
+ "http",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
@@ -83,6 +85,8 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "tokio",
+ "url",
 ]
 
 [[package]]
