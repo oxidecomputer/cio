@@ -99,39 +99,3 @@ impl ApiClient for InnerClient {
         Ok(self.client.execute(request).await?)
     }
 }
-
-// fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Result<Request>
-// where
-//     B: Serialize,
-// {
-//     let base = Url::parse(ENDPOINT)?;
-//     let url = base.join(&(self.inner.base_id.to_string() + "/" + &path))?;
-
-//     let bt = format!("Bearer {}", self.get_key());
-//     let bearer = header::HeaderValue::from_str(&bt)?;
-
-//     // Set the default headers.
-//     let mut headers = header::HeaderMap::new();
-//     headers.append(header::AUTHORIZATION, bearer);
-//     headers.append(
-//         header::CONTENT_TYPE,
-//         header::HeaderValue::from_static("application/json"),
-//     );
-
-//     let mut rb = self.inner.client.request(method.clone(), url).headers(headers);
-
-//     match query {
-//         None => (),
-//         Some(val) => {
-//             rb = rb.query(&val);
-//         }
-//     }
-
-//     // Add the body, this is to ensure our GET and DELETE calls succeed.
-//     if method != Method::GET && method != Method::DELETE {
-//         rb = rb.json(&body);
-//     }
-
-//     // Build the request.
-//     Ok(rb.build()?)
-// }
