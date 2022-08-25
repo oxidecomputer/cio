@@ -5,13 +5,15 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::{error::AirtableEnterpriseError, inner::Inner};
 
 mod error;
-pub mod group;
-pub mod user;
+mod group;
+mod user;
 
-pub use error::{AirtableScimError, ClientError, ScimError};
-pub use group::AirtableScimGroupClient;
-pub use user::AirtableScimUserClient;
+pub use self::error::{AirtableScimError, ClientError, ScimError};
+pub use self::group::AirtableScimGroupClient;
+pub use self::user::AirtableScimUserClient;
 
+/// Accessor for interacting with the Airtable Enterprise SCIM endpoints. Provides access to the
+/// [AirtableScimUserClient] and the [AirtableScimGroupClient]
 #[derive(Clone)]
 pub struct AirtableScimClient {
     inner: Inner,
@@ -22,10 +24,12 @@ impl AirtableScimClient {
         Self { inner }
     }
 
+    /// Get a client for managing SCIM users
     pub fn user(&self) -> AirtableScimUserClient {
         AirtableScimUserClient::new(self.inner.clone())
     }
 
+    /// Get a client for managing SCIM groups
     pub fn group(&self) -> AirtableScimGroupClient {
         AirtableScimGroupClient::new(self.inner.clone())
     }
@@ -514,18 +518,18 @@ mod tests {
         );
 
         let update_user = ScimUpdateUser {
-            schemas: Some(vec![
+            schemas: vec![
                 "urn:ietf:params:scim:schemas:core:2.0:User".to_string(),
                 "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User".to_string(),
-            ]),
-            user_name: Some("foo@bar.com".to_string()),
-            name: Some(ScimName {
+            ],
+            user_name: "foo@bar.com".to_string(),
+            name: ScimName {
                 family_name: "Jane".to_string(),
                 given_name: "Doe".to_string(),
-            }),
-            title: Some("Manager".to_string()),
-            active: Some(false),
-            extensions: Some(extensions),
+            },
+            title: "Manager".to_string(),
+            active: false,
+            extensions: extensions,
         };
 
         let expected: ScimUpdateUser = serde_json::from_str(
@@ -616,18 +620,18 @@ mod tests {
         );
 
         let update_user = ScimUpdateUser {
-            schemas: Some(vec![
+            schemas: vec![
                 "urn:ietf:params:scim:schemas:core:2.0:User".to_string(),
                 "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User".to_string(),
-            ]),
-            user_name: Some("foo@bar.com".to_string()),
-            name: Some(ScimName {
+            ],
+            user_name: "foo@bar.com".to_string(),
+            name: ScimName {
                 family_name: "Jane".to_string(),
                 given_name: "Doe".to_string(),
-            }),
-            title: Some("Manager".to_string()),
-            active: Some(false),
-            extensions: Some(extensions),
+            },
+            title: "Manager".to_string(),
+            active: false,
+            extensions: extensions,
         };
 
         let user = client.user().update("usr00000000000000", &update_user).await.unwrap();
@@ -679,7 +683,7 @@ mod tests {
 }"#,
         );
 
-        let groups = client.group().list().await.unwrap();
+        let groups = client.group().list(None).await.unwrap();
 
         let expected = ScimListResponse {
             schemas: vec!["urn:ietf:params:scim:api:messages:2.0:ListResponse".to_string()],

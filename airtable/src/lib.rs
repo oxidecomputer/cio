@@ -50,10 +50,14 @@ use std::sync::Arc;
 
 mod error;
 mod inner;
-pub mod scim;
+mod scim;
 
-use crate::inner::{Inner, InnerClient};
-use crate::scim::AirtableScimClient;
+use inner::{Inner, InnerClient};
+pub use self::scim::{
+    AirtableScimClient,
+    AirtableScimGroupClient,
+    AirtableScimUserClient,
+};
 
 /// Endpoint for the Airtable API.
 const ENDPOINT: &str = "https://api.airtable.com/v0/";
@@ -528,6 +532,13 @@ impl Airtable {
         Ok(())
     }
 
+    /// Get a SCIM client for interacting with the Airtable Enterprise SCIM endpoints. This client
+    /// can be used for managing Airtable users and groups. This functionality is only available
+    /// for Airtable accounts tied to an Enterprise domain and using SSO. See the
+    /// [https://airtable.com/api/enterprise#scim](Airtable Enterprise SCIM documentation) for more
+    /// information.
+    ///
+    /// From: <https://airtable.com/api/enterprise#scim>
     pub fn scim(&self) -> AirtableScimClient {
         AirtableScimClient::new(self.inner.clone())
     }

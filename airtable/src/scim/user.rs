@@ -8,6 +8,9 @@ use std::collections::HashMap;
 use super::{to_client_response, ScimError, ScimListResponse};
 use crate::Inner;
 
+/// A client for making requests to the Airtable Enterprise SCIM Group endpoints. An [AirtableScimUserClient]
+/// can be retrieved from an [AirtableScimClient][crate::AirtableScimClient]. Supports listing, reading, creating,
+/// and updating users as defined by the Airtable SCIM Users API. Patching users is not currently supported.
 pub struct AirtableScimUserClient {
     inner: Inner,
 }
@@ -61,6 +64,8 @@ impl AirtableScimUserClient {
         to_client_response(resp).await
     }
 
+    /// Create a new user from a [SCIM User](https://datatracker.ietf.org/doc/html/rfc7643#section-4.1) object
+    ///
     /// From: <https://airtable.com/api/enterprise#scimUserCreate>
     pub async fn create(&self, new_user: &ScimCreateUser) -> Result<ScimUser, ScimError> {
         let req = self
@@ -73,6 +78,9 @@ impl AirtableScimUserClient {
         to_client_response(resp).await
     }
 
+    /// Replace a user with a new a [SCIM User](https://datatracker.ietf.org/doc/html/rfc7643#section-4.1) object. Additionally during an update
+    /// the `active` flag should be set to determine if the user is activated.
+    ///
     /// From: <https://airtable.com/api/enterprise#scimUserUpdate>
     pub async fn update<T: AsRef<str>>(&self, id: T, user: &ScimUpdateUser) -> Result<ScimUser, ScimError> {
         let req = self
@@ -182,15 +190,39 @@ pub struct ScimCreateUser {
 
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimUpdateUser {
-    pub schemas: Option<Vec<String>>,
+    pub schemas: Vec<String>,
     #[serde(rename = "userName")]
-    pub user_name: Option<String>,
-    pub name: Option<ScimName>,
+    pub user_name: String,
+    pub name: ScimName,
     /// The title field is available in create and update requests, but it is not returned in
     /// retrieval responses
     /// See: https://airtable.com/api/enterprise#scimUserFieldTypes
-    pub title: Option<String>,
-    pub active: Option<bool>,
+    pub title: String,
+    pub active: bool,
     #[serde(flatten)]
-    pub extensions: Option<HashMap<String, HashMap<String, Value>>>,
+    pub extensions: HashMap<String, HashMap<String, Value>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ScimListUserFilter, ScimListUserOptions};
+
+    #[test]
+    fn test_serialize_list_options() {
+        let options = ScimListUserOptions {
+            start_index: Some(5),
+            count: Some(10),
+            filter: Some(ScimListUserFilter {
+                user_name: Some("foo@bar.com".to_string()),
+            }),
+        };
+
+        let expected = vec![
+            ("startIndex", "5".to_string()),
+            ("count", "10".to_string()),
+            ("fitler", r#"userName+eq+"foo@bar.com""#.to_string()),
+        ];
+
+        assert_eq!(expected, options.to_query_args());
+    }
 }
