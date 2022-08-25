@@ -73,17 +73,9 @@ pub struct ScimListResponse<T> {
 
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub enum ScimPatchOperation {
-    Add {
-        path: String,
-        value: String,
-    },
-    Remove {
-        path: String,
-    },
-    Replace {
-        path: String,
-        value: String,
-    }
+    Add { path: String, value: String },
+    Remove { path: String },
+    Replace { path: String, value: String },
 }
 
 #[cfg(test)]

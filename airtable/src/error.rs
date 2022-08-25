@@ -86,7 +86,11 @@ impl fmt::Display for ClientErrorKind {
     }
 }
 
-impl Error for ClientError {}
+impl Error for ClientError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.error)
+    }
+}
 
 // Modeling for Airtable Enterprise API errors (non-scim)
 #[derive(Debug, Clone, Deserialize, Serialize)]
