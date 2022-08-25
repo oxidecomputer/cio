@@ -535,7 +535,7 @@ impl Airtable {
     /// Get a SCIM client for interacting with the Airtable Enterprise SCIM endpoints. This client
     /// can be used for managing Airtable users and groups. This functionality is only available
     /// for Airtable accounts tied to an Enterprise domain and using SSO. See the
-    /// [https://airtable.com/api/enterprise#scim](Airtable Enterprise SCIM documentation) for more
+    /// [Airtable Enterprise SCIM documentation](https://airtable.com/api/enterprise#scim) for more
     /// information.
     ///
     /// From: <https://airtable.com/api/enterprise#scim>
