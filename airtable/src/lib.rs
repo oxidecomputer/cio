@@ -52,12 +52,8 @@ mod error;
 mod inner;
 mod scim;
 
+pub use self::scim::{AirtableScimClient, AirtableScimGroupClient, AirtableScimUserClient};
 use inner::{Inner, InnerClient};
-pub use self::scim::{
-    AirtableScimClient,
-    AirtableScimGroupClient,
-    AirtableScimUserClient,
-};
 
 /// Endpoint for the Airtable API.
 const ENDPOINT: &str = "https://api.airtable.com/v0/";
