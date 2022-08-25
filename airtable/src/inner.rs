@@ -3,7 +3,7 @@ use reqwest::{header, Method, Request, Response, Url};
 use reqwest_middleware::RequestBuilder;
 use std::sync::Arc;
 
-use crate::error::AirtableError;
+use crate::error::ClientError;
 
 pub type Inner = Arc<dyn ApiClient>;
 
@@ -44,8 +44,8 @@ pub trait ApiClient {
         method: Method,
         url: Url,
         query: Option<Vec<(&str, String)>>,
-    ) -> Result<RequestBuilder, AirtableError>;
-    async fn execute(&self, request: Request) -> Result<Response, AirtableError>;
+    ) -> Result<RequestBuilder, ClientError>;
+    async fn execute(&self, request: Request) -> Result<Response, ClientError>;
 }
 
 #[async_trait]
@@ -71,9 +71,9 @@ impl ApiClient for InnerClient {
         method: Method,
         url: Url,
         query: Option<Vec<(&str, String)>>,
-    ) -> Result<RequestBuilder, AirtableError> {
+    ) -> Result<RequestBuilder, ClientError> {
         let bt = format!("Bearer {}", self.key());
-        let bearer = header::HeaderValue::from_str(&bt).map_err(|_| AirtableError::FailedToConstructRequest)?;
+        let bearer = header::HeaderValue::from_str(&bt)?;
 
         // Set the default headers.
         let mut headers = header::HeaderMap::new();
@@ -95,7 +95,7 @@ impl ApiClient for InnerClient {
         Ok(rb)
     }
 
-    async fn execute(&self, request: Request) -> Result<Response, AirtableError> {
+    async fn execute(&self, request: Request) -> Result<Response, ClientError> {
         Ok(self.client.execute(request).await?)
     }
 }

@@ -8,7 +8,7 @@ mod error;
 mod group;
 mod user;
 
-pub use self::error::{AirtableScimError, ClientError, ScimError};
+pub use self::error::{AirtableScimApiError, ScimClientError};
 pub use self::group::AirtableScimGroupClient;
 pub use self::user::AirtableScimUserClient;
 
@@ -35,7 +35,7 @@ impl AirtableScimClient {
     }
 }
 
-async fn to_client_response<T>(response: Response) -> Result<T, ScimError>
+async fn to_client_response<T>(response: Response) -> Result<T, ScimClientError>
 where
     T: DeserializeOwned,
 {
@@ -46,15 +46,15 @@ where
         Ok(data)
     } else if status == StatusCode::UNAUTHORIZED {
         let error: AirtableEnterpriseError = response.json().await?;
-        Err(ScimError::Api(AirtableScimError {
+        Err(ScimClientError::Api(AirtableScimApiError {
             schemas: vec![],
             status: status.as_u16(),
             detail: error.error.message,
         }))
     } else {
         // Capture SCIM errors
-        let error: AirtableScimError = response.json().await?;
-        Err(ScimError::Api(error))
+        let error: AirtableScimApiError = response.json().await?;
+        Err(ScimClientError::Api(error))
     }
 }
 
@@ -71,6 +71,21 @@ pub struct ScimListResponse<T> {
     pub items_per_page: u32,
 }
 
+#[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
+pub enum ScimPatchOperation {
+    Add {
+        path: String,
+        value: String,
+    },
+    Remove {
+        path: String,
+    },
+    Replace {
+        path: String,
+        value: String,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use async_trait::async_trait;
@@ -81,8 +96,8 @@ mod tests {
     use serde_json::{Map, Value};
     use std::{collections::HashMap, sync::Arc};
 
-    use super::{group::*, user::*, AirtableScimClient, AirtableScimError, ScimError, ScimListResponse};
-    use crate::{error::AirtableError, inner::ApiClient};
+    use super::{group::*, user::*, AirtableScimApiError, AirtableScimClient, ScimClientError, ScimListResponse};
+    use crate::{error::ClientError, inner::ApiClient};
 
     struct MockClient<T> {
         exec: T,
@@ -116,13 +131,13 @@ mod tests {
             method: Method,
             url: Url,
             _query: Option<Vec<(&str, String)>>,
-        ) -> Result<RequestBuilder, AirtableError> {
+        ) -> Result<RequestBuilder, ClientError> {
             let rb = self.client.request(method.clone(), url);
 
             Ok(rb)
         }
 
-        async fn execute(&self, request: Request) -> Result<Response, AirtableError> {
+        async fn execute(&self, request: Request) -> Result<Response, ClientError> {
             let handler_resp = (self.exec)(request);
 
             if let Some(handler_resp) = handler_resp {
@@ -180,7 +195,7 @@ mod tests {
         let resp = client.user().list(None).await;
 
         match resp {
-            Err(ScimError::Api(AirtableScimError {
+            Err(ScimClientError::Api(AirtableScimApiError {
                 schemas,
                 status,
                 detail,
@@ -357,7 +372,7 @@ mod tests {
                 family_name: "Jane".to_string(),
                 given_name: "Doe".to_string(),
             },
-            title: "Manager".to_string(),
+            title: Some("Manager".to_string()),
             extensions,
         };
 
@@ -457,7 +472,7 @@ mod tests {
                 family_name: "Jane".to_string(),
                 given_name: "Doe".to_string(),
             },
-            title: "Manager".to_string(),
+            title: Some("Manager".to_string()),
             extensions,
         };
 
@@ -527,7 +542,7 @@ mod tests {
                 family_name: "Jane".to_string(),
                 given_name: "Doe".to_string(),
             },
-            title: "Manager".to_string(),
+            title: Some("Manager".to_string()),
             active: false,
             extensions: extensions,
         };
@@ -629,7 +644,7 @@ mod tests {
                 family_name: "Jane".to_string(),
                 given_name: "Doe".to_string(),
             },
-            title: "Manager".to_string(),
+            title: Some("Manager".to_string()),
             active: false,
             extensions: extensions,
         };

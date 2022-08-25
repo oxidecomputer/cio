@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use super::{to_client_response, ScimError, ScimListResponse};
+use super::{to_client_response, ScimClientError, ScimListResponse};
 use crate::Inner;
 
 /// A client for making requests to the Airtable Enterprise SCIM Group endpoints. An [AirtableScimUserClient]
@@ -24,7 +24,7 @@ impl AirtableScimUserClient {
         "https://airtable.com/scim/v2/Users"
     }
 
-    fn url(base: &str, path: Option<&str>) -> Result<Url, ScimError> {
+    fn url(base: &str, path: Option<&str>) -> Result<Url, ScimClientError> {
         let url = Url::parse(base)?;
 
         if let Some(path) = path {
@@ -37,7 +37,10 @@ impl AirtableScimUserClient {
     /// Lists users as [SCIM User](https://datatracker.ietf.org/doc/html/rfc7643#section-4.1) objects
     ///
     /// From: <https://airtable.com/api/enterprise#scimUsersGet>
-    pub async fn list(&self, filter: Option<&ScimListUserOptions>) -> Result<ScimListResponse<ScimUser>, ScimError> {
+    pub async fn list(
+        &self,
+        filter: Option<&ScimListUserOptions>,
+    ) -> Result<ScimListResponse<ScimUser>, ScimClientError> {
         let query_args = filter.map(|options| options.to_query_args());
 
         let req = self
@@ -53,7 +56,7 @@ impl AirtableScimUserClient {
     /// Get a single user as a [SCIM User](https://datatracker.ietf.org/doc/html/rfc7643#section-4.1) object
     ///
     /// From: <https://airtable.com/api/enterprise#scimUsersGetById>
-    pub async fn get<T: AsRef<str>>(&self, id: T) -> Result<Option<ScimUser>, ScimError> {
+    pub async fn get<T: AsRef<str>>(&self, id: T) -> Result<Option<ScimUser>, ScimClientError> {
         let req = self
             .inner
             .request(Method::GET, Self::url(Self::base_endpoint(), Some(id.as_ref()))?, None)?
@@ -67,7 +70,7 @@ impl AirtableScimUserClient {
     /// Create a new user from a [SCIM User](https://datatracker.ietf.org/doc/html/rfc7643#section-4.1) object
     ///
     /// From: <https://airtable.com/api/enterprise#scimUserCreate>
-    pub async fn create(&self, new_user: &ScimCreateUser) -> Result<ScimUser, ScimError> {
+    pub async fn create(&self, new_user: &ScimCreateUser) -> Result<ScimUser, ScimClientError> {
         let req = self
             .inner
             .request(Method::POST, Self::url(Self::base_endpoint(), None)?, None)?
@@ -82,7 +85,7 @@ impl AirtableScimUserClient {
     /// the `active` flag should be set to determine if the user is activated.
     ///
     /// From: <https://airtable.com/api/enterprise#scimUserUpdate>
-    pub async fn update<T: AsRef<str>>(&self, id: T, user: &ScimUpdateUser) -> Result<ScimUser, ScimError> {
+    pub async fn update<T: AsRef<str>>(&self, id: T, user: &ScimUpdateUser) -> Result<ScimUser, ScimClientError> {
         let req = self
             .inner
             .request(Method::PUT, Self::url(Self::base_endpoint(), Some(id.as_ref()))?, None)?
@@ -94,7 +97,7 @@ impl AirtableScimUserClient {
     }
 
     // /// From: <https://airtable.com/api/enterprise#scimUserPatch>
-    // pub async fn patch<T: AsRef<str>>(&self, id: T, operation: ScimPatchOp) -> Result<ScimUser, ScimError> {
+    // pub async fn patch<T: AsRef<str>>(&self, id: T, operation: ScimPatchOp) -> Result<ScimUser, ScimClientError> {
     //     unimplemented!()
     // }
 }
@@ -183,7 +186,7 @@ pub struct ScimCreateUser {
     /// The title field is available in create and update requests, but it is not returned in
     /// retrieval responses
     /// See: https://airtable.com/api/enterprise#scimUserFieldTypes
-    pub title: String,
+    pub title: Option<String>,
     #[serde(flatten)]
     pub extensions: HashMap<String, HashMap<String, Value>>,
 }
@@ -197,7 +200,7 @@ pub struct ScimUpdateUser {
     /// The title field is available in create and update requests, but it is not returned in
     /// retrieval responses
     /// See: https://airtable.com/api/enterprise#scimUserFieldTypes
-    pub title: String,
+    pub title: Option<String>,
     pub active: bool,
     #[serde(flatten)]
     pub extensions: HashMap<String, HashMap<String, Value>>,

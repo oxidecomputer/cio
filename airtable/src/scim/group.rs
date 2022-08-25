@@ -2,7 +2,7 @@ use reqwest::{Method, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use super::{to_client_response, ScimError, ScimListResponse};
+use super::{to_client_response, ScimClientError, ScimListResponse};
 use crate::Inner;
 
 /// A client for making requests to the Airtable Enterprise SCIM Group endpoints. An [AirtableScimGroupClient]
@@ -26,7 +26,7 @@ impl AirtableScimGroupClient {
         "https://airtable.com/scim/v2/Groups"
     }
 
-    fn url(base: &str, path: Option<&str>) -> Result<Url, ScimError> {
+    fn url(base: &str, path: Option<&str>) -> Result<Url, ScimClientError> {
         let url = Url::parse(base)?;
 
         if let Some(path) = path {
@@ -42,7 +42,7 @@ impl AirtableScimGroupClient {
     pub async fn list(
         &self,
         filter: Option<&ScimListGroupOptions>,
-    ) -> Result<ScimListResponse<ScimGroupIndex>, ScimError> {
+    ) -> Result<ScimListResponse<ScimGroupIndex>, ScimClientError> {
         let query_args = filter.map(|options| options.to_query_args());
 
         let req = self
@@ -58,7 +58,7 @@ impl AirtableScimGroupClient {
     /// Get a single group as a [SCIM Group](https://datatracker.ietf.org/doc/html/rfc7643#section-4.2) object.
     ///
     /// From: <https://airtable.com/api/enterprise#scimGroupsGetById>
-    pub async fn get<T: AsRef<str>>(&self, id: T) -> Result<Option<ScimGroup>, ScimError> {
+    pub async fn get<T: AsRef<str>>(&self, id: T) -> Result<Option<ScimGroup>, ScimClientError> {
         let req = self
             .inner
             .request(
@@ -77,7 +77,7 @@ impl AirtableScimGroupClient {
     /// The supplied display name must not currently be in use.
     ///
     /// From: <https://airtable.com/api/enterprise#scimGroupCreate>
-    pub async fn create(&self, new_group: &ScimCreateGroup) -> Result<ScimWriteGroupResponse, ScimError> {
+    pub async fn create(&self, new_group: &ScimCreateGroup) -> Result<ScimWriteGroupResponse, ScimClientError> {
         let req = self
             .inner
             .request(Method::POST, Self::url(Self::singular_endpoint(), None)?, None)?
@@ -97,7 +97,7 @@ impl AirtableScimGroupClient {
         &self,
         id: T,
         group: &ScimUpdateGroup,
-    ) -> Result<ScimWriteGroupResponse, ScimError> {
+    ) -> Result<ScimWriteGroupResponse, ScimClientError> {
         let req = self
             .inner
             .request(
@@ -113,14 +113,14 @@ impl AirtableScimGroupClient {
     }
 
     // /// From: <https://airtable.com/api/enterprise#scimGroupPatch>
-    // pub async fn patch<T: AsRef<str>>(&self, id: T, operation: ScimPatchOp) -> Result<ScimGroup, ScimError> {
+    // pub async fn patch<T: AsRef<str>>(&self, id: T, operation: ScimPatchOp) -> Result<ScimGroup, ScimClientError> {
     //     unimplemented!()
     // }
 
     /// Delete a group
     ///
     /// From: <https://airtable.com/api/enterprise#scimGroupDelete>
-    pub async fn delete<T: AsRef<str>>(&self, id: T) -> Result<(), ScimError> {
+    pub async fn delete<T: AsRef<str>>(&self, id: T) -> Result<(), ScimClientError> {
         let req = self
             .inner
             .request(
