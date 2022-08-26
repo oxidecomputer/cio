@@ -1,0 +1,1 @@
+CREATE VIEW read_applicants AS SELECT airtable_record_id, name, email, role, status, interviews_started, start_date, rejection_sent_date_time, offer_created, interested_in, question_why_oxide, submitted_time, location, linkedin, github, portfolio, website, resume, materials, portfolio_pdf FROM applicants;
