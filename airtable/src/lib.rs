@@ -50,6 +50,8 @@ use std::sync::Arc;
 
 pub mod error;
 mod inner;
+
+/// API clients for interacting with user and group SCIM endpoints
 pub mod scim;
 
 use self::scim::AirtableScimClient;
