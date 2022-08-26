@@ -5,19 +5,30 @@ use std::{error::Error, fmt, sync::Arc};
 
 // General API client errors
 
+/// A failure that is internal to the client itself
 #[derive(Debug, Clone, JsonSchema, Serialize)]
 pub struct ClientError {
+    /// Classification of the inner error type
     pub kind: ClientErrorKind,
+
+    /// The error that occurred
     #[serde(skip)]
     pub error: Arc<dyn std::error::Error + Send + Sync>,
 }
 
+#[non_exhaustive]
 #[derive(Debug, Clone, JsonSchema, Serialize, Deserialize)]
 pub enum ClientErrorKind {
+    /// A failure when generating authorization headers
     InvalidHeaderValue,
+
+    /// A failure when building a request or when deserializing a response
     Reqwest,
+
+    /// A failure when executing a request
     ReqwestMiddleware,
-    Serde,
+
+    /// A failure when constructing an endpoint url
     Url,
 }
 
@@ -57,15 +68,6 @@ impl From<url::ParseError> for ClientError {
     }
 }
 
-impl From<serde_json::Error> for ClientError {
-    fn from(err: serde_json::Error) -> Self {
-        ClientError {
-            kind: ClientErrorKind::Serde,
-            error: Arc::new(err),
-        }
-    }
-}
-
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.kind)
@@ -78,7 +80,6 @@ impl fmt::Display for ClientErrorKind {
             Self::InvalidHeaderValue => "InvalidHeaderValue",
             Self::Reqwest => "Reqwest",
             Self::ReqwestMiddleware => "ReqwestMiddleware",
-            Self::Serde => "Serde",
             Self::Url => "Url",
         };
 

@@ -48,11 +48,11 @@ use serde::{
 };
 use std::sync::Arc;
 
-mod error;
+pub mod error;
 mod inner;
-mod scim;
+pub mod scim;
 
-pub use self::scim::{AirtableScimClient, AirtableScimGroupClient, AirtableScimUserClient};
+use self::scim::AirtableScimClient;
 use inner::{Inner, InnerClient};
 
 /// Endpoint for the Airtable API.

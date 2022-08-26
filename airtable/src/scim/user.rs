@@ -74,7 +74,7 @@ impl AirtableScimUserClient {
         let req = self
             .inner
             .request(Method::POST, Self::url(Self::base_endpoint(), None)?, None)?
-            .body(serde_json::to_string(new_user)?)
+            .json(new_user)
             .build()?;
         let resp = self.inner.execute(req).await?;
 
@@ -89,7 +89,7 @@ impl AirtableScimUserClient {
         let req = self
             .inner
             .request(Method::PUT, Self::url(Self::base_endpoint(), Some(id.as_ref()))?, None)?
-            .body(serde_json::to_string(user)?)
+            .json(user)
             .build()?;
         let resp = self.inner.execute(req).await?;
 
@@ -102,6 +102,7 @@ impl AirtableScimUserClient {
     // }
 }
 
+/// Options for controlling the users that are returned from a list request
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimListUserOptions {
     pub start_index: Option<u32>,
@@ -109,6 +110,8 @@ pub struct ScimListUserOptions {
     pub filter: Option<ScimListUserFilter>,
 }
 
+/// Filters the users returned in a list request by their userName. Airtable defines this value to
+/// be the same as the users email address
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimListUserFilter {
     pub user_name: Option<String>,
@@ -142,6 +145,10 @@ impl ScimListUserOptions {
     }
 }
 
+/// A SCIM user. Additional schema data is collapsed into the `extensions` field where keys are
+/// SCIM URNs
+///
+/// See: <https://airtable.com/api/enterprise#scimUserFieldTypes>
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimUser {
     pub schemas: Vec<String>,
@@ -185,7 +192,8 @@ pub struct ScimCreateUser {
     pub name: ScimName,
     /// The title field is available in create and update requests, but it is not returned in
     /// retrieval responses
-    /// See: https://airtable.com/api/enterprise#scimUserFieldTypes
+    ///
+    /// See: <https://airtable.com/api/enterprise#scimUserFieldTypes>
     pub title: Option<String>,
     #[serde(flatten)]
     pub extensions: HashMap<String, HashMap<String, Value>>,
@@ -199,7 +207,8 @@ pub struct ScimUpdateUser {
     pub name: ScimName,
     /// The title field is available in create and update requests, but it is not returned in
     /// retrieval responses
-    /// See: https://airtable.com/api/enterprise#scimUserFieldTypes
+    ///
+    /// See: <https://airtable.com/api/enterprise#scimUserFieldTypes>
     pub title: Option<String>,
     pub active: bool,
     #[serde(flatten)]

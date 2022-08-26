@@ -81,7 +81,7 @@ impl AirtableScimGroupClient {
         let req = self
             .inner
             .request(Method::POST, Self::url(Self::singular_endpoint(), None)?, None)?
-            .body(serde_json::to_string(new_group)?)
+            .json(new_group)
             .build()?;
         let resp = self.inner.execute(req).await?;
 
@@ -105,7 +105,7 @@ impl AirtableScimGroupClient {
                 Self::url(Self::singular_endpoint(), Some(id.as_ref()))?,
                 None,
             )?
-            .body(serde_json::to_string(group)?)
+            .json(group)
             .build()?;
         let resp = self.inner.execute(req).await?;
 
@@ -141,6 +141,7 @@ impl AirtableScimGroupClient {
     }
 }
 
+/// Options for controlling the groups that are returned from a list request
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimListGroupOptions {
     pub start_index: Option<u32>,
@@ -148,6 +149,7 @@ pub struct ScimListGroupOptions {
     pub filter: Option<ScimListGroupFilter>,
 }
 
+/// Filters the groups returned in a list request by their displayName
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimListGroupFilter {
     pub display_name: Option<String>,
@@ -181,6 +183,8 @@ impl ScimListGroupOptions {
     }
 }
 
+/// A partial SCIM group that does not contain membership data. Partial groups are returned from
+/// the list group endpoints
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimGroupIndex {
     pub schemas: Vec<String>,
@@ -189,6 +193,9 @@ pub struct ScimGroupIndex {
     pub display_name: String,
 }
 
+/// A SCIM group
+///
+/// See: <https://airtable.com/api/enterprise#scimGroupFieldTypes>
 #[derive(Debug, PartialEq, Default, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimGroup {
     pub schemas: Vec<String>,

@@ -5,8 +5,8 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::{error::AirtableEnterpriseError, inner::Inner};
 
 mod error;
-mod group;
-mod user;
+pub mod group;
+pub mod user;
 
 pub use self::error::{AirtableScimApiError, ScimClientError};
 pub use self::group::AirtableScimGroupClient;
@@ -58,6 +58,7 @@ where
     }
 }
 
+/// A paginated SCIM response
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimListResponse<T> {
     pub schemas: Vec<String>,
@@ -71,8 +72,9 @@ pub struct ScimListResponse<T> {
     pub items_per_page: u32,
 }
 
+#[doc(hidden)]
 #[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
-pub enum ScimPatchOperation {
+enum ScimPatchOperation {
     Add { path: String, value: String },
     Remove { path: String },
     Replace { path: String, value: String },
