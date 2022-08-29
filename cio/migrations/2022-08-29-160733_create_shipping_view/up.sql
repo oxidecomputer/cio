@@ -1,0 +1,1 @@
+CREATE VIEW read_user_shipping AS SELECT id, username, home_address_street_1, home_address_street_2, home_address_city, home_address_state, home_address_zipcode, home_address_country, recovery_phone, cio_company_id FROM users;
