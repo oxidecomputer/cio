@@ -1009,6 +1009,8 @@ impl OutboundShipment {
     /// Send the label to our printer.
     pub async fn print_label(&self, db: &Database) -> Result<()> {
         if self.label_link.trim().is_empty() {
+            warn!("[print]: Failed to print label due to missing label link");
+
             // Return early.
             return Ok(());
         }
@@ -1016,21 +1018,42 @@ impl OutboundShipment {
         let company = self.company(db).await?;
 
         if company.printer_url.is_empty() {
+            warn!("[print]: Failed to print label due to missing printer url");
+
             // Return early.
             return Ok(());
         }
 
         let printer_url = format!("{}/rollo", company.printer_url);
+
+        info!(
+            "[print]: Sending request to print label {} to {}",
+            json!(self.label_link).to_string(),
+            printer_url
+        );
+
         let client = reqwest::Client::new();
         let resp = client
             .post(&printer_url)
             .body(json!(self.label_link).to_string())
             .send()
             .await?;
+
         match resp.status() {
-            StatusCode::ACCEPTED => (),
+            StatusCode::ACCEPTED => {
+                info!(
+                    "[print]: accepted job status_code: {}, body: {}",
+                    resp.status(),
+                    resp.text().await?
+                );
+            }
             s => {
-                bail!("[print]: status_code: {}, body: {}", s, resp.text().await?);
+                let message = resp.text().await?;
+                warn!(
+                    "[print]: failed to accept print job status_code: {}, body: {}",
+                    s, message
+                );
+                bail!("[print]: status_code: {}, body: {}", s, message);
             }
         };
 
