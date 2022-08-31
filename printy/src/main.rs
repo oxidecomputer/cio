@@ -6,25 +6,14 @@ use dropshot::{
 };
 use dropshot_verify_request::bearer::Bearer;
 use log::{info, warn};
-use schemars::JsonSchema;
 use sentry::IntoDsn;
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use cio_api_types::swag_inventory::PrintRequest;
 
 mod bearer;
 
 use bearer::EnvToken;
-
-// Duplicates the struct definition from cio so as to prevent needing to pull in the cio_api dep
-#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
-pub struct PrintRequest {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub url: String,
-    #[serde(default)]
-    pub quantity: i32,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub content: String,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), String> {

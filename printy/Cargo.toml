@@ -10,6 +10,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 async-trait = "0.1.56"
+cio-api-types = { path = "../cio-api-types" }
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 dropshot-verify-request = { path = "../dropshot-verify-request" }
 http = "0.2.6"

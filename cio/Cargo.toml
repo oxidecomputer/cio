@@ -28,6 +28,7 @@ checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.2.1"
 chrono-tz = { version = "0.6", features = ["serde"] }
+cio-api-types = { path = "../cio-api-types" }
 cloudflare = "^0.9.1"
 csv = "1.1"
 comrak = "0.12"
