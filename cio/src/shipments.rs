@@ -24,6 +24,7 @@ use crate::{
     configs::User,
     core::UpdateAirtableRecord,
     db::Database,
+    printer::Printer,
     schema::{inbound_shipments, outbound_shipments, package_pickups},
 };
 
@@ -1025,6 +1026,7 @@ impl OutboundShipment {
         }
 
         let printer_url = format!("{}/rollo", company.printer_url);
+        let printer_key = Printer::key();
 
         info!(
             "[print]: Sending request to print label {} to {}",
@@ -1035,6 +1037,7 @@ impl OutboundShipment {
         let client = reqwest::Client::new();
         let resp = client
             .post(&printer_url)
+            .bearer_auth(printer_key)
             .body(json!(self.label_link).to_string())
             .send()
             .await?;
