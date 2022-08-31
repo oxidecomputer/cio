@@ -49,7 +49,12 @@ async fn main() -> Result<(), String> {
             .output()
             .expect("failed to execute process");
         let o = std::str::from_utf8(&output.stdout).unwrap();
-        o[0..8].to_string()
+
+        if o.len() < 8 {
+            "unknown".to_string()
+        } else {
+            o[0..8].to_string()
+        }
     };
     info!("git hash: {}", git_hash);
 
