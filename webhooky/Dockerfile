@@ -77,6 +77,8 @@ COPY rust-toolchain ./rust-toolchain
 # Move the deps we need to compile.
 COPY cio ../cio
 
+COPY cio-api-types ../cio-api-types
+
 COPY macros ../macros
 
 COPY mailchimp-minimal-api ../mailchimp-minimal-api

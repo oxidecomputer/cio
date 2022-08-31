@@ -47,6 +47,8 @@ COPY Cargo.lock ./Cargo.lock
 
 COPY rust-toolchain ./rust-toolchain
 
+COPY cio-api-types ../cio-api-types
+
 COPY macros ../macros
 
 COPY mailchimp-minimal-api ../mailchimp-minimal-api
