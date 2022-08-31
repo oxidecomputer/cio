@@ -3796,13 +3796,17 @@ dependencies = [
 name = "printy"
 version = "0.1.0"
 dependencies = [
- "cio-api",
+ "anyhow",
+ "async-trait",
  "dropshot",
+ "dropshot-verify-request",
  "http",
  "log",
  "pretty_env_logger",
  "reqwest",
+ "schemars",
  "sentry",
+ "serde",
  "tokio",
  "uuid 1.1.2",
 ]

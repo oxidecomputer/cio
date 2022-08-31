@@ -35,6 +35,7 @@ pub mod interviews;
 pub mod journal_clubs;
 pub mod mailing_list;
 pub mod octorust_utils;
+pub mod printer;
 pub mod providers;
 pub mod rack_line;
 pub mod recorded_meetings;

@@ -28,6 +28,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
+    printer::Printer,
     schema::{barcode_scans, swag_inventory_items, swag_items},
 };
 
@@ -540,9 +541,12 @@ impl SwagInventoryItem {
         };
 
         let printer_url = format!("{}/zebra", company.printer_url);
+        let printer_key = Printer::key();
+
         let client = reqwest::Client::new();
         let resp = client
             .post(&printer_url)
+            .bearer_auth(printer_key)
             .body(
                 json!(PrintRequest {
                     url,
