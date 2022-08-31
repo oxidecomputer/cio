@@ -159,7 +159,10 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(rqctx: Arc<RequestContext<Context>>, _auth: Bearer<EnvToken>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn api_get_schema(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<EnvToken>,
+) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
     Ok(HttpResponseOk(api_context.schema.to_string()))
