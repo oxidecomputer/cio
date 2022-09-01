@@ -757,6 +757,7 @@ dependencies = [
  "chrono",
  "chrono-humanize",
  "chrono-tz",
+ "cio-api-types",
  "cloudflare",
  "comrak",
  "csv",
@@ -827,6 +828,14 @@ dependencies = [
  "zip",
  "zoho-api",
  "zoom-api",
+]
+
+[[package]]
+name = "cio-api-types"
+version = "0.2.0"
+dependencies = [
+ "schemars",
+ "serde",
 ]
 
 [[package]]
@@ -3798,6 +3807,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cio-api-types",
  "dropshot",
  "dropshot-verify-request",
  "http",

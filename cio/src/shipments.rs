@@ -985,7 +985,7 @@ impl OutboundShipment {
         let resp = client
             .post(&printer_url)
             .body(
-                json!(crate::swag_inventory::PrintRequest {
+                json!(cio_api_types::swag_inventory::PrintRequest {
                     content: format!(
                         "{}\n{}\n\n{}\n{}\n\n{}\n\n",
                         self.name, self.address_formatted, self.carrier, self.tracking_number, self.contents
