@@ -40,6 +40,7 @@ pub mod providers;
 pub mod rack_line;
 pub mod recorded_meetings;
 pub mod repos;
+pub mod rfd;
 pub mod rfds;
 pub mod schema;
 pub mod shipment_status;
