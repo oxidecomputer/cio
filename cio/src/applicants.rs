@@ -2161,8 +2161,8 @@ The applicants Airtable \
             && self.status == crate::applicant_status::Status::GivingOffer.to_string()
         {
             info!(
-                "applicant has status giving offer: {}, generating employee agreements in docusign for them!",
-                self.name
+                "applicant {} has status giving offer: generating employee agreements in docusign for them!",
+                self.id
             );
 
             // Let's create the envelope.
@@ -2203,8 +2203,8 @@ The applicants Airtable \
             && self.status == crate::applicant_status::Status::Hired.to_string()
         {
             info!(
-                "applicant has status giving offer: {}, generating employee agreements in docusign for them!",
-                self.name
+                "generating new employee agreements for applicant {} in docusign",
+                self.id
             );
 
             // Reset the current piia fields
