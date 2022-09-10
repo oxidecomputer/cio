@@ -1,8 +1,9 @@
 use anyhow::{bail, Result};
 use comrak::{markdown_to_html, ComrakOptions};
-use log::{info, warn};
+use log::info;
 use regex::Regex;
 use std::{
+    borrow::Cow,
     env,
     fs,
     path::PathBuf,
@@ -17,40 +18,88 @@ use crate::utils::{
 };
 use super::{
     GitHubRFDBranch,
+    RFDNumber,
     RFDPdf
 };
 
-pub enum RFDContent {
-    Asciidoc(RFDAsciidoc),
-    Markdown(RFDMarkdown),
+pub enum RFDContent<'a> {
+    Asciidoc(RFDAsciidoc<'a>),
+    Markdown(RFDMarkdown<'a>),
 }
 
-impl RFDContent {
-    pub fn new_asciidoc(content: String) -> Self {
+impl<'a> RFDContent<'a> {
+
+    /// Create a new RFDContent wrapper and attempt to determine the type by examining the source
+    /// contents.
+    // TODO: This content inspection should be replaced by actually storing the format of the
+    // content in the RFD struct
+    pub fn new<T>(content: T) -> Result<Self> where T: Into<Cow<'a, str>> {
+        let content = content.into();
+
+        let is_asciidoc = {
+            // A regular expression that looks for commonly used Asciidoc attributes. These are static
+            // regular expressions and can be safely unwrapped.
+            let attribute_check = Regex::new(r"^(:showtitle:|:numbered:|:toc: left|:icons: font)$").unwrap();
+            let state_check = Regex::new(r"^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
+
+            // Check that the content contains at least one of the commonly used asciidoc attributes,
+            // and contains a state line.
+            attribute_check.is_match(&content) && state_check.is_match(&content)
+        };
+
+        let is_markdown = !is_asciidoc && {
+            let title_check = Regex::new(r"^# RFD").unwrap();
+            let state_check = Regex::new(r"^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
+
+            title_check.is_match(&content) && state_check.is_match(&content)
+        };
+
+        // Return the content wrapped in the appropriate format wrapper
+        if is_asciidoc {
+            Ok(Self::new_asciidoc(content))
+        } else if is_markdown {
+            Ok(Self::new_markdown(content))
+        } else {
+
+            // If neither content type can be detected than we return an error
+            bail!("Failed to detect if the content was either Asciidoc or Markdown")
+        }
+
+    }
+
+    pub fn new_asciidoc(content: Cow<'a, str>) -> Self {
         Self::Asciidoc(RFDAsciidoc::new(content))
     }
 
-    pub fn new_markdown(content: String) -> Self {
+    pub fn new_markdown(content: Cow<'a, str>) -> Self {
         Self::Markdown(RFDMarkdown::new(content))
     }
 
     pub fn raw(&self) -> &str {
         match self {
-            Self::Asciidoc(adoc) => adoc.content.as_str(),
-            Self::Markdown(md) => md.content.as_str(),
+            Self::Asciidoc(adoc) => &adoc.content,
+            Self::Markdown(md) => &md.content,
+        }
+    }
+
+    pub fn into_inner(self) -> String {
+        match self {
+            Self::Asciidoc(adoc) => adoc.content.into_owned(),
+            Self::Markdown(md) => md.content.into_owned(),
         }
     }
 
     pub async fn to_html(
         &self,
+        number: &RFDNumber,
         branch: &GitHubRFDBranch,
     ) -> Result<RFDHtml> {
         match self {
             Self::Asciidoc(adoc) => {
-                adoc.to_html(branch).await
+                adoc.to_html(number, branch).await
             }
             Self::Markdown(md) => {
-                md.to_html(branch)
+                md.to_html(number)
             }
         }
     }
@@ -58,23 +107,24 @@ impl RFDContent {
     pub async fn to_pdf(
         &self,
         title: &str,
+        number: &RFDNumber,
         branch: &GitHubRFDBranch,
     ) -> Result<RFDPdf> {
         match self {
             Self::Asciidoc(adoc) => {
-                adoc.to_pdf(title, branch).await
+                adoc.to_pdf(title, number, branch).await
             }
             _ => Err(anyhow::anyhow!("Only asciidoc supports PDF generation"))
         }
     }
 
     pub fn update_discussion_link(&mut self, link: &str) {
-        let (mut re, mut pre, &mut content) = match self {
-            RFDContent::Asciidoc(adoc) => {
-                (Regex::new(r"(?m)(:discussion:.*$)").unwrap(), ":", &mut adoc.content)
+        let (re, pre, content) = match self {
+            RFDContent::Asciidoc(ref mut adoc) => {
+                (Regex::new(r"(?m)(:discussion:.*$)").unwrap(), ":", adoc.content.to_mut())
             },
-            RFDContent::Markdown(md) => {
-                (Regex::new(r"(?m)(discussion:.*$)").unwrap(), "", &mut md.content)
+            RFDContent::Markdown(ref mut md) => {
+                (Regex::new(r"(?m)(discussion:.*$)").unwrap(), "", md.content.to_mut())
             }
         };
 
@@ -84,16 +134,16 @@ impl RFDContent {
             String::new()
         };
     
-        content = content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1);
+        *content = content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1);
     }
     
-    pub fn update_state(&mut self, state: &str, is_markdown: bool) {
-        let (mut re, mut pre, &mut content) = match self {
-            RFDContent::Asciidoc(adoc) => {
-                (Regex::new(r"(?m)(:state:.*$)").unwrap(), ":", &mut adoc.content)
+    pub fn update_state(&mut self, state: &str) {
+        let (re, pre, content) = match self {
+            RFDContent::Asciidoc(ref mut adoc) => {
+                (Regex::new(r"(?m)(:state:.*$)").unwrap(), ":", adoc.content.to_mut())
             },
-            RFDContent::Markdown(md) => {
-                (Regex::new(r"(?m)(state:.*$)").unwrap(), "", &mut md.content)
+            RFDContent::Markdown(ref mut md) => {
+                (Regex::new(r"(?m)(state:.*$)").unwrap(), "", md.content.to_mut())
             }
         };
     
@@ -103,31 +153,138 @@ impl RFDContent {
             String::new()
         };
 
-        content = content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1);
+        *content = content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1);
+    }
+
+    pub fn get_title(&self) -> String {
+        let content = self.raw();
+
+        let mut re = Regex::new(r"(?m)(RFD .*$)").unwrap();
+        match re.find(content) {
+            Some(v) => {
+                // TODO: find less horrible way to do this.
+                let trimmed = v
+                    .as_str()
+                    .replace("RFD", "")
+                    .replace("# ", "")
+                    .replace("= ", " ")
+                    .trim()
+                    .to_string();
+
+                let (_, s) = trimmed.split_once(' ').unwrap();
+                s.to_string()
+            }
+            None => {
+                // There is no "RFD" in our title. This is the case for RFD 31.
+                re = Regex::new(r"(?m)(^= .*$)").unwrap();
+                let c = re.find(content);
+                if c.is_none() {
+                    // If we couldn't find anything assume we have no title.
+                    // This was related to this error in Sentry:
+                    // https://sentry.io/organizations/oxide-computer-company/issues/2701636092/?project=-1
+                    String::new()
+                } else {
+                    let results = c.unwrap();
+
+                    results
+                        .as_str()
+                        .replace("RFD", "")
+                        .replace("# ", "")
+                        .replace("= ", " ")
+                        .trim()
+                        .to_string()
+                }
+            }
+        }
+    }
+
+    pub fn get_state(&self) -> String {
+        let re = Regex::new(r"(?m)(state:.*$)").unwrap();
+
+        match re.find(self.raw()) {
+            Some(v) => v.as_str().replace("state:", "").trim().to_string(),
+            None => Default::default(),
+        }
+    }
+
+    pub fn get_discussion(&self) -> String {
+        let re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
+        match re.find(self.raw()) {
+            Some(v) => {
+                let d = v.as_str().replace("discussion:", "").trim().to_string();
+
+                if !d.starts_with("http") {
+                    Default::default()
+                } else {
+                    d
+                }
+            }
+            None => Default::default(),
+        }
+    }
+
+    pub fn get_authors(&self) -> String {
+        match self {
+            Self::Asciidoc(RFDAsciidoc { content, .. }) => {
+                // We must have asciidoc content.
+                // We want to find the line under the first "=" line (which is the title), authors is under
+                // that.
+                let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)").unwrap();
+                match re.find(content) {
+                    Some(v) => {
+                        let val = v.as_str().trim().to_string();
+                        let parts: Vec<&str> = val.split('\n').collect();
+                        if parts.len() < 2 {
+                            Default::default()
+                        } else {
+                            let mut authors = parts[1].to_string();
+                            if authors == "{authors}" {
+                                // Do the traditional check.
+                                let re = Regex::new(r"(?m)(^:authors.*$)").unwrap();
+                                if let Some(v) = re.find(content) {
+                                    authors = v.as_str().replace(":authors:", "").trim().to_string();
+                                }
+                            }
+                            authors
+                        }
+                    }
+                    None => Default::default(),
+                }
+            },
+            Self::Markdown(RFDMarkdown { content }) => {
+                // TODO: make work w asciidoc.
+                let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
+                match re.find(content) {
+                    Some(v) => v.as_str().replace("authors:", "").trim().to_string(),
+                    None => Default::default(),
+                }
+            },
+        }
     }
 }
 
-struct RFDAsciidoc {
-    content: String,
+pub struct RFDAsciidoc<'a> {
+    content: Cow<'a, str>,
     storage_id: Uuid
 }
 
-impl RFDAsciidoc {
-    pub fn new(content: String) -> Self {
+impl<'a> RFDAsciidoc<'a> {
+    pub fn new(content: Cow<'a, str>) -> Self {
         Self { content, storage_id: Uuid::new_v4() }
     }
 
     pub async fn to_html(
         &self,
+        number: &RFDNumber,
         branch: &GitHubRFDBranch,
     ) -> Result<RFDHtml> {
-        self.download_images(branch).await?;
+        self.download_images(number, branch).await?;
 
         let mut html = RFDHtml(from_utf8(&self.parse(RFDAsciidocOutputFormat::Html).await?)?.to_string());
-        html.clean_links(&branch.rfd_number.as_number_string());
+        html.clean_links(&number.as_number_string());
 
         if let Err(err) = self.cleanup_tmp_path() {
-            log::error!("Failed to clean up temporary working files for {:?}", branch.rfd_number);
+            log::error!("Failed to clean up temporary working files for {:?} {:?}", number, err);
         }
 
         Ok(html)
@@ -136,26 +293,27 @@ impl RFDAsciidoc {
     pub async fn to_pdf(
         &self,
         title: &str,
+        number: &RFDNumber,
         branch: &GitHubRFDBranch,
     ) -> Result<RFDPdf> {
-        self.download_images(branch).await?;
+        self.download_images(number, branch).await?;
 
         let content = self.parse(RFDAsciidocOutputFormat::Pdf).await?;
 
         if let Err(err) = self.cleanup_tmp_path() {
-            log::error!("Failed to clean up temporary working files for {:?}", branch.rfd_number);
+            log::error!("Failed to clean up temporary working files for {:?} {:?}", number, err);
         }
 
         let filename = format!(
             "RFD {} {}.pdf",
-            branch.rfd_number.as_number_string(),
+            number.as_number_string(),
             title.replace('/', "-").replace('\'', "").replace(':', "").trim()
         );
 
         Ok(RFDPdf {
             filename,
             contents: content,
-            number: branch.rfd_number.clone(),
+            number: *number,
         })
     }
 
@@ -213,11 +371,11 @@ impl RFDAsciidoc {
         Ok(result)
     }
 
-    async fn download_images(&self, branch: &GitHubRFDBranch) -> Result<()> {
-        let dir = branch.repo_directory();
+    async fn download_images(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<()> {
+        let dir = number.repo_directory();
         let storage_path = self.tmp_path();
         let storage_path_string = storage_path.to_str().ok_or_else(|| anyhow::anyhow!("Unable to convert image temp storage path to string"))?;
-        let images = branch.get_images(&dir).await?;
+        let images = branch.get_images().await?;
 
         for image in images {
             // Save the image to our temporary directory.
@@ -227,7 +385,7 @@ impl RFDAsciidoc {
 
             info!(
                 "[asciidoc] Wrote embedded image to temp dir {} / {}",
-                branch.rfd_number, branch.branch
+                number, branch.branch
             );
         }
 
@@ -273,7 +431,7 @@ impl RFDAsciidocOutputFormat {
                 command
             }
             Self::Pdf => {
-                let command = Command::new("asciidoctor-pdf");
+                let mut command = Command::new("asciidoctor-pdf");
                 command
                     .current_dir(working_dir)
                     .args(&[
@@ -292,18 +450,18 @@ impl RFDAsciidocOutputFormat {
     }
 }
 
-struct RFDMarkdown {
-    content: String,
+pub struct RFDMarkdown<'a> {
+    content: Cow<'a, str>,
 }
 
-impl RFDMarkdown {
-    pub fn new(content: String) -> Self {
+impl<'a> RFDMarkdown<'a> {
+    pub fn new(content: Cow<'a, str>) -> Self {
         Self { content }
     }
 
-    pub fn to_html(&self, branch: &GitHubRFDBranch) -> Result<RFDHtml> {
+    pub fn to_html(&self, number: &RFDNumber) -> Result<RFDHtml> {
         let mut html = RFDHtml(markdown_to_html(&self.content, &ComrakOptions::default()));
-        html.clean_links(&branch.rfd_number.as_number_string())?;
+        html.clean_links(&number.as_number_string());
 
         Ok(html)
     }
@@ -312,7 +470,7 @@ impl RFDMarkdown {
 pub struct RFDHtml(pub String);
 
 impl RFDHtml {
-    pub fn clean_links(&mut self, num: &str) -> Result<()> {
+    pub fn clean_links(&mut self, num: &str) {
         let mut cleaned = self.0
             .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
             .replace("href=\"#", &format!("href=\"/rfd/{}#", num))
@@ -323,19 +481,19 @@ impl RFDHtml {
                 &format!(r#"object type="image/svg+xml" data="/static/images/{}/"#, num),
             );
 
-        let mut re = Regex::new(r"https://(?P<num>[0-9]).rfd.oxide.computer")?;
+        let mut re = Regex::new(r"https://(?P<num>[0-9]).rfd.oxide.computer").unwrap();
         cleaned = re
             .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/000$num")
             .to_string();
-        re = Regex::new(r"https://(?P<num>[0-9][0-9]).rfd.oxide.computer")?;
+        re = Regex::new(r"https://(?P<num>[0-9][0-9]).rfd.oxide.computer").unwrap();
         cleaned = re
             .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/00$num")
             .to_string();
-        re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9]).rfd.oxide.computer")?;
+        re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9]).rfd.oxide.computer").unwrap();
         cleaned = re
             .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/0$num")
             .to_string();
-        re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9][0-9]).rfd.oxide.computer")?;
+        re = Regex::new(r"https://(?P<num>[0-9][0-9][0-9][0-9]).rfd.oxide.computer").unwrap();
         cleaned = re
             .replace_all(&cleaned, "https://rfd.shared.oxide.computer/rfd/$num")
             .to_string();
@@ -343,7 +501,5 @@ impl RFDHtml {
         self.0 = cleaned
             .replace("link:", &format!("link:https://{}.rfd.oxide.computer/", num))
             .replace(&format!("link:https://{}.rfd.oxide.computer/http", num), "link:http");
-
-        Ok(())
     }
 }

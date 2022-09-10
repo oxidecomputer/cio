@@ -160,7 +160,7 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
         }
         crate::core::SubCommand::SendRFDChangelog(_) => {
             let Context { db, company, .. } = context;
-            cio_api::rfds::send_rfd_changelog(&db, &company).await?;
+            cio_api::rfd::send_rfd_changelog(&db, &company).await?;
         }
         crate::core::SubCommand::SyncAnalytics(_) => {
             let Context { db, company, .. } = context;
@@ -263,7 +263,7 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
         crate::core::SubCommand::SyncRFDs(_) => {
             let Context { db, company, .. } = context;
             cio_api::rfds::refresh_db_rfds(&db, &company).await?;
-            cio_api::rfds::cleanup_rfd_pdfs(&db, &company).await?;
+            cio_api::rfd::cleanup_rfd_pdfs(&db, &company).await?;
         }
         crate::core::SubCommand::SyncOther(_) => {
             let Context { company, .. } = context;

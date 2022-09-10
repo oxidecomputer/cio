@@ -4,7 +4,7 @@ use std::{fmt, str::FromStr};
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum SlackCommand {
-    RFD,
+    // RFD,
 
     Meet,
 
@@ -23,7 +23,7 @@ impl SlackCommand {
     /// Returns a static string for the command.
     pub fn name(self) -> &'static str {
         match self {
-            SlackCommand::RFD => "/rfd",
+            // SlackCommand::RFD => "/rfd",
             SlackCommand::Meet => "/meet",
             SlackCommand::Applicants => "/applicants",
             SlackCommand::Applicant => "/applicant",
@@ -39,7 +39,7 @@ impl FromStr for SlackCommand {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "/rfd" => Ok(SlackCommand::RFD),
+            // "/rfd" => Ok(SlackCommand::RFD),
             "/meet" => Ok(SlackCommand::Meet),
             "/applicants" => Ok(SlackCommand::Applicants),
             "/applicant" => Ok(SlackCommand::Applicant),

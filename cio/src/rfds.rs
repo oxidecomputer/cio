@@ -1,47 +1,32 @@
 #![allow(clippy::from_over_into)]
-use std::{
-    collections::BTreeMap,
-    env,
-    path::{Path, PathBuf},
-    process::Command,
-    str::from_utf8,
-};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, Utc};
-use comrak::{markdown_to_html, ComrakOptions};
-use csv::ReaderBuilder;
-use google_drive::{
-    traits::{DriveOps, FileOps},
-    Client as GoogleDrive,
-};
+use chrono::{DateTime, Utc};
 use log::{info, warn};
 use macros::db;
-use octorust::Client as Octorust;
 use partial_struct::partial;
 use regex::Regex;
 use schemars::JsonSchema;
-use sendgrid_api::{traits::MailOps, Client as SendGrid};
 use serde::{Deserialize, Serialize};
-use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
 
 use crate::{
     airtable::AIRTABLE_RFD_TABLE,
-    companies::{Company, RFDRepo},
+    companies::Company,
     core::{GitHubPullRequest, UpdateAirtableRecord},
     db::Database,
-    features::Features,
-    octorust_utils::{into_octorust_error, OctorustErrorKind},
+    rfd::{
+        GitHubRFDBranch,
+        GitHubRFDReadme,
+        GitHubRFDRepo,
+        GitHubRFDUpdate,
+        RFDContent,
+        RFDSearchIndex
+    },
     schema::rfds as r_f_ds,
     schema::rfds,
-    utils::{
-        create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string, get_file_content_from_repo,
-        truncate, write_file,
-    },
+    utils::truncate,
 };
 
 /// The data type for an RFD.
@@ -119,132 +104,120 @@ pub struct NewRFD {
 }
 
 impl NewRFD {
-    /// Return a NewRFD from a parsed file on a specific GitHub branch.
-    pub async fn new_from_github(
+    // /// Return a NewRFD from a parsed file on a specific GitHub branch.
+    // pub async fn new_from_github(
+    //     company: &Company,
+    //     github: &octorust::Client,
+    //     owner: &str,
+    //     repo: &str,
+    //     branch: &str,
+    //     file_path: &str,
+    //     commit_date: DateTime<Utc>,
+    // ) -> Result<Self> {
+    //     // Get the file from GitHub.
+    //     let mut content = String::new();
+    //     let mut link = String::new();
+    //     let mut sha = String::new();
+    //     if let Ok(f) = github.repos().get_content_file(owner, repo, file_path, branch).await {
+    //         content = decode_base64_to_string(&f.content);
+    //         link = f.html_url.to_string();
+    //         sha = f.sha;
+    //     }
+
+    //     // Parse the RFD directory as an int.
+    //     let (dir, _) = file_path.trim_start_matches("rfd/").split_once('/').unwrap();
+    //     let number = dir.trim_start_matches('0').parse::<i32>()?;
+
+    //     let number_string = NewRFD::generate_number_string(number);
+
+    //     // Parse the RFD title from the contents.
+    //     let title = NewRFD::get_title(&content)?;
+    //     let name = NewRFD::generate_name(number, &title);
+
+    //     // Parse the state from the contents.
+    //     let state = NewRFD::get_state(&content)?;
+
+    //     // Parse the discussion from the contents.
+    //     let discussion = NewRFD::get_discussion(&content)?;
+
+    //     Ok(NewRFD {
+    //         number,
+    //         number_string,
+    //         title,
+    //         name,
+    //         state,
+    //         link,
+    //         short_link: Default::default(),
+    //         rendered_link: Default::default(),
+    //         discussion,
+    //         authors: Default::default(),
+    //         // We parse this below.
+    //         html: Default::default(),
+    //         content,
+    //         sha,
+    //         commit_date,
+    //         // Only exists in Airtable,
+    //         milestones: Default::default(),
+    //         // Only exists in Airtable,
+    //         relevant_components: Default::default(),
+    //         pdf_link_github: Default::default(),
+    //         pdf_link_google_drive: Default::default(),
+    //         cio_company_id: company.id,
+    //     })
+    // }
+
+    /// We want to fetch the most up to date representation of this RFD as we can at this point in
+    /// time. This RFD may or may not already have a version in our internal database, and may or
+    /// may not exist in GitHub. If the RFD does not exist in the internal database then we set a
+    /// number of default fields and use the data from GitHub only. If the RFD does not exist in
+    /// GitHub, then this will fail as we are effectively not getting any new data.
+    ///
+    /// This function will return both the old RFD (representing our internal state) as well as the
+    /// new merged/updated version.
+    pub async fn new_from_update(
         company: &Company,
-        github: &octorust::Client,
-        owner: &str,
-        repo: &str,
-        branch: &str,
-        file_path: &str,
-        commit_date: DateTime<Utc>,
+        update: &GitHubRFDUpdate
     ) -> Result<Self> {
-        // Get the file from GitHub.
-        let mut content = String::new();
-        let mut link = String::new();
-        let mut sha = String::new();
-        if let Ok(f) = github.repos().get_content_file(owner, repo, file_path, branch).await {
-            content = decode_base64_to_string(&f.content);
-            link = f.html_url.to_string();
-            sha = f.sha;
-        }
 
-        // Parse the RFD directory as an int.
-        let (dir, _) = file_path.trim_start_matches("rfd/").split_once('/').unwrap();
-        let number = dir.trim_start_matches('0').parse::<i32>()?;
-
-        let number_string = NewRFD::generate_number_string(number);
+        // If we can not find a remote file from GitHub then we abandon here.
+        let readme = update.branch.get_readme_contents(Some(update.number)).await?;
 
         // Parse the RFD title from the contents.
-        let title = NewRFD::get_title(&content)?;
-        let name = NewRFD::generate_name(number, &title);
-
-        // Parse the state from the contents.
-        let state = NewRFD::get_state(&content)?;
+        let title = readme.content.get_title();
+        let name = NewRFD::generate_name(update.number.into(), &title);
 
         // Parse the discussion from the contents.
-        let discussion = NewRFD::get_discussion(&content)?;
+        let discussion = readme.content.get_discussion();
 
         Ok(NewRFD {
-            number,
-            number_string,
+            number: update.number.into(),
+            number_string: update.number.as_number_string(),
             title,
             name,
-            state,
-            link,
-            short_link: Default::default(),
-            rendered_link: Default::default(),
+            state: readme.content.get_state(),
+            link: readme.link,
+            short_link: NewRFD::generate_short_link(update.number.into()),
+            rendered_link: NewRFD::generate_rendered_link(&update.number.as_number_string()),
             discussion,
-            authors: Default::default(),
-            // We parse this below.
-            html: Default::default(),
-            content,
-            sha,
-            commit_date,
+            authors: readme.content.get_authors(),
+
+            html: readme.content.to_html(&update.number, &update.branch).await?.0,
+            content: readme.content.raw().to_string(),
+
+            sha: readme.sha,
+            commit_date: update.commit_date,
+
             // Only exists in Airtable,
             milestones: Default::default(),
             // Only exists in Airtable,
             relevant_components: Default::default(),
+
+            // PDF links are purposefully blanked out so that they do not point at an invalid file
+            // while new PDFs are generated
             pdf_link_github: Default::default(),
             pdf_link_google_drive: Default::default(),
             cio_company_id: company.id,
         })
-    }
-
-    pub fn get_title(content: &str) -> Result<String> {
-        let mut re = Regex::new(r"(?m)(RFD .*$)")?;
-        match re.find(content) {
-            Some(v) => {
-                // TODO: find less horrible way to do this.
-                let trimmed = v
-                    .as_str()
-                    .replace("RFD", "")
-                    .replace("# ", "")
-                    .replace("= ", " ")
-                    .trim()
-                    .to_string();
-
-                let (_, s) = trimmed.split_once(' ').unwrap();
-
-                // If the string is empty, it means there is no RFD in our
-                // title.
-                if s.is_empty() {}
-
-                Ok(s.to_string())
-            }
-            None => {
-                // There is no "RFD" in our title. This is the case for RFD 31.
-                re = Regex::new(r"(?m)(^= .*$)")?;
-                let c = re.find(content);
-                if c.is_none() {
-                    // If we couldn't find anything assume we have no title.
-                    // This was related to this error in Sentry:
-                    // https://sentry.io/organizations/oxide-computer-company/issues/2701636092/?project=-1
-                    return Ok(String::new());
-                }
-                let results = c.unwrap();
-
-                Ok(results
-                    .as_str()
-                    .replace("RFD", "")
-                    .replace("# ", "")
-                    .replace("= ", " ")
-                    .trim()
-                    .to_string())
-            }
-        }
-    }
-
-    pub fn get_state(content: &str) -> Result<String> {
-        let re = Regex::new(r"(?m)(state:.*$)")?;
-        match re.find(content) {
-            Some(v) => return Ok(v.as_str().replace("state:", "").trim().to_string()),
-            None => Ok(Default::default()),
-        }
-    }
-
-    pub fn get_discussion(content: &str) -> Result<String> {
-        let re = Regex::new(r"(?m)(discussion:.*$)")?;
-        match re.find(content) {
-            Some(v) => {
-                let d = v.as_str().replace("discussion:", "").trim().to_string();
-                if !d.starts_with("http") {
-                    return Ok(Default::default());
-                }
-                Ok(d)
-            }
-            None => Ok(Default::default()),
-        }
     }
 
     pub fn generate_number_string(number: i32) -> String {
@@ -523,17 +496,25 @@ impl RFD {
     }
 
     /// Update an RFDs state.
-    pub fn update_state(&mut self, state: &str, is_markdown: bool) -> Result<()> {
-        self.content = update_state(&self.content, state, is_markdown)?;
+    pub fn update_state(&mut self, state: &str) -> Result<()> {
+        let mut content = RFDContent::new(&self.content)?;
+        content.update_state(state);
+
+        self.content = content.into_inner();
         self.state = state.to_string();
 
         Ok(())
     }
 
     /// Update an RFDs discussion link.
-    pub fn update_discussion(&mut self, link: &str, is_markdown: bool) {
-        self.content = update_discussion_link(&self.content, link, is_markdown);
+    pub fn update_discussion(&mut self, link: &str) -> Result<()> {
+        let mut content = RFDContent::new(&self.content)?;
+        content.update_discussion_link(link);
+
+        self.content = content.into_inner();
         self.discussion = link.to_string();
+
+        Ok(())
     }
 
     /// Update the pull request information for an RFD.
@@ -542,7 +523,7 @@ impl RFD {
         github: &octorust::Client,
         company: &Company,
         pull_request: &GitHubPullRequest,
-    ) -> Result<()> {;
+    ) -> Result<()> {
         let owner = company.github_org.to_string();
         let repo = "rfd";
 
@@ -943,6 +924,10 @@ impl RFD {
     //     Ok(())
     // }
 
+    pub fn content(&self) -> Result<RFDContent> {
+        RFDContent::new(&self.content)
+    }
+
     pub async fn branch(&self, company: &Company) -> Result<GitHubRFDBranch> {
         let repo = GitHubRFDRepo::new(company).await?;
 
@@ -952,17 +937,17 @@ impl RFD {
             self.number_string.clone()
         };
 
-        Ok(repo.branch(self.number, branch))
+        Ok(repo.branch(branch))
     }
 
     /// Expand the fields in the RFD.
     /// This will get the content, html, sha, commit_date as well as fill in all generated fields.
-    pub async fn expand(&mut self, github: &octorust::Client, company: &Company) -> Result<GitHubRFDReadme> {
+    pub async fn expand<'a>(&mut self, company: &Company) -> Result<GitHubRFDReadme<'a>> {
         info!("[rfd.expand] Running RFD expansion {} / {}", self.id, self.number);
-
-        let owner = &company.github_org;
-        let repo = "rfd";
-        let r = github.repos().get(owner, repo).await?;
+        
+        // let owner = &company.github_org;
+        // let repo = "rfd";
+        // let r = github.repos().get(owner, repo).await?;
 
         info!("[rfd.expand] Fetched full RFD repo {} / {}", self.id, self.number);
 
@@ -994,10 +979,10 @@ impl RFD {
         // or a specific RFD branch. In either case this does not ensure that a branch exists
         let branch = self.branch(company).await?;
 
-        let rfd_dir = branch.repo_directory();
+        // let rfd_dir = branch.repo_directory();
 
         // Fetch the readme contents for this RFD
-        let readme = branch.get_readme_contents().await?;
+        let readme = branch.get_readme_contents(Some(self.number.into())).await?;
 
         // Extract the raw contents and sha from the fetched readme
         self.content = readme.content.raw().to_string();
@@ -1005,14 +990,8 @@ impl RFD {
 
         info!("[rfd.expand] Fetched contents of RFD {} / {}", self.id, self.number);
 
-        // Get the commit date.
-        if let Ok(commits) = github
-            .repos()
-            .list_commits(owner, repo, &branch, &rfd_dir, "", None, None, 0, 0)
-            .await
-        {
-            let commit = commits.get(0).unwrap();
-            self.commit_date = commit.commit.committer.as_ref().unwrap().date.parse()?;
+        if let Ok(commit_date) = branch.get_latest_commit_date().await {
+            self.commit_date = commit_date;
         }
 
         info!(
@@ -1021,7 +1000,7 @@ impl RFD {
         );
 
         // Parse the HTML.
-        self.html = readme.content.to_html(branch, rfd_dir).await?;
+        self.html = readme.content.to_html(&self.number.into(), &branch).await?.0;
 
         info!(
             "[rfd.expand] Parsed RFD contents into html {} / {}",
@@ -1032,7 +1011,8 @@ impl RFD {
             return Err(anyhow!("got empty html for rfd#{}", self.number));
         }
 
-        self.authors = NewRFD::get_authors(&self.content, is_markdown)?;
+        // TODO: Fix me
+        // self.authors = NewRFD::get_authors(&self.content, is_markdown)?;
 
         info!("[rfd.expand] Extracted authors from RFD {} / {}", self.id, self.number);
 
@@ -1048,25 +1028,25 @@ impl RFD {
         Ok(readme)
     }
 
-    pub async fn sync(&mut self, db: &Database, company: &Company, github: &octorust::Client) -> Result<()> {
+    pub async fn sync(&mut self, db: &Database, company: &Company) -> Result<()> {
         let branch = self.branch(company).await?;
 
         // Expand the fields in the RFD
-        let readme = self.expand(github, company).await?;
+        let readme = self.expand(company).await?;
 
         // Update the RFD here just in case the PDF conversion fails.
-        let mut rfd = rfd.update(db).await?;
+        self.update(db).await?;
 
         // Now that the database is updated, update the search index.
-        if let Err(err) = RFDSearchIndex::index_rfd(&rfd.number.into()).await {
+        if let Err(err) = RFDSearchIndex::index_rfd(&self.number.into()).await {
             log::error!("Failed to index RFD in to search index {:?}", err);
         }
 
         // Make and update the PDF versions.
-        match readme.content.to_pdf(&self.title, &branch) {
+        match readme.content.to_pdf(&self.title, &self.number.into(), &branch).await {
             Ok(pdf) => {
                 match pdf.upload(&db, &company).await {
-                    Ok(pdf_links) = {
+                    Ok(pdf_links) => {
                         if let Some(github_url) = pdf_links.github_url {
                             self.pdf_link_github = github_url;
                         }
@@ -1076,17 +1056,19 @@ impl RFD {
                         }
                     }
                     Err(err) => {
-                        warn!("Failed to upload RFD {} PDF to storage {:?}", branch.rfd_number, err);
+                        warn!("Failed to upload RFD {} PDF to storage {:?}", self.number, err);
                     }
                 }
             }
             Err(err) => {
-                warn!("Failed to convert RFD {} to PDF {:?}", branch.rfd_number, err);
+                warn!("Failed to convert RFD {} to PDF {:?}", self.number, err);
             }
         }
 
         // Update the RFD again, for the PDF.
-        rfd.update(db).await?;
+        self.update(db).await?;
+
+        Ok(())
     }
 }
 
@@ -1114,19 +1096,8 @@ impl UpdateAirtableRecord<RFD> for RFD {
 
 // Sync the rfds with our database.
 pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
-    // Authenticate GitHub.
-    let github = company.authenticate_github()?;
-
-    // Check if the repo exists, if not exit early.
-    if let Err(e) = github.repos().get(&company.github_org, "rfd").await {
-        if e.to_string().contains("404") {
-            return Ok(());
-        } else {
-            bail!("checking for rfd repo failed: {}", e);
-        }
-    }
-
-    let rfds = get_rfds_from_repo(&github, company).await?;
+    let repo = GitHubRFDRepo::new(company).await?;
+    let rfds = repo.get_rfds_from_repo().await?;
 
     // Iterate over the rfds and update.
     // We should do these concurrently, but limit it to maybe 3 at a time.
@@ -1140,8 +1111,8 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
             .skip(skip)
             .take(take)
             .map(|(_, mut rfd)| {
-                tokio::spawn(enclose! { (db, company, github) async move {
-                    rfd.sync(&db, &company, &github).await
+                tokio::spawn(enclose! { (db, company) async move {
+                    rfd.sync(&db, &company).await
                 }})
             })
             .collect();
@@ -1168,7 +1139,7 @@ pub async fn refresh_db_rfds(db: &Database, company: &Company) -> Result<()> {
 }
 
 impl NewRFD {
-    async fn sync(&mut self, db: &Database, company: &Company, github: &octorust::Client) -> Result<()> {
+    async fn sync(&mut self, db: &Database, company: &Company) -> Result<()> {
 
         // Check if we already have an existing RFD.
         if let Some(existing) = RFD::get_from_db(db, self.number).await {
@@ -1187,7 +1158,7 @@ impl NewRFD {
         let mut rfd = self.upsert(db).await?;
 
         // Now with a persisted record, perform the remaining sync tasks
-        rfd.sync()
+        rfd.sync(&db, &company).await?;
 
         // // Expand the fields in the RFD.
         // rfd.expand(github, company).await?;
