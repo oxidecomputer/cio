@@ -11,24 +11,14 @@ mod search;
 
 pub use changelog::send_rfd_changelog;
 pub use content::RFDContent;
-pub use github::{
-    GitHubRFDBranch,
-    GitHubRFDReadme,
-    GitHubRFDRepo,
-    GitHubRFDUpdate,
-};
-pub use pdf::{
-    cleanup_rfd_pdfs,
-    PDFStorage,
-    RFDPdf,
-};
+pub use github::{GitHubRFDBranch, GitHubRFDReadme, GitHubRFDRepo, GitHubRFDUpdate};
+pub use pdf::{cleanup_rfd_pdfs, PDFStorage, RFDPdf};
 pub use search::RFDSearchIndex;
 
 #[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct RFDNumber(i32);
 
 impl RFDNumber {
-
     /// Get the path to where the source contents of this RFD exists in the RFD repo.
     pub fn repo_directory(&self) -> String {
         format!("/rfd/{}", self.as_number_string())

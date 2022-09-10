@@ -3,33 +3,16 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use csv::ReaderBuilder;
 use log::{info, warn};
-use octorust::{
-    Client as Octorust,
-};
-use std::{
-    borrow::Cow,
-    collections::BTreeMap,
-    fmt,
-    str::from_utf8
-};
+use octorust::Client as Octorust;
+use std::{borrow::Cow, collections::BTreeMap, fmt, str::from_utf8};
 
+use super::{PDFStorage, RFDContent, RFDNumber, RFDPdf};
 use crate::{
     companies::Company,
     core::GitHubPullRequest,
     rfds::NewRFD,
-    utils::{
-        create_or_update_file_in_github_repo,
-        decode_base64,
-        decode_base64_to_string,
-        get_file_content_from_repo,
-    },
-    utils::is_image
-};
-use super::{
-    PDFStorage,
-    RFDContent,
-    RFDNumber,
-    RFDPdf,
+    utils::is_image,
+    utils::{create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string, get_file_content_from_repo},
 };
 
 #[derive(Clone)]
@@ -51,7 +34,6 @@ impl fmt::Debug for GitHubRFDRepo {
 }
 
 impl GitHubRFDRepo {
-
     /// Create a new RFD repo for the provided company. Assumes that the RFD repo is named "rfd"
     pub async fn new(company: &Company) -> Result<Self> {
         let github = company.authenticate_github()?;
@@ -61,7 +43,7 @@ impl GitHubRFDRepo {
             client: github,
             owner: company.github_org.to_string(),
             repo: "rfd".to_string(),
-            default_branch: full_repo.default_branch
+            default_branch: full_repo.default_branch,
         })
     }
 
@@ -72,17 +54,22 @@ impl GitHubRFDRepo {
             owner: self.owner.clone(),
             repo: self.repo.clone(),
             default_branch: self.default_branch.clone(),
-            branch
+            branch,
         }
     }
 
     /// Read the remote rfd.csv file stored in GitHub and return a map from RFD number to RFD. The
     /// RFDs returned may or may have already been persisted
     pub async fn get_rfds_from_repo(&self) -> Result<BTreeMap<i32, NewRFD>> {
-
         // Get the contents of the .helpers/rfd.csv file.
-        let (rfd_csv_content, _) =
-            get_file_content_from_repo(&self.client, &self.owner, &self.repo, &self.default_branch, "/.helpers/rfd.csv").await?;
+        let (rfd_csv_content, _) = get_file_content_from_repo(
+            &self.client,
+            &self.owner,
+            &self.repo,
+            &self.default_branch,
+            "/.helpers/rfd.csv",
+        )
+        .await?;
         let rfd_csv_string = from_utf8(&rfd_csv_content)?;
 
         // Create the csv reader.
@@ -99,7 +86,7 @@ impl GitHubRFDRepo {
             // TODO: this whole thing is a mess jessfraz needs to cleanup
             rfd.number_string = NewRFD::generate_number_string(rfd.number);
             rfd.name = NewRFD::generate_name(rfd.number, &rfd.title);
-            
+
             // Removing company record association abstraction
             rfd.cio_company_id = 1;
 
@@ -132,7 +119,6 @@ impl fmt::Debug for GitHubRFDBranch {
 }
 
 impl GitHubRFDBranch {
-
     /// Get the path to where the source contents of this RFD exists in the RFD repo.
     pub fn repo_directory(&self) -> String {
         format!("/rfd/{}", self.branch)
@@ -140,7 +126,11 @@ impl GitHubRFDBranch {
 
     /// Checks if this branch actually exists in the remote system (GitHub)
     pub async fn exists_in_remote(&self) -> bool {
-        self.client.repos().get_branch(&self.owner, &self.repo, &self.branch).await.is_ok()
+        self.client
+            .repos()
+            .get_branch(&self.owner, &self.repo, &self.branch)
+            .await
+            .is_ok()
     }
 
     /// Try to get the markdown or asciidoc contents from the repo.
@@ -164,7 +154,6 @@ impl GitHubRFDBranch {
         let dir = if let Some(number) = rfd_number {
             number.repo_directory()
         } else {
-
             // Otherwise use the branch name to determine the appropriate location
             self.repo_directory()
         };
@@ -172,7 +161,11 @@ impl GitHubRFDBranch {
         // Get the contents of the file.
         let path = format!("{}/README.adoc", dir);
 
-        let content_file = self.client.repos().get_content_file(&self.owner, &self.repo, &path, &self.branch).await;
+        let content_file = self
+            .client
+            .repos()
+            .get_content_file(&self.owner, &self.repo, &path, &self.branch)
+            .await;
 
         info!(
             "[rfd.contents] Retrieved asciidoc README from GitHub {} / {}",
@@ -224,20 +217,22 @@ impl GitHubRFDBranch {
             RFDContent::new_asciidoc(Cow::Owned(transliterated))
         };
 
-        Ok(GitHubRFDReadme {
-            content,
-            link,
-            sha,
-        })
+        Ok(GitHubRFDReadme { content, link, sha })
     }
 
     pub async fn copy_images_to_default_branch(&self) -> Result<()> {
-        info!("[rfd.contents] Getting images from branch {} / {}", self.repo, self.branch);
+        info!(
+            "[rfd.contents] Getting images from branch {} / {}",
+            self.repo, self.branch
+        );
 
         // Get all the images in the branch and make sure they are in the images directory on master.
         let images = self.get_images().await?;
 
-        info!("[rfd.contents] Updating images in branch {} / {}", self.repo, self.branch);
+        info!(
+            "[rfd.contents] Updating images in branch {} / {}",
+            self.repo, self.branch
+        );
 
         for image in images {
             let new_path = image.path.replace("rfd/", "src/public/static/images/");
@@ -269,7 +264,11 @@ impl GitHubRFDBranch {
         let mut files: Vec<octorust::types::ContentFile> = Default::default();
 
         // Get all the images in the branch and make sure they are in the images directory on master.
-        let resp = self.client.repos().get_content_vec_entries(&self.owner, &self.repo, &dir, &self.branch).await?;
+        let resp = self
+            .client
+            .repos()
+            .get_content_vec_entries(&self.owner, &self.repo, &dir, &self.branch)
+            .await?;
 
         for file in resp {
             info!(
@@ -299,14 +298,17 @@ impl GitHubRFDBranch {
                     }
 
                     if is_image(&file2.name) {
-                        let f = crate::utils::get_github_file(&self.client, &self.owner, &self.repo, &self.branch, &file2).await?;
+                        let f =
+                            crate::utils::get_github_file(&self.client, &self.owner, &self.repo, &self.branch, &file2)
+                                .await?;
                         files.push(f);
                     }
                 }
             }
 
             if is_image(&file.name) {
-                let f = crate::utils::get_github_file(&self.client, &self.owner, &self.repo, &self.branch, &file).await?;
+                let f =
+                    crate::utils::get_github_file(&self.client, &self.owner, &self.repo, &self.branch, &file).await?;
                 files.push(f);
             }
         }
@@ -349,9 +351,25 @@ impl GitHubRFDBranch {
     }
 
     pub async fn get_latest_commit_date(&self) -> Result<DateTime<Utc>> {
-        let commits = self.client.repos().list_commits(&self.owner, &self.repo, &self.branch, &self.repo_directory(), "", None, None, 0, 0).await?;
-        let latest_commit = commits.get(0).ok_or_else(|| anyhow!("No commits found for branch {}", self.branch))?;
-        
+        let commits = self
+            .client
+            .repos()
+            .list_commits(
+                &self.owner,
+                &self.repo,
+                &self.branch,
+                &self.repo_directory(),
+                "",
+                None,
+                None,
+                0,
+                0,
+            )
+            .await?;
+        let latest_commit = commits
+            .get(0)
+            .ok_or_else(|| anyhow!("No commits found for branch {}", self.branch))?;
+
         Ok(latest_commit
             .commit
             .committer

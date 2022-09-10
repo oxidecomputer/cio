@@ -5,10 +5,7 @@ use google_drive::{
     Client as GoogleDrive,
 };
 
-use super::{
-    RFDPdf,
-    PDFStorage
-};
+use super::{PDFStorage, RFDPdf};
 
 #[async_trait]
 impl PDFStorage for GoogleDrive {

@@ -117,7 +117,11 @@ pub async fn handle_rfd_update_by_number(
     // Now that the database is updated, update the search index.
     RFDSearchIndex::index_rfd(&rfd.number.into()).await?;
 
-    rfd.content()?.to_pdf(&rfd.title, &rfd.number.into(), &rfd.branch(&oxide).await?).await?.upload(db, &oxide).await?;
+    rfd.content()?
+        .to_pdf(&rfd.title, &rfd.number.into(), &rfd.branch(&oxide).await?)
+        .await?
+        .upload(db, &oxide)
+        .await?;
 
     info!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
 
@@ -193,57 +197,6 @@ pub async fn handle_slack_commands(
 
     // Filter by command type and do the command.
     let response = match command {
-        // SlackCommand::RFD => {
-        //     let num = text.parse::<i32>().unwrap_or(0);
-        //     if num > 0 {
-        //         if let Ok(rfd) = rfds::dsl::rfds
-        //             .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num)))
-        //             .first_async::<RFD>(db.pool())
-        //             .await
-        //         {
-        //             let r: FormattedMessage = rfd.into();
-        //             json!(r)
-        //         } else if let Ok(rfd) = rfds::dsl::rfds
-        //             .filter(
-        //                 rfds::dsl::cio_company_id
-        //                     .eq(company.id)
-        //                     .and(rfds::dsl::name.ilike(format!("%{}%", text))),
-        //             )
-        //             .first_async::<RFD>(db.pool())
-        //             .await
-        //         {
-        //             let r: FormattedMessage = rfd.into();
-        //             json!(r)
-        //         } else {
-        //             json!(MessageResponse {
-        //                 response_type: MessageResponseType::InChannel,
-        //                 text: format!(
-        //                     "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
-        //                     bot_command.user_id, text
-        //                 ),
-        //             })
-        //         }
-        //     } else if let Ok(rfd) = rfds::dsl::rfds
-        //         .filter(
-        //             rfds::dsl::cio_company_id
-        //                 .eq(company.id)
-        //                 .and(rfds::dsl::name.ilike(format!("%{}%", text))),
-        //         )
-        //         .first_async::<RFD>(db.pool())
-        //         .await
-        //     {
-        //         let r: FormattedMessage = rfd.into();
-        //         json!(r)
-        //     } else {
-        //         json!(MessageResponse {
-        //             response_type: MessageResponseType::InChannel,
-        //             text: format!(
-        //                 "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
-        //                 bot_command.user_id, text
-        //             ),
-        //         })
-        //     }
-        // }
         SlackCommand::Meet => {
             let mut name = text.replace(' ', "-");
             if name.is_empty() {

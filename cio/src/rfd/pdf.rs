@@ -2,16 +2,9 @@ use anyhow::Result;
 use async_trait::async_trait;
 use log::info;
 
-use crate::{
-    companies::Company,
-    db::Database,
-    features::Features,
-};
+use crate::{companies::Company, db::Database, features::Features};
 
-use super::{
-    GitHubRFDRepo,
-    RFDNumber,
-};
+use super::{GitHubRFDRepo, RFDNumber};
 
 #[async_trait]
 pub trait PDFStorage {
@@ -30,13 +23,8 @@ pub struct RFDPdfUpload {
 }
 
 impl RFDPdf {
-
     /// Upload the PDF to GitHub and/or Google Drive depending on which backends are supported
-    pub async fn upload(
-        &self,
-        db: &Database,
-        company: &Company,
-    ) -> Result<RFDPdfUpload> {
+    pub async fn upload(&self, db: &Database, company: &Company) -> Result<RFDPdfUpload> {
         if Features::is_enabled("RFD_PDFS_IN_GITHUB") || Features::is_enabled("RFD_PDFS_IN_GOOGLE_DRIVE") {
             // Create or update the file in the github repository.
             let github_url = if Features::is_enabled("RFD_PDFS_IN_GITHUB") {
@@ -204,4 +192,4 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
     // }
 
     Ok(())
-} 
+}

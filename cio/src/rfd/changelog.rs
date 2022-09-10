@@ -2,9 +2,9 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
 
-use crate::rfds::RFDs;
 use crate::companies::Company;
 use crate::db::Database;
+use crate::rfds::RFDs;
 
 /// Create a changelog email for the RFDs.
 pub async fn send_rfd_changelog(db: &Database, company: &Company) -> Result<()> {

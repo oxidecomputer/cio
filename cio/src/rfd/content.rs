@@ -2,25 +2,11 @@ use anyhow::{bail, Result};
 use comrak::{markdown_to_html, ComrakOptions};
 use log::info;
 use regex::Regex;
-use std::{
-    borrow::Cow,
-    env,
-    fs,
-    path::PathBuf,
-    process::Command,
-    str::from_utf8
-};
+use std::{borrow::Cow, env, fs, path::PathBuf, process::Command, str::from_utf8};
 use uuid::Uuid;
 
-use crate::utils::{
-    decode_base64,
-    write_file
-};
-use super::{
-    GitHubRFDBranch,
-    RFDNumber,
-    RFDPdf
-};
+use super::{GitHubRFDBranch, RFDNumber, RFDPdf};
+use crate::utils::{decode_base64, write_file};
 
 pub enum RFDContent<'a> {
     Asciidoc(RFDAsciidoc<'a>),
@@ -28,19 +14,22 @@ pub enum RFDContent<'a> {
 }
 
 impl<'a> RFDContent<'a> {
-
     /// Create a new RFDContent wrapper and attempt to determine the type by examining the source
     /// contents.
     // TODO: This content inspection should be replaced by actually storing the format of the
     // content in the RFD struct
-    pub fn new<T>(content: T) -> Result<Self> where T: Into<Cow<'a, str>> {
+    pub fn new<T>(content: T) -> Result<Self>
+    where
+        T: Into<Cow<'a, str>>,
+    {
         let content = content.into();
 
         let is_asciidoc = {
             // A regular expression that looks for commonly used Asciidoc attributes. These are static
             // regular expressions and can be safely unwrapped.
             let attribute_check = Regex::new(r"^(:showtitle:|:numbered:|:toc: left|:icons: font)$").unwrap();
-            let state_check = Regex::new(r"^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
+            let state_check =
+                Regex::new(r"^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
 
             // Check that the content contains at least one of the commonly used asciidoc attributes,
             // and contains a state line.
@@ -49,7 +38,8 @@ impl<'a> RFDContent<'a> {
 
         let is_markdown = !is_asciidoc && {
             let title_check = Regex::new(r"^# RFD").unwrap();
-            let state_check = Regex::new(r"^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
+            let state_check =
+                Regex::new(r"^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
 
             title_check.is_match(&content) && state_check.is_match(&content)
         };
@@ -60,11 +50,9 @@ impl<'a> RFDContent<'a> {
         } else if is_markdown {
             Ok(Self::new_markdown(content))
         } else {
-
             // If neither content type can be detected than we return an error
             bail!("Failed to detect if the content was either Asciidoc or Markdown")
         }
-
     }
 
     pub fn new_asciidoc(content: Cow<'a, str>) -> Self {
@@ -89,43 +77,28 @@ impl<'a> RFDContent<'a> {
         }
     }
 
-    pub async fn to_html(
-        &self,
-        number: &RFDNumber,
-        branch: &GitHubRFDBranch,
-    ) -> Result<RFDHtml> {
+    pub async fn to_html(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDHtml> {
         match self {
-            Self::Asciidoc(adoc) => {
-                adoc.to_html(number, branch).await
-            }
-            Self::Markdown(md) => {
-                md.to_html(number)
-            }
+            Self::Asciidoc(adoc) => adoc.to_html(number, branch).await,
+            Self::Markdown(md) => md.to_html(number),
         }
     }
 
-    pub async fn to_pdf(
-        &self,
-        title: &str,
-        number: &RFDNumber,
-        branch: &GitHubRFDBranch,
-    ) -> Result<RFDPdf> {
+    pub async fn to_pdf(&self, title: &str, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDPdf> {
         match self {
-            Self::Asciidoc(adoc) => {
-                adoc.to_pdf(title, number, branch).await
-            }
-            _ => Err(anyhow::anyhow!("Only asciidoc supports PDF generation"))
+            Self::Asciidoc(adoc) => adoc.to_pdf(title, number, branch).await,
+            _ => Err(anyhow::anyhow!("Only asciidoc supports PDF generation")),
         }
     }
 
     pub fn update_discussion_link(&mut self, link: &str) {
         let (re, pre, content) = match self {
-            RFDContent::Asciidoc(ref mut adoc) => {
-                (Regex::new(r"(?m)(:discussion:.*$)").unwrap(), ":", adoc.content.to_mut())
-            },
-            RFDContent::Markdown(ref mut md) => {
-                (Regex::new(r"(?m)(discussion:.*$)").unwrap(), "", md.content.to_mut())
-            }
+            RFDContent::Asciidoc(ref mut adoc) => (
+                Regex::new(r"(?m)(:discussion:.*$)").unwrap(),
+                ":",
+                adoc.content.to_mut(),
+            ),
+            RFDContent::Markdown(ref mut md) => (Regex::new(r"(?m)(discussion:.*$)").unwrap(), "", md.content.to_mut()),
         };
 
         let replacement = if let Some(v) = re.find(&content) {
@@ -133,20 +106,18 @@ impl<'a> RFDContent<'a> {
         } else {
             String::new()
         };
-    
+
         *content = content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1);
     }
-    
+
     pub fn update_state(&mut self, state: &str) {
         let (re, pre, content) = match self {
             RFDContent::Asciidoc(ref mut adoc) => {
                 (Regex::new(r"(?m)(:state:.*$)").unwrap(), ":", adoc.content.to_mut())
-            },
-            RFDContent::Markdown(ref mut md) => {
-                (Regex::new(r"(?m)(state:.*$)").unwrap(), "", md.content.to_mut())
             }
+            RFDContent::Markdown(ref mut md) => (Regex::new(r"(?m)(state:.*$)").unwrap(), "", md.content.to_mut()),
         };
-    
+
         let replacement = if let Some(v) = re.find(&content) {
             v.as_str().to_string()
         } else {
@@ -250,7 +221,7 @@ impl<'a> RFDContent<'a> {
                     }
                     None => Default::default(),
                 }
-            },
+            }
             Self::Markdown(RFDMarkdown { content }) => {
                 // TODO: make work w asciidoc.
                 let re = Regex::new(r"(?m)(^authors.*$)").unwrap();
@@ -258,26 +229,25 @@ impl<'a> RFDContent<'a> {
                     Some(v) => v.as_str().replace("authors:", "").trim().to_string(),
                     None => Default::default(),
                 }
-            },
+            }
         }
     }
 }
 
 pub struct RFDAsciidoc<'a> {
     content: Cow<'a, str>,
-    storage_id: Uuid
+    storage_id: Uuid,
 }
 
 impl<'a> RFDAsciidoc<'a> {
     pub fn new(content: Cow<'a, str>) -> Self {
-        Self { content, storage_id: Uuid::new_v4() }
+        Self {
+            content,
+            storage_id: Uuid::new_v4(),
+        }
     }
 
-    pub async fn to_html(
-        &self,
-        number: &RFDNumber,
-        branch: &GitHubRFDBranch,
-    ) -> Result<RFDHtml> {
+    pub async fn to_html(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDHtml> {
         self.download_images(number, branch).await?;
 
         let mut html = RFDHtml(from_utf8(&self.parse(RFDAsciidocOutputFormat::Html).await?)?.to_string());
@@ -290,12 +260,7 @@ impl<'a> RFDAsciidoc<'a> {
         Ok(html)
     }
 
-    pub async fn to_pdf(
-        &self,
-        title: &str,
-        number: &RFDNumber,
-        branch: &GitHubRFDBranch,
-    ) -> Result<RFDPdf> {
+    pub async fn to_pdf(&self, title: &str, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDPdf> {
         self.download_images(number, branch).await?;
 
         let content = self.parse(RFDAsciidocOutputFormat::Pdf).await?;
@@ -318,10 +283,7 @@ impl<'a> RFDAsciidoc<'a> {
     }
 
     async fn parse(&self, format: RFDAsciidocOutputFormat) -> Result<Vec<u8>> {
-        // info!(
-        //     "[asciidoc] Parsing asciidoc file {} / {} / {}",
-        //     self.id, self.number, branch
-        // );
+        info!("[asciidoc] Parsing asciidoc file");
 
         // Create the path to the local tmp file for holding the asciidoc contents
         let storage_path = self.tmp_path();
@@ -330,10 +292,7 @@ impl<'a> RFDAsciidoc<'a> {
         // // Write the contents to a temporary file.
         write_file(&file_path, deunicode::deunicode(&self.content).as_bytes()).await?;
 
-        // info!(
-        //     "[asciidoc] Wrote file to temp dir {} / {} / {}",
-        //     self.id, self.number, branch
-        // );
+        info!("[asciidoc] Wrote file to temp dir {}", file_path);
 
         let cmd_output = tokio::task::spawn_blocking(enclose! { (storage_path, file_path) move || {
             info!("[asciidoc] Shelling out to asciidoctor {:?} / {:?}", storage_path, file_path);
@@ -348,10 +307,7 @@ impl<'a> RFDAsciidoc<'a> {
         }})
         .await??;
 
-        // info!(
-        //     "[asciidoc] Completed asciidoc rendering {} / {} / {}",
-        //     self.id, self.number, branch
-        // );
+        info!("[asciidoc] Completed asciidoc rendering");
 
         let result = if cmd_output.status.success() {
             cmd_output.stdout
@@ -363,10 +319,7 @@ impl<'a> RFDAsciidoc<'a> {
             );
         };
 
-        // info!(
-        //     "[asciidoc] Finished cleanup and returning {} / {} / {}",
-        //     self.id, self.number, branch
-        // );
+        info!("[asciidoc] Finished cleanup and returning");
 
         Ok(result)
     }
@@ -374,12 +327,18 @@ impl<'a> RFDAsciidoc<'a> {
     async fn download_images(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<()> {
         let dir = number.repo_directory();
         let storage_path = self.tmp_path();
-        let storage_path_string = storage_path.to_str().ok_or_else(|| anyhow::anyhow!("Unable to convert image temp storage path to string"))?;
+        let storage_path_string = storage_path
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Unable to convert image temp storage path to string"))?;
         let images = branch.get_images().await?;
 
         for image in images {
             // Save the image to our temporary directory.
-            let image_path = format!("{}/{}", storage_path_string, image.path.replace(&dir, "").trim_start_matches('/'));
+            let image_path = format!(
+                "{}/{}",
+                storage_path_string,
+                image.path.replace(&dir, "").trim_start_matches('/')
+            );
 
             write_file(&PathBuf::from(image_path), &decode_base64(&image.content)).await?;
 
@@ -405,7 +364,7 @@ impl<'a> RFDAsciidoc<'a> {
     // Cleanup remaining images and local state that was used by asciidoctor
     fn cleanup_tmp_path(&self) -> Result<()> {
         let storage_path = self.tmp_path();
-        
+
         if storage_path.exists() && storage_path.is_dir() {
             fs::remove_dir_all(storage_path)?
         }
@@ -416,7 +375,7 @@ impl<'a> RFDAsciidoc<'a> {
 
 enum RFDAsciidocOutputFormat {
     Html,
-    Pdf
+    Pdf,
 }
 
 impl RFDAsciidocOutputFormat {
@@ -427,22 +386,20 @@ impl RFDAsciidocOutputFormat {
                 command
                     .current_dir(working_dir)
                     .args(&["-o", "-", "--no-header-footer", file_path.to_str().unwrap()]);
-                
+
                 command
             }
             Self::Pdf => {
                 let mut command = Command::new("asciidoctor-pdf");
-                command
-                    .current_dir(working_dir)
-                    .args(&[
-                        "-o",
-                        "-",
-                        "-r",
-                        "asciidoctor-mermaid/pdf",
-                        "-a",
-                        "source-highlighter=rouge",
-                        file_path.to_str().unwrap(),
-                    ]);
+                command.current_dir(working_dir).args(&[
+                    "-o",
+                    "-",
+                    "-r",
+                    "asciidoctor-mermaid/pdf",
+                    "-a",
+                    "source-highlighter=rouge",
+                    file_path.to_str().unwrap(),
+                ]);
 
                 command
             }
@@ -471,7 +428,8 @@ pub struct RFDHtml(pub String);
 
 impl RFDHtml {
     pub fn clean_links(&mut self, num: &str) {
-        let mut cleaned = self.0
+        let mut cleaned = self
+            .0
             .replace(r#"href="\#"#, &format!(r#"href="/rfd/{}#"#, num))
             .replace("href=\"#", &format!("href=\"/rfd/{}#", num))
             .replace(r#"img src=""#, &format!(r#"img src="/static/images/{}/"#, num))
