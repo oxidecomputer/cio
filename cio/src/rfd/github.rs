@@ -223,7 +223,7 @@ impl GitHubRFDBranch {
         })
     }
 
-    pub async fn copy_images_to_default_branch(&self, rfd_number: &RFDNumber) -> Result<()> {
+    pub async fn copy_images_to_frontend(&self, rfd_number: &RFDNumber) -> Result<()> {
         info!(
             "[rfd.contents] Getting images from branch {} / {}",
             self.repo, self.branch
@@ -237,6 +237,8 @@ impl GitHubRFDBranch {
             self.repo, self.branch
         );
 
+        // TODO: This could likely be improved by being made into a single commit. There may be
+        // issues around the payload size of a combined commit
         for image in images {
             let new_path = image.path.replace("rfd/", "src/public/static/images/");
 

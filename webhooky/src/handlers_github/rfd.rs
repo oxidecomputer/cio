@@ -36,6 +36,7 @@ pub struct RFDUpdater {
 impl Default for RFDUpdater {
     fn default() -> Self {
         Self::new(vec![
+            Box::new(CopyImagesToFrontend),
             Box::new(UpdateSearch),
             Box::new(UpdatePDFs),
             Box::new(GenerateShortUrls),
@@ -160,6 +161,23 @@ pub struct RFDUpdateActionContext<'a, 'b, 'c, 'd, 'e, 'f> {
 #[async_trait]
 pub trait RFDUpdateAction {
     async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()>;
+}
+
+pub struct CopyImagesToFrontend;
+
+#[async_trait]
+impl RFDUpdateAction for CopyImagesToFrontend {
+    async fn run(&self, ctx: &RFDUpdateActionContext, _rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext { update, .. } = ctx;
+        update.branch.copy_images_to_frontend(&update.number).await?;
+
+        info!(
+            "Copied images for RFD {} on {} to frontend storage",
+            update.number, update.branch.branch
+        );
+
+        Ok(())
+    }
 }
 
 pub struct UpdateSearch;

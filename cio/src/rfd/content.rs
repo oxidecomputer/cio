@@ -8,6 +8,9 @@ use uuid::Uuid;
 use super::{GitHubRFDBranch, RFDNumber, RFDPdf};
 use crate::utils::{decode_base64, write_file};
 
+// TODO: RFDNumber should probably be stored with the content as it doesn't parsing content with a
+// mismatched RFDNumber is pretty nonsensical.
+
 pub enum RFDContent<'a> {
     Asciidoc(RFDAsciidoc<'a>),
     Markdown(RFDMarkdown<'a>),
@@ -16,12 +19,12 @@ pub enum RFDContent<'a> {
 impl<'a> RFDContent<'a> {
     /// Create a new RFDContent wrapper and attempt to determine the type by examining the source
     /// contents.
-    // TODO: This content inspection should be replaced by actually storing the format of the
-    // content in the RFD struct
     pub fn new<T>(content: T) -> Result<Self>
     where
         T: Into<Cow<'a, str>>,
     {
+        // TODO: This content inspection should be replaced by actually storing the format of the
+        // content in the RFD struct
         let content = content.into();
 
         let is_asciidoc = {
@@ -55,14 +58,17 @@ impl<'a> RFDContent<'a> {
         }
     }
 
+    /// Construct a new RFDContent wrapper that contains Asciidoc content
     pub fn new_asciidoc(content: Cow<'a, str>) -> Self {
         Self::Asciidoc(RFDAsciidoc::new(content))
     }
 
+    /// Construct a new RFDContent wrapper that contains Markdown content
     pub fn new_markdown(content: Cow<'a, str>) -> Self {
         Self::Markdown(RFDMarkdown::new(content))
     }
 
+    /// Get a reference to the internal unparsed contents
     pub fn raw(&self) -> &str {
         match self {
             Self::Asciidoc(adoc) => &adoc.content,
@@ -70,6 +76,7 @@ impl<'a> RFDContent<'a> {
         }
     }
 
+    /// Consume this wrapper and return the internal unparsed contents
     pub fn into_inner(self) -> String {
         match self {
             Self::Asciidoc(adoc) => adoc.content.into_owned(),
@@ -77,6 +84,8 @@ impl<'a> RFDContent<'a> {
         }
     }
 
+    /// Generate an HTML string by combining RFD contents with static resources that are stored for
+    /// a given RFD number on a specific branch
     pub async fn to_html(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDHtml> {
         match self {
             Self::Asciidoc(adoc) => adoc.to_html(number, branch).await,
@@ -84,6 +93,8 @@ impl<'a> RFDContent<'a> {
         }
     }
 
+    /// Generate a PDF by combining RFD contents with static resources that are stored for a given
+    /// RFD number on a specific branch. Markdown documents do not support PDF generation
     pub async fn to_pdf(&self, title: &str, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDPdf> {
         match self {
             Self::Asciidoc(adoc) => adoc.to_pdf(title, number, branch).await,
@@ -91,6 +102,7 @@ impl<'a> RFDContent<'a> {
         }
     }
 
+    /// Update the discussion link stored within the document to the passed link
     pub fn update_discussion_link(&mut self, link: &str) {
         let (re, pre, content) = match self {
             RFDContent::Asciidoc(ref mut adoc) => (
@@ -110,6 +122,7 @@ impl<'a> RFDContent<'a> {
         *content = content.replacen(&replacement, &format!("{}discussion: {}", pre, link.trim()), 1);
     }
 
+    /// Update the state stored within the document to the passed state
     pub fn update_state(&mut self, state: &str) {
         let (re, pre, content) = match self {
             RFDContent::Asciidoc(ref mut adoc) => {
@@ -127,6 +140,7 @@ impl<'a> RFDContent<'a> {
         *content = content.replacen(&replacement, &format!("{}state: {}", pre, state.trim()), 1);
     }
 
+    /// Extract the title from the internal content
     pub fn get_title(&self) -> String {
         let content = self.raw();
 
@@ -169,17 +183,24 @@ impl<'a> RFDContent<'a> {
         }
     }
 
+    /// Get the state value stored within the document. If one can not be found, then an empty
+    /// string is returned
     pub fn get_state(&self) -> String {
         let re = Regex::new(r"(?m)(state:.*$)").unwrap();
 
+        // TODO: This should return Option<&str>
         match re.find(self.raw()) {
             Some(v) => v.as_str().replace("state:", "").trim().to_string(),
             None => Default::default(),
         }
     }
 
+    /// Get the discussion link stored within the document. If one can not be found, then an empty
+    /// string is returned
     pub fn get_discussion(&self) -> String {
         let re = Regex::new(r"(?m)(discussion:.*$)").unwrap();
+
+        // TODO: This should return Option<&str>
         match re.find(self.raw()) {
             Some(v) => {
                 let d = v.as_str().replace("discussion:", "").trim().to_string();
@@ -194,12 +215,14 @@ impl<'a> RFDContent<'a> {
         }
     }
 
+    /// Get the authors line stored within the document. The returned string may contain multiple
+    /// names. If none can be found, then and empty string is returned
     pub fn get_authors(&self) -> String {
         match self {
             Self::Asciidoc(RFDAsciidoc { content, .. }) => {
                 // We must have asciidoc content.
-                // We want to find the line under the first "=" line (which is the title), authors is under
-                // that.
+                // We want to find the line under the first "=" line (which is the title), authors
+                // is under that.
                 let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)").unwrap();
                 match re.find(content) {
                     Some(v) => {
@@ -234,6 +257,7 @@ impl<'a> RFDContent<'a> {
     }
 }
 
+/// The text data of an Asciidoc RFD
 pub struct RFDAsciidoc<'a> {
     content: Cow<'a, str>,
     storage_id: Uuid,
@@ -247,6 +271,8 @@ impl<'a> RFDAsciidoc<'a> {
         }
     }
 
+    /// Generate an HTML string by combining RFD contents with static resources that are stored for
+    /// a given RFD number on a specific branch
     pub async fn to_html(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDHtml> {
         self.download_images(number, branch).await?;
 
@@ -260,6 +286,8 @@ impl<'a> RFDAsciidoc<'a> {
         Ok(html)
     }
 
+    /// Generate a PDF by combining RFD contents with static resources that are stored for a given
+    /// RFD number on a specific branch. Markdown documents do not support PDF generation
     pub async fn to_pdf(&self, title: &str, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDPdf> {
         self.download_images(number, branch).await?;
 
@@ -282,6 +310,8 @@ impl<'a> RFDAsciidoc<'a> {
         })
     }
 
+    /// Parse the asciidoc content and generate output data of the requested format. This relies on
+    /// invoking an external asciidoctor binary to perform the actual transformation.
     async fn parse(&self, format: RFDAsciidocOutputFormat) -> Result<Vec<u8>> {
         info!("[asciidoc] Parsing asciidoc file");
 
@@ -324,6 +354,8 @@ impl<'a> RFDAsciidoc<'a> {
         Ok(result)
     }
 
+    /// Downloads images that are stored on the provided GitHub branch for the given RFD number.
+    /// These are stored locally so in a tmp directory for use by asciidoctor
     async fn download_images(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<()> {
         let dir = number.repo_directory();
         let storage_path = self.tmp_path();
@@ -379,6 +411,7 @@ enum RFDAsciidocOutputFormat {
 }
 
 impl RFDAsciidocOutputFormat {
+    /// Generate a command for parsing asciidoctor content
     pub fn command(&self, working_dir: &PathBuf, file_path: &PathBuf) -> Command {
         match self {
             Self::Html => {
@@ -416,6 +449,8 @@ impl<'a> RFDMarkdown<'a> {
         Self { content }
     }
 
+    /// Generate an HTML string by combining RFD contents with static resources that are stored for
+    /// a given RFD number on a specific branch
     pub fn to_html(&self, number: &RFDNumber) -> Result<RFDHtml> {
         let mut html = RFDHtml(markdown_to_html(&self.content, &ComrakOptions::default()));
         html.clean_links(&number.as_number_string());
@@ -427,6 +462,9 @@ impl<'a> RFDMarkdown<'a> {
 pub struct RFDHtml(pub String);
 
 impl RFDHtml {
+    /// Replaces link relative to the document with links relative to the root of the RFD repo.
+    /// Also replaces urls of the form (<num>\d+).rfd.oxide.computer with urls that look like
+    /// rfd.shared.oxide.computer/rfd/$num where $num is left padded with 0s
     pub fn clean_links(&mut self, num: &str) {
         let mut cleaned = self
             .0
