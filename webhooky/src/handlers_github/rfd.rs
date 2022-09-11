@@ -1,63 +1,17 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use cio_api::{
-    core::{GitHubCommit, GitHubPullRequest},
+    core::GitHubPullRequest,
     features::Features,
-    rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate, RFDSearchIndex},
+    rfd::{GitHubRFDUpdate, RFDSearchIndex},
     rfds::{NewRFD, RFD},
     shorturls::generate_shorturls_for_rfds,
-    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, is_image},
+    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };
 use google_drive::traits::{DriveOps, FileOps};
-use log::{error, info, warn};
+use log::info;
 
-use crate::{context::Context, github_types::GitHubWebhook};
-
-fn get_rfd_updates(branch: &GitHubRFDBranch, commit: &GitHubCommit) -> Vec<GitHubRFDUpdate> {
-    let mut updates = vec![];
-
-    // Iterate through all of the updated files and for anything that looks like and RFD document
-    // we generate a update. (These are documents that exist in /rfd/ and are named either
-    // README.adoc or README.md
-    let mut changed_files: Vec<&String> = vec![];
-    changed_files.extend(commit.added.iter());
-    changed_files.extend(commit.modified.iter());
-
-    for file in changed_files {
-        // We only care about files in the rfd/ directory
-        if !file.starts_with("rfd/") {
-            continue;
-        }
-
-        // If the file is a README.md or README.adoc, this
-        if file.ends_with("README.md") || file.ends_with("README.adoc") {
-            // Parse the RFD directory as an int.
-            let (dir, _) = file.trim_start_matches("rfd/").split_once('/').unwrap();
-
-            // If we can not easily parse an RFD number from the path than we ignore it
-            if let Ok(number) = dir.trim_start_matches('0').parse::<i32>() {
-                if let Some(commit_date) = commit.timestamp {
-                    updates.push(GitHubRFDUpdate {
-                        number: number.into(),
-                        branch: branch.clone(),
-                        file: file.clone(),
-                        commit_date,
-                    });
-                } else {
-                    log::error!("RFD document commit is missing a timestamp. {}", commit.id);
-                }
-            } else {
-                log::warn!(
-                    "Found README document that looks like an RFD, but could not determine an RFD number. {} {}",
-                    commit.id,
-                    file
-                );
-            }
-        }
-    }
-
-    updates
-}
+use crate::context::Context;
 
 trait Validate {
     fn is_valid(&self) -> bool;
@@ -75,81 +29,34 @@ impl Validate for GitHubRFDUpdate {
     }
 }
 
-pub struct RFDPushHandler {
-    post_update_hooks: Vec<Box<dyn PostRFDUpdateHook + Send + Sync>>,
+pub struct RFDUpdater {
+    actions: Vec<Box<dyn RFDUpdateAction + Send + Sync>>,
 }
 
-impl RFDPushHandler {
-    pub fn new() -> Self {
-        Self {
-            post_update_hooks: vec![
-                Box::new(UpdateSearch),
-                Box::new(UpdatePDFs),
-                Box::new(GenerateShortUrls),
-                Box::new(CreatePullRequest),
-                Box::new(UpdatePullRequest),
-                Box::new(UpdateDiscussionUrl),
-                Box::new(EnsureRFDOnDefaultIsInPublishedState),
-                Box::new(DeleteOldPDFs),
-            ],
-        }
+impl Default for RFDUpdater {
+    fn default() -> Self {
+        Self::new(vec![
+            Box::new(UpdateSearch),
+            Box::new(UpdatePDFs),
+            Box::new(GenerateShortUrls),
+            Box::new(CreatePullRequest),
+            Box::new(UpdatePullRequest),
+            Box::new(UpdateDiscussionUrl),
+            Box::new(EnsureRFDOnDefaultIsInPublishedState),
+            Box::new(DeleteOldPDFs),
+        ])
+    }
+}
+
+impl RFDUpdater {
+    pub fn new(actions: Vec<Box<dyn RFDUpdateAction + Send + Sync>>) -> Self {
+        Self { actions }
     }
 
     /// Handle a `push` event for the rfd repo.
-    pub async fn handle(&self, github: &octorust::Client, api_context: &Context, event: GitHubWebhook) -> Result<()> {
-        info!("[rfd.push] Remaining stack size: {:?}", stacker::remaining_stack());
-
-        // Perform validation checks first to determine if we need to process this call or if we can
-        // drop it early
-        if event.repository.name != "repo" {
-            error!(
-                "Attempting to run rfd `push` handler on the {} repo. Exiting as this should not occur.",
-                event.repository.name
-            );
-            return Ok(());
-        }
-
-        if event.commits.is_empty() {
-            // Return early that there are no commits.
-            // IDK how we got here, since we check this above in the main github handler.
-            warn!("rfd `push` event had no commits");
-            return Ok(());
-        }
-
-        // Get the commit.
-        let mut commit = event.commits.get(0).unwrap().clone();
-
-        // Ignore any changes that are not to the `rfd/` directory.
-        let dir = "rfd/";
-        commit.filter_files_by_path(dir);
-        if !commit.has_changed_files() {
-            // No files changed that we care about.
-            // We can throw this out, log it and return early.
-            info!(
-                "`push` event commit `{}` does not include any changes to the `{}` directory",
-                commit.id, dir
-            );
-            return Ok(());
-        }
-
-        // Look up our RFD repo
-        let repo = GitHubRFDRepo::new(&api_context.company).await?;
-
-        // Get the branch name.
-        let branch_name = event.refv.trim_start_matches("refs/heads/");
-        let branch = repo.branch(branch_name.to_string());
-
-        // We are always creating updates based on the branch that is defined by the event, independent
-        // of it if corresponds with RFD number of the file(s) updated. We are only responsible for
-        // generating updates, not determining if they make sense to process.
-        let updates = get_rfd_updates(&branch, &commit);
-
-        let log_message = |s: &str| {
-            info!("[rfd] [{}] {}", commit.sha, s);
-        };
-
-        // Loop through the updates that were found and process them individually. We also throw out any
-        // updates that attempt to update a mismatched RFD
+    pub async fn handle(&self, api_context: &Context, updates: &[GitHubRFDUpdate]) -> Result<()> {
+        // Loop through the updates that were provided and process them individually. We also throw
+        // out any updates that attempt to update a mismatched RFD
         for update in updates {
             // Skip any updates that fail validation
             if !update.is_valid() {
@@ -159,20 +66,26 @@ impl RFDPushHandler {
             // We have a README file that changed, let's parse the RFD and update it
             // in our database.
             info!(
-                "`push` event -> file {} was modified on branch {}",
-                update.file, update.branch.branch
+                "Updating RFD {} on the {} branch ({})",
+                update.number, update.branch.branch, update.file
             );
 
             // If this branch does not actually exist in GitHub, then we drop the update
             if !update.branch.exists_in_remote().await {
-                info!("Dropping RFD update as the remote branch has gone missing {:?}", update);
+                info!(
+                    "Dropping RFD {} update as the remote branch {} has gone missing",
+                    update.number, update.branch.branch
+                );
                 continue;
             }
 
             // Fetch the latest RFD information from GitHub
             let new_rfd = NewRFD::new_from_update(&api_context.company, &update).await?;
 
-            info!("Generated RFD for branch {} from GitHub", update.branch.branch);
+            info!(
+                "Generated RFD {} from branch {} on GitHub",
+                update.number, update.branch.branch
+            );
 
             // Get the old RFD from the database.
             // DO THIS BEFORE UPDATING THE RFD.
@@ -180,134 +93,38 @@ impl RFDPushHandler {
             let old_rfd = RFD::get_from_db(&api_context.db, new_rfd.number).await;
 
             info!(
-                "Checked for existing RFD in the database {:?}",
-                old_rfd.as_ref().map(|o| o.id)
+                "Checked for existing version of RFD {} in the database: {}",
+                update.number,
+                old_rfd.is_some()
             );
 
             // Update the RFD in the database.
             let mut rfd = new_rfd.upsert(&api_context.db).await?;
 
-            info!("Updated RFD {} in the database", update.number);
+            info!("Upserted RFD {} in to the database", rfd.number);
 
-            // The RFD has been stored internally, now trigger the post update actions
-            self.run_hooks(api_context, &update, old_rfd.as_ref(), &mut rfd).await?;
-
-            info!("[SUCCESS]: RFD {} `push` operations completed", rfd.number_string);
-        }
-
-        // Iterate over the removed files and remove any images that we no longer
-        // need for the HTML rendered RFD website.
-        for file in &commit.removed {
-            // Make sure the file has a prefix of "rfd/".
-            if !file.starts_with("rfd/") {
-                // Continue through the loop early.
-                // We only care if a file change in the rfd/ directory.
-                continue;
-            }
-
-            if is_image(file) {
-                // Remove the image from the `src/public/static/images` path since we no
-                // longer need it.
-                // We delete these on the default branch ONLY.
-                let website_file = file.replace("rfd/", "src/public/static/images/");
-
-                // We need to get the current sha for the file we want to delete.
-                let (_, gh_file_sha) = if let Ok((v, s)) = get_file_content_from_repo(
-                    github,
-                    &branch.owner,
-                    &branch.repo,
-                    &branch.default_branch,
-                    &website_file,
-                )
-                .await
-                {
-                    (v, s)
-                } else {
-                    // If there was an error, likely the file does not exist, so we can continue
-                    // anyways.
-                    (vec![], "".to_string())
-                };
-
-                if !gh_file_sha.is_empty() {
-                    github
-                        .repos()
-                        .delete_file(
-                            &repo.owner,
-                            &repo.repo,
-                            &website_file,
-                            &octorust::types::ReposDeleteFileRequest {
-                                message: format!(
-                                    "Deleting file content {} programatically\n\nThis is done from \
-                                    the cio repo webhooky::listen_github_webhooks function.",
-                                    website_file
-                                ),
-                                sha: gh_file_sha,
-                                committer: None,
-                                author: None,
-                                branch: branch.default_branch.to_string(),
-                            },
-                        )
-                        .await?;
-                    log_message(&format!(
-                        "[SUCCESS]: deleted file `{}` since it was removed in this push",
-                        website_file,
-                    ));
-                }
-            }
-        }
-
-        // Iterate over the files and update the RFDs that have been added or
-        // modified in our database.
-        let mut changed_files = commit.added.clone();
-        changed_files.append(&mut commit.modified.clone());
-        for file in changed_files {
-            // Make sure the file has a prefix of "rfd/".
-            if !file.starts_with("rfd/") {
-                // Continue through the loop early.
-                // We only care if a file change in the rfd/ directory.
-                continue;
-            }
-
-            // Update images for the static site.
-            if is_image(&file) {
-                // Some image for an RFD updated. Let's make sure we have that image in the right place
-                // for the RFD shared site.
-                // First, let's read the file contents.
-                let (gh_file_content, _) =
-                    get_file_content_from_repo(github, &branch.owner, &branch.repo, &branch.branch, &file).await?;
-
-                // Let's write the file contents to the location for the static website.
-                // We replace the `rfd/` path with the `src/public/static/images/` path since
-                // this is where images go for the static website.
-                // We update these on the default branch ONLY
-                let website_file = file.replace("rfd/", "src/public/static/images/");
-                create_or_update_file_in_github_repo(
-                    github,
-                    &branch.owner,
-                    &branch.repo,
-                    &branch.default_branch,
-                    &website_file,
-                    gh_file_content,
-                )
+            // The RFD has been stored internally, now trigger the update actions
+            self.run_actions(api_context, &update, old_rfd.as_ref(), &mut rfd)
                 .await?;
 
-                info!(
-                    "[SUCCESS]: updated file `{}` since it was modified in this push",
-                    website_file
-                );
-            }
+            // Perform a final update to capture and modifications made during update actions
+            rfd.update(&api_context.db).await?;
+
+            info!(
+                "Update for RFD {} via the {} branch completed",
+                rfd.number, update.branch.branch
+            );
         }
 
-        // TODO: should we do something if the file gets deleted (?)
         Ok(())
     }
 
-    async fn run_hooks(
+    async fn run_actions(
         &self,
         api_context: &Context,
         update: &GitHubRFDUpdate,
         old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
+        rfd: &mut RFD,
     ) -> Result<()> {
         let github = api_context.company.authenticate_github()?;
         let pull_requests = update.branch.find_pull_requests().await?;
@@ -316,43 +133,42 @@ impl RFDPushHandler {
         // refactored to account for multiple pull requests existing (even though there *should*
         // never be multiple)
         let pull_request = pull_requests.get(0);
+        let ctx = RFDUpdateActionContext {
+            api_context: api_context,
+            github: &github,
+            pull_request: pull_request,
+            update: update,
+            old_rfd: old_rfd,
+        };
 
-        for hook in &self.post_update_hooks {
-            hook.run(api_context, &github, pull_request, update, old_rfd, new_rfd)
-                .await?;
+        for action in &self.actions {
+            action.run(&ctx, rfd).await?;
         }
 
         Ok(())
     }
 }
 
+pub struct RFDUpdateActionContext<'a, 'b, 'c, 'd, 'e> {
+    pub api_context: &'a Context,
+    pub github: &'b octorust::Client,
+    pub pull_request: Option<&'c GitHubPullRequest>,
+    pub update: &'d GitHubRFDUpdate,
+    pub old_rfd: Option<&'e RFD>,
+}
+
 #[async_trait]
-pub trait PostRFDUpdateHook {
-    async fn run(
-        &self,
-        api_context: &Context,
-        github: &octorust::Client,
-        pull_request: Option<&GitHubPullRequest>,
-        update: &GitHubRFDUpdate,
-        old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
-    ) -> Result<()>;
+pub trait RFDUpdateAction {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()>;
 }
 
 pub struct UpdateSearch;
 
 #[async_trait]
-impl PostRFDUpdateHook for UpdateSearch {
-    async fn run(
-        &self,
-        _api_context: &Context,
-        _github: &octorust::Client,
-        _pull_request: Option<&GitHubPullRequest>,
-        update: &GitHubRFDUpdate,
-        _old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
-    ) -> Result<()> {
-        RFDSearchIndex::index_rfd(&new_rfd.number.into()).await?;
+impl RFDUpdateAction for UpdateSearch {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext { update, .. } = ctx;
+        RFDSearchIndex::index_rfd(&rfd.number.into()).await?;
         info!("Triggered update of the search index for RFD {}", update.number);
 
         Ok(())
@@ -362,31 +178,27 @@ impl PostRFDUpdateHook for UpdateSearch {
 pub struct UpdatePDFs;
 
 #[async_trait]
-impl PostRFDUpdateHook for UpdatePDFs {
-    async fn run(
-        &self,
-        api_context: &Context,
-        _github: &octorust::Client,
-        _pull_request: Option<&GitHubPullRequest>,
-        update: &GitHubRFDUpdate,
-        _old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
-    ) -> Result<()> {
+impl RFDUpdateAction for UpdatePDFs {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext {
+            update, api_context, ..
+        } = ctx;
+
         // Generate the PDFs for the RFD and upload them
-        let upload = new_rfd
+        let upload = rfd
             .content()?
-            .to_pdf(&new_rfd.title, &update.number, &update.branch)
+            .to_pdf(&rfd.title, &update.number, &update.branch)
             .await?
             .upload(&api_context.db, &api_context.company)
             .await?;
 
         // Store the PDF urls as needed to the RFD record
         if let Some(github_url) = upload.github_url {
-            new_rfd.pdf_link_github = github_url;
+            rfd.pdf_link_github.replace_range(.., &github_url);
         }
 
         if let Some(google_drive_url) = upload.google_drive_url {
-            new_rfd.pdf_link_google_drive = google_drive_url;
+            rfd.pdf_link_google_drive.replace_range(.., &google_drive_url);
         }
 
         Ok(())
@@ -396,16 +208,10 @@ impl PostRFDUpdateHook for UpdatePDFs {
 pub struct GenerateShortUrls;
 
 #[async_trait]
-impl PostRFDUpdateHook for GenerateShortUrls {
-    async fn run(
-        &self,
-        api_context: &Context,
-        _github: &octorust::Client,
-        _pull_request: Option<&GitHubPullRequest>,
-        _update: &GitHubRFDUpdate,
-        _old_rfd: Option<&RFD>,
-        _new_rfd: &mut RFD,
-    ) -> Result<()> {
+impl RFDUpdateAction for GenerateShortUrls {
+    async fn run(&self, ctx: &RFDUpdateActionContext, _rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext { api_context, .. } = ctx;
+
         // Create all the shorturls for the RFD if we need to, this would be on added files, only.
         generate_shorturls_for_rfds(
             &api_context.db,
@@ -425,29 +231,27 @@ impl PostRFDUpdateHook for GenerateShortUrls {
 pub struct CreatePullRequest;
 
 #[async_trait]
-impl PostRFDUpdateHook for CreatePullRequest {
-    async fn run(
-        &self,
-        api_context: &Context,
-        github: &octorust::Client,
-        pull_request: Option<&GitHubPullRequest>,
-        update: &GitHubRFDUpdate,
-        old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
-    ) -> Result<()> {
+impl RFDUpdateAction for CreatePullRequest {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext {
+            update,
+            github,
+            pull_request,
+            api_context,
+            old_rfd,
+            ..
+        } = ctx;
+
         // We only ever create pull requests if the RFD is in the discussion state, and we are not
         // handling an update on the default branch
-        if update.branch.branch != update.branch.default_branch
-            && new_rfd.state == "discussion"
-            && pull_request.is_none()
-        {
+        if update.branch.branch != update.branch.default_branch && rfd.state == "discussion" && pull_request.is_none() {
             let pull = github
                 .pulls()
                 .create(
                     &update.branch.owner,
                     &update.branch.repo,
                     &octorust::types::PullsCreateRequest {
-                        title: new_rfd.name.to_string(),
+                        title: rfd.name.to_string(),
                         head: format!("{}:{}", api_context.company.github_org, update.branch.branch),
                         base: update.branch.default_branch.to_string(),
                         body: "Automatically opening the pull request since the document \
@@ -464,9 +268,9 @@ impl PostRFDUpdateHook for CreatePullRequest {
 
             info!(
                 "[SUCCESS]: RFD {} has moved from state {:?} -> {}, on branch {}, opened pull request {}",
-                new_rfd.number_string,
+                rfd.number_string,
                 old_rfd.map(|rfd| &rfd.state),
-                new_rfd.state,
+                rfd.state,
                 update.branch.branch,
                 pull.number,
             );
@@ -479,20 +283,19 @@ impl PostRFDUpdateHook for CreatePullRequest {
 pub struct UpdatePullRequest;
 
 #[async_trait]
-impl PostRFDUpdateHook for UpdatePullRequest {
-    async fn run(
-        &self,
-        _api_context: &Context,
-        github: &octorust::Client,
-        pull_request: Option<&GitHubPullRequest>,
-        update: &GitHubRFDUpdate,
-        _old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
-    ) -> Result<()> {
+impl RFDUpdateAction for UpdatePullRequest {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext {
+            update,
+            pull_request,
+            github,
+            ..
+        } = ctx;
+
         if let Some(pull_request) = pull_request {
             // Let's make sure the title of the pull request is what it should be.
             // The pull request title should be equal to the name of the pull request.
-            if new_rfd.name != pull_request.title {
+            if rfd.name != pull_request.title {
                 // TODO: Is this call necessary?
                 // Get the current set of settings for the pull request.
                 // We do this because we want to keep the current state for body.
@@ -508,7 +311,7 @@ impl PostRFDUpdateHook for UpdatePullRequest {
                         &update.branch.repo,
                         pull_request.number,
                         &octorust::types::PullsUpdateRequest {
-                            title: new_rfd.name.to_string(),
+                            title: rfd.name.to_string(),
                             body: pull_content.body,
                             base: "".to_string(),
                             maintainer_can_modify: None,
@@ -520,7 +323,7 @@ impl PostRFDUpdateHook for UpdatePullRequest {
                         anyhow!(
                             "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
                             pull_request.title,
-                            new_rfd.name,
+                            rfd.name,
                             pull_request.number,
                             err,
                         )
@@ -530,9 +333,9 @@ impl PostRFDUpdateHook for UpdatePullRequest {
             // Update the labels for the pull request.
             let mut labels: Vec<String> = Default::default();
 
-            if new_rfd.state == "discussion" {
+            if rfd.state == "discussion" {
                 labels.push(":thought_balloon: discussion".to_string());
-            } else if new_rfd.state == "ideation" {
+            } else if rfd.state == "ideation" {
                 labels.push(":hatching_chick: ideation".to_string());
             }
 
@@ -554,26 +357,25 @@ impl PostRFDUpdateHook for UpdatePullRequest {
 pub struct UpdateDiscussionUrl;
 
 #[async_trait]
-impl PostRFDUpdateHook for UpdateDiscussionUrl {
-    async fn run(
-        &self,
-        _api_context: &Context,
-        github: &octorust::Client,
-        pull_request: Option<&GitHubPullRequest>,
-        update: &GitHubRFDUpdate,
-        _old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
-    ) -> Result<()> {
+impl RFDUpdateAction for UpdateDiscussionUrl {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext {
+            pull_request,
+            github,
+            update,
+            ..
+        } = ctx;
+
         if let Some(pull_request) = pull_request {
             // If the stored discussion link does not match the PR we found, then and
             // update is required
-            if new_rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
+            if rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
                 info!(
                     "Stored discussion link \"{}\" does not match the PR found \"{}\"",
-                    new_rfd.discussion, pull_request.html_url
+                    rfd.discussion, pull_request.html_url
                 );
 
-                new_rfd.update_discussion(&pull_request.html_url)?;
+                rfd.update_discussion(&pull_request.html_url)?;
 
                 // Update the file in GitHub. This will trigger another commit webhook
                 // and therefore must only occur when there is a change that needawaits to
@@ -585,7 +387,7 @@ impl PostRFDUpdateHook for UpdateDiscussionUrl {
                     &update.branch.repo,
                     &update.branch.branch,
                     &update.file,
-                    new_rfd.content.as_bytes().to_vec(),
+                    rfd.content.as_bytes().to_vec(),
                 )
                 .await?;
 
@@ -600,21 +402,15 @@ impl PostRFDUpdateHook for UpdateDiscussionUrl {
 pub struct EnsureRFDOnDefaultIsInPublishedState;
 
 #[async_trait]
-impl PostRFDUpdateHook for EnsureRFDOnDefaultIsInPublishedState {
-    async fn run(
-        &self,
-        _api_context: &Context,
-        github: &octorust::Client,
-        _pull_request: Option<&GitHubPullRequest>,
-        update: &GitHubRFDUpdate,
-        _old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
-    ) -> Result<()> {
+impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext { update, github, .. } = ctx;
+
         // If the RFD was merged into the default branch, but the RFD state is not `published`,
         // update the state of the RFD in GitHub to show it as `published`.
-        if update.branch.branch == update.branch.default_branch && new_rfd.state != "published" {
+        if update.branch.branch == update.branch.default_branch && rfd.state != "published" {
             //  Update the state of the RFD in GitHub to show it as `published`.
-            new_rfd.update_state("published")?;
+            rfd.update_state("published")?;
 
             // Update the file in GitHub.
             // Keep in mind: this push will kick off another webhook.
@@ -624,13 +420,13 @@ impl PostRFDUpdateHook for EnsureRFDOnDefaultIsInPublishedState {
                 &update.branch.repo,
                 &update.branch.branch,
                 &update.file,
-                new_rfd.content.as_bytes().to_vec(),
+                rfd.content.as_bytes().to_vec(),
             )
             .await?;
 
             info!(
                 "[SUCCESS]: updated state to `published` for RFD {}, since it was merged into branch {}",
-                new_rfd.number_string, update.branch.default_branch
+                rfd.number_string, update.branch.default_branch
             );
         }
 
@@ -641,22 +437,22 @@ impl PostRFDUpdateHook for EnsureRFDOnDefaultIsInPublishedState {
 pub struct DeleteOldPDFs;
 
 #[async_trait]
-impl PostRFDUpdateHook for DeleteOldPDFs {
-    async fn run(
-        &self,
-        api_context: &Context,
-        github: &octorust::Client,
-        _pull_request: Option<&GitHubPullRequest>,
-        update: &GitHubRFDUpdate,
-        old_rfd: Option<&RFD>,
-        new_rfd: &mut RFD,
-    ) -> Result<()> {
+impl RFDUpdateAction for DeleteOldPDFs {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
+        let RFDUpdateActionContext {
+            old_rfd,
+            github,
+            update,
+            api_context,
+            ..
+        } = ctx;
+
         let old_pdf_filename = old_rfd.map(|rfd| rfd.get_pdf_filename());
 
         // If the PDF filename has changed (likely due to a title change for an RFD), then ensure
         // that the old PDF files are deleted
         if let Some(old_pdf_filename) = old_pdf_filename {
-            let new_pdf_filename = new_rfd.get_pdf_filename();
+            let new_pdf_filename = rfd.get_pdf_filename();
 
             if old_pdf_filename != new_pdf_filename {
                 if Features::is_enabled("RFD_PDFS_IN_GITHUB") {

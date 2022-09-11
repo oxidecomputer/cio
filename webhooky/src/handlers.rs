@@ -14,7 +14,6 @@ use cio_api::{
     journal_clubs::JournalClubMeeting,
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
-    rfd::RFDSearchIndex,
     rfds::RFD,
     schema::{applicants, inbound_shipments, journal_club_meetings, outbound_shipments},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
@@ -37,6 +36,7 @@ use slack_chat_api::{
 
 use crate::{
     context::Context,
+    handlers_github::RFDUpdater,
     server::{
         AirtableRowEvent, ApplicationFileUploadData, CounterResponse, GitHubRateLimit, RFDPathParams,
         ShippoTrackingUpdateEvent,
@@ -83,50 +83,13 @@ pub async fn handle_rfd_update_by_number(
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).await.unwrap();
 
-    let result = RFD::get_from_db(db, num).await;
-    if result.is_none() {
-        // Return early, we couldn't find an RFD.
-        bail!("no RFD was found with number `{}`", num);
-    }
-    let mut rfd = result.unwrap();
+    let rfd = RFD::get_from_db(db, num)
+        .await
+        .ok_or_else(|| anyhow::anyhow!("no RFD was found with number `{}`", num))?;
 
-    // Update the RFD.
-    if let Err(e) = rfd.expand(&oxide).await {
-        if (e.to_string()).contains("No commit found for the ref") {
-            // Likely it was merged into master, let's try that.
-            // And likely something messed up, so let's try again.
-            // And no worries if it's not merged into master it will just fail again.
-            // And won't save it back to the database.
-            rfd.state = "published".to_string();
-            // Set the link since thats how we figure out if it's published on master.
-            rfd.link = format!(
-                "https://github.com/oxidecomputer/rfd/tree/master/rfd/{}",
-                rfd.number_string
-            );
-            rfd.expand(&oxide).await?;
-        } else {
-            bail!("failed to expand RFD: {}", e);
-        }
-    }
-    info!("updated  RFD {}", rfd.number_string);
-
-    // Save the rfd back to our database.
-    // Do the save before the pdf in case something goes wrong.
-    let rfd = rfd.update(db).await?;
-
-    // Now that the database is updated, update the search index.
-    RFDSearchIndex::index_rfd(&rfd.number.into()).await?;
-
-    rfd.content()?
-        .to_pdf(&rfd.title, &rfd.number.into(), &rfd.branch(&oxide).await?)
-        .await?
-        .upload(db, &oxide)
-        .await?;
-
-    info!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
-
-    // Save the rfd back to our database.
-    rfd.update(db).await?;
+    let update = rfd.create_sync(&oxide).await?;
+    let updater = RFDUpdater::default();
+    updater.handle(&api_context, &[update]).await?;
 
     Ok(())
 }

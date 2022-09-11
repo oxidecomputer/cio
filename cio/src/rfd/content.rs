@@ -292,7 +292,7 @@ impl<'a> RFDAsciidoc<'a> {
         // // Write the contents to a temporary file.
         write_file(&file_path, deunicode::deunicode(&self.content).as_bytes()).await?;
 
-        info!("[asciidoc] Wrote file to temp dir {}", file_path);
+        info!("[asciidoc] Wrote file to temp dir {:?}", file_path);
 
         let cmd_output = tokio::task::spawn_blocking(enclose! { (storage_path, file_path) move || {
             info!("[asciidoc] Shelling out to asciidoctor {:?} / {:?}", storage_path, file_path);
@@ -330,7 +330,7 @@ impl<'a> RFDAsciidoc<'a> {
         let storage_path_string = storage_path
             .to_str()
             .ok_or_else(|| anyhow::anyhow!("Unable to convert image temp storage path to string"))?;
-        let images = branch.get_images().await?;
+        let images = branch.get_images(number).await?;
 
         for image in images {
             // Save the image to our temporary directory.

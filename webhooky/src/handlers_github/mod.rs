@@ -7,15 +7,17 @@ use cio_api::{
         get_configs_from_repo, sync_buildings, sync_certificates, sync_github_outside_collaborators, sync_groups,
         sync_links, sync_resources, sync_users,
     },
+    core::GitHubCommit,
     repos::NewRepo,
+    rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate},
     rfds::RFD,
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos},
-    utils::{create_or_update_file_in_github_repo, decode_base64_to_string},
+    utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo, is_image},
 };
 use dropshot::{Extractor, RequestContext, ServerContext};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
-use log::{info, warn};
+use log::{error, info, warn};
 use sha2::Sha256;
 use std::{str::FromStr, sync::Arc};
 
@@ -23,7 +25,7 @@ use crate::{context::Context, event_types::EventType, github_types::GitHubWebhoo
 
 mod rfd;
 
-use rfd::RFDPushHandler;
+pub use rfd::RFDUpdater;
 
 #[derive(Debug)]
 pub struct GitHubWebhookVerification;
@@ -172,9 +174,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                         scope.set_tag("github.event.type", &event_type_string);
                     });
 
-                    let handler = RFDPushHandler::new();
-
-                    match handler.handle(&github, api_context, event.clone()).await {
+                    match handle_rfd_push(&github, api_context, event.clone()).await {
                         Ok(_) => ( /* Silence */ ),
                         Err(e) => {
                             event
@@ -244,6 +244,210 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
     }
 
     Ok(())
+}
+
+async fn handle_rfd_push(github: &octorust::Client, api_context: &Context, event: GitHubWebhook) -> Result<()> {
+    info!("[rfd.push] Remaining stack size: {:?}", stacker::remaining_stack());
+
+    // Perform validation checks first to determine if we need to process this call or if we can
+    // drop it early
+    if event.repository.name != "rfd" {
+        error!(
+            "Attempting to run rfd `push` handler on the {} repo. Exiting as this should not occur.",
+            event.repository.name
+        );
+        return Ok(());
+    }
+
+    if event.commits.is_empty() {
+        // Return early that there are no commits.
+        // IDK how we got here, since we check this above in the main github handler.
+        warn!("rfd `push` event had no commits");
+        return Ok(());
+    }
+
+    // Get the commit.
+    let mut commit = event.commits.get(0).unwrap().clone();
+
+    // Ignore any changes that are not to the `rfd/` directory.
+    let dir = "rfd/";
+    commit.filter_files_by_path(dir);
+    if !commit.has_changed_files() {
+        // No files changed that we care about.
+        // We can throw this out, log it and return early.
+        info!(
+            "`push` event commit `{}` does not include any changes to the `{}` directory",
+            commit.id, dir
+        );
+        return Ok(());
+    }
+
+    // Look up our RFD repo
+    let repo = GitHubRFDRepo::new(&api_context.company).await?;
+
+    // Get the branch name.
+    let branch_name = event.refv.trim_start_matches("refs/heads/");
+    let branch = repo.branch(branch_name.to_string());
+
+    // Iterate over the removed files and remove any images that we no longer
+    // need for the HTML rendered RFD website.
+    for file in &commit.removed {
+        // Make sure the file has a prefix of "rfd/".
+        if !file.starts_with("rfd/") {
+            // Continue through the loop early.
+            // We only care if a file change in the rfd/ directory.
+            continue;
+        }
+
+        if is_image(file) {
+            // Remove the image from the `src/public/static/images` path since we no
+            // longer need it.
+            // We delete these on the default branch ONLY.
+            let website_file = file.replace("rfd/", "src/public/static/images/");
+
+            // We need to get the current sha for the file we want to delete.
+            let (_, gh_file_sha) = if let Ok((v, s)) = get_file_content_from_repo(
+                github,
+                &branch.owner,
+                &branch.repo,
+                &branch.default_branch,
+                &website_file,
+            )
+            .await
+            {
+                (v, s)
+            } else {
+                // If there was an error, likely the file does not exist, so we can continue
+                // anyways.
+                (vec![], "".to_string())
+            };
+
+            if !gh_file_sha.is_empty() {
+                github
+                    .repos()
+                    .delete_file(
+                        &repo.owner,
+                        &repo.repo,
+                        &website_file,
+                        &octorust::types::ReposDeleteFileRequest {
+                            message: format!(
+                                "Deleting file content {} programatically\n\nThis is done from \
+                                the cio repo webhooky::listen_github_webhooks function.",
+                                website_file
+                            ),
+                            sha: gh_file_sha,
+                            committer: None,
+                            author: None,
+                            branch: branch.default_branch.to_string(),
+                        },
+                    )
+                    .await?;
+                info!(
+                    "[SUCCESS]: deleted file `{}` since it was removed in this push",
+                    website_file
+                );
+            }
+        }
+    }
+
+    // Iterate over the files and update the RFDs that have been added or
+    // modified in our database.
+    let mut changed_files: Vec<&String> = vec![];
+    changed_files.extend(commit.added.iter());
+    changed_files.extend(commit.modified.iter());
+
+    for file in changed_files {
+        // Make sure the file has a prefix of "rfd/".
+        if !file.starts_with("rfd/") {
+            // Continue through the loop early.
+            // We only care if a file change in the rfd/ directory.
+            continue;
+        }
+
+        // Update images for the static site.
+        if is_image(file) {
+            // Some image for an RFD updated. Let's make sure we have that image in the right place
+            // for the RFD shared site.
+            // First, let's read the file contents.
+            let (gh_file_content, _) =
+                get_file_content_from_repo(github, &branch.owner, &branch.repo, &branch.branch, file).await?;
+
+            // Let's write the file contents to the location for the static website.
+            // We replace the `rfd/` path with the `src/public/static/images/` path since
+            // this is where images go for the static website.
+            // We update these on the default branch ONLY
+            let website_file = file.replace("rfd/", "src/public/static/images/");
+            create_or_update_file_in_github_repo(
+                github,
+                &branch.owner,
+                &branch.repo,
+                &branch.default_branch,
+                &website_file,
+                gh_file_content,
+            )
+            .await?;
+
+            info!(
+                "[SUCCESS]: updated file `{}` since it was modified in this push",
+                website_file
+            );
+        }
+    }
+
+    // We are always creating updates based on the branch that is defined by the event, independent
+    // of it if corresponds with RFD number of the file(s) updated. We are only responsible for
+    // generating updates, not determining if they make sense to process.
+    let updates = get_rfd_updates(&branch, &commit);
+
+    let handler = RFDUpdater::default();
+
+    handler.handle(api_context, &updates).await
+}
+
+fn get_rfd_updates(branch: &GitHubRFDBranch, commit: &GitHubCommit) -> Vec<GitHubRFDUpdate> {
+    let mut updates = vec![];
+
+    // Iterate through all of the updated files and for anything that looks like and RFD document
+    // we generate a update. (These are documents that exist in /rfd/ and are named either
+    // README.adoc or README.md
+    let mut changed_files: Vec<&String> = vec![];
+    changed_files.extend(commit.added.iter());
+    changed_files.extend(commit.modified.iter());
+
+    for file in changed_files {
+        // We only care about files in the rfd/ directory
+        if !file.starts_with("rfd/") {
+            continue;
+        }
+
+        // If the file is a README.md or README.adoc, this
+        if file.ends_with("README.md") || file.ends_with("README.adoc") {
+            // Parse the RFD directory as an int.
+            let (dir, _) = file.trim_start_matches("rfd/").split_once('/').unwrap();
+
+            // If we can not easily parse an RFD number from the path than we ignore it
+            if let Ok(number) = dir.trim_start_matches('0').parse::<i32>() {
+                if let Some(commit_date) = commit.timestamp {
+                    updates.push(GitHubRFDUpdate {
+                        number: number.into(),
+                        branch: branch.clone(),
+                        file: file.clone(),
+                        commit_date,
+                    });
+                } else {
+                    log::error!("RFD document commit is missing a timestamp. {}", commit.id);
+                }
+            } else {
+                log::warn!(
+                    "Found README document that looks like an RFD, but could not determine an RFD number. {} {}",
+                    commit.id,
+                    file
+                );
+            }
+        }
+    }
+
+    updates
 }
 
 /// Handle a `pull_request` event for the rfd repo.
