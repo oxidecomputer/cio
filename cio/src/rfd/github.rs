@@ -84,10 +84,17 @@ impl GitHubRFDRepo {
             .deserialize::<RFDCsvRow>()
             .filter_map(|row| {
                 row.ok().map(|row| {
-                    let number = row.num.into();
+                    let number: RFDNumber = row.num.into();
+
+                    let branch_name = if row.link.contains(&format!("/{}/", self.default_branch)) {
+                        self.default_branch.clone()
+                    } else {
+                        number.as_number_string()
+                    };
+
                     GitHubRFDUpdate {
                         number,
-                        branch: self.branch(number.as_number_string()),
+                        branch: self.branch(branch_name),
                     }
                 })
             })
