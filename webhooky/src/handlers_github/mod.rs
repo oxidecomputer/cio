@@ -427,16 +427,10 @@ fn get_rfd_updates(branch: &GitHubRFDBranch, commit: &GitHubCommit) -> Vec<GitHu
 
             // If we can not easily parse an RFD number from the path than we ignore it
             if let Ok(number) = dir.trim_start_matches('0').parse::<i32>() {
-                if let Some(commit_date) = commit.timestamp {
-                    updates.push(GitHubRFDUpdate {
-                        number: number.into(),
-                        branch: branch.clone(),
-                        file: file.clone(),
-                        commit_date,
-                    });
-                } else {
-                    log::error!("RFD document commit is missing a timestamp. {}", commit.id);
-                }
+                updates.push(GitHubRFDUpdate {
+                    number: number.into(),
+                    branch: branch.clone(),
+                });
             } else {
                 log::warn!(
                     "Found README document that looks like an RFD, but could not determine an RFD number. {} {}",

@@ -3,8 +3,8 @@ use async_trait::async_trait;
 use cio_api::{
     core::GitHubPullRequest,
     features::Features,
-    rfd::{GitHubRFDUpdate, RFDSearchIndex},
-    rfds::{NewRFD, RFD},
+    rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, RFDSearchIndex},
+    rfds::{NewRFD, RemoteRFD, RFD},
     shorturls::generate_shorturls_for_rfds,
     utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };
@@ -65,10 +65,7 @@ impl RFDUpdater {
 
             // We have a README file that changed, let's parse the RFD and update it
             // in our database.
-            info!(
-                "Updating RFD {} on the {} branch ({})",
-                update.number, update.branch.branch, update.file
-            );
+            info!("Updating RFD {} on the {} branch", update.number, update.branch.branch);
 
             // If this branch does not actually exist in GitHub, then we drop the update
             if !update.branch.exists_in_remote().await {
@@ -80,7 +77,7 @@ impl RFDUpdater {
             }
 
             // Fetch the latest RFD information from GitHub
-            let new_rfd = NewRFD::new_from_update(&api_context.company, &update).await?;
+            let RemoteRFD { rfd: new_rfd, location } = NewRFD::new_from_update(&api_context.company, &update).await?;
 
             info!(
                 "Generated RFD {} from branch {} on GitHub",
@@ -104,7 +101,7 @@ impl RFDUpdater {
             info!("Upserted RFD {} in to the database", rfd.number);
 
             // The RFD has been stored internally, now trigger the update actions
-            self.run_actions(api_context, &update, old_rfd.as_ref(), &mut rfd)
+            self.run_actions(api_context, &update, &location, old_rfd.as_ref(), &mut rfd)
                 .await?;
 
             // Perform a final update to capture and modifications made during update actions
@@ -123,6 +120,7 @@ impl RFDUpdater {
         &self,
         api_context: &Context,
         update: &GitHubRFDUpdate,
+        location: &GitHubRFDReadmeLocation,
         old_rfd: Option<&RFD>,
         rfd: &mut RFD,
     ) -> Result<()> {
@@ -134,11 +132,12 @@ impl RFDUpdater {
         // never be multiple)
         let pull_request = pull_requests.get(0);
         let ctx = RFDUpdateActionContext {
-            api_context: api_context,
+            api_context,
             github: &github,
-            pull_request: pull_request,
-            update: update,
-            old_rfd: old_rfd,
+            pull_request,
+            update,
+            location,
+            old_rfd,
         };
 
         for action in &self.actions {
@@ -149,12 +148,13 @@ impl RFDUpdater {
     }
 }
 
-pub struct RFDUpdateActionContext<'a, 'b, 'c, 'd, 'e> {
+pub struct RFDUpdateActionContext<'a, 'b, 'c, 'd, 'e, 'f> {
     pub api_context: &'a Context,
     pub github: &'b octorust::Client,
     pub pull_request: Option<&'c GitHubPullRequest>,
     pub update: &'d GitHubRFDUpdate,
-    pub old_rfd: Option<&'e RFD>,
+    pub location: &'e GitHubRFDReadmeLocation,
+    pub old_rfd: Option<&'f RFD>,
 }
 
 #[async_trait]
@@ -363,6 +363,7 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
             pull_request,
             github,
             update,
+            location,
             ..
         } = ctx;
 
@@ -386,7 +387,7 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
                     &update.branch.owner,
                     &update.branch.repo,
                     &update.branch.branch,
-                    &update.file,
+                    &location.file,
                     rfd.content.as_bytes().to_vec(),
                 )
                 .await?;
@@ -404,7 +405,12 @@ pub struct EnsureRFDOnDefaultIsInPublishedState;
 #[async_trait]
 impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
     async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
-        let RFDUpdateActionContext { update, github, .. } = ctx;
+        let RFDUpdateActionContext {
+            update,
+            github,
+            location,
+            ..
+        } = ctx;
 
         // If the RFD was merged into the default branch, but the RFD state is not `published`,
         // update the state of the RFD in GitHub to show it as `published`.
@@ -419,7 +425,7 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
                 &update.branch.owner,
                 &update.branch.repo,
                 &update.branch.branch,
-                &update.file,
+                &location.file,
                 rfd.content.as_bytes().to_vec(),
             )
             .await?;

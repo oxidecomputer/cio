@@ -4,15 +4,17 @@ use chrono::{DateTime, Utc};
 use csv::ReaderBuilder;
 use log::{info, warn};
 use octorust::Client as Octorust;
-use std::{borrow::Cow, fmt};
+use serde::Deserialize;
+use std::{borrow::Cow, fmt, str::from_utf8};
 
-use super::{PDFStorage, RFDContent, RFDNumber, RFDPdf};
 use crate::{
     companies::Company,
     core::GitHubPullRequest,
     utils::is_image,
-    utils::{create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string},
+    utils::{create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string, get_file_content_from_repo},
 };
+
+use super::{PDFStorage, RFDContent, RFDNumber, RFDPdf};
 
 #[derive(Clone)]
 pub struct GitHubRFDRepo {
@@ -60,47 +62,37 @@ impl GitHubRFDRepo {
     /// Read the remote rfd.csv file stored in GitHub and return a map from RFD number to RFD. The
     /// RFDs returned may or may have already been persisted
     pub async fn get_rfd_sync_updates(&self) -> Result<Vec<GitHubRFDUpdate>> {
-        unimplemented!()
+        // Get the contents of the .helpers/rfd.csv file.
+        let (rfd_csv_content, _) = get_file_content_from_repo(
+            &self.client,
+            &self.owner,
+            &self.repo,
+            &self.default_branch,
+            "/.helpers/rfd.csv",
+        )
+        .await?;
+
+        let rfd_csv_string = from_utf8(&rfd_csv_content)?;
+
+        // Create the csv reader.
+        let mut csv_reader = ReaderBuilder::new()
+            .delimiter(b',')
+            .has_headers(true)
+            .from_reader(rfd_csv_string.as_bytes());
+
+        Ok(csv_reader
+            .deserialize::<RFDCsvRow>()
+            .filter_map(|row| {
+                row.ok().map(|row| {
+                    let number = row.num.into();
+                    GitHubRFDUpdate {
+                        number,
+                        branch: self.branch(number.as_number_string()),
+                    }
+                })
+            })
+            .collect())
     }
-
-    // /// Read the remote rfd.csv file stored in GitHub and return a map from RFD number to RFD. The
-    // /// RFDs returned may or may have already been persisted
-    // pub async fn get_rfds_from_repo(&self) -> Result<BTreeMap<i32, NewRFD>> {
-    //     // Get the contents of the .helpers/rfd.csv file.
-    //     let (rfd_csv_content, _) = get_file_content_from_repo(
-    //         &self.client,
-    //         &self.owner,
-    //         &self.repo,
-    //         &self.default_branch,
-    //         "/.helpers/rfd.csv",
-    //     )
-    //     .await?;
-    //     let rfd_csv_string = from_utf8(&rfd_csv_content)?;
-
-    //     // Create the csv reader.
-    //     let mut csv_reader = ReaderBuilder::new()
-    //         .delimiter(b',')
-    //         .has_headers(true)
-    //         .from_reader(rfd_csv_string.as_bytes());
-
-    //     // Create the BTreeMap of RFDs.
-    //     let mut rfds: BTreeMap<i32, NewRFD> = Default::default();
-    //     for r in csv_reader.deserialize() {
-    //         let mut rfd: NewRFD = r?;
-
-    //         // TODO: this whole thing is a mess jessfraz needs to cleanup
-    //         rfd.number_string = NewRFD::generate_number_string(rfd.number);
-    //         rfd.name = NewRFD::generate_name(rfd.number, &rfd.title);
-
-    //         // Removing company record association abstraction
-    //         rfd.cio_company_id = 1;
-
-    //         // Add this to our BTreeMap.
-    //         rfds.insert(rfd.number, rfd);
-    //     }
-
-    //     Ok(rfds)
-    // }
 }
 
 #[derive(Clone)]
@@ -166,11 +158,11 @@ impl GitHubRFDBranch {
             &self.repo, &self.branch
         );
 
-        let (decoded, is_markdown, sha, link) = match content_file {
+        let (file, decoded, is_markdown, sha, link) = match content_file {
             Ok(f) => {
                 let decoded = decode_base64_to_string(&f.content);
                 info!("[rfd.contents] Decoded asciidoc README {} / {}", self.repo, self.branch);
-                (decoded, false, f.sha, f.html_url)
+                (path, decoded, false, f.sha, f.html_url)
             }
             Err(e) => {
                 info!(
@@ -178,14 +170,16 @@ impl GitHubRFDBranch {
                     path, e
                 );
 
+                let md_path = format!("{}/README.md", dir);
+
                 let f = self
                     .client
                     .repos()
-                    .get_content_file(&self.owner, &self.repo, &format!("{}/README.md", dir), &self.branch)
+                    .get_content_file(&self.owner, &self.repo, &md_path, &self.branch)
                     .await?;
 
                 let decoded = decode_base64_to_string(&f.content);
-                (decoded, true, f.sha, f.html_url)
+                (md_path, decoded, true, f.sha, f.html_url)
             }
         };
 
@@ -211,7 +205,15 @@ impl GitHubRFDBranch {
             RFDContent::new_asciidoc(Cow::Owned(transliterated))
         };
 
-        Ok(GitHubRFDReadme { content, link, sha })
+        Ok(GitHubRFDReadme {
+            content,
+            link,
+            sha,
+            location: GitHubRFDReadmeLocation {
+                file,
+                branch: self.clone(),
+            },
+        })
     }
 
     pub async fn copy_images_to_default_branch(&self, rfd_number: &RFDNumber) -> Result<()> {
@@ -396,12 +398,22 @@ pub struct GitHubRFDReadme<'a> {
     pub content: RFDContent<'a>,
     pub link: String,
     pub sha: String,
+    pub location: GitHubRFDReadmeLocation,
+}
+
+pub struct GitHubRFDReadmeLocation {
+    pub file: String,
+    pub branch: GitHubRFDBranch,
 }
 
 #[derive(Debug)]
 pub struct GitHubRFDUpdate {
     pub number: RFDNumber,
     pub branch: GitHubRFDBranch,
-    pub file: String,
-    pub commit_date: DateTime<Utc>,
+}
+
+#[derive(Deserialize)]
+struct RFDCsvRow {
+    num: i32,
+    link: String,
 }

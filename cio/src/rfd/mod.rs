@@ -11,7 +11,7 @@ mod search;
 
 pub use changelog::send_rfd_changelog;
 pub use content::RFDContent;
-pub use github::{GitHubRFDBranch, GitHubRFDReadme, GitHubRFDRepo, GitHubRFDUpdate};
+pub use github::{GitHubRFDBranch, GitHubRFDReadme, GitHubRFDReadmeLocation, GitHubRFDRepo, GitHubRFDUpdate};
 pub use pdf::{cleanup_rfd_pdfs, PDFStorage, RFDPdf};
 pub use search::RFDSearchIndex;
 

@@ -14,7 +14,7 @@ use crate::{
     airtable::AIRTABLE_RFD_TABLE,
     companies::Company,
     core::{GitHubPullRequest, UpdateAirtableRecord},
-    rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate, RFDContent, RFDNumber},
+    rfd::{GitHubRFDBranch, GitHubRFDReadmeLocation, GitHubRFDRepo, GitHubRFDUpdate, RFDContent},
     schema::rfds as r_f_ds,
     schema::rfds,
     utils::truncate,
@@ -94,6 +94,11 @@ pub struct NewRFD {
     pub cio_company_id: i32,
 }
 
+pub struct RemoteRFD {
+    pub rfd: NewRFD,
+    pub location: GitHubRFDReadmeLocation,
+}
+
 impl NewRFD {
     /// We want to fetch the most up to date representation of this RFD as we can at this point in
     /// time. This RFD may or may not already have a version in our internal database, and may or
@@ -103,7 +108,9 @@ impl NewRFD {
     ///
     /// This function will return both the old RFD (representing our internal state) as well as the
     /// new merged/updated version.
-    pub async fn new_from_update(company: &Company, update: &GitHubRFDUpdate) -> Result<Self> {
+    pub async fn new_from_update(company: &Company, update: &GitHubRFDUpdate) -> Result<RemoteRFD> {
+        let github = company.authenticate_github()?;
+
         // If we can not find a remote file from GitHub then we abandon here.
         let readme = update.branch.get_readme_contents(&update.number).await?;
 
@@ -121,34 +128,73 @@ impl NewRFD {
             bail!("Generated RFD has empty content")
         }
 
-        Ok(NewRFD {
-            number: update.number.into(),
-            number_string: update.number.as_number_string(),
-            title,
-            name,
-            state: readme.content.get_state(),
-            link: readme.link,
-            short_link: NewRFD::generate_short_link(update.number.into()),
-            rendered_link: NewRFD::generate_rendered_link(&update.number.as_number_string()),
-            discussion,
-            authors: readme.content.get_authors(),
+        // Get the commit date.
+        let commits = github
+            .repos()
+            .list_commits(
+                &update.branch.owner,
+                &update.branch.repo,
+                &update.branch.branch,
+                &update.number.repo_directory(),
+                "",
+                None,
+                None,
+                0,
+                0,
+            )
+            .await?;
 
-            html,
-            content: readme.content.raw().to_string(),
+        let latest_commit = commits.get(0).ok_or(anyhow!(
+            "RFD {} on {} does not have any commits",
+            update.number,
+            update.branch.branch
+        ))?;
+        let commit_date = latest_commit
+            .commit
+            .committer
+            .as_ref()
+            .ok_or_else(|| {
+                anyhow!(
+                    "RFD {} on {} ({}) does not have a commit date",
+                    update.number,
+                    update.branch.branch,
+                    latest_commit.sha
+                )
+            })?
+            .date
+            .parse()?;
 
-            sha: readme.sha,
-            commit_date: update.commit_date,
+        Ok(RemoteRFD {
+            rfd: NewRFD {
+                number: update.number.into(),
+                number_string: update.number.as_number_string(),
+                title,
+                name,
+                state: readme.content.get_state(),
+                link: readme.link,
+                short_link: NewRFD::generate_short_link(update.number.into()),
+                rendered_link: NewRFD::generate_rendered_link(&update.number.as_number_string()),
+                discussion,
+                authors: readme.content.get_authors(),
 
-            // Only exists in Airtable,
-            milestones: Default::default(),
-            // Only exists in Airtable,
-            relevant_components: Default::default(),
+                html,
+                content: readme.content.raw().to_string(),
 
-            // PDF links are purposefully blanked out so that they do not point at an invalid file
-            // while new PDFs are generated
-            pdf_link_github: Default::default(),
-            pdf_link_google_drive: Default::default(),
-            cio_company_id: company.id,
+                sha: readme.sha,
+                commit_date,
+
+                // Only exists in Airtable,
+                milestones: Default::default(),
+                // Only exists in Airtable,
+                relevant_components: Default::default(),
+
+                // PDF links are purposefully blanked out so that they do not point at an invalid file
+                // while new PDFs are generated
+                pdf_link_github: Default::default(),
+                pdf_link_google_drive: Default::default(),
+                cio_company_id: company.id,
+            },
+            location: readme.location,
         })
     }
 
@@ -385,18 +431,9 @@ impl RFD {
     }
 
     pub async fn create_sync(&self, company: &Company) -> Result<GitHubRFDUpdate> {
-        let extension = match self.content()? {
-            RFDContent::Asciidoc(_) => "adoc",
-            RFDContent::Markdown(_) => "md",
-        };
-
-        let file = format!("{}/README.{}", RFDNumber::from(self.number).repo_directory(), extension);
-
         let update = GitHubRFDUpdate {
             number: self.number.into(),
             branch: self.branch(company).await?,
-            file,
-            commit_date: self.commit_date,
         };
 
         Ok(update)
