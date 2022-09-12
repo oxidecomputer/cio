@@ -61,6 +61,11 @@ impl RFDPdf {
 }
 
 pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
+
+    // TODO: Replace this. There should be one query that fetches the full list of PDFs from Google
+    // Drive. Then load all RFD pdf filenames from the database. Delete all PDFs that do not appear
+    // in the list from the database but do appear in the Google Drive list from Google Drive.
+
     // // Get all the rfds from the database.
     // let rfds = RFDs::get_from_db(db, company.id).await?;
     // let github = company.authenticate_github()?;
