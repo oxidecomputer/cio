@@ -5,7 +5,7 @@ use csv::ReaderBuilder;
 use log::{info, warn};
 use octorust::Client as Octorust;
 use serde::Deserialize;
-use std::{borrow::Cow, fmt, str::from_utf8};
+use std::{borrow::Cow, fmt, str::from_utf8, sync::Arc};
 
 use crate::{
     companies::Company,
@@ -18,7 +18,7 @@ use super::{PDFStorage, RFDContent, RFDNumber, RFDPdf};
 
 #[derive(Clone)]
 pub struct GitHubRFDRepo {
-    client: Octorust,
+    client: Arc<Octorust>,
     pub owner: String,
     pub repo: String,
     pub default_branch: String,
@@ -41,7 +41,7 @@ impl GitHubRFDRepo {
         let full_repo = github.repos().get(&company.github_org, "rfd").await?;
 
         Ok(Self {
-            client: github,
+            client: Arc::new(github),
             owner: company.github_org.to_string(),
             repo: "rfd".to_string(),
             default_branch: full_repo.default_branch,
@@ -104,7 +104,7 @@ impl GitHubRFDRepo {
 
 #[derive(Clone)]
 pub struct GitHubRFDBranch {
-    client: Octorust,
+    client: Arc<Octorust>,
     pub owner: String,
     pub repo: String,
     pub default_branch: String,
