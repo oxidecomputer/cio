@@ -283,7 +283,7 @@ async fn handle_rfd_push(github: Arc<octorust::Client>, api_context: &Context, e
     }
 
     // Look up our RFD repo
-    let repo = GitHubRFDRepo::new(&api_context.company).await?;
+    let repo = GitHubRFDRepo::new_with_client(&api_context.company, github.clone()).await?;
 
     // Get the branch name.
     let branch_name = event.refv.trim_start_matches("refs/heads/");
