@@ -263,7 +263,7 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
         crate::core::SubCommand::SyncRFDs(_) => {
             let Context { db, company, .. } = &context;
             handlers_rfd::refresh_db_rfds(&context).await?;
-            cio_api::rfd::cleanup_rfd_pdfs(db, company).await?;
+            cio_api::rfd::drive::cleanup_rfd_pdfs(db, company).await?;
         }
         crate::core::SubCommand::SyncOther(_) => {
             let Context { company, .. } = context;

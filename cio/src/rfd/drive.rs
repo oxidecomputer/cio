@@ -4,6 +4,13 @@ use google_drive::{
     traits::{DriveOps, FileOps},
     Client as GoogleDrive,
 };
+use log::info;
+
+use crate::{
+    companies::Company,
+    db::Database,
+    rfds::{RFDs, RFD},
+};
 
 use super::{PDFStorage, RFDPdf};
 
@@ -26,4 +33,50 @@ impl PDFStorage for GoogleDrive {
 
         Ok(format!("https://drive.google.com/open?id={}", drive_file.id))
     }
+}
+
+// This code has been broken for a while and is therefore only auditing deletes until we verify it.
+pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
+    // Get all the rfds from the database.
+    let rfds: Vec<RFD> = RFDs::get_from_db(db, company.id).await?.into();
+    let valid_pdf_filenames = rfds.iter().map(|rfd| rfd.get_pdf_filename()).collect::<Vec<String>>();
+
+    let drive_client = company.authenticate_google_drive(db).await?;
+
+    // Figure out where our directory is.
+    // It should be in the shared drive : "Automated Documents"/"rfds"
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
+    let drive_id = shared_drive.id.to_string();
+
+    // Get the directory by the name.
+    let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await?;
+
+    let drive_files = drive_client
+        .files()
+        .list_all(
+            "drive",                                // corpa
+            &drive_id,                              // drive id
+            true,                                   // include items from all drives
+            "",                                     // include permissions for view
+            false,                                  // include team drive items
+            "",                                     // order by
+            &format!("'{}' in parents", parent_id), // query
+            "",                                     // spaces
+            true,                                   // supports all drives
+            false,                                  // supports team drives
+            "",                                     // team drive id
+        )
+        .await?;
+
+    // Iterate over the files and if the name does not equal our name, then nuke it.
+    for df in drive_files {
+        if !valid_pdf_filenames.contains(&df.name) {
+            info!(
+                r#"Planning to delete "{}" from Google Drive as it does not much a valid known RFD pdf name"#,
+                df.name
+            );
+        }
+    }
+
+    Ok(())
 }

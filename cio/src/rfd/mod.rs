@@ -3,7 +3,7 @@ use std::fmt;
 
 mod changelog;
 mod content;
-mod drive;
+pub mod drive;
 mod github;
 mod new_rfd;
 mod pdf;
@@ -12,7 +12,7 @@ mod search;
 pub use changelog::send_rfd_changelog;
 pub use content::RFDContent;
 pub use github::{GitHubRFDBranch, GitHubRFDReadme, GitHubRFDReadmeLocation, GitHubRFDRepo, GitHubRFDUpdate};
-pub use pdf::{cleanup_rfd_pdfs, PDFStorage, RFDPdf};
+pub use pdf::{PDFStorage, RFDPdf};
 pub use search::RFDSearchIndex;
 
 #[derive(Debug, Copy, Clone, Deserialize, Serialize)]
