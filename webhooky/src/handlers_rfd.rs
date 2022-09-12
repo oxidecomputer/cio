@@ -9,7 +9,6 @@ use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::RequestContext;
 use log::warn;
 use std::sync::Arc;
-use tokio;
 
 use crate::{context::Context, handlers_github::RFDUpdater};
 

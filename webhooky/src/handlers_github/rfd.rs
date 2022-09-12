@@ -78,7 +78,7 @@ impl RFDUpdater {
             }
 
             // Fetch the latest RFD information from GitHub
-            let RemoteRFD { rfd: new_rfd, location } = NewRFD::new_from_update(&api_context.company, &update).await?;
+            let RemoteRFD { rfd: new_rfd, location } = NewRFD::new_from_update(&api_context.company, update).await?;
 
             info!(
                 "Generated RFD {} from branch {} on GitHub",
@@ -102,7 +102,7 @@ impl RFDUpdater {
             info!("Upserted RFD {} in to the database", rfd.number);
 
             // The RFD has been stored internally, now trigger the update actions
-            self.run_actions(api_context, &update, &location, old_rfd.as_ref(), &mut rfd)
+            self.run_actions(api_context, update, &location, old_rfd.as_ref(), &mut rfd)
                 .await?;
 
             // Perform a final update to capture and modifications made during update actions
@@ -125,7 +125,7 @@ impl RFDUpdater {
         old_rfd: Option<&RFD>,
         rfd: &mut RFD,
     ) -> Result<()> {
-        let github = api_context.company.authenticate_github()?;
+        let github = update.client();
         let pull_requests = update.branch.find_pull_requests().await?;
 
         // This is here to remain consistent with previous behavior. This likely needs to be
@@ -134,7 +134,7 @@ impl RFDUpdater {
         let pull_request = pull_requests.get(0);
         let ctx = RFDUpdateActionContext {
             api_context,
-            github: &github,
+            github,
             pull_request,
             update,
             location,
@@ -401,7 +401,7 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
                 // be made. If this is handled unconditionally then commit hooks could
                 // loop indefinitely.
                 create_or_update_file_in_github_repo(
-                    &github,
+                    github,
                     &update.branch.owner,
                     &update.branch.repo,
                     &update.branch.branch,
@@ -439,7 +439,7 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
             // Update the file in GitHub.
             // Keep in mind: this push will kick off another webhook.
             create_or_update_file_in_github_repo(
-                &github,
+                github,
                 &update.branch.owner,
                 &update.branch.repo,
                 &update.branch.branch,
@@ -484,7 +484,7 @@ impl RFDUpdateAction for DeleteOldPDFs {
 
                     // First get the sha of the old pdf.
                     let (_, old_pdf_sha) = get_file_content_from_repo(
-                        &github,
+                        github,
                         &update.branch.owner,
                         &update.branch.repo,
                         &update.branch.default_branch,

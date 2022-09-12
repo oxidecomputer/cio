@@ -38,10 +38,14 @@ impl GitHubRFDRepo {
     /// Create a new RFD repo for the provided company. Assumes that the RFD repo is named "rfd"
     pub async fn new(company: &Company) -> Result<Self> {
         let github = company.authenticate_github()?;
-        let full_repo = github.repos().get(&company.github_org, "rfd").await?;
+        Self::new_with_client(company, Arc::new(github)).await
+    }
+
+    pub async fn new_with_client(company: &Company, client: Arc<octorust::Client>) -> Result<Self> {
+        let full_repo = client.repos().get(&company.github_org, "rfd").await?;
 
         Ok(Self {
-            client: Arc::new(github),
+            client,
             owner: company.github_org.to_string(),
             repo: "rfd".to_string(),
             default_branch: full_repo.default_branch,
@@ -123,6 +127,10 @@ impl fmt::Debug for GitHubRFDBranch {
 }
 
 impl GitHubRFDBranch {
+    pub fn client(&self) -> &Octorust {
+        &self.client
+    }
+
     /// Checks if this branch actually exists in the remote system (GitHub)
     pub async fn exists_in_remote(&self) -> bool {
         self.client
@@ -419,6 +427,12 @@ pub struct GitHubRFDReadmeLocation {
 pub struct GitHubRFDUpdate {
     pub number: RFDNumber,
     pub branch: GitHubRFDBranch,
+}
+
+impl GitHubRFDUpdate {
+    pub fn client(&self) -> &Octorust {
+        self.branch.client()
+    }
 }
 
 #[derive(Deserialize)]

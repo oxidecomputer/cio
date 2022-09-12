@@ -2,7 +2,13 @@ use anyhow::{bail, Result};
 use comrak::{markdown_to_html, ComrakOptions};
 use log::info;
 use regex::Regex;
-use std::{borrow::Cow, env, fs, path::PathBuf, process::Command, str::from_utf8};
+use std::{
+    borrow::Cow,
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+    str::from_utf8,
+};
 use uuid::Uuid;
 
 use super::{GitHubRFDBranch, RFDNumber, RFDPdf};
@@ -113,7 +119,7 @@ impl<'a> RFDContent<'a> {
             RFDContent::Markdown(ref mut md) => (Regex::new(r"(?m)(discussion:.*$)").unwrap(), "", md.content.to_mut()),
         };
 
-        let replacement = if let Some(v) = re.find(&content) {
+        let replacement = if let Some(v) = re.find(content) {
             v.as_str().to_string()
         } else {
             String::new()
@@ -131,7 +137,7 @@ impl<'a> RFDContent<'a> {
             RFDContent::Markdown(ref mut md) => (Regex::new(r"(?m)(state:.*$)").unwrap(), "", md.content.to_mut()),
         };
 
-        let replacement = if let Some(v) = re.find(&content) {
+        let replacement = if let Some(v) = re.find(content) {
             v.as_str().to_string()
         } else {
             String::new()
@@ -163,14 +169,8 @@ impl<'a> RFDContent<'a> {
                 // There is no "RFD" in our title. This is the case for RFD 31.
                 re = Regex::new(r"(?m)(^= .*$)").unwrap();
                 let c = re.find(content);
-                if c.is_none() {
-                    // If we couldn't find anything assume we have no title.
-                    // This was related to this error in Sentry:
-                    // https://sentry.io/organizations/oxide-computer-company/issues/2701636092/?project=-1
-                    String::new()
-                } else {
-                    let results = c.unwrap();
 
+                if let Some(results) = c {
                     results
                         .as_str()
                         .replace("RFD", "")
@@ -178,6 +178,11 @@ impl<'a> RFDContent<'a> {
                         .replace("= ", " ")
                         .trim()
                         .to_string()
+                } else {
+                    // If we couldn't find anything assume we have no title.
+                    // This was related to this error in Sentry:
+                    // https://sentry.io/organizations/oxide-computer-company/issues/2701636092/?project=-1
+                    String::new()
                 }
             }
         }
@@ -412,7 +417,7 @@ enum RFDAsciidocOutputFormat {
 
 impl RFDAsciidocOutputFormat {
     /// Generate a command for parsing asciidoctor content
-    pub fn command(&self, working_dir: &PathBuf, file_path: &PathBuf) -> Command {
+    pub fn command(&self, working_dir: &PathBuf, file_path: &Path) -> Command {
         match self {
             Self::Html => {
                 let mut command = Command::new("asciidoctor");

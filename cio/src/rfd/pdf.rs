@@ -31,7 +31,7 @@ impl RFDPdf {
                 let repo = GitHubRFDRepo::new(company).await?;
                 let branch = repo.branch(repo.default_branch.clone());
 
-                Some(branch.store_rfd_pdf(&self).await?)
+                Some(branch.store_rfd_pdf(self).await?)
             } else {
                 None
             };

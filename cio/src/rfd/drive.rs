@@ -39,6 +39,10 @@ impl PDFStorage for GoogleDrive {
 pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
     // Get all the rfds from the database.
     let rfds: Vec<RFD> = RFDs::get_from_db(db, company.id).await?.into();
+
+    // Clippy warns about this collect. We could instead move the rfds.iter() call down to the loop
+    // but this form feels clearer and is minimal performance hit for a function executes rarely
+    #[allow(clippy::needless_collect)]
     let valid_pdf_filenames = rfds.iter().map(|rfd| rfd.get_pdf_filename()).collect::<Vec<String>>();
 
     let drive_client = company.authenticate_google_drive(db).await?;

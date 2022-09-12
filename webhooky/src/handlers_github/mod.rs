@@ -164,7 +164,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
         let repo_name = Repo::from_str(&repo.name).unwrap();
 
         let company = Company::get_from_github_org(&api_context.db, &repo.owner.login).await?;
-        let github = company.authenticate_github()?;
+        let github = Arc::new(company.authenticate_github()?);
 
         match repo_name {
             Repo::RFD => match event_type {
@@ -174,7 +174,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                         scope.set_tag("github.event.type", &event_type_string);
                     });
 
-                    match handle_rfd_push(&github, api_context, event.clone()).await {
+                    match handle_rfd_push(github.clone(), api_context, event.clone()).await {
                         Ok(_) => ( /* Silence */ ),
                         Err(e) => {
                             event
@@ -246,7 +246,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
     Ok(())
 }
 
-async fn handle_rfd_push(github: &octorust::Client, api_context: &Context, event: GitHubWebhook) -> Result<()> {
+async fn handle_rfd_push(github: Arc<octorust::Client>, api_context: &Context, event: GitHubWebhook) -> Result<()> {
     info!("[rfd.push] Remaining stack size: {:?}", stacker::remaining_stack());
 
     // Perform validation checks first to determine if we need to process this call or if we can
@@ -307,7 +307,7 @@ async fn handle_rfd_push(github: &octorust::Client, api_context: &Context, event
 
             // We need to get the current sha for the file we want to delete.
             let (_, gh_file_sha) = if let Ok((v, s)) = get_file_content_from_repo(
-                github,
+                &github,
                 &branch.owner,
                 &branch.repo,
                 &branch.default_branch,

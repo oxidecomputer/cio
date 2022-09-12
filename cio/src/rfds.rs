@@ -109,7 +109,7 @@ impl NewRFD {
     /// This function will return both the old RFD (representing our internal state) as well as the
     /// new merged/updated version.
     pub async fn new_from_update(company: &Company, update: &GitHubRFDUpdate) -> Result<RemoteRFD> {
-        let github = company.authenticate_github()?;
+        let github = update.client();
 
         // If we can not find a remote file from GitHub then we abandon here.
         let readme = update.branch.get_readme_contents(&update.number).await?;
@@ -144,11 +144,13 @@ impl NewRFD {
             )
             .await?;
 
-        let latest_commit = commits.get(0).ok_or(anyhow!(
-            "RFD {} on {} does not have any commits",
-            update.number,
-            update.branch.branch
-        ))?;
+        let latest_commit = commits.get(0).ok_or_else(|| {
+            anyhow!(
+                "RFD {} on {} does not have any commits",
+                update.number,
+                update.branch.branch
+            )
+        })?;
         let commit_date = latest_commit
             .commit
             .committer

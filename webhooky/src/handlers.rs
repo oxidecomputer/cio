@@ -89,7 +89,7 @@ pub async fn handle_rfd_update_by_number(
 
     let update = rfd.create_sync(&oxide).await?;
     let updater = RFDUpdater::default();
-    updater.handle(&api_context, &[update]).await?;
+    updater.handle(api_context, &[update]).await?;
 
     Ok(())
 }
