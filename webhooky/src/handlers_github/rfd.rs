@@ -42,9 +42,8 @@ impl Default for RFDUpdater {
             Box::new(GenerateShortUrls),
             Box::new(CreatePullRequest),
             Box::new(UpdatePullRequest),
-            Box::new(UpdateDiscussionUrl),
-            Box::new(EnsureRFDOnDefaultIsInPublishedState),
-            Box::new(DeleteOldPDFs),
+            Box::new(UpdateDiscussionUrl),                  // Stops on error
+            Box::new(EnsureRFDOnDefaultIsInPublishedState), // Stops on error
         ])
     }
 }
@@ -152,7 +151,25 @@ impl RFDUpdater {
         };
 
         for action in &self.actions {
-            action.run(&ctx, rfd).await?;
+            match action.run(&ctx, rfd).await {
+                Ok(_) => ( /* Nothing to do */ ),
+                Err(err) => match err {
+                    RFDUpdateActionErr::Continue(action_err) => {
+                        warn!(
+                            "Updating RFD {} on {} errored with non-fatal error {:?}",
+                            update.number, update.branch.branch, action_err
+                        );
+                    }
+                    RFDUpdateActionErr::Stop(action_err) => {
+                        warn!(
+                            "Updating RFD {} on {} errored with fatal error {:?}",
+                            update.number, update.branch.branch, action_err
+                        );
+
+                        return Err(action_err);
+                    }
+                },
+            }
         }
 
         Ok(())
@@ -170,16 +187,26 @@ pub struct RFDUpdateActionContext<'a, 'b, 'c, 'd, 'e, 'f> {
 
 #[async_trait]
 pub trait RFDUpdateAction {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()>;
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr>;
+}
+
+#[derive(Debug)]
+pub enum RFDUpdateActionErr {
+    Continue(anyhow::Error),
+    Stop(anyhow::Error),
 }
 
 pub struct CopyImagesToFrontend;
 
 #[async_trait]
 impl RFDUpdateAction for CopyImagesToFrontend {
-    async fn run(&self, ctx: &RFDUpdateActionContext, _rfd: &mut RFD) -> Result<()> {
+    async fn run(&self, ctx: &RFDUpdateActionContext, _rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
-        update.branch.copy_images_to_frontend(&update.number).await?;
+        update
+            .branch
+            .copy_images_to_frontend(&update.number)
+            .await
+            .map_err(RFDUpdateActionErr::Continue)?;
 
         info!(
             "Copied images for RFD {} on {} to frontend storage",
@@ -194,9 +221,11 @@ pub struct UpdateSearch;
 
 #[async_trait]
 impl RFDUpdateAction for UpdateSearch {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
-        RFDSearchIndex::index_rfd(&rfd.number.into()).await?;
+        RFDSearchIndex::index_rfd(&rfd.number.into())
+            .await
+            .map_err(RFDUpdateActionErr::Continue)?;
         info!("Triggered update of the search index for RFD {}", update.number);
 
         Ok(())
@@ -205,13 +234,8 @@ impl RFDUpdateAction for UpdateSearch {
 
 pub struct UpdatePDFs;
 
-#[async_trait]
-impl RFDUpdateAction for UpdatePDFs {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
-        let RFDUpdateActionContext {
-            update, api_context, ..
-        } = ctx;
-
+impl UpdatePDFs {
+    async fn upload(api_context: &Context, update: &GitHubRFDUpdate, rfd: &mut RFD) -> Result<()> {
         // Generate the PDFs for the RFD and upload them
         let upload = rfd
             .content()?
@@ -231,256 +255,14 @@ impl RFDUpdateAction for UpdatePDFs {
 
         Ok(())
     }
-}
 
-pub struct GenerateShortUrls;
-
-#[async_trait]
-impl RFDUpdateAction for GenerateShortUrls {
-    async fn run(&self, ctx: &RFDUpdateActionContext, _rfd: &mut RFD) -> Result<()> {
-        let RFDUpdateActionContext { api_context, .. } = ctx;
-
-        // Create all the shorturls for the RFD if we need to, this would be on added files, only.
-        generate_shorturls_for_rfds(
-            &api_context.db,
-            &api_context.company.authenticate_github()?,
-            &api_context.company,
-            &api_context.company.authenticate_cloudflare()?,
-            "configs",
-        )
-        .await?;
-
-        info!("[SUCCESS]: updated shorturls for the rfds");
-
-        Ok(())
-    }
-}
-
-pub struct CreatePullRequest;
-
-#[async_trait]
-impl RFDUpdateAction for CreatePullRequest {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
-        let RFDUpdateActionContext {
-            update,
-            github,
-            pull_request,
-            api_context,
-            old_rfd,
-            ..
-        } = ctx;
-
-        // We only ever create pull requests if the RFD is in the discussion state, and we are not
-        // handling an update on the default branch
-        if update.branch.branch != update.branch.default_branch && rfd.state == "discussion" && pull_request.is_none() {
-            let pull = github
-                .pulls()
-                .create(
-                    &update.branch.owner,
-                    &update.branch.repo,
-                    &octorust::types::PullsCreateRequest {
-                        title: rfd.name.to_string(),
-                        head: format!("{}:{}", api_context.company.github_org, update.branch.branch),
-                        base: update.branch.default_branch.to_string(),
-                        body: "Automatically opening the pull request since the document \
-                            is marked as being in discussion. If you wish to not have \
-                            a pull request open, change the state of your document and \
-                            close this pull request."
-                            .to_string(),
-                        draft: Some(false),
-                        maintainer_can_modify: Some(true),
-                        issue: 0,
-                    },
-                )
-                .await?;
-
-            info!(
-                "[SUCCESS]: RFD {} has moved from state {:?} -> {}, on branch {}, opened pull request {}",
-                rfd.number_string,
-                old_rfd.map(|rfd| &rfd.state),
-                rfd.state,
-                update.branch.branch,
-                pull.number,
-            );
-        }
-
-        Ok(())
-    }
-}
-
-pub struct UpdatePullRequest;
-
-#[async_trait]
-impl RFDUpdateAction for UpdatePullRequest {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
-        let RFDUpdateActionContext {
-            update,
-            pull_request,
-            github,
-            ..
-        } = ctx;
-
-        if let Some(pull_request) = pull_request {
-            // Let's make sure the title of the pull request is what it should be.
-            // The pull request title should be equal to the name of the pull request.
-            if rfd.name != pull_request.title {
-                // TODO: Is this call necessary?
-                // Get the current set of settings for the pull request.
-                // We do this because we want to keep the current state for body.
-                let pull_content = github
-                    .pulls()
-                    .get(&update.branch.owner, &update.branch.repo, pull_request.number)
-                    .await?;
-
-                github
-                    .pulls()
-                    .update(
-                        &update.branch.owner,
-                        &update.branch.repo,
-                        pull_request.number,
-                        &octorust::types::PullsUpdateRequest {
-                            title: rfd.name.to_string(),
-                            body: pull_content.body,
-                            base: "".to_string(),
-                            maintainer_can_modify: None,
-                            state: None,
-                        },
-                    )
-                    .await
-                    .map_err(|err| {
-                        anyhow!(
-                            "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
-                            pull_request.title,
-                            rfd.name,
-                            pull_request.number,
-                            err,
-                        )
-                    })?;
-            }
-
-            // Update the labels for the pull request.
-            let mut labels: Vec<String> = Default::default();
-
-            if rfd.state == "discussion" {
-                labels.push(":thought_balloon: discussion".to_string());
-            } else if rfd.state == "ideation" {
-                labels.push(":hatching_chick: ideation".to_string());
-            }
-
-            github
-                .issues()
-                .add_labels(
-                    &update.branch.owner,
-                    &update.branch.repo,
-                    pull_request.number,
-                    &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
-                )
-                .await?;
-        }
-
-        Ok(())
-    }
-}
-
-pub struct UpdateDiscussionUrl;
-
-#[async_trait]
-impl RFDUpdateAction for UpdateDiscussionUrl {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
-        let RFDUpdateActionContext {
-            pull_request,
-            github,
-            update,
-            location,
-            ..
-        } = ctx;
-
-        if let Some(pull_request) = pull_request {
-            // If the stored discussion link does not match the PR we found, then and
-            // update is required
-            if rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
-                info!(
-                    "Stored discussion link \"{}\" does not match the PR found \"{}\"",
-                    rfd.discussion, pull_request.html_url
-                );
-
-                rfd.update_discussion(&pull_request.html_url)?;
-
-                // Update the file in GitHub. This will trigger another commit webhook
-                // and therefore must only occur when there is a change that needawaits to
-                // be made. If this is handled unconditionally then commit hooks could
-                // loop indefinitely.
-                create_or_update_file_in_github_repo(
-                    github,
-                    &update.branch.owner,
-                    &update.branch.repo,
-                    &update.branch.branch,
-                    &location.file,
-                    rfd.content.as_bytes().to_vec(),
-                )
-                .await?;
-
-                info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
-            }
-        }
-
-        Ok(())
-    }
-}
-
-pub struct EnsureRFDOnDefaultIsInPublishedState;
-
-#[async_trait]
-impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
-        let RFDUpdateActionContext {
-            update,
-            github,
-            location,
-            ..
-        } = ctx;
-
-        // If the RFD was merged into the default branch, but the RFD state is not `published`,
-        // update the state of the RFD in GitHub to show it as `published`.
-        if update.branch.branch == update.branch.default_branch && rfd.state != "published" {
-            //  Update the state of the RFD in GitHub to show it as `published`.
-            rfd.update_state("published")?;
-
-            // Update the file in GitHub.
-            // Keep in mind: this push will kick off another webhook.
-            create_or_update_file_in_github_repo(
-                github,
-                &update.branch.owner,
-                &update.branch.repo,
-                &update.branch.branch,
-                &location.file,
-                rfd.content.as_bytes().to_vec(),
-            )
-            .await?;
-
-            info!(
-                "[SUCCESS]: updated state to `published` for RFD {}, since it was merged into branch {}",
-                rfd.number_string, update.branch.default_branch
-            );
-        }
-
-        Ok(())
-    }
-}
-
-pub struct DeleteOldPDFs;
-
-#[async_trait]
-impl RFDUpdateAction for DeleteOldPDFs {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<()> {
-        let RFDUpdateActionContext {
-            old_rfd,
-            github,
-            update,
-            api_context,
-            ..
-        } = ctx;
-
+    async fn delete_old(
+        api_context: &Context,
+        github: &octorust::Client,
+        update: &GitHubRFDUpdate,
+        old_rfd: &Option<&RFD>,
+        rfd: &mut RFD,
+    ) -> Result<()> {
         let old_pdf_filename = old_rfd.map(|rfd| rfd.get_pdf_filename());
 
         // If the PDF filename has changed (likely due to a title change for an RFD), then ensure
@@ -554,6 +336,279 @@ impl RFDUpdateAction for DeleteOldPDFs {
                     );
                 }
             }
+        }
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl RFDUpdateAction for UpdatePDFs {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+        let RFDUpdateActionContext {
+            api_context,
+            github,
+            old_rfd,
+            update,
+            ..
+        } = ctx;
+
+        Self::upload(api_context, update, rfd)
+            .await
+            .map_err(RFDUpdateActionErr::Continue)?;
+        Self::delete_old(api_context, github, update, old_rfd, rfd)
+            .await
+            .map_err(RFDUpdateActionErr::Continue)?;
+
+        Ok(())
+    }
+}
+
+pub struct GenerateShortUrls;
+
+#[async_trait]
+impl RFDUpdateAction for GenerateShortUrls {
+    async fn run(&self, ctx: &RFDUpdateActionContext, _rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+        let RFDUpdateActionContext {
+            api_context, github, ..
+        } = ctx;
+
+        // Create all the shorturls for the RFD if we need to, this would be on added files, only.
+        generate_shorturls_for_rfds(
+            &api_context.db,
+            github,
+            &api_context.company,
+            &api_context
+                .company
+                .authenticate_cloudflare()
+                .map_err(RFDUpdateActionErr::Continue)?,
+            "configs",
+        )
+        .await
+        .map_err(RFDUpdateActionErr::Continue)?;
+
+        info!("[SUCCESS]: updated shorturls for the rfds");
+
+        Ok(())
+    }
+}
+
+pub struct CreatePullRequest;
+
+#[async_trait]
+impl RFDUpdateAction for CreatePullRequest {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+        let RFDUpdateActionContext {
+            update,
+            github,
+            pull_request,
+            api_context,
+            old_rfd,
+            ..
+        } = ctx;
+
+        // We only ever create pull requests if the RFD is in the discussion state, and we are not
+        // handling an update on the default branch
+        if update.branch.branch != update.branch.default_branch && rfd.state == "discussion" && pull_request.is_none() {
+            let pull = github
+                .pulls()
+                .create(
+                    &update.branch.owner,
+                    &update.branch.repo,
+                    &octorust::types::PullsCreateRequest {
+                        title: rfd.name.to_string(),
+                        head: format!("{}:{}", api_context.company.github_org, update.branch.branch),
+                        base: update.branch.default_branch.to_string(),
+                        body: "Automatically opening the pull request since the document \
+                            is marked as being in discussion. If you wish to not have \
+                            a pull request open, change the state of your document and \
+                            close this pull request."
+                            .to_string(),
+                        draft: Some(false),
+                        maintainer_can_modify: Some(true),
+                        issue: 0,
+                    },
+                )
+                .await
+                .map_err(RFDUpdateActionErr::Continue)?;
+
+            info!(
+                "[SUCCESS]: RFD {} has moved from state {:?} -> {}, on branch {}, opened pull request {}",
+                rfd.number_string,
+                old_rfd.map(|rfd| &rfd.state),
+                rfd.state,
+                update.branch.branch,
+                pull.number,
+            );
+        }
+
+        Ok(())
+    }
+}
+
+pub struct UpdatePullRequest;
+
+#[async_trait]
+impl RFDUpdateAction for UpdatePullRequest {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+        let RFDUpdateActionContext {
+            update,
+            pull_request,
+            github,
+            ..
+        } = ctx;
+
+        if let Some(pull_request) = pull_request {
+            // Let's make sure the title of the pull request is what it should be.
+            // The pull request title should be equal to the name of the pull request.
+            if rfd.name != pull_request.title {
+                // TODO: Is this call necessary?
+                // Get the current set of settings for the pull request.
+                // We do this because we want to keep the current state for body.
+                let pull_content = github
+                    .pulls()
+                    .get(&update.branch.owner, &update.branch.repo, pull_request.number)
+                    .await
+                    .map_err(RFDUpdateActionErr::Continue)?;
+
+                github
+                    .pulls()
+                    .update(
+                        &update.branch.owner,
+                        &update.branch.repo,
+                        pull_request.number,
+                        &octorust::types::PullsUpdateRequest {
+                            title: rfd.name.to_string(),
+                            body: pull_content.body,
+                            base: "".to_string(),
+                            maintainer_can_modify: None,
+                            state: None,
+                        },
+                    )
+                    .await
+                    .map_err(|err| {
+                        RFDUpdateActionErr::Continue(anyhow!(
+                            "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
+                            pull_request.title,
+                            rfd.name,
+                            pull_request.number,
+                            err,
+                        ))
+                    })?;
+            }
+
+            // Update the labels for the pull request.
+            let mut labels: Vec<String> = Default::default();
+
+            if rfd.state == "discussion" {
+                labels.push(":thought_balloon: discussion".to_string());
+            } else if rfd.state == "ideation" {
+                labels.push(":hatching_chick: ideation".to_string());
+            }
+
+            github
+                .issues()
+                .add_labels(
+                    &update.branch.owner,
+                    &update.branch.repo,
+                    pull_request.number,
+                    &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
+                )
+                .await
+                .map_err(RFDUpdateActionErr::Continue)?;
+        }
+
+        Ok(())
+    }
+}
+
+pub struct UpdateDiscussionUrl;
+
+#[async_trait]
+impl RFDUpdateAction for UpdateDiscussionUrl {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+        let RFDUpdateActionContext {
+            pull_request,
+            github,
+            update,
+            location,
+            ..
+        } = ctx;
+
+        if let Some(pull_request) = pull_request {
+            // If the stored discussion link does not match the PR we found, then and
+            // update is required
+            if rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
+                info!(
+                    "Stored discussion link \"{}\" does not match the PR found \"{}\"",
+                    rfd.discussion, pull_request.html_url
+                );
+
+                rfd.update_discussion(&pull_request.html_url)
+                    .map_err(RFDUpdateActionErr::Continue)?;
+
+                // Update the file in GitHub. This will trigger another commit webhook
+                // and therefore must only occur when there is a change that needawaits to
+                // be made. If this is handled unconditionally then commit hooks could
+                // loop indefinitely.
+                create_or_update_file_in_github_repo(
+                    github,
+                    &update.branch.owner,
+                    &update.branch.repo,
+                    &update.branch.branch,
+                    &location.file,
+                    rfd.content.as_bytes().to_vec(),
+                )
+                .await
+                // If this call fails then we want to stop updating the RFD. We may now be in a
+                // corrupt internal state
+                .map_err(RFDUpdateActionErr::Stop)?;
+
+                info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
+            }
+        }
+
+        Ok(())
+    }
+}
+
+pub struct EnsureRFDOnDefaultIsInPublishedState;
+
+#[async_trait]
+impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
+    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+        let RFDUpdateActionContext {
+            update,
+            github,
+            location,
+            ..
+        } = ctx;
+
+        // If the RFD was merged into the default branch, but the RFD state is not `published`,
+        // update the state of the RFD in GitHub to show it as `published`.
+        if update.branch.branch == update.branch.default_branch && rfd.state != "published" {
+            //  Update the state of the RFD in GitHub to show it as `published`.
+            rfd.update_state("published").map_err(RFDUpdateActionErr::Continue)?;
+
+            // Update the file in GitHub.
+            // Keep in mind: this push will kick off another webhook.
+            create_or_update_file_in_github_repo(
+                github,
+                &update.branch.owner,
+                &update.branch.repo,
+                &update.branch.branch,
+                &location.file,
+                rfd.content.as_bytes().to_vec(),
+            )
+            .await
+            // If this call fails then we want to stop updating the RFD. We may now be in a
+            // corrupt internal state
+            .map_err(RFDUpdateActionErr::Stop)?;
+
+            info!(
+                "[SUCCESS]: updated state to `published` for RFD {}, since it was merged into branch {}",
+                rfd.number_string, update.branch.default_branch
+            );
         }
 
         Ok(())
