@@ -9,7 +9,7 @@ use cio_api::{
     utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };
 use google_drive::traits::{DriveOps, FileOps};
-use log::info;
+use log::{info, warn};
 
 use crate::context::Context;
 
@@ -60,59 +60,69 @@ impl RFDUpdater {
         // out any updates that attempt to update a mismatched RFD
         for update in updates {
             // Skip any updates that fail validation
-            if !update.is_valid() {
-                continue;
+            if update.is_valid() {
+                // If this branch does not actually exist in GitHub, then we drop the update
+                if update.branch.exists_in_remote().await {
+                    if let Err(err) = self.run_update(api_context, update).await {
+                        warn!(
+                            "Failed to run update for RFD {} on the {} branch to completion. Ended with the error: {:?}",
+                            update.number, update.branch.branch, err
+                        );
+                    }
+                } else {
+                    info!(
+                        "Dropping RFD {} update as the remote branch {} has gone missing",
+                        update.number, update.branch.branch
+                    );
+                }
+            } else {
+                warn!("Encountered invalid RFD update (it will not be run) {:?}", update);
             }
-
-            // We have a README file that changed, let's parse the RFD and update it
-            // in our database.
-            info!("Updating RFD {} on the {} branch", update.number, update.branch.branch);
-
-            // If this branch does not actually exist in GitHub, then we drop the update
-            if !update.branch.exists_in_remote().await {
-                info!(
-                    "Dropping RFD {} update as the remote branch {} has gone missing",
-                    update.number, update.branch.branch
-                );
-                continue;
-            }
-
-            // Fetch the latest RFD information from GitHub
-            let RemoteRFD { rfd: new_rfd, location } = NewRFD::new_from_update(&api_context.company, update).await?;
-
-            info!(
-                "Generated RFD {} from branch {} on GitHub",
-                update.number, update.branch.branch
-            );
-
-            // Get the old RFD from the database.
-            // DO THIS BEFORE UPDATING THE RFD.
-            // We will need this later to check if the RFD's state changed.
-            let old_rfd = RFD::get_from_db(&api_context.db, new_rfd.number).await;
-
-            info!(
-                "Checked for existing version of RFD {} in the database: {}",
-                update.number,
-                old_rfd.is_some()
-            );
-
-            // Update the RFD in the database.
-            let mut rfd = new_rfd.upsert(&api_context.db).await?;
-
-            info!("Upserted RFD {} in to the database", rfd.number);
-
-            // The RFD has been stored internally, now trigger the update actions
-            self.run_actions(api_context, update, &location, old_rfd.as_ref(), &mut rfd)
-                .await?;
-
-            // Perform a final update to capture and modifications made during update actions
-            rfd.update(&api_context.db).await?;
-
-            info!(
-                "Update for RFD {} via the {} branch completed",
-                rfd.number, update.branch.branch
-            );
         }
+
+        Ok(())
+    }
+
+    async fn run_update(&self, api_context: &Context, update: &GitHubRFDUpdate) -> Result<()> {
+        // We have a README file that changed, let's parse the RFD and update it
+        // in our database.
+        info!("Updating RFD {} on the {} branch", update.number, update.branch.branch);
+
+        // Fetch the latest RFD information from GitHub
+        let RemoteRFD { rfd: new_rfd, location } = NewRFD::new_from_update(&api_context.company, update).await?;
+
+        info!(
+            "Generated RFD {} from branch {} on GitHub",
+            update.number, update.branch.branch
+        );
+
+        // Get the old RFD from the database.
+        // DO THIS BEFORE UPDATING THE RFD.
+        // We will need this later to check if the RFD's state changed.
+        let old_rfd = RFD::get_from_db(&api_context.db, new_rfd.number).await;
+
+        info!(
+            "Checked for existing version of RFD {} in the database: {}",
+            update.number,
+            old_rfd.is_some()
+        );
+
+        // Update the RFD in the database.
+        let mut rfd = new_rfd.upsert(&api_context.db).await?;
+
+        info!("Upserted RFD {} in to the database", rfd.number);
+
+        // The RFD has been stored internally, now trigger the update actions
+        self.run_actions(api_context, update, &location, old_rfd.as_ref(), &mut rfd)
+            .await?;
+
+        // Perform a final update to capture and modifications made during update actions
+        rfd.update(&api_context.db).await?;
+
+        info!(
+            "Update for RFD {} via the {} branch completed",
+            rfd.number, update.branch.branch
+        );
 
         Ok(())
     }
