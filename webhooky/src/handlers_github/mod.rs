@@ -350,50 +350,6 @@ async fn handle_rfd_push(github: &octorust::Client, api_context: &Context, event
         }
     }
 
-    // Iterate over the files and update the RFDs that have been added or
-    // modified in our database.
-    let mut changed_files: Vec<&String> = vec![];
-    changed_files.extend(commit.added.iter());
-    changed_files.extend(commit.modified.iter());
-
-    for file in changed_files {
-        // Make sure the file has a prefix of "rfd/".
-        if !file.starts_with("rfd/") {
-            // Continue through the loop early.
-            // We only care if a file change in the rfd/ directory.
-            continue;
-        }
-
-        // Update images for the static site.
-        if is_image(file) {
-            // Some image for an RFD updated. Let's make sure we have that image in the right place
-            // for the RFD shared site.
-            // First, let's read the file contents.
-            let (gh_file_content, _) =
-                get_file_content_from_repo(github, &branch.owner, &branch.repo, &branch.branch, file).await?;
-
-            // Let's write the file contents to the location for the static website.
-            // We replace the `rfd/` path with the `src/public/static/images/` path since
-            // this is where images go for the static website.
-            // We update these on the default branch ONLY
-            let website_file = file.replace("rfd/", "src/public/static/images/");
-            create_or_update_file_in_github_repo(
-                github,
-                &branch.owner,
-                &branch.repo,
-                &branch.default_branch,
-                &website_file,
-                gh_file_content,
-            )
-            .await?;
-
-            info!(
-                "[SUCCESS]: updated file `{}` since it was modified in this push",
-                website_file
-            );
-        }
-    }
-
     // We are always creating updates based on the branch that is defined by the event, independent
     // of it if corresponds with RFD number of the file(s) updated. We are only responsible for
     // generating updates, not determining if they make sense to process.
