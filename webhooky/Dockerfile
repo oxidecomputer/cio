@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y \
 	# Additional deps for Pupeteer
 	libatk-bridge2.0-0 \
 	libgtk-3.0 \
+	libasound2 \
 	libgbm-dev \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
