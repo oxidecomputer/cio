@@ -3,6 +3,9 @@
 # ------------------------------------------------------------------------------
 FROM debian:bullseye AS app-base
 
+RUN groupadd -g 1023 webhooky && \
+    useradd -r -u 1023 -g webhooky webhooky
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/src/webhooky
@@ -32,7 +35,7 @@ RUN apt-get update && apt-get install -y \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
-	apt install -y --no-install-recommends \
+	apt-get install -y --no-install-recommends \
 	nodejs
 
 RUN gem install \
@@ -43,6 +46,8 @@ RUN gem install \
 RUN cd /usr/local/lib && \
 	npm install @mermaid-js/mermaid-cli && \
 	ln -s ../lib/node_modules/.bin/mmdc /usr/local/bin/mmdc
+
+USER webhooky
 
 # ------------------------------------------------------------------------------
 # Cargo Nightly Stage
