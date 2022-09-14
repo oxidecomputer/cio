@@ -65,13 +65,17 @@ impl<'a> RFDContent<'a> {
     }
 
     /// Construct a new RFDContent wrapper that contains Asciidoc content
-    pub fn new_asciidoc(content: Cow<'a, str>) -> Self {
-        Self::Asciidoc(RFDAsciidoc::new(content))
+    pub fn new_asciidoc<T>(content: T) -> Self 
+    where
+        T: Into<Cow<'a, str>>,{
+        Self::Asciidoc(RFDAsciidoc::new(content.into()))
     }
 
     /// Construct a new RFDContent wrapper that contains Markdown content
-    pub fn new_markdown(content: Cow<'a, str>) -> Self {
-        Self::Markdown(RFDMarkdown::new(content))
+    pub fn new_markdown<T>(content: T) -> Self 
+    where
+        T: Into<Cow<'a, str>>,{
+        Self::Markdown(RFDMarkdown::new(content.into()))
     }
 
     /// Get a reference to the internal unparsed contents
@@ -502,5 +506,339 @@ impl RFDHtml {
         self.0 = cleaned
             .replace("link:", &format!("link:https://{}.rfd.oxide.computer/", num))
             .replace(&format!("link:https://{}.rfd.oxide.computer/http", num), "link:http");
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clean_rfd_html_links() {
+        let content = r#"https://3.rfd.oxide.computer
+        https://41.rfd.oxide.computer
+        https://543.rfd.oxide.computer#-some-link
+        https://3245.rfd.oxide.computer/things
+        https://3265.rfd.oxide.computer/things
+        <img src="things.png" \>
+        <a href="\#_principles">
+        <object data="thing.svg">
+        <object type="image/svg+xml" data="thing.svg">
+        <a href="\#things" \>
+        link:thing.html[Our thing]
+        link:http://example.com[our example]"#;
+
+        let mut html = RFDHtml(content.to_string());
+
+        html.clean_links("0032");
+
+        let expected = r#"https://rfd.shared.oxide.computer/rfd/0003
+        https://rfd.shared.oxide.computer/rfd/0041
+        https://rfd.shared.oxide.computer/rfd/0543#-some-link
+        https://rfd.shared.oxide.computer/rfd/3245/things
+        https://rfd.shared.oxide.computer/rfd/3265/things
+        <img src="/static/images/0032/things.png" \>
+        <a href="/rfd/0032#_principles">
+        <object data="/static/images/0032/thing.svg">
+        <object type="image/svg+xml" data="/static/images/0032/thing.svg">
+        <a href="/rfd/0032#things" \>
+        link:https://0032.rfd.oxide.computer/thing.html[Our thing]
+        link:http://example.com[our example]"#;
+
+        assert_eq!(expected, html.0);
+    }
+
+    // Read authors tests
+
+    #[test]
+    fn test_get_markdown_authors() {
+        let content = r#"sdfsdf
+sdfsdf
+authors: things, joe
+dsfsdf
+sdf
+authors: nope"#;
+        let authors = RFDContent::new_markdown(content).get_authors();
+        let expected = "things, joe".to_string();
+        assert_eq!(expected, authors);
+    }
+    
+    #[test]
+    fn test_get_markdown_ignores_asciidoc_authors() {
+        let content = r#"sdfsdf
+= sdfgsdfgsdfg
+things, joe
+dsfsdf
+sdf
+:authors: nope"#;
+        let authors = RFDContent::new_markdown(content).get_authors();
+        let expected = "".to_string();
+        assert_eq!(expected, authors);
+    }
+    
+    #[test]
+    fn test_get_asciidoc_fallback_authors() {
+        let content = r#"sdfsdf
+= sdfgsdfgsdfg
+things <things@email.com>, joe <joe@email.com>
+dsfsdf
+sdf
+authors: nope"#;
+        let authors = RFDContent::new_asciidoc(content).get_authors();
+        let expected = r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
+        assert_eq!(expected, authors);
+    }
+    
+    #[test]
+    fn test_get_asciidoc_attribute_authors() {        
+        let content = r#":authors: Jess <jess@thing.com>
+= sdfgsdfgsdfg
+{authors}
+dsfsdf
+sdf"#;
+        let authors = RFDContent::new_asciidoc(content).get_authors();
+        let expected = r#"Jess <jess@thing.com>"#.to_string();
+        assert_eq!(expected, authors);
+    }
+
+    // Read state tests
+
+    #[test]
+    fn test_get_markdown_state() {
+        let content = r#"sdfsdf
+sdfsdf
+state: discussion
+dsfsdf
+sdf
+authors: nope"#;
+        let state = RFDContent::new_markdown(content).get_state();
+        let expected = "discussion".to_string();
+        assert_eq!(expected, state);
+    }
+
+    #[test]
+    fn test_get_asciidoc_state() {
+        let content = r#"sdfsdf
+= sdfgsdfgsdfg
+:state: prediscussion
+dsfsdf
+sdf
+:state: nope"#;
+        let state = RFDContent::new_asciidoc(content).get_state();
+        let expected = "prediscussion".to_string();
+        assert_eq!(expected, state);
+    }
+
+    // Read discussion link tests
+
+    #[test]
+    fn test_get_markdown_discussion_link() {
+        let content = r#"sdfsdf
+sdfsdf
+discussion: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+authors: nope"#;
+        let discussion = RFDContent::new_markdown(content).get_discussion();
+        let expected = "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
+        assert_eq!(expected, discussion);
+    }
+
+    #[test]
+    fn test_get_asciidoc_discussion_link() {
+        let content = r#"sdfsdf
+= sdfgsdfgsdfg
+:discussion: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+:discussion: nope"#;
+        let discussion = RFDContent::new_asciidoc(content).get_discussion();
+        let expected = "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
+        assert_eq!(expected, discussion);
+    }
+
+    // Update discussion link tests
+
+    #[test]
+    fn test_update_existing_markdown_discussion_link() {
+        let link = "https://github.com/oxidecomputer/rfd/pulls/2019";
+
+        let content = r#"sdfsdf
+        sdfsdf
+        discussion:   https://github.com/oxidecomputer/rfd/pulls/1
+        dsfsdf
+        sdf
+        authors: nope"#;
+                let mut rfd = RFDContent::new_markdown(content);
+                rfd.update_discussion_link(link);
+        
+                let expected = r#"sdfsdf
+        sdfsdf
+        discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+        dsfsdf
+        sdf
+        authors: nope"#;
+                assert_eq!(expected, rfd.raw());        
+    }
+
+    #[test]
+    fn test_update_existing_asciidoc_discussion_link_and_ignores_markdown_link() {
+        let link = "https://github.com/oxidecomputer/rfd/pulls/2019";
+
+        let content = r#"sdfsdf
+= sdfgsd
+discussion: fgsdfg
+:discussion: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+:discussion: nope"#;
+
+        let mut rfd = RFDContent::new_asciidoc(content);
+        rfd.update_discussion_link(link);
+        let expected = r#"sdfsdf
+= sdfgsd
+discussion: fgsdfg
+:discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+dsfsdf
+sdf
+:discussion: nope"#;
+        assert_eq!(expected, rfd.raw());
+    }
+
+    #[test]
+    fn test_update_missing_asciidoc_discussion_link_and_ignores_markdown_link() {
+        let link = "https://github.com/oxidecomputer/rfd/pulls/2019";
+
+        let content = r#"sdfsdf
+= sdfgsd
+discussion: fgsdfg
+:discussion:
+dsfsdf
+sdf
+:discussion: nope"#;
+
+        let mut rfd = RFDContent::new_asciidoc(content);
+        rfd.update_discussion_link(link);
+        let expected = r#"sdfsdf
+= sdfgsd
+discussion: fgsdfg
+:discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+dsfsdf
+sdf
+:discussion: nope"#;
+        assert_eq!(expected, rfd.raw());
+    }
+
+    // Update state tests
+
+    #[test]
+    fn test_update_existing_markdown_state() {
+        let state = "discussion";
+        let content = r#"sdfsdf
+sdfsdf
+state:   sdfsdfsdf
+dsfsdf
+sdf
+authors: nope"#;
+        let mut rfd = RFDContent::new_markdown(content);
+        rfd.update_state(state);
+
+        let expected = r#"sdfsdf
+sdfsdf
+state: discussion
+dsfsdf
+sdf
+authors: nope"#;
+        assert_eq!(expected, rfd.raw());
+    }
+
+    #[test]
+    fn test_update_existing_asciidoc_state() {
+        let state = "discussion";
+        let content = r#"sdfsdf
+= sdfgsd
+state: fgsdfg
+:state: prediscussion
+dsfsdf
+sdf
+:state: nope"#;
+        let mut rfd = RFDContent::new_asciidoc(content);
+        rfd.update_state(state);
+        let expected = r#"sdfsdf
+= sdfgsd
+state: fgsdfg
+:state: discussion
+dsfsdf
+sdf
+:state: nope"#;
+        assert_eq!(expected, rfd.raw());
+    }
+
+    #[test]
+    fn test_update_empty_asciidoc_state() {
+        let state = "discussion";
+        let content = r#"sdfsdf
+= sdfgsd
+state: fgsdfg
+:state:
+dsfsdf
+sdf
+:state: nope"#;
+        let mut rfd = RFDContent::new_asciidoc(content);
+        rfd.update_state(state);
+        let expected = r#"sdfsdf
+= sdfgsd
+state: fgsdfg
+:state: discussion
+dsfsdf
+sdf
+:state: nope"#;
+        assert_eq!(expected, rfd.raw());
+    }
+
+    // Read title tests
+
+    #[test]
+    fn test_get_markdown_title() {
+        let content = r#"things
+# RFD 43 Identity and Access Management (IAM)
+sdfsdf
+title: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+authors: nope"#;
+        let rfd = RFDContent::new_markdown(content);
+        let expected = "Identity and Access Management (IAM)".to_string();
+        assert_eq!(expected, rfd.get_title());
+    }
+
+    #[test]
+    fn test_get_asciidoc_title() {
+        let content = r#"sdfsdf
+= RFD 43 Identity and Access Management (IAM)
+:title: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+= RFD 53 Bye
+sdf
+:title: nope"#;
+        let rfd = RFDContent::new_asciidoc(content);
+        let expected = "Identity and Access Management (IAM)".to_string();
+        assert_eq!(expected, rfd.get_title());
+    }
+
+    #[test]
+    fn test_get_asciidoc_title_without_rfd_prefix() {
+        // Add a test to show what happens for rfd 31 where there is no "RFD" in
+        // the title.
+        let content = r#"sdfsdf
+= Identity and Access Management (IAM)
+:title: https://github.com/oxidecomputer/rfd/pulls/1
+dsfsdf
+sdf
+:title: nope"#;
+        let rfd = RFDContent::new_asciidoc(content);
+        let expected = "Identity and Access Management (IAM)".to_string();
+        assert_eq!(expected, rfd.get_title());
     }
 }
