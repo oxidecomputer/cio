@@ -385,7 +385,7 @@ impl RFD {
         path.push(&format!("contents-{}.adoc", self.number_string));
 
         // Write the contents to a temporary file.
-        write_file(&path, deunicode::deunicode(&self.content).as_bytes()).await?;
+        write_file(&path, clean_quotes(&self.content).as_bytes()).await?;
 
         info!(
             "[asciidoc] Wrote file to temp dir {} / {} / {}",
@@ -1008,23 +1008,7 @@ pub async fn get_rfd_contents_from_repo(
         .await?;
     }
 
-    info!(
-        "[rfd.contents] Transforming from unicode to ascii (length: {}) {} / {}",
-        decoded.len(),
-        repo,
-        branch
-    );
-
-    let transliterated = deunicode::deunicode(&decoded);
-
-    info!(
-        "[rfd.contents] Ascii version length: {} {} / {}",
-        transliterated.len(),
-        repo,
-        branch
-    );
-
-    Ok((transliterated, is_markdown, sha))
+    Ok((clean_quotes(&decoded), is_markdown, sha))
 }
 
 // Get all the images in a specific directory of a GitHub branch.
@@ -1490,6 +1474,14 @@ impl PDFStorage for RFDBranch {
         .await
         .map(|_| "".to_string())
     }
+}
+
+fn clean_quotes(content: &str) -> String {
+    content
+        .replace('’', "'")
+        .replace('‘', "'")
+        .replace('“', "\"")
+        .replace('”', "\"")
 }
 
 #[cfg(test)]
