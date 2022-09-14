@@ -65,16 +65,18 @@ impl<'a> RFDContent<'a> {
     }
 
     /// Construct a new RFDContent wrapper that contains Asciidoc content
-    pub fn new_asciidoc<T>(content: T) -> Self 
+    pub fn new_asciidoc<T>(content: T) -> Self
     where
-        T: Into<Cow<'a, str>>,{
+        T: Into<Cow<'a, str>>,
+    {
         Self::Asciidoc(RFDAsciidoc::new(content.into()))
     }
 
     /// Construct a new RFDContent wrapper that contains Markdown content
-    pub fn new_markdown<T>(content: T) -> Self 
+    pub fn new_markdown<T>(content: T) -> Self
     where
-        T: Into<Cow<'a, str>>,{
+        T: Into<Cow<'a, str>>,
+    {
         Self::Markdown(RFDMarkdown::new(content.into()))
     }
 
@@ -509,7 +511,6 @@ impl RFDHtml {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -563,7 +564,7 @@ authors: nope"#;
         let expected = "things, joe".to_string();
         assert_eq!(expected, authors);
     }
-    
+
     #[test]
     fn test_get_markdown_ignores_asciidoc_authors() {
         let content = r#"sdfsdf
@@ -576,7 +577,7 @@ sdf
         let expected = "".to_string();
         assert_eq!(expected, authors);
     }
-    
+
     #[test]
     fn test_get_asciidoc_fallback_authors() {
         let content = r#"sdfsdf
@@ -589,9 +590,9 @@ authors: nope"#;
         let expected = r#"things <things@email.com>, joe <joe@email.com>"#.to_string();
         assert_eq!(expected, authors);
     }
-    
+
     #[test]
-    fn test_get_asciidoc_attribute_authors() {        
+    fn test_get_asciidoc_attribute_authors() {
         let content = r#":authors: Jess <jess@thing.com>
 = sdfgsdfgsdfg
 {authors}
@@ -670,16 +671,16 @@ sdf
         dsfsdf
         sdf
         authors: nope"#;
-                let mut rfd = RFDContent::new_markdown(content);
-                rfd.update_discussion_link(link);
-        
-                let expected = r#"sdfsdf
+        let mut rfd = RFDContent::new_markdown(content);
+        rfd.update_discussion_link(link);
+
+        let expected = r#"sdfsdf
         sdfsdf
         discussion: https://github.com/oxidecomputer/rfd/pulls/2019
         dsfsdf
         sdf
         authors: nope"#;
-                assert_eq!(expected, rfd.raw());        
+        assert_eq!(expected, rfd.raw());
     }
 
     #[test]
