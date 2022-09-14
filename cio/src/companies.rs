@@ -1004,7 +1004,7 @@ impl Company {
         let jwt = JWTCredentials::new(app_id, key.data)?;
 
         // Create the HTTP cache.
-        let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME")?)));
+        let http_cache = Box::new(FileBasedCache::new("/tmp/.cache/github"));
 
         let token_generator = InstallationTokenGenerator::new(self.github_app_installation_id.try_into()?, jwt);
 

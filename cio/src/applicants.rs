@@ -2161,8 +2161,8 @@ The applicants Airtable \
             && self.status == crate::applicant_status::Status::GivingOffer.to_string()
         {
             info!(
-                "applicant has status giving offer: {}, generating employee agreements in docusign for them!",
-                self.name
+                "applicant {} has status giving offer: generating employee agreements in docusign for them!",
+                self.id
             );
 
             // Let's create the envelope.
@@ -2185,6 +2185,52 @@ The applicants Airtable \
         }
 
         Ok(())
+    }
+
+    pub async fn send_new_piia_for_accepted_applicant(
+        &mut self,
+        db: &Database,
+        ds: &DocuSign,
+        new_envelope: docusign::Envelope,
+    ) -> Result<()> {
+        // Keep the fields from Airtable we need just in case they changed.
+        self.keep_fields_from_airtable(db).await;
+
+        // Only allow documents to be re-generated if we are in the process of or have already
+        // hired this applicant
+        if self.status == crate::applicant_status::Status::GivingOffer.to_string()
+            && self.status == crate::applicant_status::Status::Onboarding.to_string()
+            && self.status == crate::applicant_status::Status::Hired.to_string()
+        {
+            info!(
+                "generating new employee agreements for applicant {} in docusign",
+                self.id
+            );
+
+            // Reset the current piia fields
+            self.docusign_piia_envelope_id = String::new();
+            self.docusign_piia_envelope_status = String::new();
+            self.piia_envelope_created = None;
+            self.piia_envelope_completed = None;
+
+            // Let's create the envelope.
+            let envelope = ds.create_envelope(new_envelope).await?;
+
+            // Set the id of the envelope.
+            self.docusign_piia_envelope_id = envelope.envelope_id.to_string();
+
+            // Set the status of the envelope.
+            self.docusign_piia_envelope_status = envelope.status.to_string();
+
+            // Update the applicant in the database.
+            self.update(db).await?;
+
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Unable to regenerate PIIA documents for non-hiring employees"
+            ))
+        }
     }
 
     pub async fn keep_fields_from_airtable(&mut self, db: &Database) {

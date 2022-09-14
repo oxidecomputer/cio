@@ -772,6 +772,45 @@ pub async fn handle_airtable_applicants_update(
     Ok(())
 }
 
+pub async fn listen_airtable_applicants_recreate_piia_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    event: AirtableRowEvent,
+) -> Result<()> {
+    let api_context = rqctx.context();
+
+    if event.record_id.is_empty() {
+        bail!("record id is empty");
+    }
+
+    // Get the row from airtable.
+    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+
+    if applicant.status.is_empty() {
+        bail!("got an empty applicant status for row: {}", applicant.email);
+    }
+
+    // Grab our old applicant from the database.
+    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id).await?;
+
+    // Create our docusign client.
+    let company = db_applicant.company(&api_context.db).await?;
+    let ds = company.authenticate_docusign(&api_context.db).await?;
+
+    let piia_letter = api_context
+        .app_config
+        .read()
+        .unwrap()
+        .envelopes
+        .create_piia_letter(&db_applicant);
+
+    db_applicant
+        .send_new_piia_for_accepted_applicant(&api_context.db, &ds, piia_letter)
+        .await?;
+
+    info!("sent applicant {} new PIIA documents successfully", applicant.id);
+    Ok(())
+}
+
 pub async fn handle_airtable_shipments_outbound_create(
     rqctx: Arc<RequestContext<Context>>,
     event: AirtableRowEvent,
