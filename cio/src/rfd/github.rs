@@ -198,26 +198,10 @@ impl GitHubRFDBranch {
             }
         };
 
-        info!(
-            "[rfd.contents] Transforming from unicode to ascii (length: {}) {} / {}",
-            decoded.len(),
-            self.repo,
-            self.branch
-        );
-
-        let transliterated = deunicode::deunicode(&decoded);
-
-        info!(
-            "[rfd.contents] Ascii version length: {} {} / {}",
-            transliterated.len(),
-            self.repo,
-            self.branch
-        );
-
         let content = if is_markdown {
-            RFDContent::new_markdown(Cow::Owned(transliterated))
+            RFDContent::new_markdown(Cow::Owned(decoded))
         } else {
-            RFDContent::new_asciidoc(Cow::Owned(transliterated))
+            RFDContent::new_asciidoc(Cow::Owned(decoded))
         };
 
         Ok(GitHubRFDReadme {
