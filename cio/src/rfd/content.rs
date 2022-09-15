@@ -520,7 +520,8 @@ mod tests {
 
     #[test]
     fn test_inspects_content_for_asciidoc() {
-        let content = RFDContent::new(r#"
+        let content = RFDContent::new(
+            r#"
 :showtitle:
 :toc: left
 :numbered:
@@ -529,39 +530,44 @@ mod tests {
 :discussion: https://github.com/company/repo/pull/123
 :revremark: State: {state} | {discussion}
 :authors: FirstName LastName <fname@company.org>
-"#);
+"#,
+        );
 
         match content {
             Ok(RFDContent::Asciidoc(_)) => (),
-            other => panic!("Invalid inspection result {:?}", other)
+            other => panic!("Invalid inspection result {:?}", other),
         }
     }
 
     #[test]
     fn test_inspects_content_for_markdown() {
-        let content = RFDContent::new(r#"
+        let content = RFDContent::new(
+            r#"
 ---
 authors: FirstName LastName <fname@company.org>
 state: discussion
 discussion: https://github.com/company/repo/pull/123
 ---
 
-# RFD 123"#);
+# RFD 123"#,
+        );
 
         match content {
             Ok(RFDContent::Markdown(_)) => (),
-            other => panic!("Invalid inspection result {:?}", other)
+            other => panic!("Invalid inspection result {:?}", other),
         }
     }
 
     #[test]
     fn test_inspect_fails_on_indeterminate_content() {
-        let content = RFDContent::new(r#"
+        let content = RFDContent::new(
+            r#"
 showtitle:
 notreallystate: discussion
 
 # RFD 123
-= RFD 123"#);
+= RFD 123"#,
+        );
 
         assert!(content.is_err())
     }
