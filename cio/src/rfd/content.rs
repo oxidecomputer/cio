@@ -17,6 +17,7 @@ use crate::utils::{decode_base64, write_file};
 // TODO: RFDNumber should probably be stored with the content as it doesn't parsing content with a
 // mismatched RFDNumber is pretty nonsensical.
 
+#[derive(Debug)]
 pub enum RFDContent<'a> {
     Asciidoc(RFDAsciidoc<'a>),
     Markdown(RFDMarkdown<'a>),
@@ -36,9 +37,9 @@ impl<'a> RFDContent<'a> {
         let is_asciidoc = {
             // A regular expression that looks for commonly used Asciidoc attributes. These are static
             // regular expressions and can be safely unwrapped.
-            let attribute_check = Regex::new(r"^(:showtitle:|:numbered:|:toc: left|:icons: font)$").unwrap();
+            let attribute_check = Regex::new(r"(?m)^(:showtitle:|:numbered:|:toc: left|:icons: font)$").unwrap();
             let state_check =
-                Regex::new(r"^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
+                Regex::new(r"(?m)^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
 
             // Check that the content contains at least one of the commonly used asciidoc attributes,
             // and contains a state line.
@@ -46,9 +47,9 @@ impl<'a> RFDContent<'a> {
         };
 
         let is_markdown = !is_asciidoc && {
-            let title_check = Regex::new(r"^# RFD").unwrap();
+            let title_check = Regex::new(r"(?m)^# RFD").unwrap();
             let state_check =
-                Regex::new(r"^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
+                Regex::new(r"(?m)^state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
 
             title_check.is_match(&content) && state_check.is_match(&content)
         };
@@ -269,6 +270,7 @@ impl<'a> RFDContent<'a> {
 }
 
 /// The text data of an Asciidoc RFD
+#[derive(Debug)]
 pub struct RFDAsciidoc<'a> {
     content: Cow<'a, str>,
     storage_id: Uuid,
@@ -451,6 +453,7 @@ impl RFDAsciidocOutputFormat {
     }
 }
 
+#[derive(Debug)]
 pub struct RFDMarkdown<'a> {
     content: Cow<'a, str>,
 }
@@ -514,6 +517,54 @@ impl RFDHtml {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_inspects_content_for_asciidoc() {
+        let content = RFDContent::new(r#"
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: published
+:discussion: https://github.com/company/repo/pull/123
+:revremark: State: {state} | {discussion}
+:authors: FirstName LastName <fname@company.org>
+"#);
+
+        match content {
+            Ok(RFDContent::Asciidoc(_)) => (),
+            other => panic!("Invalid inspection result {:?}", other)
+        }
+    }
+
+    #[test]
+    fn test_inspects_content_for_markdown() {
+        let content = RFDContent::new(r#"
+---
+authors: FirstName LastName <fname@company.org>
+state: discussion
+discussion: https://github.com/company/repo/pull/123
+---
+
+# RFD 123"#);
+
+        match content {
+            Ok(RFDContent::Markdown(_)) => (),
+            other => panic!("Invalid inspection result {:?}", other)
+        }
+    }
+
+    #[test]
+    fn test_inspect_fails_on_indeterminate_content() {
+        let content = RFDContent::new(r#"
+showtitle:
+notreallystate: discussion
+
+# RFD 123
+= RFD 123"#);
+
+        assert!(content.is_err())
+    }
 
     #[test]
     fn test_clean_rfd_html_links() {

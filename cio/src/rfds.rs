@@ -6,7 +6,6 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use macros::db;
 use partial_struct::partial;
-use regex::Regex;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
