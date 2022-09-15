@@ -897,18 +897,20 @@ sdf
         assert_eq!(expected, rfd.get_title());
     }
 
-    #[tokio::test]
-    async fn test_parse_asciidoc_content() {
-        let content = r#"
+    fn test_rfd_content() -> &'static str {
+        r#"
 :showtitle:
 :toc: left
 :numbered:
 :icons: font
 :state: prediscussion
 :revremark: State: {state}
+:docdatetime: 2019-01-04 19:26:06 UTC
+:localdatetime: 2019-01-04 19:26:06 UTC
 
 = RFD 123 Place
-:authors: FirstName LastName <fname@company.org>
+FirstName LastName <fname@company.org>
+
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc et dignissim nisi. Donec ut libero in 
 dolor tempor aliquam quis quis nisl. Proin sit amet nunc in orci suscipit placerat. Mauris 
 pellentesque fringilla lacus id gravida. Donec in velit luctus, elementum mauris eu, pellentesque 
@@ -924,15 +926,28 @@ tortor eget, sollicitudin vestibulum sem. Proin eu velit orci.
 in velit.
 
 . Donec elementum luctus mauris.
-"#;
+"#
+    }
 
-        let rfd = RFDAsciidoc::new(Cow::Borrowed(content));
-
-        let expected = "<h1>RFD 123 Place</h1>\n<div class=\"paragraph\">\n<p>pellentesque fringilla lacus id gravida. Donec in velit luctus, elementum mauris eu, pellentesque\nmassa. In lectus orci, vehicula at aliquet nec, elementum eu nisi. Vivamus viverra imperdiet\nmalesuada.</p>\n</div>\n<div class=\"olist arabic\">\n<ol class=\"arabic\">\n<li>\n<p>Suspendisse blandit sem ligula, ac luctus metus condimentum non. Fusce enim purus, tincidunt ut\ntortor eget, sollicitudin vestibulum sem. Proin eu velit orci.</p>\n</li>\n<li>\n<p>Proin eu finibus velit. Morbi eget blandit neque.</p>\n</li>\n<li>\n<p>Maecenas molestie, quam nec lacinia porta, lectus turpis molestie quam, at fringilla neque ipsum\nin velit.</p>\n</li>\n<li>\n<p>Donec elementum luctus mauris.</p>\n</li>\n</ol>\n</div>\n";
+    #[tokio::test]
+    async fn test_asciidoc_to_html() {
+        let rfd = RFDAsciidoc::new(Cow::Borrowed(test_rfd_content()));
+        let expected = "<h1>RFD 123 Place</h1>\n<div class=\"paragraph\">\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc et dignissim nisi. Donec ut libero in\ndolor tempor aliquam quis quis nisl. Proin sit amet nunc in orci suscipit placerat. Mauris\npellentesque fringilla lacus id gravida. Donec in velit luctus, elementum mauris eu, pellentesque\nmassa. In lectus orci, vehicula at aliquet nec, elementum eu nisi. Vivamus viverra imperdiet\nmalesuada.</p>\n</div>\n<div class=\"olist arabic\">\n<ol class=\"arabic\">\n<li>\n<p>Suspendisse blandit sem ligula, ac luctus metus condimentum non. Fusce enim purus, tincidunt ut\ntortor eget, sollicitudin vestibulum sem. Proin eu velit orci.</p>\n</li>\n<li>\n<p>Proin eu finibus velit. Morbi eget blandit neque.</p>\n</li>\n<li>\n<p>Maecenas molestie, quam nec lacinia porta, lectus turpis molestie quam, at fringilla neque ipsum\nin velit.</p>\n</li>\n<li>\n<p>Donec elementum luctus mauris.</p>\n</li>\n</ol>\n</div>\n";
 
         assert_eq!(
             expected,
             from_utf8(&rfd.parse(RFDAsciidocOutputFormat::Html).await.unwrap()).unwrap()
         );
+    }
+
+    #[tokio::test]
+    async fn test_asciidoc_to_pdf() {
+        let rfd = RFDAsciidoc::new(Cow::Borrowed(test_rfd_content()));
+        let pdf = rfd.parse(RFDAsciidocOutputFormat::Pdf).await.unwrap();
+
+        let ref_path = format!("{}/tests/ref/asciidoc_to_pdf.pdf", std::env::var("CARGO_MANIFEST_DIR").unwrap());
+        let expected = std::fs::read(&ref_path).unwrap();
+
+        assert_eq!(expected, pdf);
     }
 }
