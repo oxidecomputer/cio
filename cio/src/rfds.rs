@@ -116,7 +116,7 @@ impl NewRFD {
 
         // Parse the RFD title from the contents.
         let title = readme.content.get_title().trim().to_string();
-        let name = NewRFD::generate_name(update.number.into(), &title);
+        let name = Self::generate_name(update.number.into(), &title);
 
         // Parse the discussion from the contents.
         let discussion = readme.content.get_discussion();
@@ -174,8 +174,8 @@ impl NewRFD {
                 name,
                 state: readme.content.get_state(),
                 link: readme.link,
-                short_link: NewRFD::generate_short_link(update.number.into()),
-                rendered_link: NewRFD::generate_rendered_link(&update.number.as_number_string()),
+                short_link: Self::generate_short_link(update.number.into()),
+                rendered_link: Self::generate_rendered_link(&update.number.as_number_string()),
                 discussion,
                 authors: readme.content.get_authors(),
 
@@ -200,62 +200,16 @@ impl NewRFD {
         })
     }
 
-    pub fn generate_number_string(number: i32) -> String {
-        // Add leading zeros to the number for the number_string.
-        let mut number_string = number.to_string();
-        while number_string.len() < 4 {
-            number_string = format!("0{}", number_string);
-        }
-
-        number_string
-    }
-
-    pub fn generate_name(number: i32, title: &str) -> String {
+    fn generate_name(number: i32, title: &str) -> String {
         format!("RFD {} {}", number, title)
     }
 
-    pub fn generate_short_link(number: i32) -> String {
+    fn generate_short_link(number: i32) -> String {
         format!("https://{}.rfd.oxide.computer", number)
     }
 
-    pub fn generate_rendered_link(number_string: &str) -> String {
+    fn generate_rendered_link(number_string: &str) -> String {
         format!("https://rfd.shared.oxide.computer/rfd/{}", number_string)
-    }
-
-    pub fn get_authors(content: &str, is_markdown: bool) -> Result<String> {
-        if is_markdown {
-            // TODO: make work w asciidoc.
-            let re = Regex::new(r"(?m)(^authors.*$)")?;
-            match re.find(content) {
-                Some(v) => return Ok(v.as_str().replace("authors:", "").trim().to_string()),
-                None => return Ok(Default::default()),
-            }
-        }
-
-        // We must have asciidoc content.
-        // We want to find the line under the first "=" line (which is the title), authors is under
-        // that.
-        let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)")?;
-        match re.find(content) {
-            Some(v) => {
-                let val = v.as_str().trim().to_string();
-                let parts: Vec<&str> = val.split('\n').collect();
-                if parts.len() < 2 {
-                    Ok(Default::default())
-                } else {
-                    let mut authors = parts[1].to_string();
-                    if authors == "{authors}" {
-                        // Do the traditional check.
-                        let re = Regex::new(r"(?m)(^:authors.*$)")?;
-                        if let Some(v) = re.find(content) {
-                            authors = v.as_str().replace(":authors:", "").trim().to_string();
-                        }
-                    }
-                    Ok(authors)
-                }
-            }
-            None => Ok(Default::default()),
-        }
     }
 }
 
@@ -420,7 +374,7 @@ impl RFD {
         RFDContent::new(&self.content)
     }
 
-    pub async fn branch(&self, company: &Company) -> Result<GitHubRFDBranch> {
+    async fn branch(&self, company: &Company) -> Result<GitHubRFDBranch> {
         let repo = GitHubRFDRepo::new(company).await?;
 
         let branch = if self.link.contains(&format!("/{}/", repo.default_branch)) {
