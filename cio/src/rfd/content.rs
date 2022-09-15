@@ -292,10 +292,6 @@ impl<'a> RFDAsciidoc<'a> {
         let mut html = RFDHtml(from_utf8(&self.parse(RFDAsciidocOutputFormat::Html).await?)?.to_string());
         html.clean_links(&number.as_number_string());
 
-        if let Err(err) = self.cleanup_tmp_path() {
-            log::error!("Failed to clean up temporary working files for {:?} {:?}", number, err);
-        }
-
         Ok(html)
     }
 
@@ -305,10 +301,6 @@ impl<'a> RFDAsciidoc<'a> {
         self.download_images(number, branch).await?;
 
         let content = self.parse(RFDAsciidocOutputFormat::Pdf).await?;
-
-        if let Err(err) = self.cleanup_tmp_path() {
-            log::error!("Failed to clean up temporary working files for {:?} {:?}", number, err);
-        }
 
         let filename = format!(
             "RFD {} {}.pdf",
@@ -361,6 +353,10 @@ impl<'a> RFDAsciidoc<'a> {
                 from_utf8(&cmd_output.stderr)?
             );
         };
+
+        if let Err(err) = self.cleanup_tmp_path() {
+            log::error!("Failed to clean up temporary working files for {:?} {:?}", format, err);
+        }
 
         info!("[asciidoc] Finished cleanup and returning");
 
@@ -418,6 +414,7 @@ impl<'a> RFDAsciidoc<'a> {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 enum RFDAsciidocOutputFormat {
     Html,
     Pdf,
@@ -898,5 +895,44 @@ sdf
         let rfd = RFDContent::new_asciidoc(content);
         let expected = "Identity and Access Management (IAM)".to_string();
         assert_eq!(expected, rfd.get_title());
+    }
+
+    #[tokio::test]
+    async fn test_parse_asciidoc_content() {
+        let content = r#"
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: prediscussion
+:revremark: State: {state}
+
+= RFD 123 Place
+:authors: FirstName LastName <fname@company.org>
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc et dignissim nisi. Donec ut libero in 
+dolor tempor aliquam quis quis nisl. Proin sit amet nunc in orci suscipit placerat. Mauris 
+pellentesque fringilla lacus id gravida. Donec in velit luctus, elementum mauris eu, pellentesque 
+massa. In lectus orci, vehicula at aliquet nec, elementum eu nisi. Vivamus viverra imperdiet 
+malesuada.
+
+. Suspendisse blandit sem ligula, ac luctus metus condimentum non. Fusce enim purus, tincidunt ut 
+tortor eget, sollicitudin vestibulum sem. Proin eu velit orci.
+
+. Proin eu finibus velit. Morbi eget blandit neque.
+
+. Maecenas molestie, quam nec lacinia porta, lectus turpis molestie quam, at fringilla neque ipsum 
+in velit.
+
+. Donec elementum luctus mauris.
+"#;
+
+        let rfd = RFDAsciidoc::new(Cow::Borrowed(content));
+
+        let expected = "<h1>RFD 123 Place</h1>\n<div class=\"paragraph\">\n<p>pellentesque fringilla lacus id gravida. Donec in velit luctus, elementum mauris eu, pellentesque\nmassa. In lectus orci, vehicula at aliquet nec, elementum eu nisi. Vivamus viverra imperdiet\nmalesuada.</p>\n</div>\n<div class=\"olist arabic\">\n<ol class=\"arabic\">\n<li>\n<p>Suspendisse blandit sem ligula, ac luctus metus condimentum non. Fusce enim purus, tincidunt ut\ntortor eget, sollicitudin vestibulum sem. Proin eu velit orci.</p>\n</li>\n<li>\n<p>Proin eu finibus velit. Morbi eget blandit neque.</p>\n</li>\n<li>\n<p>Maecenas molestie, quam nec lacinia porta, lectus turpis molestie quam, at fringilla neque ipsum\nin velit.</p>\n</li>\n<li>\n<p>Donec elementum luctus mauris.</p>\n</li>\n</ol>\n</div>\n";
+
+        assert_eq!(
+            expected,
+            from_utf8(&rfd.parse(RFDAsciidocOutputFormat::Html).await.unwrap()).unwrap()
+        );
     }
 }
