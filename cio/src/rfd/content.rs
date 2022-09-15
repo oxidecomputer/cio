@@ -945,7 +945,10 @@ in velit.
         let rfd = RFDAsciidoc::new(Cow::Borrowed(test_rfd_content()));
         let pdf = rfd.parse(RFDAsciidocOutputFormat::Pdf).await.unwrap();
 
-        let ref_path = format!("{}/tests/ref/asciidoc_to_pdf.pdf", std::env::var("CARGO_MANIFEST_DIR").unwrap());
+        let ref_path = format!(
+            "{}/tests/ref/asciidoc_to_pdf.pdf",
+            std::env::var("CARGO_MANIFEST_DIR").unwrap()
+        );
         let expected = std::fs::read(&ref_path).unwrap();
 
         assert_eq!(expected, pdf);
