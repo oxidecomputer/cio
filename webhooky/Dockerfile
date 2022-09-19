@@ -40,7 +40,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
 
 RUN gem install \
 	asciidoctor-pdf \
-	asciidoctor-mermaid \
+	asciidoctor-mermaid -v 0.4.1 \
 	rouge
 
 RUN cd /usr/local/lib && \

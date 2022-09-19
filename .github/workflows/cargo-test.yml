@@ -54,7 +54,8 @@ jobs:
       - name: Install asciidoctor-pdf, asciidoctor-mermaid
         shell: bash
         run: |
-          sudo gem install asciidoctor-pdf asciidoctor-mermaid rouge
+          sudo gem install asciidoctor-pdf rouge
+          sudo gem install asciidoctor-mermaid -v 0.4.1
           npm install @mermaid-js/mermaid-cli
           ln -s ./node_modules/.bin/mmdc /usr/local/bin/mmdc
       - name: Install latest nightly
