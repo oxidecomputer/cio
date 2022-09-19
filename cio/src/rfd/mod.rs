@@ -5,13 +5,14 @@ mod changelog;
 mod content;
 pub mod drive;
 mod github;
-mod new_rfd;
+mod model;
 mod pdf;
 mod search;
 
 pub use changelog::send_rfd_changelog;
 pub use content::RFDContent;
 pub use github::{GitHubRFDBranch, GitHubRFDReadme, GitHubRFDReadmeLocation, GitHubRFDRepo, GitHubRFDUpdate};
+pub use model::{NewRFD, RFDEntry, RFDIndexEntry, RFDs, RemoteRFD, RFD};
 pub use pdf::{PDFStorage, RFDPdf};
 pub use search::RFDSearchIndex;
 

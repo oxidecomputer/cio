@@ -6,13 +6,9 @@ use google_drive::{
 };
 use log::info;
 
-use crate::{
-    companies::Company,
-    db::Database,
-    rfds::{RFDs, RFD},
-};
+use crate::{companies::Company, db::Database};
 
-use super::{PDFStorage, RFDPdf};
+use super::{PDFStorage, RFDPdf, RFDs, RFD};
 
 #[async_trait]
 impl PDFStorage for GoogleDrive {

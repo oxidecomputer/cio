@@ -1,8 +1,7 @@
 use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use cio_api::{
-    rfd::GitHubRFDRepo,
-    rfds::{NewRFD, RFDEntry, RFDIndexEntry, RFDs, RFD},
+    rfd::{GitHubRFDRepo, NewRFD, RFDEntry, RFDIndexEntry, RFDs, RFD},
     schema::rfds,
 };
 use diesel::{ExpressionMethods, QueryDsl};

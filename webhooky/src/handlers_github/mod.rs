@@ -9,8 +9,7 @@ use cio_api::{
     },
     core::GitHubCommit,
     repos::NewRepo,
-    rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate},
-    rfds::RFD,
+    rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate, RFD},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos},
     utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo, is_image},
 };

@@ -14,7 +14,7 @@ use cio_api::{
     journal_clubs::JournalClubMeeting,
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
-    rfds::RFD,
+    rfd::RFD,
     schema::{applicants, inbound_shipments, journal_club_meetings, outbound_shipments},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
     swag_inventory::SwagInventoryItem,

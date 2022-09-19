@@ -3,8 +3,7 @@ use async_trait::async_trait;
 use cio_api::{
     core::GitHubPullRequest,
     features::Features,
-    rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, RFDSearchIndex},
-    rfds::{NewRFD, RemoteRFD, RFD},
+    rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, NewRFD, RFDSearchIndex, RemoteRFD, RFD},
     shorturls::generate_shorturls_for_rfds,
     utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };

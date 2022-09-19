@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use cio_api::{
     analytics::NewPageView,
     functions::Function,
-    rfds::{RFDEntry, RFDIndexEntry},
+    rfd::{RFDEntry, RFDIndexEntry},
     swag_store::Order,
 };
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
