@@ -180,7 +180,7 @@ impl RFDUpdater {
             // Update the file in GitHub.
             // Keep in mind: this push will kick off another webhook.
             create_or_update_file_in_github_repo(
-                &ctx.github,
+                ctx.github,
                 &ctx.update.branch.owner,
                 &ctx.update.branch.repo,
                 &ctx.update.branch.branch,
@@ -219,11 +219,13 @@ pub struct RFDUpdateActionResponse {
 
 impl From<Vec<RFDUpdateActionResponse>> for RFDUpdateActionResponse {
     fn from(responses: Vec<RFDUpdateActionResponse>) -> Self {
-        responses.iter().fold(RFDUpdateActionResponse::default(), |acc, response| {
-            RFDUpdateActionResponse {
-                requires_source_commit: acc.requires_source_commit || response.requires_source_commit
-            }
-        })
+        responses
+            .iter()
+            .fold(RFDUpdateActionResponse::default(), |acc, response| {
+                RFDUpdateActionResponse {
+                    requires_source_commit: acc.requires_source_commit || response.requires_source_commit,
+                }
+            })
     }
 }
 
@@ -679,10 +681,7 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
         ctx: &RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
-        let RFDUpdateActionContext {
-            update,
-            ..
-        } = ctx;
+        let RFDUpdateActionContext { update, .. } = ctx;
 
         // If the RFD was merged into the default branch, but the RFD state is not `published`,
         // update the state of the RFD in GitHub to show it as `published`.
