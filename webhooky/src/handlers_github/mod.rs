@@ -9,9 +9,9 @@ use cio_api::{
     },
     core::GitHubCommit,
     repos::NewRepo,
-    rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate, RFD},
+    rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos},
-    utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo, is_image},
+    utils::{get_file_content_from_repo, is_image},
 };
 use dropshot::{Extractor, RequestContext, ServerContext};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
@@ -190,7 +190,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                     // Let's create the check run.
                     let check_run_id = event.create_check_run(&github).await?;
 
-                    match handle_rfd_pull_request(&github, api_context, event.clone(), &company).await {
+                    match handle_rfd_pull_request(api_context, event.clone(), &company).await {
                         Ok((conclusion, message)) => {
                             event
                                 .update_check_run(&github, check_run_id, &message, conclusion)
@@ -288,8 +288,9 @@ async fn handle_rfd_push(github: Arc<octorust::Client>, api_context: &Context, e
     let branch_name = event.refv.trim_start_matches("refs/heads/");
     let branch = repo.branch(branch_name.to_string());
 
-    // Iterate over the removed files and remove any images that we no longer
-    // need for the HTML rendered RFD website.
+    // Iterate over the removed files and remove any images that we no longer need for the HTML
+    // rendered RFD website. This is a special code path that only runs on RFD pushes as opposed to
+    // the rest of the RFD update logic which can be centralized
     for file in &commit.removed {
         // Make sure the file has a prefix of "rfd/".
         if !file.starts_with("rfd/") {
@@ -401,22 +402,29 @@ fn get_rfd_updates(branch: &GitHubRFDBranch, commit: &GitHubCommit) -> Vec<GitHu
 
 /// Handle a `pull_request` event for the rfd repo.
 pub async fn handle_rfd_pull_request(
-    github: &octorust::Client,
     api_context: &Context,
     event: GitHubWebhook,
     company: &Company,
 ) -> Result<(octorust::types::ChecksCreateRequestConclusion, String)> {
-    let db = &api_context.db;
-
-    let owner = &company.github_org;
-    let repo = "rfd";
-
-    // Let's get the RFD.
-    let branch = event.pull_request.head.commit_ref.to_string();
+    // Perform validation checks first to determine if we need to process this call or if we can
+    // drop it early
+    if event.repository.name != "rfd" {
+        error!(
+            "Attempting to run rfd `push` handler on the {} repo. Exiting as this should not occur.",
+            event.repository.name
+        );
+        return Ok((
+            octorust::types::ChecksCreateRequestConclusion::Skipped,
+            format!(
+                "Attempting to run rfd `push` handler on the {} repo. Exiting as this should not occur.",
+                event.repository.name
+            ),
+        ));
+    }
 
     // Check if we somehow had a pull request opened from the default branch.
     // This should never happen, but let's check regardless.
-    if branch == event.repository.default_branch {
+    if event.pull_request.head.commit_ref == event.repository.default_branch {
         // Return early.
         return Ok((octorust::types::ChecksCreateRequestConclusion::Skipped, format!(
             "event was to the default branch `{}`, we don't care, but also this would be pretty weird to have a pull request opened from the default branch",
@@ -424,144 +432,39 @@ pub async fn handle_rfd_pull_request(
         )));
     }
 
-    // The branch should be equivalent to the number in the database.
-    // Let's try to get the RFD from that.
-    let number = branch.trim_start_matches('0').parse::<i32>().unwrap_or_default();
-    // Make sure we actually have a number.
-    if number == 0 {
-        // Return early.
-        return Ok((
-            octorust::types::ChecksCreateRequestConclusion::Skipped,
-            format!(
-                "event was to the branch `{}`, which is not a number so it cannot be an RFD",
-                branch,
-            ),
-        ));
-    }
-
-    // Try to get the RFD from the database.
-    let result = RFD::get_from_db(db, number).await;
-    if result.is_none() {
-        return Ok((
-            octorust::types::ChecksCreateRequestConclusion::Skipped,
-            format!("could not find RFD with number `{}` in the database", number),
-        ));
-    }
-    let mut rfd = result.unwrap();
-
-    let mut message = String::new();
-
-    let mut a = |s: &str| {
-        message.push_str(&format!("[{}] ", Utc::now().format("%+")));
-        message.push_str(s);
-        message.push('\n');
-    };
-
-    let mut has_errors = false;
-    match rfd.update_pull_request(github, company, &event.pull_request).await {
-        Ok(_) => {
-            a("[SUCCESS]: update pull request title and labels");
-        }
-        Err(e) => {
-            warn!(
-                "unable to update pull request tile and labels for pr#{}: {}",
-                event.pull_request.number, e,
-            );
-
-            a(&format!(
-                "[ERROR]: update pull request title and labels: {} cc @augustuswm",
-                e
-            ));
-
-            has_errors = true;
-        }
-    }
-
     // We only care if the pull request was `opened`.
     if event.action != "opened" {
-        // We can throw this out, log it and return early.
-        a(&format!(
-            "[SUCCESS]: completed automations for `{}` action",
-            event.action
+        return Ok((
+            octorust::types::ChecksCreateRequestConclusion::Success,
+            format!("Ignoring pull_request hook due to unhandled action: {}", event.action),
         ));
-        return Ok((octorust::types::ChecksCreateRequestConclusion::Success, message));
     }
 
-    // Okay, now we finally have the RFD.
-    // We need to do two things.
-    //  1. Update the discussion link.
-    //  2. Update the state of the RFD to be in discussion if it is not
-    //      in an acceptable current state. More on this below.
-    // To do both these tasks we need to first get the path of the file on GitHub,
-    // so we can update it later, and also find out if it is markdown or not for parsing.
+    // Attempt to parse an RFD number from the branch name, if one can not be determined we will
+    // drop handling this pull request event
+    let branch_name = &event.pull_request.head.commit_ref;
 
-    // Get the file path from GitHub.
-    // We need to figure out whether this file is a README.adoc or README.md
-    // before we update it.
-    // Let's get the contents of the directory from GitHub.
-    let dir = format!("/rfd/{}", branch);
-    // Get the contents of the file.
-    let mut path = format!("{}/README.adoc", dir);
-    match github.repos().get_content_file(owner, repo, &path, &branch).await {
-        Ok(contents) => {
-            rfd.content = decode_base64_to_string(&contents.content);
-            rfd.sha = contents.sha;
-        }
-        Err(e) => {
-            info!(
-                "[rfd] getting file contents for {} on branch {} failed: {}, trying markdown instead...",
-                path, branch, e
-            );
+    if let Ok(number) = branch_name.trim_start_matches('0').parse::<i32>() {
+        let repo = GitHubRFDRepo::new(company).await?;
+        let branch = repo.branch(branch_name.to_string());
 
-            // Try to get the markdown instead.
-            path = format!("{}/README.md", dir);
-            let contents = github.repos().get_content_file(owner, repo, &path, &branch).await?;
+        let handler = RFDUpdater::default();
 
-            rfd.content = decode_base64_to_string(&contents.content);
-            rfd.sha = contents.sha;
-        }
+        handler
+            .handle(
+                api_context,
+                &[GitHubRFDUpdate {
+                    number: number.into(),
+                    branch,
+                }],
+            )
+            .await?;
     }
 
-    // Update the discussion link.
-    let discussion_link = event.pull_request.html_url;
-    rfd.update_discussion(&discussion_link)?;
-
-    a(&format!(
-        "[SUCCESS]: ensured RFD discussion link is `{}`",
-        discussion_link
-    ));
-
-    // A pull request can be open for an RFD if it is in the following states:
-    //  - published: a already published RFD is being updated in a pull request.
-    //  - discussion: it is in discussion
-    //  - ideation: it is in ideation
-    // We can update the state if it is not currently in an acceptable state.
-    if rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
-        //  Update the state of the RFD in GitHub to show it as `discussion`.
-        rfd.update_state("discussion")?;
-        a("[SUCCESS]: updated RFD state to `discussion`");
-    }
-
-    // Update the RFD to show the new state and link in the database.
-    rfd.update(db).await?;
-    a("[SUCCESS]: updated RFD in the database");
-    a("[SUCCESS]: updated RFD in Airtable");
-
-    // Update the file in GitHub.
-    // Keep in mind: this push will kick off another webhook.
-    create_or_update_file_in_github_repo(github, owner, repo, &branch, &path, rfd.content.as_bytes().to_vec()).await?;
-    a("[SUCCESS]: updated RFD file in GitHub with any changes");
-
-    a(&format!(
-        "[SUCCESS]: completed automations for `{}` action",
-        event.action
-    ));
-
-    if has_errors {
-        return Ok((octorust::types::ChecksCreateRequestConclusion::Failure, message));
-    }
-
-    Ok((octorust::types::ChecksCreateRequestConclusion::Success, message))
+    Ok((
+        octorust::types::ChecksCreateRequestConclusion::Success,
+        "Completed pull_request event handling".to_string(),
+    ))
 }
 
 /// Handle a `push` event for the configs repo.

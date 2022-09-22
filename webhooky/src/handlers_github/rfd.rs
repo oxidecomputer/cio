@@ -41,8 +41,9 @@ impl Default for RFDUpdater {
             Box::new(GenerateShortUrls),
             Box::new(CreatePullRequest),
             Box::new(UpdatePullRequest),
-            Box::new(UpdateDiscussionUrl),                  // Stops on error
-            Box::new(EnsureRFDOnDefaultIsInPublishedState), // Stops on error
+            Box::new(UpdateDiscussionUrl),                    // Stops on error
+            Box::new(EnsureRFDWithPullReuqestIsInValidState), // Stops on error
+            Box::new(EnsureRFDOnDefaultIsInPublishedState),   // Stops on error
         ])
     }
 }
@@ -186,7 +187,16 @@ pub struct RFDUpdateActionContext<'a, 'b, 'c, 'd, 'e, 'f> {
 
 #[async_trait]
 pub trait RFDUpdateAction {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr>;
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr>;
+}
+
+#[derive(Default)]
+pub struct RFDUpdateActionResponse {
+    pub requires_source_commit: bool,
 }
 
 #[derive(Debug)]
@@ -199,7 +209,11 @@ pub struct CopyImagesToFrontend;
 
 #[async_trait]
 impl RFDUpdateAction for CopyImagesToFrontend {
-    async fn run(&self, ctx: &RFDUpdateActionContext, _rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        _rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
         update
             .branch
@@ -212,7 +226,7 @@ impl RFDUpdateAction for CopyImagesToFrontend {
             update.number, update.branch.branch
         );
 
-        Ok(())
+        Ok(RFDUpdateActionResponse::default())
     }
 }
 
@@ -220,14 +234,18 @@ pub struct UpdateSearch;
 
 #[async_trait]
 impl RFDUpdateAction for UpdateSearch {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
         RFDSearchIndex::index_rfd(&rfd.number.into())
             .await
             .map_err(RFDUpdateActionErr::Continue)?;
         info!("Triggered update of the search index for RFD {}", update.number);
 
-        Ok(())
+        Ok(RFDUpdateActionResponse::default())
     }
 }
 
@@ -343,7 +361,11 @@ impl UpdatePDFs {
 
 #[async_trait]
 impl RFDUpdateAction for UpdatePDFs {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             api_context,
             github,
@@ -359,7 +381,7 @@ impl RFDUpdateAction for UpdatePDFs {
             .await
             .map_err(RFDUpdateActionErr::Continue)?;
 
-        Ok(())
+        Ok(RFDUpdateActionResponse::default())
     }
 }
 
@@ -367,7 +389,11 @@ pub struct GenerateShortUrls;
 
 #[async_trait]
 impl RFDUpdateAction for GenerateShortUrls {
-    async fn run(&self, ctx: &RFDUpdateActionContext, _rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        _rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             api_context, github, ..
         } = ctx;
@@ -388,7 +414,7 @@ impl RFDUpdateAction for GenerateShortUrls {
 
         info!("[SUCCESS]: updated shorturls for the rfds");
 
-        Ok(())
+        Ok(RFDUpdateActionResponse::default())
     }
 }
 
@@ -396,7 +422,11 @@ pub struct CreatePullRequest;
 
 #[async_trait]
 impl RFDUpdateAction for CreatePullRequest {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             update,
             github,
@@ -441,7 +471,7 @@ impl RFDUpdateAction for CreatePullRequest {
             );
         }
 
-        Ok(())
+        Ok(RFDUpdateActionResponse::default())
     }
 }
 
@@ -449,7 +479,11 @@ pub struct UpdatePullRequest;
 
 #[async_trait]
 impl RFDUpdateAction for UpdatePullRequest {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             update,
             pull_request,
@@ -517,7 +551,7 @@ impl RFDUpdateAction for UpdatePullRequest {
                 .map_err(RFDUpdateActionErr::Continue)?;
         }
 
-        Ok(())
+        Ok(RFDUpdateActionResponse::default())
     }
 }
 
@@ -525,7 +559,11 @@ pub struct UpdateDiscussionUrl;
 
 #[async_trait]
 impl RFDUpdateAction for UpdateDiscussionUrl {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             pull_request,
             github,
@@ -567,7 +605,40 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
             }
         }
 
-        Ok(())
+        Ok(RFDUpdateActionResponse {
+            requires_source_commit: true,
+        })
+    }
+}
+
+pub struct EnsureRFDWithPullReuqestIsInValidState;
+
+#[async_trait]
+impl RFDUpdateAction for EnsureRFDWithPullReuqestIsInValidState {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
+        let RFDUpdateActionContext { pull_request, .. } = ctx;
+
+        // If there is a pull request open for this branch, then check to ensure that it is in one
+        // of three valid states:
+        //   * published  - A RFD may be in this state if it had previously been published and an
+        //                  an update is being made
+        //   * discussion - The default state for a RFD that has an open pull request and has yet to
+        //                  to be merged. If the document on this branch is found to be in an
+        //                  invalid state, it will be set back to the discussion state
+        //   * ideation   - An alternative state to discussion where the RFD is not yet merged, but
+        //                  may not be ready for discussion. A pull request is being used to share
+        //                  initial thoughts on an idea
+        if pull_request.is_some() && rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
+            rfd.update_state("discussion").map_err(RFDUpdateActionErr::Stop)?;
+        }
+
+        Ok(RFDUpdateActionResponse {
+            requires_source_commit: true,
+        })
     }
 }
 
@@ -575,7 +646,11 @@ pub struct EnsureRFDOnDefaultIsInPublishedState;
 
 #[async_trait]
 impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
-    async fn run(&self, ctx: &RFDUpdateActionContext, rfd: &mut RFD) -> Result<(), RFDUpdateActionErr> {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             update,
             github,
@@ -587,7 +662,7 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
         // update the state of the RFD in GitHub to show it as `published`.
         if update.branch.branch == update.branch.default_branch && rfd.state != "published" {
             //  Update the state of the RFD in GitHub to show it as `published`.
-            rfd.update_state("published").map_err(RFDUpdateActionErr::Continue)?;
+            rfd.update_state("published").map_err(RFDUpdateActionErr::Stop)?;
 
             // Update the file in GitHub.
             // Keep in mind: this push will kick off another webhook.
@@ -610,6 +685,8 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
             );
         }
 
-        Ok(())
+        Ok(RFDUpdateActionResponse {
+            requires_source_commit: true,
+        })
     }
 }

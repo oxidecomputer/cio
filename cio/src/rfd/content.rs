@@ -325,7 +325,7 @@ impl<'a> RFDAsciidoc<'a> {
         let file_path = storage_path.join("contents.adoc");
 
         // // Write the contents to a temporary file.
-        write_file(&file_path, &self.content.as_bytes()).await?;
+        write_file(&file_path, self.content.as_bytes()).await?;
 
         info!("[asciidoc] Wrote file to temp dir {:?}", file_path);
 
