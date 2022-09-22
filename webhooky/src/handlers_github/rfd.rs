@@ -42,7 +42,7 @@ impl Default for RFDUpdater {
             Box::new(CreatePullRequest),
             Box::new(UpdatePullRequest),
             Box::new(UpdateDiscussionUrl),                    // Stops on error
-            Box::new(EnsureRFDWithPullReuqestIsInValidState), // Stops on error
+            Box::new(EnsureRFDWithPullRequestIsInValidState), // Stops on error
             Box::new(EnsureRFDOnDefaultIsInPublishedState),   // Stops on error
         ])
     }
@@ -150,9 +150,11 @@ impl RFDUpdater {
             old_rfd,
         };
 
+        let mut responses = vec![];
+
         for action in &self.actions {
             match action.run(&ctx, rfd).await {
-                Ok(_) => ( /* Nothing to do */ ),
+                Ok(response) => responses.push(response),
                 Err(err) => match err {
                     RFDUpdateActionErr::Continue(action_err) => {
                         warn!(
@@ -170,6 +172,22 @@ impl RFDUpdater {
                     }
                 },
             }
+        }
+
+        let response: RFDUpdateActionResponse = responses.into();
+
+        if response.requires_source_commit {
+            // Update the file in GitHub.
+            // Keep in mind: this push will kick off another webhook.
+            create_or_update_file_in_github_repo(
+                &ctx.github,
+                &ctx.update.branch.owner,
+                &ctx.update.branch.repo,
+                &ctx.update.branch.branch,
+                &location.file,
+                rfd.content.as_bytes().to_vec(),
+            )
+            .await?;
         }
 
         Ok(())
@@ -197,6 +215,16 @@ pub trait RFDUpdateAction {
 #[derive(Default)]
 pub struct RFDUpdateActionResponse {
     pub requires_source_commit: bool,
+}
+
+impl From<Vec<RFDUpdateActionResponse>> for RFDUpdateActionResponse {
+    fn from(responses: Vec<RFDUpdateActionResponse>) -> Self {
+        responses.iter().fold(RFDUpdateActionResponse::default(), |acc, response| {
+            RFDUpdateActionResponse {
+                requires_source_commit: acc.requires_source_commit || response.requires_source_commit
+            }
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -611,10 +639,10 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
     }
 }
 
-pub struct EnsureRFDWithPullReuqestIsInValidState;
+pub struct EnsureRFDWithPullRequestIsInValidState;
 
 #[async_trait]
-impl RFDUpdateAction for EnsureRFDWithPullReuqestIsInValidState {
+impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
     async fn run(
         &self,
         ctx: &RFDUpdateActionContext,
@@ -653,8 +681,6 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             update,
-            github,
-            location,
             ..
         } = ctx;
 
@@ -663,21 +689,6 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
         if update.branch.branch == update.branch.default_branch && rfd.state != "published" {
             //  Update the state of the RFD in GitHub to show it as `published`.
             rfd.update_state("published").map_err(RFDUpdateActionErr::Stop)?;
-
-            // Update the file in GitHub.
-            // Keep in mind: this push will kick off another webhook.
-            create_or_update_file_in_github_repo(
-                github,
-                &update.branch.owner,
-                &update.branch.repo,
-                &update.branch.branch,
-                &location.file,
-                rfd.content.as_bytes().to_vec(),
-            )
-            .await
-            // If this call fails then we want to stop updating the RFD. We may now be in a
-            // corrupt internal state
-            .map_err(RFDUpdateActionErr::Stop)?;
 
             info!(
                 "[SUCCESS]: updated state to `published` for RFD {}, since it was merged into branch {}",
