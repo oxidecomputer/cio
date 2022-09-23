@@ -119,7 +119,13 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 let mut record = self.upsert_in_db(db).await?;
 
                 // Let's also update this record in Airtable.
-                let new_airtable_record = record.upsert_in_airtable(db).await?;
+                let new_airtable_record = match record.upsert_in_airtable(db).await {
+                    Ok(airtable_record) => airtable_record,
+                    Err(err) => {
+                        log::error!("Failed to upsert persisted database record into Airtable. id: {}", record.id);
+                        return Err(err);
+                    }
+                };
 
                 if record.airtable_record_id.is_empty(){
                     // Now we have the id we need to update the database.
