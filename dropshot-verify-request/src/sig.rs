@@ -125,11 +125,11 @@ where
         let req_uri = rqctx.request.lock().await.uri().clone();
 
         let signature = T::signature(rqctx.clone()).await;
-        let mac = <T::Algo as Mac>::new_from_slice(&*key);
+        let mac = <T::Algo as Mac>::new_from_slice(&key);
 
         let verified = match (signature, mac) {
             (Ok(signature), Ok(mut mac)) => {
-                mac.update(&*content);
+                mac.update(&content);
                 let verified = mac.verify_slice(&signature).is_ok();
 
                 if !verified {

@@ -8,5 +8,5 @@ repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/cio-api"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-schemars = { version = "0.8" }
+serde = { workspace = true }
+schemars = { workspace = true }

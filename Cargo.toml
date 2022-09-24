@@ -24,3 +24,62 @@ members = [
 
 [profile.release]
 debug = true
+
+[workspace.dependencies]
+anyhow = "1"
+async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "7944dafc8a36dc6e20a1405eca59d04662de2bb7" }
+async-trait = "^0.1.57"
+base64 = "0.13.0"
+bytes = "1"
+checkr = "^0.0.10"
+chrono = { version = "^0.4.20", features = ["serde"] }
+chrono-humanize = "0.2.1"
+chrono-tz = { version = "0.6", features = ["serde"] }
+cio-api = { path = "cio" }
+cio-api-types = { path = "cio-api-types" }
+cloudflare = "^0.9.1"
+diesel = { git = "https://github.com/diesel-rs/diesel", rev = "99d0b05" }
+docusign = "^0.1.0"
+dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
+dropshot-verify-request = { path = "dropshot-verify-request" }
+google-drive = "^0.4.0"
+gusto-api = "^0.2.4"
+hex = "0.4.3"
+hmac = "0.12.0"
+http = "0.2.6"
+Inflector = "^0.11.4"
+log = "0.4"
+mailchimp-minimal-api = { path = "mailchimp-minimal-api" }
+octorust = { version = "^0.1.35", features = ["httpcache"] }
+pretty_env_logger = "0.4"
+proc-macro2 = "1"
+quickbooks = "^0.1.12"
+quote = "1"
+ramp-api = "^0.2.2"
+rand = "^0.8.5"
+regex = "^1"
+reqwest = "^0.11"
+reqwest-middleware = "0.1.5"
+reqwest-retry = "0.1.4"
+reqwest-tracing = { version = "0.2.1", features = ["opentelemetry_0_17"] }
+schemars = "0.8"
+sentry = "0.27.0"
+serde = { version = "^1.0",  features = ["derive"] }
+serde_json = "^1.0"
+serde_qs = "0.9"
+serde_urlencoded = "^0.7.0"
+sha2 = "0.10.0"
+sheets = "^0.4.0"
+shipbob = "^0.1.4"
+shippo = "^0.1.12"
+slack-chat-api = "^0.1.46"
+stacker = "0.1.14"
+steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
+syn = "1.0"
+tokio = "^1"
+tracing = "^0.1"
+tracing-subscriber = "0.3.15"
+url = "^2"
+urlencoding = "2.1.0"
+uuid = { version = "1.0", features = ["serde", "v4"] }
+zoom-api = "^0.2.1"

@@ -397,11 +397,11 @@ impl Shippo {
         match &resp.json::<Transaction>().await {
             Ok(v) => Ok(v.clone()),
             Err(e) => {
-                return Err(APIError {
+                Err(APIError {
                     status_code: *status,
                     // TODO: somehow get the body
                     body: format!("{}", e),
-                });
+                })
             }
         }
     }

@@ -6,15 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = {version="0.11.11", features = ["json"]}
-schemars = {version = "0.8.8", features = ["chrono", "uuid"]}
-serde = {version = "1.0.131", features = ["derive"]}
-chrono = {version = "0.4.19", features = ["serde"]}
-base64 = "0.13.0"
-http = "0.2.5"
-urlencoding = "2.1.0"
-url = "2.2.2"
-serde_json = "1.0.73"
+reqwest = { workspace = true, features = ["json"] }
+schemars = { workspace = true, features = ["chrono", "uuid"]}
+serde = { workspace = true, features = ["derive"]}
+chrono = { workspace = true }
+base64 = { workspace = true }
+http = { workspace = true }
+urlencoding = { workspace = true }
+url = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
-tokio = {version = "1.14.0", features = ["full"]}
+tokio = { workspace = true, features = ["full"] }

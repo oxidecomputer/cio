@@ -284,11 +284,7 @@ pub fn partial(attr: TokenStream, input: TokenStream) -> TokenStream {
                                     let mut field = field.to_owned();
 
                                     // Filter out any `partial` attributes assigned to the field
-                                    field.attrs = field
-                                        .attrs
-                                        .into_iter()
-                                        .filter(|attr| !attr.path.is_ident("partial"))
-                                        .collect();
+                                    field.attrs.retain(|attr| !attr.path.is_ident("partial"));
 
                                     field
                                 })

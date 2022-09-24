@@ -103,6 +103,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "android_system_properties"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "819e7219dbd41043ac279b19830f2efc897156490d7fd6ea916720117ee66311"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "ansi_term"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -169,11 +178,11 @@ dependencies = [
 [[package]]
 name = "async-bb8-diesel"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git?rev=b2102ce03616938421eb1a9eabe04f10f79e2c44#b2102ce03616938421eb1a9eabe04f10f79e2c44"
+source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git?rev=7944dafc8a36dc6e20a1405eca59d04662de2bb7#7944dafc8a36dc6e20a1405eca59d04662de2bb7"
 dependencies = [
  "async-trait",
- "bb8",
- "diesel",
+ "bb8 0.8.0",
+ "diesel 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
  "tokio",
 ]
@@ -340,9 +349,9 @@ checksum = "7a40729d2133846d9ed0ea60a8b9541bccddab49cd30f0715a1da672fe9a2524"
 
 [[package]]
 name = "async-trait"
-version = "0.1.56"
+version = "0.1.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96cf8829f67d2eab0b2dfa42c5d0ef737e0724e4a82b01b3e292456202b19716"
+checksum = "76464446b8bc32758d7e88ee1a804d9914cd9b1cb264c029899680b0be29826f"
 dependencies = [
  "proc-macro2 1.0.41",
  "quote 1.0.20",
@@ -461,6 +470,19 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "parking_lot 0.11.2",
+ "tokio",
+]
+
+[[package]]
+name = "bb8"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1627eccf3aa91405435ba240be23513eeca466b5dc33866422672264de061582"
+dependencies = [
+ "async-trait",
+ "futures-channel",
+ "futures-util",
+ "parking_lot 0.12.1",
  "tokio",
 ]
 
@@ -689,15 +711,17 @@ dependencies = [
 
 [[package]]
 name = "chrono"
-version = "0.4.19"
+version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
+checksum = "bfd4d1b31faaa3a89d7934dbded3111da0d2ef28e3ebccdb4f0179f5929d1ef1"
 dependencies = [
- "libc",
+ "iana-time-zone",
+ "js-sys",
  "num-integer",
  "num-traits",
  "serde",
  "time 0.1.44",
+ "wasm-bindgen",
  "winapi",
 ]
 
@@ -751,7 +775,7 @@ dependencies = [
  "async-trait",
  "barcoders",
  "base64 0.13.0",
- "bb8",
+ "bb8 0.7.1",
  "byte-unit",
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",
@@ -761,7 +785,7 @@ dependencies = [
  "cloudflare",
  "comrak",
  "csv",
- "diesel",
+ "diesel 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=99d0b05)",
  "diesel-sentry",
  "diffy",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1284,13 +1308,23 @@ dependencies = [
 [[package]]
 name = "diesel"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=6d681420#6d68142028474ec5735aceab8ab3a3c82cbe8e4b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01e2adfd0a7a81070ed7beec0c62636458926326c16fedb77796d41e447b282d"
+dependencies = [
+ "diesel_derives 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "r2d2",
+]
+
+[[package]]
+name = "diesel"
+version = "2.0.0"
+source = "git+https://github.com/diesel-rs/diesel?rev=99d0b05#99d0b05626d9331af04fbb25e529b805ae3cbde4"
 dependencies = [
  "bitflags",
  "byteorder",
  "chrono",
- "diesel_derives",
- "itoa 0.4.8",
+ "diesel_derives 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=99d0b05)",
+ "itoa 1.0.2",
  "pq-sys",
  "r2d2",
  "serde_json",
@@ -1300,7 +1334,7 @@ dependencies = [
 name = "diesel-sentry"
 version = "0.1.0"
 dependencies = [
- "diesel",
+ "diesel 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=99d0b05)",
  "sentry",
  "serde",
  "tracing",
@@ -1310,7 +1344,19 @@ dependencies = [
 [[package]]
 name = "diesel_derives"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=6d681420#6d68142028474ec5735aceab8ab3a3c82cbe8e4b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22a7ab9d7967e6a1a247ea38aedf88ab808b4ac0c159576bc71866ab8f9f9250"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2 1.0.41",
+ "quote 1.0.20",
+ "syn 1.0.98",
+]
+
+[[package]]
+name = "diesel_derives"
+version = "2.0.0"
+source = "git+https://github.com/diesel-rs/diesel?rev=99d0b05#99d0b05626d9331af04fbb25e529b805ae3cbde4"
 dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.41",
@@ -2440,6 +2486,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "iana-time-zone"
+version = "0.1.49"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bbaead50122b06e9a973ac20bc7445074d99ad9a0a0654934876908a9cec82c"
+dependencies = [
+ "android_system_properties",
+ "core-foundation-sys",
+ "js-sys",
+ "wasm-bindgen",
+ "winapi",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2491,6 +2550,12 @@ dependencies = [
  "scoped_threadpool",
  "tiff 0.6.1",
 ]
+
+[[package]]
+name = "impls"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a46645bbd70538861a90d0f26c31537cdf1e44aae99a794fb75a664b70951bc"
 
 [[package]]
 name = "indexmap"
@@ -5675,9 +5740,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.20.1"
+version = "1.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a8325f63a7d4774dd041e363b2409ed1c5cbbd0f867795e661df066b2b0a581"
+checksum = "0020c875007ad96677dcc890298f4b942882c5d4eb7cc8f439fc3bf813dc9c95"
 dependencies = [
  "autocfg",
  "bytes",
@@ -6249,7 +6314,7 @@ dependencies = [
  "cio-api",
  "clap 3.2.14",
  "clokwerk",
- "diesel",
+ "diesel 2.0.0 (git+https://github.com/diesel-rs/diesel?rev=99d0b05)",
  "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "dropshot",
  "dropshot-verify-request",
@@ -6259,6 +6324,7 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "http",
+ "impls",
  "lazy_static",
  "log",
  "mailchimp-minimal-api",
