@@ -6,11 +6,14 @@
 use std::sync::Arc;
 
 use diesel::backend::Backend;
-use diesel::connection::{AnsiTransactionManager, ConnectionGatWorkaround, SimpleConnection, TransactionManager};
+use diesel::connection::{
+    AnsiTransactionManager, ConnectionGatWorkaround, LoadConnection, LoadRowIter, SimpleConnection, TransactionManager,
+};
 use diesel::debug_query;
 use diesel::expression::QueryMetadata;
+use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::query_builder::{AsQuery, QueryFragment, QueryId};
+use diesel::query_builder::{AsQuery, Query, QueryFragment, QueryId};
 use diesel::r2d2::R2D2Connection;
 use sentry::Hub;
 use std::ops::{Deref, DerefMut};
@@ -69,17 +72,59 @@ impl<C: Connection> SimpleConnection for SentryConnection<C> {
     }
 }
 
-impl<'a, C: Connection> ConnectionGatWorkaround<'a, C::Backend> for SentryConnection<C> {
-    type Cursor = <C as ConnectionGatWorkaround<'a, C::Backend>>::Cursor;
-    type Row = <C as ConnectionGatWorkaround<'a, C::Backend>>::Row;
+impl<'conn, 'query, C, B> ConnectionGatWorkaround<'conn, 'query, C::Backend, B> for SentryConnection<C>
+where
+    C: Connection<Backend = Pg> + ConnectionGatWorkaround<'conn, 'query, Pg, B>,
+{
+    type Cursor = <C as ConnectionGatWorkaround<'conn, 'query, C::Backend, B>>::Cursor;
+    type Row = <C as ConnectionGatWorkaround<'conn, 'query, C::Backend, B>>::Row;
+}
+
+impl<B, C> LoadConnection<B> for SentryConnection<C>
+where
+    C: LoadConnection<B>
+        + LoadConnection
+        + Connection<TransactionManager = AnsiTransactionManager>
+        + Connection<Backend = Pg>
+        + for<'conn, 'query> ConnectionGatWorkaround<'conn, 'query, C::Backend, B>,
+{
+    #[tracing::instrument(
+        fields(
+            db.name=%self.info.current_database,
+            db.system="postgresql",
+            db.version=%self.info.version,
+            db.statement=tracing::field::Empty,
+            otel.kind="client",
+        ),
+        skip(self, source),
+    )]
+    fn load<'conn, 'query, T>(
+        &'conn mut self,
+        source: T,
+    ) -> QueryResult<LoadRowIter<'conn, 'query, Self, Self::Backend, B>>
+    where
+        T: Query + QueryFragment<Self::Backend> + QueryId + 'query,
+        Self::Backend: QueryMetadata<T::SqlType>,
+    {
+        let q = (&source).as_query();
+        let query = debug_query::<Self::Backend, _>(&q).to_string();
+
+        let mut txn = start_sentry_db_transaction("sql.query", &query);
+        let span = tracing::Span::current();
+        span.record("db.statement", &query.as_str());
+
+        let result = <C as LoadConnection<B>>::load(&mut self.inner, source);
+        txn.finish();
+        result
+    }
 }
 
 impl<C> Connection for SentryConnection<C>
 where
-    C: Connection<TransactionManager = AnsiTransactionManager, Backend = diesel::pg::Pg>,
+    C: LoadConnection + Connection<TransactionManager = AnsiTransactionManager, Backend = Pg>,
     <C::Backend as Backend>::QueryBuilder: Default,
 {
-    type Backend = diesel::pg::Pg;
+    type Backend = Pg;
     type TransactionManager = C::TransactionManager;
 
     #[tracing::instrument(
@@ -144,52 +189,6 @@ where
             db.name=%self.info.current_database,
             db.system="postgresql",
             db.version=%self.info.version,
-            db.statement=%query,
-            otel.kind="client",
-        ),
-        skip(self),
-    )]
-    fn execute(&mut self, query: &str) -> QueryResult<usize> {
-        let mut txn = start_sentry_db_transaction("sql.query", query);
-
-        let result = self.inner.execute(query);
-        txn.finish();
-        result
-    }
-
-    #[tracing::instrument(
-        fields(
-            db.name=%self.info.current_database,
-            db.system="postgresql",
-            db.version=%self.info.version,
-            db.statement=tracing::field::Empty,
-            otel.kind="client",
-        ),
-        skip(self, source),
-    )]
-    fn load<T>(&mut self, source: T) -> QueryResult<<Self as ConnectionGatWorkaround<Self::Backend>>::Cursor>
-    where
-        T: AsQuery,
-        T::Query: QueryFragment<Self::Backend> + QueryId,
-        Self::Backend: QueryMetadata<T::SqlType>,
-    {
-        let q = source.as_query();
-        let query = debug_query::<Self::Backend, _>(&q).to_string();
-
-        let mut txn = start_sentry_db_transaction("sql.query", &query);
-        let span = tracing::Span::current();
-        span.record("db.statement", &query.as_str());
-
-        let result = self.inner.load(q);
-        txn.finish();
-        result
-    }
-
-    #[tracing::instrument(
-        fields(
-            db.name=%self.info.current_database,
-            db.system="postgresql",
-            db.version=%self.info.version,
             db.statement=tracing::field::Empty,
             otel.kind="client",
         ),
@@ -225,7 +224,9 @@ where
 
 impl<C> R2D2Connection for SentryConnection<C>
 where
-    C: R2D2Connection + Connection<TransactionManager = AnsiTransactionManager, Backend = diesel::pg::Pg>,
+    C: R2D2Connection
+        + Connection<TransactionManager = AnsiTransactionManager, Backend = diesel::pg::Pg>
+        + LoadConnection,
     <C::Backend as Backend>::QueryBuilder: Default,
 {
     fn ping(&mut self) -> QueryResult<()> {

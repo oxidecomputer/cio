@@ -136,7 +136,7 @@ impl fmt::Display for ExternalServices {
 }
 
 impl ToSql<VarChar, Pg> for ExternalServices {
-    fn to_sql<W: std::io::Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+    fn to_sql(&self, out: &mut Output<Pg>) -> serialize::Result {
         <str as ToSql<VarChar, Pg>>::to_sql(self.as_str(), out)
     }
 }
@@ -1568,7 +1568,7 @@ impl ResourceCategory {
 }
 
 impl ToSql<VarChar, Pg> for ResourceCategory {
-    fn to_sql<W: std::io::Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+    fn to_sql(&self, out: &mut Output<Pg>) -> serialize::Result {
         <str as ToSql<VarChar, Pg>>::to_sql(self.as_str(), out)
     }
 }

@@ -12,74 +12,74 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1"
-async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
-async-trait = "0.1.56"
-checkr = "^0.0.10"
-chrono = { version = "0.4", features = ["serde"] }
-chrono-humanize = "0.2.1"
-chrono-tz = { version = "0.6", features = ["serde"] }
+anyhow = { workspace = true }
+async-bb8-diesel = { workspace = true }
+async-trait= { workspace = true }
+checkr = { workspace = true }
+chrono = { workspace = true }
+chrono-humanize = { workspace = true }
+chrono-tz = { workspace = true }
 #cio-api = { git = "https://github.com/oxidecomputer/cio", rev = "acc1c2365d81ef8be38b61db75fee5886b7fe6a6" }
-cio-api = { path = "../cio" }
+cio-api  = { workspace = true }
 clap = { version = "^3.2.13", features = ["cargo", "derive", "env", "unicode"] }
 clokwerk = "0.4.0-rc1"
 # Tracking pending 2.0 version.
-diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
-docusign = "^0.1.0"
+diesel = { workspace = true,  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2", "i-implement-a-third-party-backend-and-opt-into-breaking-changes"]  }
+docusign = { workspace = true }
 #dropshot = "^0.5.0"
-dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
-dropshot-verify-request = { path = "../dropshot-verify-request" }
+dropshot = { workspace = true }
+dropshot-verify-request = { workspace = true }
 duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
-google-drive = "^0.4.0"
+google-drive = { workspace = true }
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
-gusto-api = "^0.2.4"
+gusto-api = { workspace = true }
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
-hex = "0.4.3"
-hmac = "0.12.0"
-http = "0.2.6"
+hex = { workspace = true }
+hmac = { workspace = true }
+http = { workspace = true }
 lazy_static = "^1.4.0"
-log = { version = "0.4", features = ["serde"] }
+log = { workspace = true, features = ["serde"] }
 # mailchimp-api = "^0.1.11"
-mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
+mailchimp-minimal-api = { workspace = true }
 mime_guess = "2"
-octorust = { version = "^0.1.35", features = ["httpcache"] }
+octorust = { workspace = true }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
-pretty_env_logger = "0.4"
-quickbooks = "^0.1.12"
-ramp-api = "^0.2.2"
+pretty_env_logger = { workspace = true }
+quickbooks = { workspace = true }
+ramp-api = { workspace = true }
 #ramp-api = { path = "../../third-party-api-clients/ramp" }
-rand = "^0.8.5"
-regex = "^1.5.5"
-reqwest = { version = "0.11", features = ["json"] }
-schemars = { version = "0.8", features = ["chrono", "uuid"] }
-sentry = { features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], version = "0.27.0" }
+rand = { workspace = true }
+regex = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+schemars = { workspace = true, features = ["chrono", "uuid"] }
+sentry = { version = "0.27.0", features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"] }
 # sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log", "slog"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
 #sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"], path = "../../sentry-rust/sentry"  }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_qs = "0.9"
-serde_urlencoded = "^0.7.0"
-sheets = "^0.4.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_qs = { workspace = true }
+serde_urlencoded = { workspace = true }
+sheets = { workspace = true }
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
-shipbob = "^0.1.4"
-shippo = "^0.1.12"
+shipbob = { workspace = true }
+shippo = { workspace = true }
 signal-hook = "^0.3"
-slack-chat-api = "^0.1.46"
+slack-chat-api = { workspace = true }
 slog = "2"
 slog-async = "2"
 slog-json = "^2.6.1"
 slog-scope = "4"
 slog-stdlog = "4"
 slog-term = "2"
-steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
-tokio = { version = "1", features = ["full", "time"] }
-urlencoding = "2.1.0"
-uuid = { version = "1.0", features = ["serde", "v4"] }
-zoom-api = "^0.2.1"
-sha2 = "0.10.0"
-stacker = "0.1.14"
-base64 = "0.13.0"
+steno = { workspace = true }
+tokio = { workspace = true, features = ["full", "time"] }
+urlencoding = { workspace = true }
+uuid = { workspace = true }
+zoom-api = { workspace = true }
+sha2 = { workspace = true }
+stacker = { workspace = true }
+base64 = { workspace = true }
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]

@@ -16,35 +16,35 @@ path = "src/main.rs"
 acme-lib = "^0.8.0"
 airtable-api = "^0.1.36"
 #airtable-api = { path = "../airtable" }
-anyhow = "1"
-async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
-async-trait = "^0.1.53"
+anyhow = { workspace = true }
+async-bb8-diesel = { workspace = true }
+async-trait= { workspace = true }
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
-base64 = "^0.13"
-bb8 = "^0.7.1"
+base64 = { workspace = true }
+bb8 = { workspace = true }
 byte-unit = "4"
-checkr = "^0.0.10"
+checkr = { workspace = true }
 #checkr = { path = "../checkr" }
-chrono = { version = "0.4", features = ["serde"] }
-chrono-humanize = "0.2.1"
-chrono-tz = { version = "0.6", features = ["serde"] }
-cio-api-types = { path = "../cio-api-types" }
-cloudflare = "^0.9.1"
+chrono = { workspace = true }
+chrono-humanize = { workspace = true }
+chrono-tz = { workspace = true }
+cio-api-types = { workspace = true }
+cloudflare = { workspace = true }
 csv = "1.1"
 comrak = "0.12"
 # Tracking pending 2.0 version.
-diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
+diesel = { workspace = true, features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2", "i-implement-a-third-party-backend-and-opt-into-breaking-changes"]  }
 diesel-sentry = { path = "../diesel-sentry" }
 diffy = "^0.2.0"
-docusign = "^0.1.0"
+docusign = { workspace = true }
 #docusign = { path = "../docusign" }
-dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
+dropshot = { workspace = true }
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 futures-util = "0.3"
 google-calendar = "^0.3.0"
 #google-calendar = { path = "../../third-party-api-clients/google/calendar" }
-google-drive = "^0.4.0"
+google-drive = { workspace = true }
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
@@ -52,75 +52,75 @@ google-groups-settings = "^0.3.0"
 #google-groups-settings = { path = "../../third-party-api-clients/google/groups-settings" }
 gsuite-api = "^0.4.0"
 #gsuite-api = { path = "../../third-party-api-clients/google/admin" }
-gusto-api = "^0.2.4"
+gusto-api = { workspace = true }
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "4.2.2"
-hex = "0.4.3"
-http = "0.2.6"
+hex = { workspace = true }
+http = { workspace = true }
 image = "^0.23.14"
-Inflector = "^0.11.4"
+Inflector = { workspace = true }
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
-log = { version = "0.4", features = ["serde"] }
+log = { workspace = true, features = ["serde"] }
 macros = { path = "../macros" }
 # mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }
-mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
+mailchimp-minimal-api = { workspace = true }
 names = "^0.14.0"
 nom_pem = "4"
-octorust = { version = "^0.1.35", features = ["httpcache"] }
+octorust = { workspace = true }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
 okta = "^0.2.2"
 #okta = { path = "../../third-party-api-clients/okta/" }
 openssl = "0.10"
 partial-struct = { path = "../partial-struct" }
 phonenumber = "0.3"
-pretty_env_logger = "0.4"
+pretty_env_logger = { workspace = true }
 printpdf = { version = "^0.5.2", features = ["embedded_images"] }
-quickbooks = "^0.1.12"
+quickbooks = { workspace = true }
 #quickbooks = { path = "../quickbooks" }
-ramp-api = "^0.2.2"
+ramp-api = { workspace = true }
 #ramp-api = { path = "../../third-party-api-clients/ramp" }
-rand = { version = "^0.8.5", features = ["alloc"] }
-regex = "1"
-reqwest = { version = "0.11", features = ["json"] }
-reqwest-middleware = "0.1.5"
-reqwest-retry = "0.1.4"
-reqwest-tracing = { version = "0.2.1", features = ["opentelemetry_0_17"] }
+rand = { workspace = true, features = ["alloc"] }
+regex = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+reqwest-middleware = { workspace = true }
+reqwest-retry = { workspace = true }
+reqwest-tracing = { workspace = true }
 revai = { version = "^0.3.0" }
 #revai = { path = "../../third-party-api-clients/rev.ai" }
 ring = "0.16.20"
-schemars = { version = "0.8", features = ["chrono", "uuid"] }
+schemars = { workspace = true, features = ["chrono", "uuid"] }
 sendgrid-api = "^0.2.0"
 #sendgrid-api = { path = "../../third-party-api-clients/sendgrid" }
-sentry = { version = "^0.27.0", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "tracing"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-sheets = "^0.4.0"
+sentry = { workspace = true, features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "tracing"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sheets = { workspace = true }
 #sheets = { path = "../../third-party-api-clients/google/sheets" }
-shippo = "^0.1.29"
+shippo = { workspace = true }
 #shippo = { path = "../shippo" }
-shipbob = "^0.1.4"
-slack-chat-api = "^0.1.16"
+shipbob = { workspace = true }
+slack-chat-api = { workspace = true }
 #slack-chat-api = { path = "../slack" }
 sodiumoxide = "^0.2.7"
-steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
+steno = { workspace = true }
 tailscale-api = "^0.1.2"
-tracing = "^0.1"
+tracing = { workspace = true }
 #tailscale-api = { path = "../tailscale" }
 tripactions = "0.2.3"
 #tripactions = { path = "../../third-party-api-clients/tripactions" }
 titlecase = "1.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { workspace = true, features = ["full"] }
 toml = "0.5"
-url = "2"
-uuid = { version = "^1.0", features = ["serde", "v4"] }
+url = { workspace = true }
+uuid = { workspace = true }
 walkdir = "^2.3.2"
 yup-oauth2 = "^7"
 zip = "0.6.2"
 zoho-api = { path = "../zoho-client" }
-zoom-api = "^0.2.3"
-stacker = "0.1.14"
+zoom-api = { workspace = true }
+stacker = { workspace = true }
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]
-tracing-subscriber = "0.3.15"
+tracing-subscriber = { workspace = true }

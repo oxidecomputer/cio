@@ -7,10 +7,10 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "1"
-quote = "1"
-syn = { version = "1.0", features = ["extra-traits"] }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["extra-traits"] }
 
 [dev-dependencies]
-serde = { version = "1.0.131", features = ["derive"] }
-serde_json = "1.0.73"
+serde = { workspace = true }
+serde_json = { workspace = true }

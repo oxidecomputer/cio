@@ -103,6 +103,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "android_system_properties"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "819e7219dbd41043ac279b19830f2efc897156490d7fd6ea916720117ee66311"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "ansi_term"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -169,7 +178,7 @@ dependencies = [
 [[package]]
 name = "async-bb8-diesel"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git?rev=b2102ce03616938421eb1a9eabe04f10f79e2c44#b2102ce03616938421eb1a9eabe04f10f79e2c44"
+source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git?rev=7944dafc8a36dc6e20a1405eca59d04662de2bb7#7944dafc8a36dc6e20a1405eca59d04662de2bb7"
 dependencies = [
  "async-trait",
  "bb8",
@@ -340,9 +349,9 @@ checksum = "7a40729d2133846d9ed0ea60a8b9541bccddab49cd30f0715a1da672fe9a2524"
 
 [[package]]
 name = "async-trait"
-version = "0.1.56"
+version = "0.1.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96cf8829f67d2eab0b2dfa42c5d0ef737e0724e4a82b01b3e292456202b19716"
+checksum = "76464446b8bc32758d7e88ee1a804d9914cd9b1cb264c029899680b0be29826f"
 dependencies = [
  "proc-macro2 1.0.41",
  "quote 1.0.20",
@@ -453,14 +462,14 @@ dependencies = [
 
 [[package]]
 name = "bb8"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e9f4fa9768efd269499d8fba693260cfc670891cf6de3adc935588447a77cc8"
+checksum = "1627eccf3aa91405435ba240be23513eeca466b5dc33866422672264de061582"
 dependencies = [
  "async-trait",
  "futures-channel",
  "futures-util",
- "parking_lot 0.11.2",
+ "parking_lot",
  "tokio",
 ]
 
@@ -689,15 +698,17 @@ dependencies = [
 
 [[package]]
 name = "chrono"
-version = "0.4.19"
+version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
+checksum = "bfd4d1b31faaa3a89d7934dbded3111da0d2ef28e3ebccdb4f0179f5929d1ef1"
 dependencies = [
- "libc",
+ "iana-time-zone",
+ "js-sys",
  "num-integer",
  "num-traits",
  "serde",
  "time 0.1.44",
+ "wasm-bindgen",
  "winapi",
 ]
 
@@ -1284,13 +1295,14 @@ dependencies = [
 [[package]]
 name = "diesel"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=6d681420#6d68142028474ec5735aceab8ab3a3c82cbe8e4b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01e2adfd0a7a81070ed7beec0c62636458926326c16fedb77796d41e447b282d"
 dependencies = [
  "bitflags",
  "byteorder",
  "chrono",
  "diesel_derives",
- "itoa 0.4.8",
+ "itoa 1.0.2",
  "pq-sys",
  "r2d2",
  "serde_json",
@@ -1310,7 +1322,8 @@ dependencies = [
 [[package]]
 name = "diesel_derives"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=6d681420#6d68142028474ec5735aceab8ab3a3c82cbe8e4b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22a7ab9d7967e6a1a247ea38aedf88ab808b4ac0c159576bc71866ab8f9f9250"
 dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.41",
@@ -2440,6 +2453,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "iana-time-zone"
+version = "0.1.49"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bbaead50122b06e9a973ac20bc7445074d99ad9a0a0654934876908a9cec82c"
+dependencies = [
+ "android_system_properties",
+ "core-foundation-sys",
+ "js-sys",
+ "wasm-bindgen",
+ "winapi",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3387,37 +3413,12 @@ checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
 
 [[package]]
 name = "parking_lot"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d17b78036a60663b797adeaee46f5c9dfebb86948d1255007a1d6be0271ff99"
-dependencies = [
- "instant",
- "lock_api",
- "parking_lot_core 0.8.5",
-]
-
-[[package]]
-name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
 dependencies = [
  "lock_api",
- "parking_lot_core 0.9.3",
-]
-
-[[package]]
-name = "parking_lot_core"
-version = "0.8.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d76e8e1493bcac0d2766c42737f34458f1c8c50c0d23bcb24ea953affb273216"
-dependencies = [
- "cfg-if 1.0.0",
- "instant",
- "libc",
- "redox_syscall",
- "smallvec",
- "winapi",
+ "parking_lot_core",
 ]
 
 [[package]]
@@ -3956,7 +3957,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51de85fb3fb6524929c8a2eb85e6b6d363de4e8c48f9e2c2eac4944abc181c93"
 dependencies = [
  "log",
- "parking_lot 0.12.1",
+ "parking_lot",
  "scheduled-thread-pool",
 ]
 
@@ -4429,7 +4430,7 @@ version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "977a7519bff143a44f842fd07e80ad1329295bd71686457f18e496736f4bf9bf"
 dependencies = [
- "parking_lot 0.12.1",
+ "parking_lot",
 ]
 
 [[package]]
@@ -5361,7 +5362,7 @@ checksum = "213494b7a2b503146286049378ce02b482200519accc31872ee8be91fa820a08"
 dependencies = [
  "new_debug_unreachable",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot",
  "phf_shared 0.10.0",
  "precomputed-hash",
 ]
@@ -5675,9 +5676,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.20.1"
+version = "1.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a8325f63a7d4774dd041e363b2409ed1c5cbbd0f867795e661df066b2b0a581"
+checksum = "0020c875007ad96677dcc890298f4b942882c5d4eb7cc8f439fc3bf813dc9c95"
 dependencies = [
  "autocfg",
  "bytes",
@@ -5686,7 +5687,7 @@ dependencies = [
  "mio",
  "num_cpus",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",
