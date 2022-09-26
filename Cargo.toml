@@ -30,6 +30,7 @@ anyhow = "1"
 async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "7944dafc8a36dc6e20a1405eca59d04662de2bb7" }
 async-trait = "^0.1.57"
 base64 = "0.13.0"
+bb8 = "0.8.0"
 bytes = "1"
 checkr = "^0.0.10"
 chrono = { version = "^0.4.20", features = ["serde"] }
@@ -38,7 +39,7 @@ chrono-tz = { version = "0.6", features = ["serde"] }
 cio-api = { path = "cio" }
 cio-api-types = { path = "cio-api-types" }
 cloudflare = "^0.9.1"
-diesel = { git = "https://github.com/diesel-rs/diesel", rev = "99d0b05" }
+diesel = { version = "2.0.0" }
 docusign = "^0.1.0"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 dropshot-verify-request = { path = "dropshot-verify-request" }

@@ -21,7 +21,7 @@ async-bb8-diesel = { workspace = true }
 async-trait= { workspace = true }
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
 base64 = { workspace = true }
-bb8 = "^0.7.1"
+bb8 = { workspace = true }
 byte-unit = "4"
 checkr = { workspace = true }
 #checkr = { path = "../checkr" }

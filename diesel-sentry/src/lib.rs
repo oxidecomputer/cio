@@ -39,9 +39,6 @@ pub struct SentryConnection<C: Connection> {
     info: ConnectionInfo,
 }
 
-// Need this so that ConnectionManager can impl ManageConnection
-unsafe impl<C: Connection> Send for SentryConnection<C> {}
-
 impl<C: Connection> Deref for SentryConnection<C> {
     type Target = C;
     fn deref(&self) -> &Self::Target {
