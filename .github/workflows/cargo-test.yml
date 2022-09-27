@@ -139,4 +139,5 @@ jobs:
           df -h /
       - name: Report /tmp
         shell: bash
-          ls -altr -R /tmp/asciidoc-rfd-render/
+        run: |
+          ls -altr -R /tmp/asciidoc-rfd-render
