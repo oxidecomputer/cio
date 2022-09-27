@@ -138,6 +138,7 @@ jobs:
           set -x
           df -h /
       - name: Report /tmp
+        if: always()
         shell: bash
         run: |
           ls -altr -R /tmp/asciidoc-rfd-render
