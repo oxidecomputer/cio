@@ -13,10 +13,7 @@ use docusign::DocuSign;
 use google_calendar::Client as GoogleCalendar;
 use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
-use google_storage1::{
-    hyper_rustls::HttpsConnector,
-    hyper::client::HttpConnector
-};
+use google_storage1::{hyper::client::HttpConnector, hyper_rustls::HttpsConnector};
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
 use log::{info, warn};

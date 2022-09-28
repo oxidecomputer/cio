@@ -5,10 +5,13 @@ use cio_api::{
     features::Features,
     rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, NewRFD, RFDSearchIndex, RemoteRFD, RFD},
     shorturls::generate_shorturls_for_rfds,
-    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, decode_base64},
+    utils::{create_or_update_file_in_github_repo, decode_base64, get_file_content_from_repo},
 };
 use google_drive::traits::{DriveOps, FileOps};
-use google_storage1::{hyper, hyper_rustls, api::{Storage, Object}};
+use google_storage1::{
+    api::{Object, Storage},
+    hyper, hyper_rustls,
+};
 use log::{info, warn};
 
 use crate::context::Context;
@@ -268,9 +271,11 @@ impl RFDUpdateAction for CopyImagesToGCP {
     async fn run(
         &self,
         ctx: &RFDUpdateActionContext,
-        _rfd: &mut RFD
+        _rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
-        let RFDUpdateActionContext { api_context, update, .. } = ctx;
+        let RFDUpdateActionContext {
+            api_context, update, ..
+        } = ctx;
 
         let images = update
             .branch
@@ -291,9 +296,9 @@ impl RFDUpdateAction for CopyImagesToGCP {
                     .https_or_http()
                     .enable_http1()
                     .enable_http2()
-                    .build()
+                    .build(),
             ),
-            gcp_auth
+            gcp_auth,
         );
 
         for image in images {
