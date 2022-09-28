@@ -125,3 +125,4 @@ google-storage1 = "4.0.1"
 
 [dev-dependencies]
 tracing-subscriber = "0.3.15"
+env_logger = "0.9.1"

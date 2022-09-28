@@ -133,6 +133,7 @@ jobs:
           GUSTO_REDIRECT_URI: ${{secrets.GUSTO_REDIRECT_URI}}
           RUST_BACKTRACE: 1
       - name: Report remaining disk
+        if: always()
         shell: bash
         run: |
           set -x
