@@ -5,9 +5,10 @@ use cio_api::{
     features::Features,
     rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, NewRFD, RFDSearchIndex, RemoteRFD, RFD},
     shorturls::generate_shorturls_for_rfds,
-    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
+    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, decode_base64},
 };
 use google_drive::traits::{DriveOps, FileOps};
+use google_storage1::{hyper, hyper_rustls, api::{Storage, Object}};
 use log::{info, warn};
 
 use crate::context::Context;
@@ -255,6 +256,63 @@ impl RFDUpdateAction for CopyImagesToFrontend {
             "Copied images for RFD {} on {} to frontend storage",
             update.number, update.branch.branch
         );
+
+        Ok(RFDUpdateActionResponse::default())
+    }
+}
+
+pub struct CopyImagesToGCP;
+
+#[async_trait]
+impl RFDUpdateAction for CopyImagesToGCP {
+    async fn run(
+        &self,
+        ctx: &RFDUpdateActionContext,
+        _rfd: &mut RFD
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
+        let RFDUpdateActionContext { api_context, update, .. } = ctx;
+
+        let images = update
+            .branch
+            .get_images(&update.number)
+            .await
+            .map_err(RFDUpdateActionErr::Continue)?;
+
+        let gcp_auth = api_context
+            .company
+            .authenticate_gcp()
+            .await
+            .map_err(RFDUpdateActionErr::Continue)?;
+
+        let hub = Storage::new(
+            hyper::Client::builder().build(
+                hyper_rustls::HttpsConnectorBuilder::new()
+                    .with_native_roots()
+                    .https_or_http()
+                    .enable_http1()
+                    .enable_http2()
+                    .build()
+            ),
+            gcp_auth
+        );
+
+        for image in images {
+            let object_name = format!("rfd/{}/latest/{}", update.number, image.name);
+            let mime_type = mime::Mime::from_str("application/octet-stream")
+                .map_err(|_| RFDUpdateActionErr::Continue(anyhow!("Failed to parse mime type")))?;
+            let data = decode_base64(&image.content);
+            let cursor = std::io::Cursor::new(data);
+
+            use std::str::FromStr;
+
+            let request = Object::default();
+            hub.objects()
+                .insert(request, api_context.company.rfd_static_storage())
+                .name(&object_name)
+                .upload(cursor, mime_type)
+                .await
+                .map_err(|err| RFDUpdateActionErr::Continue(err.into()))?;
+        }
 
         Ok(RFDUpdateActionResponse::default())
     }

@@ -32,6 +32,7 @@ dropshot-verify-request = { path = "../dropshot-verify-request" }
 duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
 google-drive = "^0.4.0"
+google-storage1 = "4.0.1"
 # google-drive = { path = "../../third-party-api-clients/google/drive" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
@@ -42,6 +43,7 @@ lazy_static = "^1.4.0"
 log = { version = "0.4", features = ["serde"] }
 # mailchimp-api = "^0.1.11"
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
+mime = "0.2.0"
 mime_guess = "2"
 octorust = { version = "^0.1.35", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }

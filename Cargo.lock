@@ -20,7 +20,7 @@ checksum = "292ac9d513052341a7f5bdae61f31c4dc93c1dce2598508f52709df08cecc8b0"
 dependencies = [
  "base64 0.13.0",
  "lazy_static",
- "log",
+ "log 0.4.17",
  "openssl",
  "serde",
  "serde_json",
@@ -228,7 +228,7 @@ dependencies = [
  "concurrent-queue",
  "futures-lite",
  "libc",
- "log",
+ "log 0.4.17",
  "once_cell",
  "parking",
  "polling",
@@ -302,7 +302,7 @@ dependencies = [
  "futures-lite",
  "gloo-timers",
  "kv-log-macro",
- "log",
+ "log 0.4.17",
  "memchr",
  "once_cell",
  "pin-project-lite",
@@ -403,7 +403,7 @@ dependencies = [
  "cio-api",
  "hidapi",
  "keycode",
- "log",
+ "log 0.4.17",
  "pretty_env_logger",
  "sentry",
  "tokio",
@@ -772,13 +772,14 @@ dependencies = [
  "google-drive",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "google-groups-settings",
+ "google-storage1",
  "gsuite-api",
  "gusto-api",
  "handlebars",
  "hex",
  "http",
  "image 0.23.14",
- "log",
+ "log 0.4.17",
  "lopdf 0.27.0 (git+https://github.com/J-F-Liu/lopdf?branch=master)",
  "macros",
  "mailchimp-minimal-api",
@@ -820,7 +821,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tripactions",
- "url",
+ "url 2.2.2",
  "uuid 1.1.2",
  "walkdir",
  "yup-oauth2 7.0.1",
@@ -928,7 +929,7 @@ dependencies = [
  "serde_json",
  "serde_qs 0.4.6",
  "serde_with",
- "url",
+ "url 2.2.2",
  "uuid 0.8.2",
 ]
 
@@ -1003,13 +1004,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3818dfca4b0cb5211a659bbcbb94225b7127407b2b135e650d717bfb78ab10d3"
 dependencies = [
  "cookie",
- "idna",
- "log",
+ "idna 0.2.3",
+ "log 0.4.17",
  "publicsuffix",
  "serde",
  "serde_json",
  "time 0.2.27",
- "url",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -1497,7 +1498,7 @@ dependencies = [
  "hmac 0.12.1",
  "http",
  "k256",
- "log",
+ "log 0.4.17",
  "schemars",
  "serde",
  "serde_json",
@@ -1592,7 +1593,7 @@ version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7402b94a93c24e742487327a7cd839dc9d36fec9de9fb25b09f2dae459f36c3"
 dependencies = [
- "log",
+ "log 0.4.17",
 ]
 
 [[package]]
@@ -1682,7 +1683,7 @@ checksum = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
 dependencies = [
  "atty",
  "humantime",
- "log",
+ "log 0.4.17",
  "regex",
  "termcolor",
 ]
@@ -1983,8 +1984,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "pem",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -1998,7 +1999,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
  "yup-oauth2 5.1.0",
@@ -2019,8 +2020,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "pem",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -2034,7 +2035,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
  "yup-oauth2 5.1.0",
@@ -2075,8 +2076,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "pem",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -2090,10 +2091,30 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
  "yup-oauth2 5.1.0",
+]
+
+[[package]]
+name = "google-storage1"
+version = "4.0.1+20220228"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af48a074f6a8c4cc3bc34a56d41a29bfce92e3bdba053692552a41bad26894a4"
+dependencies = [
+ "http",
+ "hyper",
+ "hyper-rustls 0.23.0",
+ "itertools 0.10.3",
+ "mime 0.2.6",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "tokio",
+ "tower-service",
+ "url 1.7.2",
+ "yup-oauth2 7.0.1",
 ]
 
 [[package]]
@@ -2122,8 +2143,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "pem",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -2137,7 +2158,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
  "yup-oauth2 5.1.0",
@@ -2157,8 +2178,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
@@ -2168,7 +2189,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
 ]
@@ -2198,7 +2219,7 @@ version = "4.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "360d9740069b2f6cbb63ce2dbaa71a20d3185350cbb990d7bebeb9318415eb17"
 dependencies = [
- "log",
+ "log 0.4.17",
  "pest",
  "pest_derive",
  "serde",
@@ -2335,14 +2356,14 @@ dependencies = [
  "isahc",
  "lazy_static",
  "levenshtein",
- "log",
+ "log 0.4.17",
  "regex",
  "serde",
  "serde_json",
  "serde_regex",
  "similar",
  "tokio",
- "url",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -2387,7 +2408,7 @@ dependencies = [
  "ct-logs",
  "futures-util",
  "hyper",
- "log",
+ "log 0.4.17",
  "rustls 0.19.1",
  "rustls-native-certs 0.5.0",
  "tokio",
@@ -2403,7 +2424,7 @@ checksum = "d87c48c02e0dc5e3b849a2041db3029fd066650f8f717c07bf8ed78ccb895cac"
 dependencies = [
  "http",
  "hyper",
- "log",
+ "log 0.4.17",
  "rustls 0.20.6",
  "rustls-native-certs 0.6.2",
  "tokio",
@@ -2434,7 +2455,7 @@ dependencies = [
  "http",
  "httpdate",
  "language-tags",
- "mime",
+ "mime 0.3.16",
  "percent-encoding 2.1.0",
  "unicase",
 ]
@@ -2444,6 +2465,17 @@ name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
+name = "idna"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38f09e0f0b1fb55fdee1f17470ad800da77af5186a1a76c026b679358b7e844e"
+dependencies = [
+ "matches",
+ "unicode-bidi",
+ "unicode-normalization",
+]
 
 [[package]]
 name = "idna"
@@ -2542,15 +2574,15 @@ dependencies = [
  "event-listener",
  "futures-lite",
  "http",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "once_cell",
  "polling",
  "slab",
  "sluice",
  "tracing",
  "tracing-futures",
- "url",
+ "url 2.2.2",
  "waker-fn",
 ]
 
@@ -2668,7 +2700,7 @@ version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0de8b303297635ad57c9f5059fd9cee7a47f8e8daa09df0fcd07dd39fb22977f"
 dependencies = [
- "log",
+ "log 0.4.17",
 ]
 
 [[package]]
@@ -2807,6 +2839,15 @@ dependencies = [
 
 [[package]]
 name = "log"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e19e8d5c34a3e0e2223db8e060f9e8264aeeb5c5fc64a4ee9965c062211c024b"
+dependencies = [
+ "log 0.4.17",
+]
+
+[[package]]
+name = "log"
 version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
@@ -2828,7 +2869,7 @@ dependencies = [
  "itoa 0.4.8",
  "lazy_static",
  "linked-hash-map",
- "log",
+ "log 0.4.17",
  "pom",
  "time 0.2.27",
  "weezl",
@@ -2844,7 +2885,7 @@ dependencies = [
  "flate2",
  "itoa 1.0.2",
  "linked-hash-map",
- "log",
+ "log 0.4.17",
  "pom",
  "time 0.2.27",
  "weezl",
@@ -2889,7 +2930,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "url",
+ "url 2.2.2",
  "urlencoding 2.1.0",
 ]
 
@@ -2928,6 +2969,15 @@ dependencies = [
 
 [[package]]
 name = "mime"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba626b8a6de5da682e1caa06bdb42a335aee5a84db8e5046a3e8ab17ba0a3ae0"
+dependencies = [
+ "log 0.3.9",
+]
+
+[[package]]
+name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a60c7ce501c71e03a9c9c0d35b861413ae925bd979cc7a4e30d060069aaac8d"
@@ -2938,7 +2988,7 @@ version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4192263c238a5f0d0c6bfd21f336a313a4ce1c450542449ca191bb657b4642ef"
 dependencies = [
- "mime",
+ "mime 0.3.16",
  "unicase",
 ]
 
@@ -2977,7 +3027,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57ee1c23c7c63b0c9250c339ffdc69255f110b298b901b9f6c82547b7b87caaf"
 dependencies = [
  "libc",
- "log",
+ "log 0.4.17",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys",
 ]
@@ -3000,7 +3050,7 @@ checksum = "fd7e2f3618557f980e0b17e8856252eee3c97fa12c54dff0ca290fb6266ca4a9"
 dependencies = [
  "lazy_static",
  "libc",
- "log",
+ "log 0.4.17",
  "openssl",
  "openssl-probe",
  "openssl-sys",
@@ -3176,8 +3226,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "pem",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -3191,7 +3241,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "url",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -3208,8 +3258,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
@@ -3219,7 +3269,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
 ]
@@ -3727,7 +3777,7 @@ checksum = "685404d509889fade3e86fe3a5803bca2ec09b0c0778d5ada6ec8bf7a8de5259"
 dependencies = [
  "cfg-if 1.0.0",
  "libc",
- "log",
+ "log 0.4.17",
  "wepoll-ffi",
  "winapi",
 ]
@@ -3778,7 +3828,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
 dependencies = [
  "env_logger",
- "log",
+ "log 0.4.17",
 ]
 
 [[package]]
@@ -3804,7 +3854,7 @@ dependencies = [
  "dropshot",
  "dropshot-verify-request",
  "http",
- "log",
+ "log 0.4.17",
  "pretty_env_logger",
  "reqwest",
  "schemars",
@@ -3877,8 +3927,8 @@ version = "1.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95b4ce31ff0a27d93c8de1849cf58162283752f065a90d508f1105fa6c9a213f"
 dependencies = [
- "idna",
- "url",
+ "idna 0.2.3",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -3955,7 +4005,7 @@ version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51de85fb3fb6524929c8a2eb85e6b6d363de4e8c48f9e2c2eac4944abc181c93"
 dependencies = [
- "log",
+ "log 0.4.17",
  "parking_lot 0.12.1",
  "scheduled-thread-pool",
 ]
@@ -3974,8 +4024,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
@@ -3985,7 +4035,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
 ]
@@ -4128,8 +4178,8 @@ dependencies = [
  "ipnet",
  "js-sys",
  "lazy_static",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "mime_guess",
  "native-tls",
  "percent-encoding 2.1.0",
@@ -4143,7 +4193,7 @@ dependencies = [
  "tokio-native-tls",
  "tokio-rustls 0.23.4",
  "tower-service",
- "url",
+ "url 2.2.2",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -4240,8 +4290,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "pem",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -4255,7 +4305,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
 ]
@@ -4326,7 +4376,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35edb675feee39aec9c99fa5ff985081995a06d594114ae14cbe797ad7b7a6d7"
 dependencies = [
  "base64 0.13.0",
- "log",
+ "log 0.4.17",
  "ring",
  "sct 0.6.1",
  "webpki 0.21.4",
@@ -4338,7 +4388,7 @@ version = "0.20.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5aab8ee6c7097ed6057f43c187a62418d0c05a4bd5f18b3571db50ee0f9ce033"
 dependencies = [
- "log",
+ "log 0.4.17",
  "ring",
  "sct 0.7.0",
  "webpki 0.22.0",
@@ -4444,7 +4494,7 @@ dependencies = [
  "schemars_derive",
  "serde",
  "serde_json",
- "url",
+ "url 2.2.2",
  "uuid 0.8.2",
  "uuid 1.1.2",
 ]
@@ -4576,8 +4626,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "pem",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -4590,7 +4640,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
 ]
@@ -4681,7 +4731,7 @@ version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58a76b41861ebde9b0a689fa13080ad5508583e094c48acad461eec5acd7fc5f"
 dependencies = [
- "log",
+ "log 0.4.17",
  "sentry-core",
 ]
 
@@ -4730,7 +4780,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "time 0.3.11",
- "url",
+ "url 2.2.2",
  "uuid 1.1.2",
 ]
 
@@ -4950,8 +5000,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "pem",
  "percent-encoding 2.1.0",
  "reqwest",
@@ -4965,7 +5015,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
  "yup-oauth2 5.1.0",
@@ -4991,8 +5041,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
@@ -5002,7 +5052,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
 ]
@@ -5183,7 +5233,7 @@ version = "4.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6706b2ace5bbae7291d3f8d2473e2bfab073ccd7d03670946197aec98471fa3e"
 dependencies = [
- "log",
+ "log 0.4.17",
  "slog",
  "slog-scope",
 ]
@@ -5773,7 +5823,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a400e31aa60b9d44a52a8ee0343b5b18566b03a8321e0d321f695cf56e940160"
 dependencies = [
  "cfg-if 1.0.0",
- "log",
+ "log 0.4.17",
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",
@@ -5817,7 +5867,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ddad33d2d10b1ed7eb9d1f518a5674713876e97e5bb9b7345a7984fbb4f922"
 dependencies = [
  "lazy_static",
- "log",
+ "log 0.4.17",
  "tracing-core",
 ]
 
@@ -5863,8 +5913,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
@@ -5874,7 +5924,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
 ]
@@ -6019,13 +6069,24 @@ dependencies = [
  "chunked_transfer",
  "cookie",
  "cookie_store",
- "log",
+ "log 0.4.17",
  "once_cell",
  "qstring",
  "rustls 0.19.1",
- "url",
+ "url 2.2.2",
  "webpki 0.21.4",
  "webpki-roots 0.21.1",
+]
+
+[[package]]
+name = "url"
+version = "1.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd4e7c0d531266369519a4aa4f399d748bd37043b00bde1e4ff1f60a120b355a"
+dependencies = [
+ "idna 0.1.5",
+ "matches",
+ "percent-encoding 1.0.1",
 ]
 
 [[package]]
@@ -6035,7 +6096,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507c383b2d33b5fc35d1861e77e6b383d158b2da5e14fe51b83dfedf6fd578c"
 dependencies = [
  "form_urlencoded",
- "idna",
+ "idna 0.2.3",
  "matches",
  "percent-encoding 2.1.0",
  "serde",
@@ -6142,7 +6203,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ce8a968cb1cd110d136ff8b819a556d6fb6d919363c61534f6860c7eb172ba0"
 dependencies = [
- "log",
+ "log 0.4.17",
  "try-lock",
 ]
 
@@ -6175,7 +6236,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "662cd44805586bd52971b9586b1df85cdbbd9112e4ef4d8f41559c334dc6ac3f"
 dependencies = [
  "bumpalo",
- "log",
+ "log 0.4.17",
  "once_cell",
  "proc-macro2 1.0.41",
  "quote 1.0.20",
@@ -6255,13 +6316,15 @@ dependencies = [
  "dropshot-verify-request",
  "duct",
  "google-drive",
+ "google-storage1",
  "gusto-api",
  "hex",
  "hmac 0.12.1",
  "http",
  "lazy_static",
- "log",
+ "log 0.4.17",
  "mailchimp-minimal-api",
+ "mime 0.2.6",
  "mime_guess",
  "octorust",
  "pretty_assertions",
@@ -6469,14 +6532,14 @@ dependencies = [
  "http",
  "hyper",
  "hyper-rustls 0.22.1",
- "log",
+ "log 0.4.17",
  "percent-encoding 2.1.0",
  "rustls 0.19.1",
  "seahash",
  "serde",
  "serde_json",
  "tokio",
- "url",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -6493,7 +6556,7 @@ dependencies = [
  "hyper",
  "hyper-rustls 0.23.0",
  "itertools 0.10.3",
- "log",
+ "log 0.4.17",
  "percent-encoding 2.1.0",
  "rustls 0.20.6",
  "rustls-pemfile 0.3.0",
@@ -6503,7 +6566,7 @@ dependencies = [
  "time 0.3.11",
  "tokio",
  "tower-service",
- "url",
+ "url 2.2.2",
 ]
 
 [[package]]
@@ -6559,8 +6622,8 @@ dependencies = [
  "http",
  "hyperx",
  "jsonwebtoken",
- "log",
- "mime",
+ "log 0.4.17",
+ "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
@@ -6570,7 +6633,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "url",
+ "url 2.2.2",
  "urlencoding 1.3.3",
  "uuid 0.8.2",
 ]
