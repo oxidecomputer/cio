@@ -938,17 +938,6 @@ in velit.
     }
 
     #[tokio::test]
-    async fn test_asciidoc_to_html() {
-        let rfd = RFDAsciidoc::new(Cow::Borrowed(test_rfd_content()));
-        let expected = "<h1>RFD 123 Place</h1>\n<div class=\"paragraph\">\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc et dignissim nisi. Donec ut libero in\ndolor tempor aliquam quis quis nisl. Proin sit amet nunc in orci suscipit placerat. Mauris\npellentesque fringilla lacus id gravida. Donec in velit luctus, elementum mauris eu, pellentesque\nmassa. In lectus orci, vehicula at aliquet nec, elementum eu nisi. Vivamus viverra imperdiet\nmalesuada.</p>\n</div>\n<div class=\"olist arabic\">\n<ol class=\"arabic\">\n<li>\n<p>Suspendisse blandit sem ligula, ac luctus metus condimentum non. Fusce enim purus, tincidunt ut\ntortor eget, sollicitudin vestibulum sem. Proin eu velit orci.</p>\n</li>\n<li>\n<p>Proin eu finibus velit. Morbi eget blandit neque.</p>\n</li>\n</ol>\n</div>\n<div class=\"listingblock\">\n<div class=\"content\">\n<pre class=\"highlight\"><code class=\"language-mermaid\" data-lang=\"mermaid\">graph TD;\n    A--&gt;B;\n    A--&gt;C;\n    B--&gt;D;\n    C--&gt;D;</code></pre>\n</div>\n</div>\n<div class=\"olist arabic\">\n<ol class=\"arabic\">\n<li>\n<p>Maecenas molestie, quam nec lacinia porta, lectus turpis molestie quam, at fringilla neque ipsum\nin velit.</p>\n</li>\n<li>\n<p>Donec elementum luctus mauris.</p>\n</li>\n</ol>\n</div>\n";
-
-        assert_eq!(
-            expected,
-            from_utf8(&rfd.parse(RFDAsciidocOutputFormat::Html).await.unwrap()).unwrap()
-        );
-    }
-
-    #[tokio::test]
     async fn test_asciidoc_to_pdf() {
         let rfd = RFDAsciidoc::new(Cow::Borrowed(test_rfd_content()));
         let pdf = rfd.parse(RFDAsciidocOutputFormat::Pdf).await.unwrap();
@@ -960,5 +949,16 @@ in velit.
         let expected = std::fs::read(&ref_path).unwrap();
 
         assert_eq!(expected, pdf);
+    }
+
+    #[tokio::test]
+    async fn test_asciidoc_to_html() {
+        let rfd = RFDAsciidoc::new(Cow::Borrowed(test_rfd_content()));
+        let expected = "<h1>RFD 123 Place</h1>\n<div class=\"paragraph\">\n<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc et dignissim nisi. Donec ut libero in\ndolor tempor aliquam quis quis nisl. Proin sit amet nunc in orci suscipit placerat. Mauris\npellentesque fringilla lacus id gravida. Donec in velit luctus, elementum mauris eu, pellentesque\nmassa. In lectus orci, vehicula at aliquet nec, elementum eu nisi. Vivamus viverra imperdiet\nmalesuada.</p>\n</div>\n<div class=\"olist arabic\">\n<ol class=\"arabic\">\n<li>\n<p>Suspendisse blandit sem ligula, ac luctus metus condimentum non. Fusce enim purus, tincidunt ut\ntortor eget, sollicitudin vestibulum sem. Proin eu velit orci.</p>\n</li>\n<li>\n<p>Proin eu finibus velit. Morbi eget blandit neque.</p>\n</li>\n</ol>\n</div>\n<div class=\"listingblock\">\n<div class=\"content\">\n<pre class=\"highlight\"><code class=\"language-mermaid\" data-lang=\"mermaid\">graph TD;\n    A--&gt;B;\n    A--&gt;C;\n    B--&gt;D;\n    C--&gt;D;</code></pre>\n</div>\n</div>\n<div class=\"olist arabic\">\n<ol class=\"arabic\">\n<li>\n<p>Maecenas molestie, quam nec lacinia porta, lectus turpis molestie quam, at fringilla neque ipsum\nin velit.</p>\n</li>\n<li>\n<p>Donec elementum luctus mauris.</p>\n</li>\n</ol>\n</div>\n";
+
+        assert_eq!(
+            expected,
+            from_utf8(&rfd.parse(RFDAsciidocOutputFormat::Html).await.unwrap()).unwrap()
+        );
     }
 }
