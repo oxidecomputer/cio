@@ -56,8 +56,9 @@ jobs:
         run: |
           sudo gem install asciidoctor-pdf rouge
           sudo gem install asciidoctor-mermaid -v 0.4.1
-          npm install @mermaid-js/mermaid-cli
-          ln -s ./node_modules/.bin/mmdc /usr/local/bin/mmdc
+          sudo npm install -g @mermaid-js/mermaid-cli
+
+          mmdc --help
       - name: Install latest nightly
         uses: oxidecomputer/actions-rs_toolchain@oxide/master
         with:
