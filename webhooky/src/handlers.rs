@@ -1046,7 +1046,7 @@ pub async fn handle_test_application_files_upload(
     for (name, (file_path, contents)) in files {
         // Get the extension from the content type.
         let ext = get_extension_from_filename(&file_path).unwrap();
-        let ct = mime_guess::from_ext(ext).first().unwrap();
+        let ct = mime_guess_2::from_ext(ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", data.user_name, name, ext);
         let raw_bytes = decode_base64(&contents);
@@ -1146,7 +1146,7 @@ pub async fn handle_application_files_upload(
     for (name, (file_path, contents)) in files {
         // Get the extension from the content type.
         let ext = get_extension_from_filename(&file_path).unwrap();
-        let ct = mime_guess::from_ext(ext).first().unwrap();
+        let ct = mime_guess_2::from_ext(ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", data.user_name, name, ext);
 

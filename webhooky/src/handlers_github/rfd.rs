@@ -298,12 +298,9 @@ impl RFDUpdateAction for CopyImagesToGCP {
 
         for image in images {
             let object_name = format!("rfd/{}/latest/{}", update.number, image.name);
-            let mime_type = mime::Mime::from_str("application/octet-stream")
-                .map_err(|_| RFDUpdateActionErr::Continue(anyhow!("Failed to parse mime type")))?;
+            let mime_type = mime_guess::guess_mime_type(&object_name);
             let data = decode_base64(&image.content);
             let cursor = std::io::Cursor::new(data);
-
-            use std::str::FromStr;
 
             let request = Object::default();
             hub.objects()
