@@ -315,36 +315,42 @@ impl GitHubRFDBranch {
 
     /// Find any existing pull request coming from the branch for this RFD
     pub async fn find_pull_requests(&self) -> Result<Vec<GitHubPullRequest>> {
-        let pulls = self
-            .client
-            .pulls()
-            .list_all(
-                &self.owner,
-                &self.repo,
-                octorust::types::IssuesListState::All,
-                // head
-                "",
-                // base
-                "",
-                // sort
-                Default::default(),
-                // direction
-                Default::default(),
-            )
-            .await?;
+        
+        // If this is an update is occurring on the master branch than we can skip the look up as
+        // we only want pull requests that are coming from an RFD branch
+        let prs = if self.branch != self.default_branch {
+            let pulls = self
+                .client
+                .pulls()
+                .list_all(
+                    &self.owner,
+                    &self.repo,
+                    octorust::types::IssuesListState::All,
+                    // head
+                    "",
+                    // base
+                    "",
+                    // sort
+                    Default::default(),
+                    // direction
+                    Default::default(),
+                )
+                .await?;
 
-        let mut matching_pulls = vec![];
+            pulls.into_iter().filter_map(|pull| {
+                let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
+                
+                if pull_branch == self.branch {
+                    Some(pull.into())
+                } else {
+                    None
+                }
+            }).collect::<Vec<_>>()
+        } else {
+            vec![]
+        };
 
-        for pull in pulls.into_iter() {
-            // Check if the pull request is for our branch.
-            let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
-
-            if pull_branch == self.branch {
-                matching_pulls.push(pull.into());
-            }
-        }
-
-        Ok(matching_pulls)
+        Ok(prs)
     }
 
     pub async fn get_latest_commit_date(&self, rfd_number: &RFDNumber) -> Result<DateTime<Utc>> {
