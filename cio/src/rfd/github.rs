@@ -315,7 +315,6 @@ impl GitHubRFDBranch {
 
     /// Find any existing pull request coming from the branch for this RFD
     pub async fn find_pull_requests(&self) -> Result<Vec<GitHubPullRequest>> {
-        
         // If this is an update is occurring on the master branch than we can skip the look up as
         // we only want pull requests that are coming from an RFD branch
         let prs = if self.branch != self.default_branch {
@@ -337,15 +336,18 @@ impl GitHubRFDBranch {
                 )
                 .await?;
 
-            pulls.into_iter().filter_map(|pull| {
-                let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
-                
-                if pull_branch == self.branch {
-                    Some(pull.into())
-                } else {
-                    None
-                }
-            }).collect::<Vec<_>>()
+            pulls
+                .into_iter()
+                .filter_map(|pull| {
+                    let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
+
+                    if pull_branch == self.branch {
+                        Some(pull.into())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
         } else {
             vec![]
         };
