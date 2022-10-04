@@ -40,6 +40,7 @@ impl Default for RFDUpdater {
     fn default() -> Self {
         Self::new(vec![
             Box::new(CopyImagesToFrontend),
+            Box::new(CopyImagesToGCP),
             Box::new(UpdateSearch),
             Box::new(UpdatePDFs),
             Box::new(GenerateShortUrls),
