@@ -655,13 +655,7 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
         ctx: &RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
-        let RFDUpdateActionContext {
-            pull_request,
-            github,
-            update,
-            location,
-            ..
-        } = ctx;
+        let RFDUpdateActionContext { pull_request, .. } = ctx;
 
         if let Some(pull_request) = pull_request {
             // If the stored discussion link does not match the PR we found, then and
@@ -674,23 +668,6 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
 
                 rfd.update_discussion(&pull_request.html_url)
                     .map_err(RFDUpdateActionErr::Continue)?;
-
-                // Update the file in GitHub. This will trigger another commit webhook
-                // and therefore must only occur when there is a change that needawaits to
-                // be made. If this is handled unconditionally then commit hooks could
-                // loop indefinitely.
-                create_or_update_file_in_github_repo(
-                    github,
-                    &update.branch.owner,
-                    &update.branch.repo,
-                    &update.branch.branch,
-                    &location.file,
-                    rfd.content.as_bytes().to_vec(),
-                )
-                .await
-                // If this call fails then we want to stop updating the RFD. We may now be in a
-                // corrupt internal state
-                .map_err(RFDUpdateActionErr::Stop)?;
 
                 info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
             }
