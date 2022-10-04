@@ -145,8 +145,8 @@ impl RFDUpdater {
         // This is here to remain consistent with previous behavior. This likely needs to be
         // refactored to account for multiple pull requests existing (even though there *should*
         // never be multiple)
-        let pull_request = pull_requests.get(0);
-        let ctx = RFDUpdateActionContext {
+        let pull_request = pull_requests.into_iter().next();
+        let mut ctx = RFDUpdateActionContext {
             api_context,
             github,
             pull_request,
@@ -158,7 +158,7 @@ impl RFDUpdater {
         let mut responses = vec![];
 
         for action in &self.actions {
-            match action.run(&ctx, rfd).await {
+            match action.run(&mut ctx, rfd).await {
                 Ok(response) => responses.push(response),
                 Err(err) => match err {
                     RFDUpdateActionErr::Continue(action_err) => {
@@ -199,10 +199,10 @@ impl RFDUpdater {
     }
 }
 
-pub struct RFDUpdateActionContext<'a, 'b, 'c, 'd, 'e, 'f> {
+pub struct RFDUpdateActionContext<'a, 'b, 'd, 'e, 'f> {
     pub api_context: &'a Context,
     pub github: &'b octorust::Client,
-    pub pull_request: Option<&'c GitHubPullRequest>,
+    pub pull_request: Option<GitHubPullRequest>,
     pub update: &'d GitHubRFDUpdate,
     pub location: &'e GitHubRFDReadmeLocation,
     pub old_rfd: Option<&'f RFD>,
@@ -212,7 +212,7 @@ pub struct RFDUpdateActionContext<'a, 'b, 'c, 'd, 'e, 'f> {
 pub trait RFDUpdateAction {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr>;
 }
@@ -246,7 +246,7 @@ pub struct CopyImagesToFrontend;
 impl RFDUpdateAction for CopyImagesToFrontend {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         _rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
@@ -271,7 +271,7 @@ pub struct CopyImagesToGCP;
 impl RFDUpdateAction for CopyImagesToGCP {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         _rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
@@ -327,7 +327,7 @@ pub struct UpdateSearch;
 impl RFDUpdateAction for UpdateSearch {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
@@ -454,7 +454,7 @@ impl UpdatePDFs {
 impl RFDUpdateAction for UpdatePDFs {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
@@ -482,7 +482,7 @@ pub struct GenerateShortUrls;
 impl RFDUpdateAction for GenerateShortUrls {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         _rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
@@ -515,7 +515,7 @@ pub struct CreatePullRequest;
 impl RFDUpdateAction for CreatePullRequest {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
@@ -572,7 +572,7 @@ pub struct UpdatePullRequest;
 impl RFDUpdateAction for UpdatePullRequest {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
@@ -652,7 +652,7 @@ pub struct UpdateDiscussionUrl;
 impl RFDUpdateAction for UpdateDiscussionUrl {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { pull_request, .. } = ctx;
@@ -685,7 +685,7 @@ pub struct EnsureRFDWithPullRequestIsInValidState;
 impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { pull_request, .. } = ctx;
@@ -716,7 +716,7 @@ pub struct EnsureRFDOnDefaultIsInPublishedState;
 impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
     async fn run(
         &self,
-        ctx: &RFDUpdateActionContext,
+        ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
