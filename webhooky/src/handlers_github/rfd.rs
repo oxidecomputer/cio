@@ -310,7 +310,7 @@ impl RFDUpdateAction for CopyImagesToGCP {
 
             let request = Object::default();
             hub.objects()
-                .insert(request, api_context.company.rfd_static_storage())
+                .insert(request, &api_context.company.rfd_static_storage())
                 .name(&object_name)
                 .upload(cursor, mime_type)
                 .await

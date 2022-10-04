@@ -1040,8 +1040,8 @@ impl Company {
         }
     }
 
-    pub fn rfd_static_storage(&self) -> &str {
-        "rfd-static-assets-f4fa10a22a46223b"
+    pub fn rfd_static_storage(&self) -> String {
+        std::env::var("RFD_STATIC_BUCKET").unwrap()
     }
 
     // TODO: Extract out the hardcoded repo name so that it can be configurable
