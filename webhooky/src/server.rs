@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use cio_api::{
     analytics::NewPageView,
     functions::Function,
-    rfds::{RFDEntry, RFDIndexEntry},
+    rfd::{RFDEntry, RFDIndexEntry},
     swag_store::Order,
 };
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
@@ -284,9 +284,9 @@ pub async fn server(
         scheduler
             .every(16.hours())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-repos")});
-        scheduler
-            .every(14.hours())
-            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-rfds")});
+        // scheduler
+        //     .every(14.hours())
+        //     .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-rfds")});
         scheduler
             .every(2.hours())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-shipments")});

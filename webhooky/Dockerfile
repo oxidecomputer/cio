@@ -38,10 +38,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
 	apt-get install -y --no-install-recommends \
 	nodejs
 
-RUN gem install \
-	asciidoctor-pdf \
-	rouge
+RUN gem install rouge
 
+RUN gem install asciidoctor-pdf -v 2.3.2
 RUN gem install asciidoctor-mermaid -v 0.4.1
 
 RUN cd /usr/local/lib && \

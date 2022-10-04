@@ -32,6 +32,11 @@ pub async fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
     Ok(())
 }
 
+/// Utility function for checking if a file extension looks like an image extension
+pub fn is_image(file: &str) -> bool {
+    file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
+}
+
 /// Create a comment on a commit for a repo.
 /// We use this a lot if a webhook was a success or errored.
 pub async fn add_comment_to_commit(

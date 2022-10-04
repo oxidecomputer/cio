@@ -14,8 +14,8 @@ use cio_api::{
     journal_clubs::JournalClubMeeting,
     mailing_list::MailingListSubscriber,
     rack_line::RackLineSubscriber,
-    rfds::RFD,
-    schema::{applicants, inbound_shipments, journal_club_meetings, outbound_shipments, rfds},
+    rfd::RFD,
+    schema::{applicants, inbound_shipments, journal_club_meetings, outbound_shipments},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
     swag_inventory::SwagInventoryItem,
     swag_store::Order,
@@ -36,6 +36,7 @@ use slack_chat_api::{
 
 use crate::{
     context::Context,
+    handlers_github::RFDUpdater,
     server::{
         AirtableRowEvent, ApplicationFileUploadData, CounterResponse, GitHubRateLimit, RFDPathParams,
         ShippoTrackingUpdateEvent,
@@ -82,47 +83,13 @@ pub async fn handle_rfd_update_by_number(
     // TODO: split this out per company.
     let oxide = Company::get_from_db(db, "Oxide".to_string()).await.unwrap();
 
-    let github = oxide.authenticate_github()?;
+    let rfd = RFD::get_from_db(db, num)
+        .await
+        .ok_or_else(|| anyhow::anyhow!("no RFD was found with number `{}`", num))?;
 
-    let result = RFD::get_from_db(db, num).await;
-    if result.is_none() {
-        // Return early, we couldn't find an RFD.
-        bail!("no RFD was found with number `{}`", num);
-    }
-    let mut rfd = result.unwrap();
-
-    // Update the RFD.
-    if let Err(e) = rfd.expand(&github, &oxide).await {
-        if (e.to_string()).contains("No commit found for the ref") {
-            // Likely it was merged into master, let's try that.
-            // And likely something messed up, so let's try again.
-            // And no worries if it's not merged into master it will just fail again.
-            // And won't save it back to the database.
-            rfd.state = "published".to_string();
-            // Set the link since thats how we figure out if it's published on master.
-            rfd.link = format!(
-                "https://github.com/oxidecomputer/rfd/tree/master/rfd/{}",
-                rfd.number_string
-            );
-            rfd.expand(&github, &oxide).await?;
-        } else {
-            bail!("failed to expand RFD: {}", e);
-        }
-    }
-    info!("updated  RFD {}", rfd.number_string);
-
-    // Save the rfd back to our database.
-    // Do the save before the pdf in case something goes wrong.
-    let mut rfd = rfd.update(db).await?;
-
-    // Now that the database is updated, update the search index.
-    rfd.update_search_index().await?;
-
-    rfd.convert_and_upload_pdf(db, &github, &oxide).await?;
-    info!("updated pdf `{}` for RFD {}", rfd.get_pdf_filename(), rfd.number_string);
-
-    // Save the rfd back to our database.
-    rfd.update(db).await?;
+    let update = rfd.create_sync(&oxide).await?;
+    let updater = RFDUpdater::default();
+    updater.handle(api_context, &[update]).await?;
 
     Ok(())
 }
@@ -193,57 +160,6 @@ pub async fn handle_slack_commands(
 
     // Filter by command type and do the command.
     let response = match command {
-        SlackCommand::RFD => {
-            let num = text.parse::<i32>().unwrap_or(0);
-            if num > 0 {
-                if let Ok(rfd) = rfds::dsl::rfds
-                    .filter(rfds::dsl::cio_company_id.eq(company.id).and(rfds::dsl::number.eq(num)))
-                    .first_async::<RFD>(db.pool())
-                    .await
-                {
-                    let r: FormattedMessage = rfd.into();
-                    json!(r)
-                } else if let Ok(rfd) = rfds::dsl::rfds
-                    .filter(
-                        rfds::dsl::cio_company_id
-                            .eq(company.id)
-                            .and(rfds::dsl::name.ilike(format!("%{}%", text))),
-                    )
-                    .first_async::<RFD>(db.pool())
-                    .await
-                {
-                    let r: FormattedMessage = rfd.into();
-                    json!(r)
-                } else {
-                    json!(MessageResponse {
-                        response_type: MessageResponseType::InChannel,
-                        text: format!(
-                            "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
-                            bot_command.user_id, text
-                        ),
-                    })
-                }
-            } else if let Ok(rfd) = rfds::dsl::rfds
-                .filter(
-                    rfds::dsl::cio_company_id
-                        .eq(company.id)
-                        .and(rfds::dsl::name.ilike(format!("%{}%", text))),
-                )
-                .first_async::<RFD>(db.pool())
-                .await
-            {
-                let r: FormattedMessage = rfd.into();
-                json!(r)
-            } else {
-                json!(MessageResponse {
-                    response_type: MessageResponseType::InChannel,
-                    text: format!(
-                        "Sorry <@{}> :scream: I could not find an RFD matching `{}`",
-                        bot_command.user_id, text
-                    ),
-                })
-            }
-        }
         SlackCommand::Meet => {
             let mut name = text.replace(' ', "-");
             if name.is_empty() {
@@ -1130,7 +1046,7 @@ pub async fn handle_test_application_files_upload(
     for (name, (file_path, contents)) in files {
         // Get the extension from the content type.
         let ext = get_extension_from_filename(&file_path).unwrap();
-        let ct = mime_guess::from_ext(ext).first().unwrap();
+        let ct = mime_guess_2::from_ext(ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", data.user_name, name, ext);
         let raw_bytes = decode_base64(&contents);
@@ -1230,7 +1146,7 @@ pub async fn handle_application_files_upload(
     for (name, (file_path, contents)) in files {
         // Get the extension from the content type.
         let ext = get_extension_from_filename(&file_path).unwrap();
-        let ct = mime_guess::from_ext(ext).first().unwrap();
+        let ct = mime_guess_2::from_ext(ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", data.user_name, name, ext);
 

@@ -10,7 +10,7 @@ use cio_api::{
     journal_clubs::{JournalClubMeeting, JournalClubMeetings},
     mailing_list::{MailingListSubscriber, MailingListSubscribers},
     repos::{GithubRepo, GithubRepos},
-    rfds::{RFDs, RFD},
+    rfd::{RFDs, RFD},
     schema::resources,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};

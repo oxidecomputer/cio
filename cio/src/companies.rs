@@ -13,6 +13,7 @@ use docusign::DocuSign;
 use google_calendar::Client as GoogleCalendar;
 use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
+use google_storage1::{hyper::client::HttpConnector, hyper_rustls::HttpsConnector};
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
 use log::{info, warn};
@@ -32,6 +33,7 @@ use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
 use tripactions::Client as TripActions;
+use yup_oauth2::authenticator::Authenticator;
 use zoho_api::Zoho;
 use zoom_api::Client as Zoom;
 
@@ -1024,6 +1026,22 @@ impl Company {
             client,
             http_cache,
         ))
+    }
+
+    // Authenticate with GCP using the instances assigned permissions
+    pub async fn authenticate_gcp(&self) -> Result<Authenticator<HttpsConnector<HttpConnector>>> {
+        let opts = yup_oauth2::ApplicationDefaultCredentialsFlowOpts::default();
+        match yup_oauth2::ApplicationDefaultCredentialsAuthenticator::builder(opts).await {
+            yup_oauth2::authenticator::ApplicationDefaultCredentialsTypes::InstanceMetadata(auth) => Ok(auth
+                .build()
+                .await?
+            ),
+            _ => Err(anyhow::anyhow!("Unsupported authentication mechanism encountered. Instance metadata authentication is the only supported authentication method."))
+        }
+    }
+
+    pub fn rfd_static_storage(&self) -> &str {
+        "rfd-static-assets-f4fa10a22a46223b"
     }
 
     // TODO: Extract out the hardcoded repo name so that it can be configurable

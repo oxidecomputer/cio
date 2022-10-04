@@ -54,10 +54,12 @@ jobs:
       - name: Install asciidoctor-pdf, asciidoctor-mermaid
         shell: bash
         run: |
-          sudo gem install asciidoctor-pdf rouge
+          sudo gem install rouge
+          sudo gem install asciidoctor-pdf -v 2.3.2
           sudo gem install asciidoctor-mermaid -v 0.4.1
-          npm install @mermaid-js/mermaid-cli
-          ln -s ./node_modules/.bin/mmdc /usr/local/bin/mmdc
+          sudo npm install -g @mermaid-js/mermaid-cli
+
+          mmdc --help
       - name: Install latest nightly
         uses: oxidecomputer/actions-rs_toolchain@oxide/master
         with:
@@ -133,7 +135,13 @@ jobs:
           GUSTO_REDIRECT_URI: ${{secrets.GUSTO_REDIRECT_URI}}
           RUST_BACKTRACE: 1
       - name: Report remaining disk
+        if: always()
         shell: bash
         run: |
           set -x
           df -h /
+      - name: Report /tmp
+        if: always()
+        shell: bash
+        run: |
+          ls -altr -R /tmp/asciidoc-rfd-render
