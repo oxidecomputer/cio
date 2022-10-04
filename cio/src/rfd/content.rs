@@ -367,6 +367,7 @@ impl<'a> RFDAsciidoc<'a> {
     /// These are stored locally so in a tmp directory for use by asciidoctor
     async fn download_images(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<()> {
         let dir = number.repo_directory();
+
         let storage_path = self.tmp_path();
         let storage_path_string = storage_path
             .to_str()
@@ -378,14 +379,16 @@ impl<'a> RFDAsciidoc<'a> {
             let image_path = format!(
                 "{}/{}",
                 storage_path_string,
-                image.path.replace(&dir, "").trim_start_matches('/')
+                image.path.replace(&dir.trim_start_matches('/'), "").trim_start_matches('/')
             );
 
-            write_file(&PathBuf::from(image_path), &decode_base64(&image.content)).await?;
+            let path = PathBuf::from(image_path);
+
+            write_file(&path, &decode_base64(&image.content)).await?;
 
             info!(
-                "[asciidoc] Wrote embedded image to temp dir {} / {}",
-                number, branch.branch
+                "[asciidoc] Wrote embedded image to {:?} / {} / {}",
+                path, number, branch.branch
             );
         }
 

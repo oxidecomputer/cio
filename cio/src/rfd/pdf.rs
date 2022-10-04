@@ -11,6 +11,7 @@ pub trait PDFStorage {
     async fn store_rfd_pdf(&self, pdf: &RFDPdf) -> Result<String>;
 }
 
+#[derive(Debug)]
 pub struct RFDPdf {
     pub number: RFDNumber,
     pub filename: String,
