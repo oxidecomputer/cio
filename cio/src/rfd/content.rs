@@ -379,7 +379,10 @@ impl<'a> RFDAsciidoc<'a> {
             let image_path = format!(
                 "{}/{}",
                 storage_path_string,
-                image.path.replace(&dir.trim_start_matches('/'), "").trim_start_matches('/')
+                image
+                    .path
+                    .replace(&dir.trim_start_matches('/'), "")
+                    .trim_start_matches('/')
             );
 
             let path = PathBuf::from(image_path);
