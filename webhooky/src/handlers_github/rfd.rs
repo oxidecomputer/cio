@@ -657,6 +657,8 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { pull_request, .. } = ctx;
 
+        let mut requires_source_commit = false;
+
         if let Some(pull_request) = pull_request {
             // If the stored discussion link does not match the PR we found, then and
             // update is required
@@ -670,12 +672,12 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
                     .map_err(RFDUpdateActionErr::Continue)?;
 
                 info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
+
+                requires_source_commit = true;
             }
         }
 
-        Ok(RFDUpdateActionResponse {
-            requires_source_commit: true,
-        })
+        Ok(RFDUpdateActionResponse { requires_source_commit })
     }
 }
 
@@ -690,6 +692,8 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { pull_request, .. } = ctx;
 
+        let mut requires_source_commit = false;
+
         // If there is a pull request open for this branch, then check to ensure that it is in one
         // of three valid states:
         //   * published  - A RFD may be in this state if it had previously been published and an
@@ -702,11 +706,10 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
         //                  initial thoughts on an idea
         if pull_request.is_some() && rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
             rfd.update_state("discussion").map_err(RFDUpdateActionErr::Stop)?;
+            requires_source_commit = true;
         }
 
-        Ok(RFDUpdateActionResponse {
-            requires_source_commit: true,
-        })
+        Ok(RFDUpdateActionResponse { requires_source_commit })
     }
 }
 
@@ -721,6 +724,8 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
 
+        let mut requires_source_commit = false;
+
         // If the RFD was merged into the default branch, but the RFD state is not `published`,
         // update the state of the RFD in GitHub to show it as `published`.
         if update.branch.branch == update.branch.default_branch && rfd.state != "published" {
@@ -731,10 +736,10 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
                 "[SUCCESS]: updated state to `published` for RFD {}, since it was merged into branch {}",
                 rfd.number_string, update.branch.default_branch
             );
+
+            requires_source_commit = true;
         }
 
-        Ok(RFDUpdateActionResponse {
-            requires_source_commit: true,
-        })
+        Ok(RFDUpdateActionResponse { requires_source_commit })
     }
 }
