@@ -704,8 +704,8 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
         //   * ideation   - An alternative state to discussion where the RFD is not yet merged, but
         //                  may not be ready for discussion. A pull request is being used to share
         //                  initial thoughts on an idea
-        //   * abandoned  - A RFD may be in this state if it had previously been abandoned or is the
-        //                  processing of being abandoned
+        //   * abandoned  - A RFD may be in this state if it had previously been abandoned or is in
+        //                  the process of being abandoned
         if pull_request.is_some()
             && rfd.state != "discussion"
             && rfd.state != "published"
