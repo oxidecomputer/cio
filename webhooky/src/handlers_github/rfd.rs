@@ -48,7 +48,7 @@ impl Default for RFDUpdater {
             Box::new(UpdatePullRequest),
             Box::new(UpdateDiscussionUrl),                    // Stops on error
             Box::new(EnsureRFDWithPullRequestIsInValidState), // Stops on error
-            Box::new(EnsureRFDOnDefaultIsInPublishedState),   // Stops on error
+            Box::new(EnsureRFDOnDefaultIsInValidState),       // Stops on error
         ])
     }
 }
@@ -704,7 +704,14 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
         //   * ideation   - An alternative state to discussion where the RFD is not yet merged, but
         //                  may not be ready for discussion. A pull request is being used to share
         //                  initial thoughts on an idea
-        if pull_request.is_some() && rfd.state != "discussion" && rfd.state != "published" && rfd.state != "ideation" {
+        //   * abandoned  - A RFD may be in this state if it had previously been abandoned or is the
+        //                  processing of being abandoned
+        if pull_request.is_some()
+            && rfd.state != "discussion"
+            && rfd.state != "published"
+            && rfd.state != "ideation"
+            && rfd.state != "abandoned"
+        {
             rfd.update_state("discussion").map_err(RFDUpdateActionErr::Stop)?;
             requires_source_commit = true;
         }
@@ -713,10 +720,10 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
     }
 }
 
-pub struct EnsureRFDOnDefaultIsInPublishedState;
+pub struct EnsureRFDOnDefaultIsInValidState;
 
 #[async_trait]
-impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
+impl RFDUpdateAction for EnsureRFDOnDefaultIsInValidState {
     async fn run(
         &self,
         ctx: &mut RFDUpdateActionContext,
@@ -726,9 +733,10 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInPublishedState {
 
         let mut requires_source_commit = false;
 
-        // If the RFD was merged into the default branch, but the RFD state is not `published`,
-        // update the state of the RFD in GitHub to show it as `published`.
-        if update.branch.branch == update.branch.default_branch && rfd.state != "published" {
+        // If an RFD exists on the default branch then it should be in either the published or
+        // abandoned state
+        if update.branch.branch == update.branch.default_branch && rfd.state != "published" && rfd.state != "abandoned"
+        {
             //  Update the state of the RFD in GitHub to show it as `published`.
             rfd.update_state("published").map_err(RFDUpdateActionErr::Stop)?;
 
