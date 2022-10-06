@@ -731,23 +731,13 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInValidState {
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
 
-        let mut requires_source_commit = false;
-
         // If an RFD exists on the default branch then it should be in either the published or
         // abandoned state
         if update.branch.branch == update.branch.default_branch && rfd.state != "published" && rfd.state != "abandoned"
         {
-            //  Update the state of the RFD in GitHub to show it as `published`.
-            rfd.update_state("published").map_err(RFDUpdateActionErr::Stop)?;
-
-            info!(
-                "[SUCCESS]: updated state to `published` for RFD {}, since it was merged into branch {}",
-                rfd.number_string, update.branch.default_branch
-            );
-
-            requires_source_commit = true;
+            log::warn!("RFD {} on the default branch is in an invalid state. It needs to be updated to either publisehd or abandoned", rfd.number);
         }
 
-        Ok(RFDUpdateActionResponse { requires_source_commit })
+        Ok(RFDUpdateActionResponse::default())
     }
 }
