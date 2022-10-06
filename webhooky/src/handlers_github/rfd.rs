@@ -733,7 +733,10 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInValidState {
 
         // If an RFD exists on the default branch then it should be in either the published or
         // abandoned state
-        if update.branch.branch == update.branch.default_branch && rfd.state != "published" && rfd.state != "abandoned"
+        if update.branch.branch == update.branch.default_branch
+            && rfd.state != "published"
+            && rfd.state != "committed"
+            && rfd.state != "abandoned"
         {
             log::warn!("RFD {} on the default branch is in an invalid state. It needs to be updated to either publisehd or abandoned", rfd.number);
         }
