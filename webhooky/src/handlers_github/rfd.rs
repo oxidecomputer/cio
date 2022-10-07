@@ -142,14 +142,10 @@ impl RFDUpdater {
         let github = update.client();
         let pull_requests = update.branch.find_pull_requests().await?;
 
-        // This is here to remain consistent with previous behavior. This likely needs to be
-        // refactored to account for multiple pull requests existing (even though there *should*
-        // never be multiple)
-        let pull_request = pull_requests.into_iter().next();
         let mut ctx = RFDUpdateActionContext {
             api_context,
             github,
-            pull_request,
+            pull_requests,
             update,
             location,
             old_rfd,
@@ -202,7 +198,7 @@ impl RFDUpdater {
 pub struct RFDUpdateActionContext<'a, 'b, 'd, 'e, 'f> {
     pub api_context: &'a Context,
     pub github: &'b octorust::Client,
-    pub pull_request: Option<GitHubPullRequest>,
+    pub pull_requests: Vec<GitHubPullRequest>,
     pub update: &'d GitHubRFDUpdate,
     pub location: &'e GitHubRFDReadmeLocation,
     pub old_rfd: Option<&'f RFD>,
@@ -521,7 +517,7 @@ impl RFDUpdateAction for CreatePullRequest {
         let RFDUpdateActionContext {
             update,
             github,
-            pull_request,
+            pull_requests,
             api_context,
             old_rfd,
             ..
@@ -529,7 +525,8 @@ impl RFDUpdateAction for CreatePullRequest {
 
         // We only ever create pull requests if the RFD is in the discussion state, and we are not
         // handling an update on the default branch
-        if update.branch.branch != update.branch.default_branch && rfd.state == "discussion" && pull_request.is_none() {
+        if update.branch.branch != update.branch.default_branch && rfd.state == "discussion" && pull_requests.is_empty()
+        {
             let pull = github
                 .pulls()
                 .create(
@@ -577,12 +574,12 @@ impl RFDUpdateAction for UpdatePullRequest {
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             update,
-            pull_request,
+            pull_requests,
             github,
             ..
         } = ctx;
 
-        if let Some(pull_request) = pull_request {
+        if let Some(pull_request) = pull_requests.iter().next() {
             // Let's make sure the title of the pull request is what it should be.
             // The pull request title should be equal to the name of the pull request.
             if rfd.name != pull_request.title {
@@ -655,26 +652,33 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
         ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
-        let RFDUpdateActionContext { pull_request, .. } = ctx;
+        let RFDUpdateActionContext { pull_requests, .. } = ctx;
 
         let mut requires_source_commit = false;
 
-        if let Some(pull_request) = pull_request {
-            // If the stored discussion link does not match the PR we found, then and
-            // update is required
-            if rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
-                info!(
-                    "Stored discussion link \"{}\" does not match the PR found \"{}\"",
-                    rfd.discussion, pull_request.html_url
-                );
+        if pull_requests.len() == 1 {
+            if let Some(pull_request) = pull_requests.iter().next() {
+                // If the stored discussion link does not match the PR we found, then and
+                // update is required
+                if rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
+                    info!(
+                        "Stored discussion link \"{}\" does not match the PR found \"{}\"",
+                        rfd.discussion, pull_request.html_url
+                    );
 
-                rfd.update_discussion(&pull_request.html_url)
-                    .map_err(RFDUpdateActionErr::Continue)?;
+                    rfd.update_discussion(&pull_request.html_url)
+                        .map_err(RFDUpdateActionErr::Continue)?;
 
-                info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
+                    info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
 
-                requires_source_commit = true;
+                    requires_source_commit = true;
+                }
             }
+        } else {
+            info!(
+                "Found multiple pull requests for RFD {}. Unable to update discussion url",
+                rfd.number
+            );
         }
 
         Ok(RFDUpdateActionResponse { requires_source_commit })
@@ -690,7 +694,7 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
         ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
-        let RFDUpdateActionContext { pull_request, .. } = ctx;
+        let RFDUpdateActionContext { pull_requests, .. } = ctx;
 
         let mut requires_source_commit = false;
 
@@ -710,15 +714,21 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
         //                  initial thoughts on an idea
         //   * abandoned  - A RFD may be in this state if it had previously been abandoned or is in
         //                  the process of being abandoned
-        if pull_request.is_some()
-            && rfd.state != "discussion"
+        if rfd.state != "discussion"
             && rfd.state != "published"
             && rfd.state != "committed"
             && rfd.state != "ideation"
             && rfd.state != "abandoned"
         {
-            rfd.update_state("discussion").map_err(RFDUpdateActionErr::Stop)?;
-            requires_source_commit = true;
+            if pull_requests.len() == 1 {
+                rfd.update_state("discussion").map_err(RFDUpdateActionErr::Stop)?;
+                requires_source_commit = true;
+            } else {
+                info!(
+                    "Found multiple pull requests for RFD {}. Unable to update state to discussion",
+                    rfd.number
+                );
+            }
         }
 
         Ok(RFDUpdateActionResponse { requires_source_commit })
