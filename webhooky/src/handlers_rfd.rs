@@ -109,7 +109,9 @@ fn chunk<T>(mut source: Vec<T>, chunk_size: usize) -> Vec<Vec<T>> {
     let mut chunks = vec![];
 
     while source.len() >= chunk_size {
-        chunks.push(source.split_off(chunk_size));
+        let remaining = source.split_off(chunk_size);
+        chunks.push(source);
+        source = remaining;
     }
 
     chunks.push(source);
