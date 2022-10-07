@@ -22,7 +22,7 @@ use std::{str::FromStr, sync::Arc};
 
 use crate::{context::Context, event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo};
 
-mod rfd;
+pub mod rfd;
 
 pub use rfd::RFDUpdater;
 

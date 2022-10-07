@@ -3,13 +3,23 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use cio_api::{
     rfd::{GitHubRFDRepo, NewRFD, RFDEntry, RFDIndexEntry, RFDs, RFD},
     schema::rfds,
+    shorturls::generate_shorturls_for_rfds,
 };
 use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::RequestContext;
-use log::warn;
+use log::{info, warn};
 use std::sync::Arc;
 
-use crate::{context::Context, handlers_github::RFDUpdater};
+use crate::{
+    context::Context,
+    handlers_github::{
+        rfd::{
+            CopyImagesToFrontend, CopyImagesToGCP, CreatePullRequest, EnsureRFDOnDefaultIsInValidState,
+            EnsureRFDWithPullRequestIsInValidState, UpdateDiscussionUrl, UpdatePDFs, UpdatePullRequest, UpdateSearch,
+        },
+        RFDUpdater,
+    },
+};
 
 pub async fn handle_rfd_index(
     rqctx: Arc<RequestContext<Context>>,
@@ -67,14 +77,25 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
 
     let batches = chunk(updates, 3);
 
-    // Iterate over the updates and execute them
-    // We should do these concurrently, but limit it to maybe 3 at a time.
+    // TODO: Turn this into proper batch jobs instead of small parallelism
     for batch in batches.into_iter() {
         let mut tasks: Vec<tokio::task::JoinHandle<Result<()>>> = vec![];
 
         for update in batch.into_iter() {
             let task = tokio::spawn(enclose! { (context) async move {
-                let updater = RFDUpdater::default();
+
+                let updater = RFDUpdater::new(vec![
+                    Box::new(CopyImagesToFrontend),
+                    Box::new(CopyImagesToGCP),
+                    Box::new(UpdateSearch),
+                    Box::new(UpdatePDFs),
+                    Box::new(CreatePullRequest),
+                    Box::new(UpdatePullRequest),
+                    Box::new(UpdateDiscussionUrl),
+                    Box::new(EnsureRFDWithPullRequestIsInValidState),
+                    Box::new(EnsureRFDOnDefaultIsInValidState),
+                ]);
+
                 updater.handle(&context, &[update]).await?;
 
                 Ok(())
@@ -94,6 +115,18 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
             }
         }
     }
+
+    // Create all the shorturls for the RFD if we need to, this would be on added files, only.
+    generate_shorturls_for_rfds(
+        &context.db,
+        &context.company.authenticate_github()?,
+        &context.company,
+        &context.company.authenticate_cloudflare()?,
+        "configs",
+    )
+    .await?;
+
+    info!("Updated shorturls for the all rfds");
 
     // Update rfds in airtable.
     RFDs::get_from_db(&context.db, context.company.id)
