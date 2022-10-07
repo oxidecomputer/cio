@@ -697,7 +697,11 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
         // If there is a pull request open for this branch, then check to ensure that it is in one
         // of three valid states:
         //   * published  - A RFD may be in this state if it had previously been published and an
-        //                  an update is being made
+        //                  an update is being made, Or the RFD may be in the process of being
+        //                  published
+        //   * committed  - A RFD may be in this state if it had previously been committed and an
+        //                  an update is being made. Or the RFD may be in the process of being
+        //                  committed
         //   * discussion - The default state for a RFD that has an open pull request and has yet to
         //                  to be merged. If the document on this branch is found to be in an
         //                  invalid state, it will be set back to the discussion state
@@ -709,6 +713,7 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
         if pull_request.is_some()
             && rfd.state != "discussion"
             && rfd.state != "published"
+            && rfd.state != "committed"
             && rfd.state != "ideation"
             && rfd.state != "abandoned"
         {
