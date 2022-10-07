@@ -579,64 +579,71 @@ impl RFDUpdateAction for UpdatePullRequest {
             ..
         } = ctx;
 
-        if let Some(pull_request) = pull_requests.iter().next() {
-            // Let's make sure the title of the pull request is what it should be.
-            // The pull request title should be equal to the name of the pull request.
-            if rfd.name != pull_request.title {
-                // TODO: Is this call necessary?
-                // Get the current set of settings for the pull request.
-                // We do this because we want to keep the current state for body.
-                let pull_content = github
-                    .pulls()
-                    .get(&update.branch.owner, &update.branch.repo, pull_request.number)
-                    .await
-                    .map_err(RFDUpdateActionErr::Continue)?;
+        if pull_requests.len() == 1 {
+            if let Some(pull_request) = pull_requests.iter().next() {
+                // Let's make sure the title of the pull request is what it should be.
+                // The pull request title should be equal to the name of the pull request.
+                if rfd.name != pull_request.title {
+                    // TODO: Is this call necessary?
+                    // Get the current set of settings for the pull request.
+                    // We do this because we want to keep the current state for body.
+                    let pull_content = github
+                        .pulls()
+                        .get(&update.branch.owner, &update.branch.repo, pull_request.number)
+                        .await
+                        .map_err(RFDUpdateActionErr::Continue)?;
+
+                    github
+                        .pulls()
+                        .update(
+                            &update.branch.owner,
+                            &update.branch.repo,
+                            pull_request.number,
+                            &octorust::types::PullsUpdateRequest {
+                                title: rfd.name.to_string(),
+                                body: pull_content.body,
+                                base: "".to_string(),
+                                maintainer_can_modify: None,
+                                state: None,
+                            },
+                        )
+                        .await
+                        .map_err(|err| {
+                            RFDUpdateActionErr::Continue(anyhow!(
+                                "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
+                                pull_request.title,
+                                rfd.name,
+                                pull_request.number,
+                                err,
+                            ))
+                        })?;
+                }
+
+                // Update the labels for the pull request.
+                let mut labels: Vec<String> = Default::default();
+
+                if rfd.state == "discussion" {
+                    labels.push(":thought_balloon: discussion".to_string());
+                } else if rfd.state == "ideation" {
+                    labels.push(":hatching_chick: ideation".to_string());
+                }
 
                 github
-                    .pulls()
-                    .update(
+                    .issues()
+                    .add_labels(
                         &update.branch.owner,
                         &update.branch.repo,
                         pull_request.number,
-                        &octorust::types::PullsUpdateRequest {
-                            title: rfd.name.to_string(),
-                            body: pull_content.body,
-                            base: "".to_string(),
-                            maintainer_can_modify: None,
-                            state: None,
-                        },
+                        &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
                     )
                     .await
-                    .map_err(|err| {
-                        RFDUpdateActionErr::Continue(anyhow!(
-                            "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
-                            pull_request.title,
-                            rfd.name,
-                            pull_request.number,
-                            err,
-                        ))
-                    })?;
+                    .map_err(RFDUpdateActionErr::Continue)?;
             }
-
-            // Update the labels for the pull request.
-            let mut labels: Vec<String> = Default::default();
-
-            if rfd.state == "discussion" {
-                labels.push(":thought_balloon: discussion".to_string());
-            } else if rfd.state == "ideation" {
-                labels.push(":hatching_chick: ideation".to_string());
-            }
-
-            github
-                .issues()
-                .add_labels(
-                    &update.branch.owner,
-                    &update.branch.repo,
-                    pull_request.number,
-                    &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
-                )
-                .await
-                .map_err(RFDUpdateActionErr::Continue)?;
+        } else {
+            info!(
+                "Found multiple pull requests for RFD {}. Unable to update title",
+                rfd.number
+            );
         }
 
         Ok(RFDUpdateActionResponse::default())
