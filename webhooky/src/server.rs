@@ -284,9 +284,9 @@ pub async fn server(
         scheduler
             .every(16.hours())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-repos")});
-        // scheduler
-        //     .every(14.hours())
-        //     .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-rfds")});
+        scheduler
+            .every(14.hours())
+            .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-rfds")});
         scheduler
             .every(2.hours())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-shipments")});
