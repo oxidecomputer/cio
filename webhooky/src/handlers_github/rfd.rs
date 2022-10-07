@@ -579,8 +579,16 @@ impl RFDUpdateAction for UpdatePullRequest {
             ..
         } = ctx;
 
-        if pull_requests.len() == 1 {
-            if let Some(pull_request) = pull_requests.iter().next() {
+        // We only want to operate on open pull requests
+        let open_prs = pull_requests
+            .iter()
+            .filter(|pr| pr.state == "open")
+            .collect::<Vec<&GitHubPullRequest>>();
+
+        // Explicitly we will only update a pull request if it is the only open pull request for the
+        // branch that we are working on
+        if open_prs.len() == 1 {
+            if let Some(pull_request) = open_prs.get(0) {
                 // Let's make sure the title of the pull request is what it should be.
                 // The pull request title should be equal to the name of the pull request.
                 if rfd.name != pull_request.title {
@@ -663,8 +671,16 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
 
         let mut requires_source_commit = false;
 
-        if pull_requests.len() == 1 {
-            if let Some(pull_request) = pull_requests.iter().next() {
+        // We only want to operate on open pull requests
+        let open_prs = pull_requests
+            .iter()
+            .filter(|pr| pr.state == "open")
+            .collect::<Vec<&GitHubPullRequest>>();
+
+        // Explicitly we will only update a pull request if it is the only open pull request for the
+        // branch that we are working on
+        if open_prs.len() == 1 {
+            if let Some(pull_request) = open_prs.get(0) {
                 // If the stored discussion link does not match the PR we found, then and
                 // update is required
                 if rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
@@ -705,37 +721,42 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
 
         let mut requires_source_commit = false;
 
-        // If there is a pull request open for this branch, then check to ensure that it is in one
-        // of three valid states:
-        //   * published  - A RFD may be in this state if it had previously been published and an
-        //                  an update is being made, Or the RFD may be in the process of being
-        //                  published
-        //   * committed  - A RFD may be in this state if it had previously been committed and an
-        //                  an update is being made. Or the RFD may be in the process of being
-        //                  committed
-        //   * discussion - The default state for a RFD that has an open pull request and has yet to
-        //                  to be merged. If the document on this branch is found to be in an
-        //                  invalid state, it will be set back to the discussion state
-        //   * ideation   - An alternative state to discussion where the RFD is not yet merged, but
-        //                  may not be ready for discussion. A pull request is being used to share
-        //                  initial thoughts on an idea
-        //   * abandoned  - A RFD may be in this state if it had previously been abandoned or is in
-        //                  the process of being abandoned
-        if rfd.state != "discussion"
-            && rfd.state != "published"
-            && rfd.state != "committed"
-            && rfd.state != "ideation"
-            && rfd.state != "abandoned"
-        {
-            if pull_requests.len() == 1 {
+        // We only want to operate on open pull requests
+        let open_prs = pull_requests.iter().filter(|pr| pr.state == "open");
+
+        // Explicitly we will only update a pull request if it is the only open pull request for the
+        // branch that we are working on
+        if open_prs.count() == 1 {
+            // If there is a pull request open for this branch, then check to ensure that it is in one
+            // of three valid states:
+            //   * published  - A RFD may be in this state if it had previously been published and an
+            //                  an update is being made, Or the RFD may be in the process of being
+            //                  published
+            //   * committed  - A RFD may be in this state if it had previously been committed and an
+            //                  an update is being made. Or the RFD may be in the process of being
+            //                  committed
+            //   * discussion - The default state for a RFD that has an open pull request and has yet to
+            //                  to be merged. If the document on this branch is found to be in an
+            //                  invalid state, it will be set back to the discussion state
+            //   * ideation   - An alternative state to discussion where the RFD is not yet merged, but
+            //                  may not be ready for discussion. A pull request is being used to share
+            //                  initial thoughts on an idea
+            //   * abandoned  - A RFD may be in this state if it had previously been abandoned or is in
+            //                  the process of being abandoned
+            if rfd.state != "discussion"
+                && rfd.state != "published"
+                && rfd.state != "committed"
+                && rfd.state != "ideation"
+                && rfd.state != "abandoned"
+            {
                 rfd.update_state("discussion").map_err(RFDUpdateActionErr::Stop)?;
                 requires_source_commit = true;
-            } else {
-                info!(
-                    "Found multiple pull requests for RFD {}. Unable to update state to discussion",
-                    rfd.number
-                );
             }
+        } else {
+            info!(
+                "Found multiple pull requests for RFD {}. Unable to update state to discussion",
+                rfd.number
+            );
         }
 
         Ok(RFDUpdateActionResponse { requires_source_commit })
