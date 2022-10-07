@@ -1,15 +1,14 @@
 use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use cio_api::{
-    rfd::{GitHubRFDRepo, NewRFD, RFDEntry, RFDIndexEntry, RFDs, RFD},
+    rfd::{GitHubRFDRepo, NewRFD, RFDEntry, RFDIndexEntry, RFD},
     schema::rfds,
 };
 use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::RequestContext;
-use log::warn;
 use std::sync::Arc;
 
-use crate::{context::Context, handlers_github::RFDUpdater};
+use crate::context::Context;
 
 pub async fn handle_rfd_index(
     rqctx: Arc<RequestContext<Context>>,
@@ -67,39 +66,41 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
 
     let batches = chunk(updates, 3);
 
-    // Iterate over the updates and execute them
-    // We should do these concurrently, but limit it to maybe 3 at a time.
-    for batch in batches.into_iter() {
-        let mut tasks: Vec<tokio::task::JoinHandle<Result<()>>> = vec![];
+    log::info!("Prepared RFD update plan {:?}", batches);
 
-        for update in batch.into_iter() {
-            let task = tokio::spawn(enclose! { (context) async move {
-                let updater = RFDUpdater::default();
-                updater.handle(&context, &[update]).await?;
+    // // Iterate over the updates and execute them
+    // // We should do these concurrently, but limit it to maybe 3 at a time.
+    // for batch in batches.into_iter() {
+    //     let mut tasks: Vec<tokio::task::JoinHandle<Result<()>>> = vec![];
 
-                Ok(())
-            }});
+    //     for update in batch.into_iter() {
+    //         let task = tokio::spawn(enclose! { (context) async move {
+    //             let updater = RFDUpdater::default();
+    //             updater.handle(&context, &[update]).await?;
 
-            tasks.push(task);
-        }
+    //             Ok(())
+    //         }});
 
-        let mut results = vec![];
-        for task in tasks {
-            results.push(task.await?);
-        }
+    //         tasks.push(task);
+    //     }
 
-        for result in results {
-            if let Err(e) = result {
-                warn!("[rfd] Refresh task failed with  {}", e);
-            }
-        }
-    }
+    //     let mut results = vec![];
+    //     for task in tasks {
+    //         results.push(task.await?);
+    //     }
 
-    // Update rfds in airtable.
-    RFDs::get_from_db(&context.db, context.company.id)
-        .await?
-        .update_airtable(&context.db)
-        .await?;
+    //     for result in results {
+    //         if let Err(e) = result {
+    //             warn!("[rfd] Refresh task failed with  {}", e);
+    //         }
+    //     }
+    // }
+
+    // // Update rfds in airtable.
+    // RFDs::get_from_db(&context.db, context.company.id)
+    //     .await?
+    //     .update_airtable(&context.db)
+    //     .await?;
 
     Ok(())
 }
