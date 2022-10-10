@@ -204,12 +204,19 @@ impl GitHubRFDBranch {
             RFDContent::new_asciidoc(Cow::Owned(decoded))
         };
 
+        // The html_url for the README.* file will look something like:
+        //   https://github.com/<owner>/<repo>/blob/<number>/rfd/<number>/README.*
+        // and we want to transform it to
+        //   https://github.com/<owner>/<repo>/tree/<number>/rfd/<number>
+        let tree_link = link.rsplit_once('/').map(|(dir, _)| dir.replace("blob", "tree"));
+
         Ok(GitHubRFDReadme {
             content,
-            link,
             sha,
             location: GitHubRFDReadmeLocation {
                 file,
+                blob_link: link,
+                tree_link,
                 branch: self.clone(),
             },
         })
@@ -405,13 +412,14 @@ impl PDFStorage for GitHubRFDBranch {
 
 pub struct GitHubRFDReadme<'a> {
     pub content: RFDContent<'a>,
-    pub link: String,
     pub sha: String,
     pub location: GitHubRFDReadmeLocation,
 }
 
 pub struct GitHubRFDReadmeLocation {
     pub file: String,
+    pub blob_link: String,
+    pub tree_link: Option<String>,
     pub branch: GitHubRFDBranch,
 }
 

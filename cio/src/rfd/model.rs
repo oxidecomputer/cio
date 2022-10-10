@@ -172,7 +172,7 @@ impl NewRFD {
                 title,
                 name,
                 state: readme.content.get_state(),
-                link: readme.link,
+                link: readme.location.tree_link.as_ref().unwrap_or(&readme.location.blob_link).to_string(),
                 short_link: Self::generate_short_link(update.number.into()),
                 rendered_link: Self::generate_rendered_link(&update.number.as_number_string()),
                 discussion,
