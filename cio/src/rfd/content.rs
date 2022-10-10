@@ -39,7 +39,8 @@ impl<'a> RFDContent<'a> {
             // regular expressions and can be safely unwrapped.
             let attribute_check = Regex::new(r"(?m)^(:showtitle:|:numbered:|:toc: left|:icons: font)$").unwrap();
             let state_check =
-                Regex::new(r"(?m)^:state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
+                Regex::new(r"(?m)^:state: (ideation|prediscussion|discussion|abandoned|published|committed) *?$")
+                    .unwrap();
 
             // Check that the content contains at least one of the commonly used asciidoc attributes,
             // and contains a state line.
@@ -49,7 +50,8 @@ impl<'a> RFDContent<'a> {
         let is_markdown = !is_asciidoc && {
             let title_check = Regex::new(r"(?m)^# RFD").unwrap();
             let state_check =
-                Regex::new(r"(?m)^state: (ideation|prediscussion|discussion|abandoned|published|committed)$").unwrap();
+                Regex::new(r"(?m)^state: (ideation|prediscussion|discussion|abandoned|published|committed) *?$")
+                    .unwrap();
 
             title_check.is_match(&content) && state_check.is_match(&content)
         };
@@ -531,7 +533,7 @@ mod tests {
 :toc: left
 :numbered:
 :icons: font
-:state: published
+:state: published  
 :discussion: https://github.com/company/repo/pull/123
 :revremark: State: {state} | {discussion}
 :authors: FirstName LastName <fname@company.org>
@@ -546,20 +548,24 @@ mod tests {
 
     #[test]
     fn test_inspects_content_for_markdown() {
-        let content = RFDContent::new(
+        let examples = vec![
             r#"
 ---
 authors: FirstName LastName <fname@company.org>
-state: discussion
+state: discussion   
 discussion: https://github.com/company/repo/pull/123
 ---
 
 # RFD 123"#,
-        );
+        ];
 
-        match content {
-            Ok(RFDContent::Markdown(_)) => (),
-            other => panic!("Invalid inspection result {:?}", other),
+        for example in examples {
+            let content = RFDContent::new(example);
+
+            match content {
+                Ok(RFDContent::Markdown(_)) => (),
+                other => panic!("Invalid inspection result {:?}", other),
+            }
         }
     }
 
