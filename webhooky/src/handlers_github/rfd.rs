@@ -474,6 +474,24 @@ impl RFDUpdateAction for UpdatePDFs {
 
 pub struct GenerateShortUrls;
 
+impl GenerateShortUrls {
+    pub async fn generate(api_context: &Context, github: &octorust::Client) -> Result<()> {
+        // Create all the shorturls for the RFD if we need to, this would be on added files, only.
+        generate_shorturls_for_rfds(
+            &api_context.db,
+            github,
+            &api_context.company,
+            &api_context.company.authenticate_cloudflare()?,
+            "configs",
+        )
+        .await?;
+
+        info!("[SUCCESS]: updated shorturls for the rfds");
+
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl RFDUpdateAction for GenerateShortUrls {
     async fn run(
@@ -485,23 +503,10 @@ impl RFDUpdateAction for GenerateShortUrls {
             api_context, github, ..
         } = ctx;
 
-        // Create all the shorturls for the RFD if we need to, this would be on added files, only.
-        generate_shorturls_for_rfds(
-            &api_context.db,
-            github,
-            &api_context.company,
-            &api_context
-                .company
-                .authenticate_cloudflare()
-                .map_err(RFDUpdateActionErr::Continue)?,
-            "configs",
-        )
-        .await
-        .map_err(RFDUpdateActionErr::Continue)?;
-
-        info!("[SUCCESS]: updated shorturls for the rfds");
-
-        Ok(RFDUpdateActionResponse::default())
+        Self::generate(api_context, github)
+            .await
+            .map(|_| RFDUpdateActionResponse::default())
+            .map_err(RFDUpdateActionErr::Continue)
     }
 }
 

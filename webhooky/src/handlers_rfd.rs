@@ -3,7 +3,6 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use cio_api::{
     rfd::{GitHubRFDRepo, NewRFD, RFDEntry, RFDIndexEntry, RFDs, RFD},
     schema::rfds,
-    shorturls::generate_shorturls_for_rfds,
 };
 use diesel::{ExpressionMethods, QueryDsl};
 use dropshot::RequestContext;
@@ -15,7 +14,8 @@ use crate::{
     handlers_github::{
         rfd::{
             CopyImagesToFrontend, CopyImagesToGCP, CreatePullRequest, EnsureRFDOnDefaultIsInValidState,
-            EnsureRFDWithPullRequestIsInValidState, UpdateDiscussionUrl, UpdatePDFs, UpdatePullRequest, UpdateSearch,
+            EnsureRFDWithPullRequestIsInValidState, GenerateShortUrls, UpdateDiscussionUrl, UpdatePDFs,
+            UpdatePullRequest, UpdateSearch,
         },
         RFDUpdater,
     },
@@ -116,15 +116,9 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
         }
     }
 
-    // Create all the shorturls for the RFD if we need to, this would be on added files, only.
-    generate_shorturls_for_rfds(
-        &context.db,
-        &context.company.authenticate_github()?,
-        &context.company,
-        &context.company.authenticate_cloudflare()?,
-        "configs",
-    )
-    .await?;
+    // Generate all short urls once after updating all of the RFDs. Once the RFDUpdater supports
+    // batching this could be folded back in to the updater
+    GenerateShortUrls::generate(context, &context.company.authenticate_github()?).await?;
 
     info!("Updated shorturls for the all rfds");
 

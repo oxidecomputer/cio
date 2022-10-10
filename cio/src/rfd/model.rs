@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     airtable::AIRTABLE_RFD_TABLE,
     companies::Company,
-    core::{GitHubPullRequest, UpdateAirtableRecord},
+    core::UpdateAirtableRecord,
     rfd::{GitHubRFDBranch, GitHubRFDReadmeLocation, GitHubRFDRepo, GitHubRFDUpdate, RFDContent},
     schema::rfds as r_f_ds,
     schema::rfds,
@@ -172,7 +172,12 @@ impl NewRFD {
                 title,
                 name,
                 state: readme.content.get_state(),
-                link: readme.location.tree_link.as_ref().unwrap_or(&readme.location.blob_link).to_string(),
+                link: readme
+                    .location
+                    .tree_link
+                    .as_ref()
+                    .unwrap_or(&readme.location.blob_link)
+                    .to_string(),
                 short_link: Self::generate_short_link(update.number.into()),
                 rendered_link: Self::generate_rendered_link(&update.number.as_number_string()),
                 discussion,
