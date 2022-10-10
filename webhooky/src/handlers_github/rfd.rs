@@ -523,8 +523,10 @@ impl RFDUpdateAction for CreatePullRequest {
             ..
         } = ctx;
 
-        // We only ever create pull requests if the RFD is in the discussion state, and we are not
-        // handling an update on the default branch
+        // We only ever create pull requests if the RFD is in the discussion state, we are not
+        // handling an update on the default branch, and there are no previous pull requests for
+        // for this branch. This includes Closed pull requests, therefore this action will not
+        // re-open or create a new pull request for a branch that previously had an open PR
         if update.branch.branch != update.branch.default_branch && rfd.state == "discussion" && pull_requests.is_empty()
         {
             let pull = github
