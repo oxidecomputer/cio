@@ -639,22 +639,32 @@ impl RFDUpdateAction for UpdatePullRequest {
                     // Update the labels for the pull request.
                     let mut labels: Vec<String> = Default::default();
 
-                    if rfd.state == "discussion" {
+                    if rfd.state == "discussion"
+                        && !pull_request
+                            .labels
+                            .iter()
+                            .any(|label| label.name.ends_with("discussion"))
+                    {
                         labels.push(":thought_balloon: discussion".to_string());
-                    } else if rfd.state == "ideation" {
+                    } else if rfd.state == "ideation"
+                        && !pull_request.labels.iter().any(|label| label.name.ends_with("ideation"))
+                    {
                         labels.push(":hatching_chick: ideation".to_string());
                     }
 
-                    github
-                        .issues()
-                        .add_labels(
-                            &update.branch.owner,
-                            &update.branch.repo,
-                            pull_request.number,
-                            &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
-                        )
-                        .await
-                        .map_err(RFDUpdateActionErr::Continue)?;
+                    // Only add a label if there is label missing.
+                    if !labels.is_empty() {
+                        github
+                            .issues()
+                            .add_labels(
+                                &update.branch.owner,
+                                &update.branch.repo,
+                                pull_request.number,
+                                &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
+                            )
+                            .await
+                            .map_err(RFDUpdateActionErr::Continue)?;
+                    }
                 }
             }
             Ordering::Greater => {
