@@ -13,6 +13,7 @@ use google_storage1::{
     hyper, hyper_rustls,
 };
 use log::{info, warn};
+use std::cmp::Ordering;
 
 use crate::context::Context;
 
@@ -594,71 +595,77 @@ impl RFDUpdateAction for UpdatePullRequest {
 
         // Explicitly we will only update a pull request if it is the only open pull request for the
         // branch that we are working on
-        if open_prs.len() == 1 {
-            if let Some(pull_request) = open_prs.get(0) {
-                // Let's make sure the title of the pull request is what it should be.
-                // The pull request title should be equal to the name of the pull request.
-                if rfd.name != pull_request.title {
-                    // TODO: Is this call necessary?
-                    // Get the current set of settings for the pull request.
-                    // We do this because we want to keep the current state for body.
-                    let pull_content = github
-                        .pulls()
-                        .get(&update.branch.owner, &update.branch.repo, pull_request.number)
-                        .await
-                        .map_err(RFDUpdateActionErr::Continue)?;
+        match open_prs.len().cmp(&1) {
+            Ordering::Equal => {
+                if let Some(pull_request) = open_prs.get(0) {
+                    // Let's make sure the title of the pull request is what it should be.
+                    // The pull request title should be equal to the name of the pull request.
+                    if rfd.name != pull_request.title {
+                        // TODO: Is this call necessary?
+                        // Get the current set of settings for the pull request.
+                        // We do this because we want to keep the current state for body.
+                        let pull_content = github
+                            .pulls()
+                            .get(&update.branch.owner, &update.branch.repo, pull_request.number)
+                            .await
+                            .map_err(RFDUpdateActionErr::Continue)?;
+
+                        github
+                            .pulls()
+                            .update(
+                                &update.branch.owner,
+                                &update.branch.repo,
+                                pull_request.number,
+                                &octorust::types::PullsUpdateRequest {
+                                    title: rfd.name.to_string(),
+                                    body: pull_content.body,
+                                    base: "".to_string(),
+                                    maintainer_can_modify: None,
+                                    state: None,
+                                },
+                            )
+                            .await
+                            .map_err(|err| {
+                                RFDUpdateActionErr::Continue(anyhow!(
+                                    "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
+                                    pull_request.title,
+                                    rfd.name,
+                                    pull_request.number,
+                                    err,
+                                ))
+                            })?;
+                    }
+
+                    // Update the labels for the pull request.
+                    let mut labels: Vec<String> = Default::default();
+
+                    if rfd.state == "discussion" {
+                        labels.push(":thought_balloon: discussion".to_string());
+                    } else if rfd.state == "ideation" {
+                        labels.push(":hatching_chick: ideation".to_string());
+                    }
 
                     github
-                        .pulls()
-                        .update(
+                        .issues()
+                        .add_labels(
                             &update.branch.owner,
                             &update.branch.repo,
                             pull_request.number,
-                            &octorust::types::PullsUpdateRequest {
-                                title: rfd.name.to_string(),
-                                body: pull_content.body,
-                                base: "".to_string(),
-                                maintainer_can_modify: None,
-                                state: None,
-                            },
+                            &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
                         )
                         .await
-                        .map_err(|err| {
-                            RFDUpdateActionErr::Continue(anyhow!(
-                                "unable to update title of pull request from `{}` to `{}` for pr#{}: {}",
-                                pull_request.title,
-                                rfd.name,
-                                pull_request.number,
-                                err,
-                            ))
-                        })?;
+                        .map_err(RFDUpdateActionErr::Continue)?;
                 }
-
-                // Update the labels for the pull request.
-                let mut labels: Vec<String> = Default::default();
-
-                if rfd.state == "discussion" {
-                    labels.push(":thought_balloon: discussion".to_string());
-                } else if rfd.state == "ideation" {
-                    labels.push(":hatching_chick: ideation".to_string());
-                }
-
-                github
-                    .issues()
-                    .add_labels(
-                        &update.branch.owner,
-                        &update.branch.repo,
-                        pull_request.number,
-                        &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
-                    )
-                    .await
-                    .map_err(RFDUpdateActionErr::Continue)?;
             }
-        } else {
-            info!(
-                "Found multiple pull requests for RFD {}. Unable to update title",
-                rfd.number
-            );
+            Ordering::Greater => {
+                info!(
+                    "Found multiple pull requests for RFD {}. Unable to update title",
+                    rfd.number
+                );
+            }
+            Ordering::Less => {
+                // Nothing to do, there are no PRs
+            }
         }
 
         Ok(RFDUpdateActionResponse::default())
@@ -686,29 +693,35 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
 
         // Explicitly we will only update a pull request if it is the only open pull request for the
         // branch that we are working on
-        if open_prs.len() == 1 {
-            if let Some(pull_request) = open_prs.get(0) {
-                // If the stored discussion link does not match the PR we found, then and
-                // update is required
-                if rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
-                    info!(
-                        "Stored discussion link \"{}\" does not match the PR found \"{}\"",
-                        rfd.discussion, pull_request.html_url
-                    );
+        match open_prs.len().cmp(&1) {
+            Ordering::Equal => {
+                if let Some(pull_request) = open_prs.get(0) {
+                    // If the stored discussion link does not match the PR we found, then and
+                    // update is required
+                    if rfd.discussion != pull_request.html_url && !pull_request.html_url.is_empty() {
+                        info!(
+                            "Stored discussion link \"{}\" does not match the PR found \"{}\"",
+                            rfd.discussion, pull_request.html_url
+                        );
 
-                    rfd.update_discussion(&pull_request.html_url)
-                        .map_err(RFDUpdateActionErr::Continue)?;
+                        rfd.update_discussion(&pull_request.html_url)
+                            .map_err(RFDUpdateActionErr::Continue)?;
 
-                    info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
+                        info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
 
-                    requires_source_commit = true;
+                        requires_source_commit = true;
+                    }
                 }
             }
-        } else {
-            info!(
-                "Found multiple pull requests for RFD {}. Unable to update discussion url",
-                rfd.number
-            );
+            Ordering::Greater => {
+                info!(
+                    "Found multiple pull requests for RFD {}. Unable to update discussion url",
+                    rfd.number
+                );
+            }
+            Ordering::Less => {
+                // Nothing to do, there are no PRs
+            }
         }
 
         Ok(RFDUpdateActionResponse { requires_source_commit })
@@ -733,37 +746,43 @@ impl RFDUpdateAction for EnsureRFDWithPullRequestIsInValidState {
 
         // Explicitly we will only update a pull request if it is the only open pull request for the
         // branch that we are working on
-        if open_prs.count() == 1 {
-            // If there is a pull request open for this branch, then check to ensure that it is in one
-            // of three valid states:
-            //   * published  - A RFD may be in this state if it had previously been published and an
-            //                  an update is being made, Or the RFD may be in the process of being
-            //                  published
-            //   * committed  - A RFD may be in this state if it had previously been committed and an
-            //                  an update is being made. Or the RFD may be in the process of being
-            //                  committed
-            //   * discussion - The default state for a RFD that has an open pull request and has yet to
-            //                  to be merged. If the document on this branch is found to be in an
-            //                  invalid state, it will be set back to the discussion state
-            //   * ideation   - An alternative state to discussion where the RFD is not yet merged, but
-            //                  may not be ready for discussion. A pull request is being used to share
-            //                  initial thoughts on an idea
-            //   * abandoned  - A RFD may be in this state if it had previously been abandoned or is in
-            //                  the process of being abandoned
-            if rfd.state != "discussion"
-                && rfd.state != "published"
-                && rfd.state != "committed"
-                && rfd.state != "ideation"
-                && rfd.state != "abandoned"
-            {
-                rfd.update_state("discussion").map_err(RFDUpdateActionErr::Stop)?;
-                requires_source_commit = true;
+        match open_prs.count().cmp(&1) {
+            Ordering::Equal => {
+                // If there is a pull request open for this branch, then check to ensure that it is in one
+                // of three valid states:
+                //   * published  - A RFD may be in this state if it had previously been published and an
+                //                  an update is being made, Or the RFD may be in the process of being
+                //                  published
+                //   * committed  - A RFD may be in this state if it had previously been committed and an
+                //                  an update is being made. Or the RFD may be in the process of being
+                //                  committed
+                //   * discussion - The default state for a RFD that has an open pull request and has yet to
+                //                  to be merged. If the document on this branch is found to be in an
+                //                  invalid state, it will be set back to the discussion state
+                //   * ideation   - An alternative state to discussion where the RFD is not yet merged, but
+                //                  may not be ready for discussion. A pull request is being used to share
+                //                  initial thoughts on an idea
+                //   * abandoned  - A RFD may be in this state if it had previously been abandoned or is in
+                //                  the process of being abandoned
+                if rfd.state != "discussion"
+                    && rfd.state != "published"
+                    && rfd.state != "committed"
+                    && rfd.state != "ideation"
+                    && rfd.state != "abandoned"
+                {
+                    rfd.update_state("discussion").map_err(RFDUpdateActionErr::Stop)?;
+                    requires_source_commit = true;
+                }
             }
-        } else {
-            info!(
-                "Found multiple pull requests for RFD {}. Unable to update state to discussion",
-                rfd.number
-            );
+            Ordering::Greater => {
+                info!(
+                    "Found multiple pull requests for RFD {}. Unable to update state to discussion",
+                    rfd.number
+                );
+            }
+            Ordering::Less => {
+                // Nothing to do, there are no PRs
+            }
         }
 
         Ok(RFDUpdateActionResponse { requires_source_commit })
