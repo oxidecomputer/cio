@@ -241,9 +241,15 @@ impl GitHubRFDBranch {
         for image in images {
             let new_path = image.path.replace("rfd/", "src/public/static/images/");
 
+            let data = decode_base64(&image.content);
+
             info!(
-                "[rfd.contents] Copy {} to {} {} / {}",
-                image.path, new_path, self.repo, self.branch
+                "[rfd.contents] Copy {} to {} ({}) {} / {}",
+                image.path,
+                new_path,
+                data.len(),
+                self.repo,
+                self.branch
             );
 
             // Make sure we have this file in the static images dir on the master branch.
@@ -253,7 +259,7 @@ impl GitHubRFDBranch {
                 &self.repo,
                 &self.default_branch,
                 &new_path,
-                decode_base64(&image.content),
+                data,
             )
             .await?;
         }
