@@ -308,9 +308,14 @@ impl GitHubRFDBranch {
                     }
 
                     if is_image(&file2.name) {
-                        let f =
-                            crate::utils::get_github_file(&self.client, &self.owner, &self.repo, &self.branch, &file2)
-                                .await?;
+                        let f = crate::utils::get_github_entry_contents(
+                            &self.client,
+                            &self.owner,
+                            &self.repo,
+                            &self.branch,
+                            &file2,
+                        )
+                        .await?;
                         files.push(f);
                     }
                 }
@@ -318,7 +323,8 @@ impl GitHubRFDBranch {
 
             if is_image(&file.name) {
                 let f =
-                    crate::utils::get_github_file(&self.client, &self.owner, &self.repo, &self.branch, &file).await?;
+                    crate::utils::get_github_entry_contents(&self.client, &self.owner, &self.repo, &self.branch, &file)
+                        .await?;
                 files.push(f);
             }
         }
