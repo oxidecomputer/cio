@@ -99,6 +99,8 @@ pub async fn get_github_user_public_ssh_keys(handle: &str) -> Result<Vec<String>
         .collect())
 }
 
+// TODO: Replace this function, it is duplicative of get_github_file
+
 /// Get a files content from a repo.
 /// It returns a tuple of the bytes of the file content and the sha of the file.
 pub async fn get_file_content_from_repo(
@@ -445,44 +447,20 @@ pub async fn get_github_file(
     branch: &str,
     file: &octorust::types::Entries,
 ) -> Result<octorust::types::ContentFile> {
-    // Get the contents of the image.
-    match github.repos().get_content_file(owner, repo, &file.path, branch).await {
-        Ok(f) => {
-            // Push the file to our vector.
-            Ok(f)
-        }
-        Err(e) => {
-            // TODO: better match on errors
-            if e.to_string().contains("too large") {
-                // The file is too big for us to get it's contents through this API.
-                // The error suggests we use the Git Data API but we need the file sha for
-                // that.
-                // We have the sha we can see if the files match using the
-                // Git Data API.
-                let blob = github.git().get_blob(owner, repo, &file.sha).await?;
+    let mut file = github.repos().get_content_file(owner, repo, &file.path, branch).await?;
 
-                // Push the new file.
-                return Ok(octorust::types::ContentFile {
-                    type_: Default::default(),
-                    encoding: Default::default(),
-                    submodule_git_url: Default::default(),
-                    target: Default::default(),
-                    size: blob.size,
-                    name: file.name.clone(),
-                    path: file.path.clone(),
-                    content: blob.content,
-                    sha: file.sha.clone(),
-                    url: file.url.clone(),
-                    git_url: file.git_url.clone(),
-                    html_url: file.html_url.clone(),
-                    download_url: file.download_url.clone(),
-                    links: file.links.clone(),
-                });
-            }
+    // If the content is empty and the encoding is none then we likely hit a "too large" file case.
+    // Try requesting the blob directly
+    if file.content.is_empty() && file.encoding == "none" {
+        let blob = github.git().get_blob(owner, repo, &file.sha).await?;
 
-            bail!("[rfd] getting file contents for {} failed: {}", file.path, e);
-        }
+        // We are only interested in the copying over the content and encoding fields, everything
+        // else from the original response should still be valid
+        file.content = blob.content;
+        file.encoding = blob.encoding;
     }
+
+    Ok(file)
 }
 
 pub fn trim<'de, D>(deserializer: D) -> Result<String, D::Error>
