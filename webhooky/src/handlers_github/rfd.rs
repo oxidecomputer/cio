@@ -303,6 +303,14 @@ impl RFDUpdateAction for CopyImagesToGCP {
             let object_name = format!("rfd/{}/latest/{}", update.number, image.name);
             let mime_type = mime_guess::guess_mime_type(&object_name);
             let data = decode_base64(&image.content);
+
+            log::info!(
+                "Writing {} ({}) with size {} to GCP",
+                object_name,
+                mime_type,
+                data.len()
+            );
+
             let cursor = std::io::Cursor::new(data);
 
             let request = Object::default();
