@@ -13,7 +13,7 @@ use crate::{
     context::Context,
     handlers_github::{
         rfd::{
-            CopyImagesToFrontend, CopyImagesToGCP, CreatePullRequest, EnsureRFDOnDefaultIsInValidState,
+            CopyImagesToGCP, CreatePullRequest, EnsureRFDOnDefaultIsInValidState,
             EnsureRFDWithPullRequestIsInValidState, GenerateShortUrls, UpdateDiscussionUrl, UpdatePDFs,
             UpdatePullRequest, UpdateSearch,
         },
@@ -85,7 +85,6 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
             let task = tokio::spawn(enclose! { (context) async move {
 
                 let updater = RFDUpdater::new(vec![
-                    Box::new(CopyImagesToFrontend),
                     Box::new(CopyImagesToGCP),
                     Box::new(UpdateSearch),
                     Box::new(UpdatePDFs),
