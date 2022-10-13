@@ -41,7 +41,7 @@ jobs:
         uses: pierotofy/set-swap-space@master
         with:
           swap-size-gb: 10
-      - uses: actions/setup-node@v3.4.1
+      - uses: actions/setup-node@v3.5.1
       - name: Install asciidoctor, pandoc, and pdftotext
         shell: bash
         run: |
