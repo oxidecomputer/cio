@@ -11,7 +11,6 @@ use cio_api::{
     repos::NewRepo,
     rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos},
-    utils::{get_file_content_from_repo, is_image},
 };
 use dropshot::{Extractor, RequestContext, ServerContext};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
@@ -287,68 +286,6 @@ async fn handle_rfd_push(github: Arc<octorust::Client>, api_context: &Context, e
     // Get the branch name.
     let branch_name = event.refv.trim_start_matches("refs/heads/");
     let branch = repo.branch(branch_name.to_string());
-
-    // Iterate over the removed files and remove any images that we no longer need for the HTML
-    // rendered RFD website. This is a special code path that only runs on RFD pushes as opposed to
-    // the rest of the RFD update logic which can be centralized
-    for file in &commit.removed {
-        // Make sure the file has a prefix of "rfd/".
-        if !file.starts_with("rfd/") {
-            // Continue through the loop early.
-            // We only care if a file change in the rfd/ directory.
-            continue;
-        }
-
-        if is_image(file) {
-            // Remove the image from the `src/public/static/images` path since we no
-            // longer need it.
-            // We delete these on the default branch ONLY.
-            let website_file = file.replace("rfd/", "src/public/static/images/");
-
-            // We need to get the current sha for the file we want to delete.
-            let (_, gh_file_sha) = if let Ok((v, s)) = get_file_content_from_repo(
-                &github,
-                &branch.owner,
-                &branch.repo,
-                &branch.default_branch,
-                &website_file,
-            )
-            .await
-            {
-                (v, s)
-            } else {
-                // If there was an error, likely the file does not exist, so we can continue
-                // anyways.
-                (vec![], "".to_string())
-            };
-
-            if !gh_file_sha.is_empty() {
-                github
-                    .repos()
-                    .delete_file(
-                        &repo.owner,
-                        &repo.repo,
-                        &website_file,
-                        &octorust::types::ReposDeleteFileRequest {
-                            message: format!(
-                                "Deleting file content {} programatically\n\nThis is done from \
-                                the cio repo webhooky::listen_github_webhooks function.",
-                                website_file
-                            ),
-                            sha: gh_file_sha,
-                            committer: None,
-                            author: None,
-                            branch: branch.default_branch.to_string(),
-                        },
-                    )
-                    .await?;
-                info!(
-                    "[SUCCESS]: deleted file `{}` since it was removed in this push",
-                    website_file
-                );
-            }
-        }
-    }
 
     // We are always creating updates based on the branch that is defined by the event, independent
     // of it if corresponds with RFD number of the file(s) updated. We are only responsible for

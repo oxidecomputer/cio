@@ -11,7 +11,7 @@ use crate::{
     companies::Company,
     core::GitHubPullRequest,
     utils::is_image,
-    utils::{create_or_update_file_in_github_repo, decode_base64, decode_base64_to_string, get_file_content_from_repo},
+    utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
 };
 
 use super::{PDFStorage, RFDContent, RFDNumber, RFDPdf};
@@ -220,51 +220,6 @@ impl GitHubRFDBranch {
                 branch: self.clone(),
             },
         })
-    }
-
-    pub async fn copy_images_to_frontend(&self, rfd_number: &RFDNumber) -> Result<()> {
-        info!(
-            "[rfd.contents] Getting images from branch {} / {}",
-            self.repo, self.branch
-        );
-
-        // Get all the images in the branch and make sure they are in the images directory on master.
-        let images = self.get_images(rfd_number).await?;
-
-        info!(
-            "[rfd.contents] Updating images in branch {} / {}",
-            self.repo, self.branch
-        );
-
-        // TODO: This could likely be improved by being made into a single commit. There may be
-        // issues around the payload size of a combined commit
-        for image in images {
-            let new_path = image.path.replace("rfd/", "src/public/static/images/");
-
-            let data = decode_base64(&image.content);
-
-            info!(
-                "[rfd.contents] Copy {} to {} ({}) {} / {}",
-                image.path,
-                new_path,
-                data.len(),
-                self.repo,
-                self.branch
-            );
-
-            // Make sure we have this file in the static images dir on the master branch.
-            create_or_update_file_in_github_repo(
-                &self.client,
-                &self.owner,
-                &self.repo,
-                &self.default_branch,
-                &new_path,
-                data,
-            )
-            .await?;
-        }
-
-        Ok(())
     }
 
     /// Get a list of images that are store in this branch

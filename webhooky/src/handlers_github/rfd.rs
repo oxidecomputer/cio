@@ -40,7 +40,6 @@ pub struct RFDUpdater {
 impl Default for RFDUpdater {
     fn default() -> Self {
         Self::new(vec![
-            Box::new(CopyImagesToFrontend),
             Box::new(CopyImagesToGCP),
             Box::new(UpdateSearch),
             Box::new(UpdatePDFs),
@@ -235,31 +234,6 @@ impl From<Vec<RFDUpdateActionResponse>> for RFDUpdateActionResponse {
 pub enum RFDUpdateActionErr {
     Continue(anyhow::Error),
     Stop(anyhow::Error),
-}
-
-pub struct CopyImagesToFrontend;
-
-#[async_trait]
-impl RFDUpdateAction for CopyImagesToFrontend {
-    async fn run(
-        &self,
-        ctx: &mut RFDUpdateActionContext,
-        _rfd: &mut RFD,
-    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
-        let RFDUpdateActionContext { update, .. } = ctx;
-        update
-            .branch
-            .copy_images_to_frontend(&update.number)
-            .await
-            .map_err(RFDUpdateActionErr::Continue)?;
-
-        info!(
-            "Copied images for RFD {} on {} to frontend storage",
-            update.number, update.branch.branch
-        );
-
-        Ok(RFDUpdateActionResponse::default())
-    }
 }
 
 pub struct CopyImagesToGCP;
