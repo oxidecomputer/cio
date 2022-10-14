@@ -211,13 +211,13 @@ impl NewCertificate {
             let record_name = format!("_acme-challenge.{}", &self.domain.replace("*.", ""));
 
             // Ensure our DNS record exists.
-            api_client.ensure_record(
-                DnsRecord {
+            api_client
+                .ensure_record(DnsRecord {
                     name: record_name.to_string(),
                     type_: DnsRecordType::TXT,
-                    content: challenge.dns_proof()
-                }
-            ).await?;
+                    content: challenge.dns_proof(),
+                })
+                .await?;
 
             // TODO: make this less awful than a sleep.
             info!("validating the proof...");

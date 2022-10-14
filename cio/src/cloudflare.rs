@@ -1,7 +1,11 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use cloudflare::{
-    endpoints::{dns, dns::{DnsRecord as CloudFlareDnsRecord, DnsContent}, zone},
+    endpoints::{
+        dns,
+        dns::{DnsContent, DnsRecord as CloudFlareDnsRecord},
+        zone,
+    },
     framework::{
         async_api::{ApiClient, Client},
         endpoint::Endpoint,
@@ -15,7 +19,7 @@ use std::{
     collections::HashMap,
     convert::TryFrom,
     sync::{Arc, RwLock},
-    time::{Duration, Instant}
+    time::{Duration, Instant},
 };
 
 use crate::dns_providers::{DNSProviderOps, DnsRecord, DnsRecordType};
@@ -277,24 +281,24 @@ impl TryFrom<DnsRecord> for DnsContent {
     fn try_from(record: DnsRecord) -> Result<DnsContent> {
         Ok(match record.type_ {
             DnsRecordType::A => DnsContent::A {
-                content: record.content.parse()?
+                content: record.content.parse()?,
             },
             DnsRecordType::AAAA => DnsContent::AAAA {
-                content: record.content.parse()?
+                content: record.content.parse()?,
             },
             DnsRecordType::CNAME => DnsContent::CNAME {
-                content: record.content
+                content: record.content,
             },
             DnsRecordType::NS => DnsContent::NS {
-                content: record.content
+                content: record.content,
             },
             DnsRecordType::SRV => DnsContent::SRV {
-                content: record.content
+                content: record.content,
             },
             DnsRecordType::TXT => DnsContent::TXT {
-                content: record.content
+                content: record.content,
             },
-            other => Err(anyhow::anyhow!("{} record types are not supported", other))?
+            other => return Err(anyhow::anyhow!("{} record types are not supported", other)),
         })
     }
 }

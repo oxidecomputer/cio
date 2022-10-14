@@ -1,12 +1,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use google_dns1::{api::ResourceRecordSet, Dns, hyper_rustls, hyper};
+use google_dns1::{api::ResourceRecordSet, hyper, hyper_rustls, Dns};
 use std::sync::Arc;
 
-use crate::dns_providers::{
-    DNSProviderOps,
-    DnsRecord,
-};
+use crate::dns_providers::{DNSProviderOps, DnsRecord};
 
 pub struct CloudDnsClient {
     project: String,
@@ -21,8 +18,13 @@ impl CloudDnsClient {
     async fn find_name_and_type_matches(&self, zone: &str, record: &DnsRecord) -> Result<Vec<ResourceRecordSet>> {
         let mut matches = vec![];
 
-        let (_, response) = self.inner.resource_record_sets().list(&self.project, &zone).doit().await?;
-        
+        let (_, response) = self
+            .inner
+            .resource_record_sets()
+            .list(&self.project, zone)
+            .doit()
+            .await?;
+
         if let Some(sets) = response.rrsets {
             for set in sets {
                 if set.name_match(record) && set.type_match(record) {
@@ -47,13 +49,20 @@ impl RecordMatch<DnsRecord> for ResourceRecordSet {
     }
 
     fn type_match(&self, other: &DnsRecord) -> bool {
-        self.type_.as_ref().map(|type_| type_ == &other.type_.to_string()).unwrap_or(false)
+        self.type_
+            .as_ref()
+            .map(|type_| type_ == &other.type_.to_string())
+            .unwrap_or(false)
     }
 
     fn covers(&self, other: &DnsRecord) -> bool {
-        self.name_match(other) &&
-        self.type_match(other) &&
-        self.rrdatas.as_ref().map(|data| data.contains(&other.content)).unwrap_or(false)
+        self.name_match(other)
+            && self.type_match(other)
+            && self
+                .rrdatas
+                .as_ref()
+                .map(|data| data.contains(&other.content))
+                .unwrap_or(false)
     }
 }
 
@@ -69,11 +78,10 @@ impl DNSProviderOps for CloudDnsClient {
         // The incoming record may be a subset of an existing record, check to see if there are any
         // records that already cover what this incoming record does.
         for existing_record_set in existing_record_sets.iter() {
-
             // If any existing record set fully covers our incoming record, then there is nothing
             // left to do
             if existing_record_set.covers(&record) {
-                return Ok(())
+                return Ok(());
             }
         }
 
@@ -84,23 +92,27 @@ impl DNSProviderOps for CloudDnsClient {
         // record set
         if existing_record_sets.is_empty() {
             // Write the updated record set back to GCP
-            let result = self.inner.resource_record_sets().create(
-                ResourceRecordSet {
-                    kind: None,
-                    name: Some(record.name.clone()),
-                    routing_policy: None,
-                    rrdatas: Some(vec![record.content.clone()]),
-                    signature_rrdatas: None,
-                    ttl: Some(1),
-                    type_: Some(record.type_.to_string())
-                },
-                &self.project,
-                &zone_name,
-            ).doit().await?;
+            let result = self
+                .inner
+                .resource_record_sets()
+                .create(
+                    ResourceRecordSet {
+                        kind: None,
+                        name: Some(record.name.clone()),
+                        routing_policy: None,
+                        rrdatas: Some(vec![record.content.clone()]),
+                        signature_rrdatas: None,
+                        ttl: Some(1),
+                        type_: Some(record.type_.to_string()),
+                    },
+                    &self.project,
+                    &zone_name,
+                )
+                .doit()
+                .await?;
 
             log::info!("Created {}::{} record : {:?}", record.type_, record.name, result);
         } else if existing_record_sets.len() == 1 {
-
             // We need to determine the record set to add the record to. We expect that for a given
             // (name, type) pair there is at most a single record set. If multiple are found then
             // we fill fail to create. This assumption needs to be tested an verified
@@ -117,16 +129,20 @@ impl DNSProviderOps for CloudDnsClient {
             }
 
             // Write the updated record set back to GCP
-            let result = self.inner.resource_record_sets().patch(
-                existing_record_set,
-                &self.project,
-                &zone_name,
-                &record.name,
-                &record.type_.to_string(),
-            ).doit().await?;
+            let result = self
+                .inner
+                .resource_record_sets()
+                .patch(
+                    existing_record_set,
+                    &self.project,
+                    &zone_name,
+                    &record.name,
+                    &record.type_.to_string(),
+                )
+                .doit()
+                .await?;
 
             log::info!("Updated {}::{} record : {:?}", record.type_, record.name, result);
-        
         } else {
             log::warn!("Encountered multiple record sets for {}::{}", record.type_, record.name);
         }
@@ -144,7 +160,6 @@ impl DNSProviderOps for CloudDnsClient {
         // The incoming record may be a subset of an existing record, check to see if there are any
         // records that already cover what this incoming record does.
         for mut existing_record_set in existing_record_sets.into_iter() {
-
             // If any existing record set fully covers our incoming record, then there is nothing
             // left to do
             if existing_record_set.covers(&record) {
@@ -154,23 +169,28 @@ impl DNSProviderOps for CloudDnsClient {
 
                 if existing_record_set.rrdatas.as_ref().map(|data| data.len()).unwrap_or(0) > 0 {
                     // Write the updated record set back to GCP
-                    let result = self.inner.resource_record_sets().patch(
-                        existing_record_set,
-                        &self.project,
-                        &zone_name,
-                        &record.name,
-                        &record.type_.to_string(),
-                    ).doit().await?;
+                    let result = self
+                        .inner
+                        .resource_record_sets()
+                        .patch(
+                            existing_record_set,
+                            &self.project,
+                            &zone_name,
+                            &record.name,
+                            &record.type_.to_string(),
+                        )
+                        .doit()
+                        .await?;
 
                     log::info!("Updated {}::{} record : {:?}", record.type_, record.name, result);
                 } else {
                     // Delete the record from GCP
-                    let result = self.inner.resource_record_sets().delete(
-                        &self.project,
-                        &zone_name,
-                        &record.name,
-                        &record.type_.to_string(),
-                    ).doit().await?;
+                    let result = self
+                        .inner
+                        .resource_record_sets()
+                        .delete(&self.project, &zone_name, &record.name, &record.type_.to_string())
+                        .doit()
+                        .await?;
 
                     log::info!("Deleted {}::{} record : {:?}", record.type_, record.name, result);
                 }

@@ -16,7 +16,7 @@ pub enum DnsRecordType {
     MX,
     NS,
     SRV,
-    TXT
+    TXT,
 }
 
 impl fmt::Display for DnsRecordType {
