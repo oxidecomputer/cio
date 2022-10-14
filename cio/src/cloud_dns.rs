@@ -1,6 +1,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use google_dns1::{api::ResourceRecordSet, hyper, hyper_rustls, Dns};
+use google_dns1::{
+    api::{ManagedZone, ResourceRecordSet},
+    hyper, hyper_rustls, Dns,
+};
 use std::sync::Arc;
 
 use crate::dns_providers::{DNSProviderOps, DnsRecord};
@@ -11,8 +14,21 @@ pub struct CloudDnsClient {
 }
 
 impl CloudDnsClient {
-    fn translate_domain_to_zone(&self, _domain: &str) -> String {
-        unimplemented!()
+    async fn translate_domain_to_zone(&self, domain: &str) -> Result<Option<ManagedZone>> {
+        let (_, response) = self.inner.managed_zones().list(&self.project).doit().await?;
+
+        if let Some(managed_zones) = response.managed_zones {
+            Ok(managed_zones.into_iter().find(|managed_zone| {
+                // GCP zone DNS names end with a .
+                managed_zone
+                    .dns_name
+                    .as_ref()
+                    .map(|dns_name| domain.ends_with(dns_name.trim_end_matches('.')))
+                    .unwrap_or(false)
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn find_name_and_type_matches(&self, zone: &str, record: &DnsRecord) -> Result<Vec<ResourceRecordSet>> {
@@ -70,7 +86,16 @@ impl RecordMatch<DnsRecord> for ResourceRecordSet {
 impl DNSProviderOps for CloudDnsClient {
     /// Ensure the record exists and has the correct information.
     async fn ensure_record(&self, record: DnsRecord) -> Result<()> {
-        let zone_name = self.translate_domain_to_zone(&record.name);
+        let zone = self
+            .translate_domain_to_zone(&record.name)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Failed to find zone for {}", record.name))?;
+        let zone_name = zone.name.ok_or_else(|| {
+            anyhow::anyhow!(
+                "Unable to operate on zone that does not have a name for {}",
+                record.name
+            )
+        })?;
 
         // Find all of the records that match the name and type of the incoming record
         let mut existing_record_sets = self.find_name_and_type_matches(&zone_name, &record).await?;
@@ -152,7 +177,16 @@ impl DNSProviderOps for CloudDnsClient {
 
     /// Delete the record if it exists.
     async fn delete_record(&self, record: DnsRecord) -> Result<()> {
-        let zone_name = self.translate_domain_to_zone(&record.name);
+        let zone = self
+            .translate_domain_to_zone(&record.name)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Failed to find zone for {}", record.name))?;
+        let zone_name = zone.name.ok_or_else(|| {
+            anyhow::anyhow!(
+                "Unable to operate on zone that does not have a name for {}",
+                record.name
+            )
+        })?;
 
         // Find all of the records that match the name and type of the incoming record
         let existing_record_sets = self.find_name_and_type_matches(&zone_name, &record).await?;
