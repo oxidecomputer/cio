@@ -13,7 +13,6 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use chrono_humanize::HumanTime;
-use cloudflare::endpoints::dns;
 use log::info;
 use macros::db;
 use openssl::x509::X509;

@@ -2023,19 +2023,22 @@ dependencies = [
 
 [[package]]
 name = "google-dns1"
-version = "2.0.8+20210319"
+version = "4.0.1+20220217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f2d7f95382f3eebe344389991271f29990e74a75de64a439f10687ad7f8f6cc"
+checksum = "bc7c028f59cdb73c52a20bf0dea8c0d0ca2a63950f6b28a2d187999f064d85f6"
 dependencies = [
+ "http",
  "hyper",
- "hyper-rustls 0.22.1",
+ "hyper-rustls 0.23.0",
  "itertools 0.10.3",
  "mime 0.2.6",
  "serde",
  "serde_derive",
  "serde_json",
+ "tokio",
+ "tower-service",
  "url 1.7.2",
- "yup-oauth2 5.1.0",
+ "yup-oauth2 7.0.1",
 ]
 
 [[package]]
