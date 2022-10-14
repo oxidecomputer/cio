@@ -29,7 +29,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
-    dns_providers::DNSProviderOps,
+    dns_providers::{DNSProviderOps, DnsRecord, DnsRecordType},
     schema::certificates,
     utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };
@@ -211,12 +211,14 @@ impl NewCertificate {
             // Use the Cloudflare API for this.
             let record_name = format!("_acme-challenge.{}", &self.domain.replace("*.", ""));
 
-            let content = dns::DnsContent::TXT {
-                content: challenge.dns_proof(),
-            };
-
             // Ensure our DNS record exists.
-            api_client.ensure_record(&record_name, content).await?;
+            api_client.ensure_record(
+                DnsRecord {
+                    name: record_name.to_string(),
+                    type_: DnsRecordType::TXT,
+                    content: challenge.dns_proof()
+                }
+            ).await?;
 
             // TODO: make this less awful than a sleep.
             info!("validating the proof...");

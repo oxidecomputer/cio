@@ -1,10 +1,9 @@
 use anyhow::{bail, Result};
-use cloudflare::endpoints::dns;
 use serde::Serialize;
 
 use crate::{
     companies::Company, configs::Links, db::Database, dns_providers::DNSProviderOps, repos::GithubRepos, rfd::RFDs,
-    templates::generate_nginx_files_for_shorturls,
+    templates::generate_nginx_files_for_shorturls, dns_providers::{DnsRecord, DnsRecordType}
 };
 
 /// Generate the files for the GitHub repository short URLs.
@@ -293,10 +292,11 @@ where
         name = format!("{}.{}.{}", name, s.subdomain, company.domain);
         if dns_client
             .ensure_record(
-                &name,
-                dns::DnsContent::A {
-                    content: company.nginx_ip.parse()?,
-                },
+                DnsRecord {
+                    name: name.to_string(),
+                    type_: DnsRecordType::A,
+                    content: company.nginx_ip.parse()?
+                }
             )
             .await
             .is_err()
@@ -304,10 +304,11 @@ where
             // Try it again, it might just have been a time out error.
             if let Err(e) = dns_client
                 .ensure_record(
-                    &name,
-                    dns::DnsContent::A {
-                        content: company.nginx_ip.parse()?,
-                    },
+                    DnsRecord {
+                        name: name.to_string(),
+                        type_: DnsRecordType::A,
+                        content: company.nginx_ip.parse()?
+                    }
                 )
                 .await
             {
