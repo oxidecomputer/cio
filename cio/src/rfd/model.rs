@@ -340,10 +340,9 @@ impl UpdateAirtableRecord<RFD> for RFD {
         // Set the Link to People from the original so it stays intact.
         self.milestones = record.milestones.clone();
         self.relevant_components = record.relevant_components;
-        // Airtable can only hold 100,000 chars. IDK which one is that long but LOL
-        // https://community.airtable.com/t/what-is-the-long-text-character-limit/1780
+
         self.content = truncate(&self.content, 100000);
-        self.html = truncate(&self.html, 100000);
+        self.html = "".to_string();
 
         Ok(())
     }
