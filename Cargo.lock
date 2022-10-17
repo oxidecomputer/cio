@@ -771,8 +771,6 @@ dependencies = [
  "dropshot",
  "env_logger 0.9.1",
  "flate2",
- "futures",
- "futures-util",
  "google-calendar",
  "google-drive",
  "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",

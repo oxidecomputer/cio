@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use csv::ReaderBuilder;
-use futures::future::FutureExt;
 use log::info;
 use octorust::Client as Octorust;
 use serde::Deserialize;
@@ -234,7 +233,7 @@ impl GitHubRFDBranch {
         dir: String,
         rfd_number: RFDNumber,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<octorust::types::ContentFile>>> + Send + 'static>> {
-        async move {
+        Box::pin(async move {
             let mut files: Vec<octorust::types::ContentFile> = Default::default();
 
             let resp = branch
@@ -269,8 +268,7 @@ impl GitHubRFDBranch {
             }
 
             Ok(files)
-        }
-        .boxed()
+        })
     }
 
     /// Find any existing pull request coming from the branch for this RFD
