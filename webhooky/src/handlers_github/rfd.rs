@@ -243,7 +243,7 @@ impl RFDUpdateAction for CopyImagesToGCP {
     async fn run(
         &self,
         ctx: &mut RFDUpdateActionContext,
-        rfd: &mut RFD,
+        _rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext {
             api_context, update, ..
@@ -274,7 +274,9 @@ impl RFDUpdateAction for CopyImagesToGCP {
         );
 
         for image in images {
-            let sub_path = image.path.replace(&format!("rfd/{}/", update.number.as_number_string()), "");
+            let sub_path = image
+                .path
+                .replace(&format!("rfd/{}/", update.number.as_number_string()), "");
             let object_name = format!("rfd/{}/latest/{}", update.number, sub_path);
             let mime_type = mime_guess::guess_mime_type(&object_name);
             let data = decode_base64(&image.content);
