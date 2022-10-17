@@ -110,9 +110,17 @@ impl<'a> RFDContent<'a> {
 
     /// Generate a PDF by combining RFD contents with static resources that are stored for a given
     /// RFD number on a specific branch. Markdown documents do not support PDF generation
-    pub async fn to_pdf(&self, title: &str, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDPdf, RFDOutputError> {
+    pub async fn to_pdf(
+        &self,
+        title: &str,
+        number: &RFDNumber,
+        branch: &GitHubRFDBranch,
+    ) -> Result<RFDPdf, RFDOutputError> {
         match self {
-            Self::Asciidoc(adoc) => adoc.to_pdf(title, number, branch).await.map_err(RFDOutputError::Generic),
+            Self::Asciidoc(adoc) => adoc
+                .to_pdf(title, number, branch)
+                .await
+                .map_err(RFDOutputError::Generic),
             _ => Err(RFDOutputError::FormatNotSupported(RFDOutputFormat::Pdf)),
         }
     }

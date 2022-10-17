@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use cio_api::{
     core::GitHubPullRequest,
     features::Features,
-    rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, NewRFD, RFDSearchIndex, RemoteRFD, RFD, RFDOutputError},
+    rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, NewRFD, RFDOutputError, RFDSearchIndex, RemoteRFD, RFD},
     shorturls::generate_shorturls_for_rfds,
     utils::{create_or_update_file_in_github_repo, decode_base64, get_file_content_from_repo},
 };
@@ -345,9 +345,7 @@ impl UpdatePDFs {
             })?;
 
         // Upload the generate PDF
-        let upload = pdf
-            .upload(&api_context.db, &api_context.company)
-            .await?;
+        let upload = pdf.upload(&api_context.db, &api_context.company).await?;
 
         // Store the PDF urls as needed to the RFD record
         if let Some(github_url) = upload.github_url {
