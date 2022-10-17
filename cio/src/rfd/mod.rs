@@ -10,7 +10,7 @@ mod pdf;
 mod search;
 
 pub use changelog::send_rfd_changelog;
-pub use content::RFDContent;
+pub use content::{RFDContent, RFDOutputError, RFDOutputFormat};
 pub use github::{GitHubRFDBranch, GitHubRFDReadme, GitHubRFDReadmeLocation, GitHubRFDRepo, GitHubRFDUpdate};
 pub use model::{NewRFD, RFDEntry, RFDIndexEntry, RFDs, RemoteRFD, RFD};
 pub use pdf::{PDFStorage, RFDPdf};

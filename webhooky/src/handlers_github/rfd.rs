@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use cio_api::{
     core::GitHubPullRequest,
     features::Features,
-    rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, NewRFD, RFDSearchIndex, RemoteRFD, RFD},
+    rfd::{GitHubRFDReadmeLocation, GitHubRFDUpdate, NewRFD, RFDSearchIndex, RemoteRFD, RFD, RFDOutputError},
     shorturls::generate_shorturls_for_rfds,
     utils::{create_or_update_file_in_github_repo, decode_base64, get_file_content_from_repo},
 };
@@ -323,11 +323,26 @@ pub struct UpdatePDFs;
 
 impl UpdatePDFs {
     async fn upload(api_context: &Context, update: &GitHubRFDUpdate, rfd: &mut RFD) -> Result<()> {
-        // Generate the PDFs for the RFD and upload them
-        let upload = rfd
+        // Generate the PDFs for the RFD
+        let pdf = rfd
             .content()?
             .to_pdf(&rfd.title, &update.number, &update.branch)
-            .await?
+            .await
+            .map_err(|err| {
+                match &err {
+                    RFDOutputError::FormatNotSupported(_) => {
+                        log::info!("RFD {} is not in a format that supports PDF output", rfd.number);
+                    }
+                    RFDOutputError::Generic(inner) => {
+                        log::error!("Failed trying to generate PDF for RFD {}: {:?}", rfd.number, inner);
+                    }
+                }
+
+                err
+            })?;
+
+        // Upload the generate PDF
+        let upload = pdf
             .upload(&api_context.db, &api_context.company)
             .await?;
 
