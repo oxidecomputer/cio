@@ -16,6 +16,7 @@ use crate::{
     rfd::{GitHubRFDBranch, GitHubRFDReadmeLocation, GitHubRFDRepo, GitHubRFDUpdate, RFDContent},
     schema::rfds as r_f_ds,
     schema::rfds,
+    utils::truncate,
 };
 
 /// The data type for an RFD.
@@ -340,7 +341,7 @@ impl UpdateAirtableRecord<RFD> for RFD {
         self.milestones = record.milestones.clone();
         self.relevant_components = record.relevant_components;
 
-        self.content = "".to_string();
+        self.content = truncate(&self.content, 100000);
         self.html = "".to_string();
 
         Ok(())
