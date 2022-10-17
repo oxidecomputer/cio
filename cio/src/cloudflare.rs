@@ -22,7 +22,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::dns_providers::{DNSProviderOps, DnsRecord, DnsRecordType};
+use crate::dns_providers::{DNSProviderOps, DnsRecord, DnsRecordType, DnsUpdateMode};
 
 #[derive(Debug, Clone)]
 pub struct ZoneEntry {
@@ -305,7 +305,7 @@ impl TryFrom<DnsRecord> for DnsContent {
 
 #[async_trait]
 impl DNSProviderOps for CloudFlareClient {
-    async fn ensure_record(&self, record: DnsRecord) -> Result<()> {
+    async fn ensure_record(&self, record: DnsRecord, _: DnsUpdateMode) -> Result<()> {
         let domain = record.name.to_lowercase();
         let content = DnsContent::try_from(record)?;
         let zone_identifier = self.get_zone_identifier(&domain).await?.id;

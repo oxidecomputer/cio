@@ -6,7 +6,7 @@ use crate::{
     configs::Links,
     db::Database,
     dns_providers::DNSProviderOps,
-    dns_providers::{DnsRecord, DnsRecordType},
+    dns_providers::{DnsRecord, DnsRecordType, DnsUpdateMode},
     repos::GithubRepos,
     rfd::RFDs,
     templates::generate_nginx_files_for_shorturls,
@@ -297,21 +297,27 @@ where
 
         name = format!("{}.{}.{}", name, s.subdomain, company.domain);
         if dns_client
-            .ensure_record(DnsRecord {
-                name: name.to_string(),
-                type_: DnsRecordType::A,
-                content: company.nginx_ip.parse()?,
-            })
+            .ensure_record(
+                DnsRecord {
+                    name: name.to_string(),
+                    type_: DnsRecordType::A,
+                    content: company.nginx_ip.parse()?,
+                },
+                DnsUpdateMode::Replace,
+            )
             .await
             .is_err()
         {
             // Try it again, it might just have been a time out error.
             if let Err(e) = dns_client
-                .ensure_record(DnsRecord {
-                    name: name.to_string(),
-                    type_: DnsRecordType::A,
-                    content: company.nginx_ip.parse()?,
-                })
+                .ensure_record(
+                    DnsRecord {
+                        name: name.to_string(),
+                        type_: DnsRecordType::A,
+                        content: company.nginx_ip.parse()?,
+                    },
+                    DnsUpdateMode::Replace,
+                )
                 .await
             {
                 bail!("Error creating DNS record for `{}`: {}", name, e);

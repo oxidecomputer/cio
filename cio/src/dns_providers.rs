@@ -2,6 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use std::fmt;
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct DnsRecord {
     pub name: String,
     pub type_: DnsRecordType,
@@ -9,6 +10,7 @@ pub struct DnsRecord {
 }
 
 // We only support adding and removing a subset of the possible DNS types
+#[derive(Clone, Debug, PartialEq)]
 pub enum DnsRecordType {
     A,
     AAAA,
@@ -17,6 +19,12 @@ pub enum DnsRecordType {
     NS,
     SRV,
     TXT,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum DnsUpdateMode {
+    Append,
+    Replace,
 }
 
 impl fmt::Display for DnsRecordType {
@@ -37,7 +45,7 @@ impl fmt::Display for DnsRecordType {
 #[async_trait]
 pub trait DNSProviderOps {
     /// Ensure the record exists and has the correct information.
-    async fn ensure_record(&self, record: DnsRecord) -> Result<()>;
+    async fn ensure_record(&self, record: DnsRecord, mode: DnsUpdateMode) -> Result<()>;
 
     /// Delete the record if it exists.
     async fn delete_record(&self, record: DnsRecord) -> Result<()>;

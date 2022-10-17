@@ -4,47 +4,133 @@ use google_dns1::{
     api::{ManagedZone, ResourceRecordSet},
     hyper, hyper_rustls, Dns,
 };
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    ops::Add,
+    sync::{Arc, RwLock},
+    time::{Duration, Instant},
+};
 
-use crate::dns_providers::{DNSProviderOps, DnsRecord};
+use crate::dns_providers::{DNSProviderOps, DnsRecord, DnsUpdateMode};
+
+struct ZoneCache {
+    zones: Vec<ManagedZone>,
+    expires_at: Instant,
+}
+
+impl ZoneCache {
+    pub fn new(zones: Vec<ManagedZone>, ttl: u64) -> Self {
+        ZoneCache {
+            zones,
+            expires_at: Instant::now().add(Duration::from_secs(ttl)),
+        }
+    }
+
+    pub fn is_expired(&self) -> bool {
+        self.expires_at <= Instant::now()
+    }
+}
+
+struct RRSetsCache {
+    rrsets: HashMap<String, Vec<ResourceRecordSet>>,
+    expires_at: Instant,
+}
+
+impl RRSetsCache {
+    pub fn new(ttl: u64) -> Self {
+        RRSetsCache {
+            rrsets: HashMap::new(),
+            expires_at: Instant::now().add(Duration::from_secs(ttl)),
+        }
+    }
+
+    pub fn is_expired(&self) -> bool {
+        self.expires_at <= Instant::now()
+    }
+}
+
+type CloudDnsInternalClient = Dns<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>;
 
 pub struct CloudDnsClient {
     project: String,
-    inner: Arc<Dns<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>>,
+    inner: Arc<CloudDnsInternalClient>,
+    zone_cache: Arc<RwLock<ZoneCache>>,
+    zone_cache_ttl: u64,
+    rrsets_cache: Arc<RwLock<RRSetsCache>>,
+    rrsets_cache_ttl: u64,
 }
 
 impl CloudDnsClient {
-    async fn translate_domain_to_zone(&self, domain: &str) -> Result<Option<ManagedZone>> {
-        let (_, response) = self.inner.managed_zones().list(&self.project).doit().await?;
+    pub fn new(project: &str, client: CloudDnsInternalClient) -> Self {
+        CloudDnsClient {
+            project: project.to_string(),
+            inner: Arc::new(client),
+            zone_cache: Arc::new(RwLock::new(ZoneCache::new(vec![], 0))),
+            zone_cache_ttl: 30,
+            rrsets_cache: Arc::new(RwLock::new(RRSetsCache::new(0))),
+            rrsets_cache_ttl: 30,
+        }
+    }
 
-        if let Some(managed_zones) = response.managed_zones {
-            Ok(managed_zones.into_iter().find(|managed_zone| {
+    async fn translate_domain_to_zone(&self, domain: &str) -> Result<Option<ManagedZone>> {
+        let expired = self.zone_cache.read().unwrap().is_expired();
+
+        if expired {
+            let (_, response) = self.inner.managed_zones().list(&self.project).doit().await?;
+
+            if let Some(managed_zones) = response.managed_zones {
+                log::info!("Updated zone cache with {} zones", managed_zones.len());
+                *self.zone_cache.write().unwrap() = ZoneCache::new(managed_zones, self.zone_cache_ttl);
+            } else {
+                log::info!("Zone lookup during cache refresh returned an empty list of zones");
+            }
+        }
+
+        Ok(self
+            .zone_cache
+            .read()
+            .unwrap()
+            .zones
+            .iter()
+            .find(|managed_zone| {
                 // GCP zone DNS names end with a .
                 managed_zone
                     .dns_name
                     .as_ref()
                     .map(|dns_name| domain.ends_with(dns_name.trim_end_matches('.')))
                     .unwrap_or(false)
-            }))
-        } else {
-            Ok(None)
-        }
+            })
+            .cloned())
     }
 
     async fn find_name_and_type_matches(&self, zone: &str, record: &DnsRecord) -> Result<Vec<ResourceRecordSet>> {
+        let expired = self.rrsets_cache.read().unwrap().is_expired();
+
+        if expired {
+            *self.rrsets_cache.write().unwrap() = RRSetsCache::new(self.rrsets_cache_ttl);
+        }
+
+        let cache_available = self.rrsets_cache.read().unwrap().rrsets.get(zone).is_some();
+
+        if !cache_available {
+            let (_, response) = self
+                .inner
+                .resource_record_sets()
+                .list(&self.project, zone)
+                .doit()
+                .await?;
+
+            if let Some(sets) = response.rrsets {
+                self.rrsets_cache.write().unwrap().rrsets.insert(zone.to_string(), sets);
+            }
+        }
+
         let mut matches = vec![];
 
-        let (_, response) = self
-            .inner
-            .resource_record_sets()
-            .list(&self.project, zone)
-            .doit()
-            .await?;
-
-        if let Some(sets) = response.rrsets {
+        if let Some(sets) = self.rrsets_cache.read().unwrap().rrsets.get(zone) {
             for set in sets {
                 if set.name_match(record) && set.type_match(record) {
-                    matches.push(set);
+                    matches.push(set.clone());
                 }
             }
         }
@@ -82,10 +168,14 @@ impl RecordMatch<DnsRecord> for ResourceRecordSet {
     }
 }
 
+fn to_dns_name(name: &str) -> String {
+    name.trim_end_matches('.').to_string() + "."
+}
+
 #[async_trait]
 impl DNSProviderOps for CloudDnsClient {
     /// Ensure the record exists and has the correct information.
-    async fn ensure_record(&self, record: DnsRecord) -> Result<()> {
+    async fn ensure_record(&self, record: DnsRecord, mode: DnsUpdateMode) -> Result<()> {
         let zone = self
             .translate_domain_to_zone(&record.name)
             .await?
@@ -106,9 +196,13 @@ impl DNSProviderOps for CloudDnsClient {
             // If any existing record set fully covers our incoming record, then there is nothing
             // left to do
             if existing_record_set.covers(&record) {
+                log::info!("Record for {} already exists. No updates needed.", record.name);
                 return Ok(());
             }
         }
+
+        // Ensure the record name is appropriately formatted
+        let name = to_dns_name(&record.name);
 
         // We need to add information to either create a new record set or amend an existing one to
         // handle the incoming record
@@ -116,14 +210,16 @@ impl DNSProviderOps for CloudDnsClient {
         // If there are no records matching the (name, type) pair, then we can simply create a new
         // record set
         if existing_record_sets.is_empty() {
-            // Write the updated record set back to GCP
+            log::info!("Could not find an existing record for {}", record.name);
+
+            // Write the new record set to GCP
             let result = self
                 .inner
                 .resource_record_sets()
                 .create(
                     ResourceRecordSet {
                         kind: None,
-                        name: Some(record.name.clone()),
+                        name: Some(name),
                         routing_policy: None,
                         rrdatas: Some(vec![record.content.clone()]),
                         signature_rrdatas: None,
@@ -148,7 +244,11 @@ impl DNSProviderOps for CloudDnsClient {
 
             // This should always be Some, but it is simply to handle both cases
             if let Some(rrdatas) = existing_record_set.rrdatas.as_mut() {
-                rrdatas.push(record.content);
+                if mode == DnsUpdateMode::Append {
+                    rrdatas.push(record.content);
+                } else {
+                    *rrdatas = vec![record.content];
+                }
             } else {
                 existing_record_set.rrdatas = Some(vec![record.content]);
             }
@@ -161,7 +261,7 @@ impl DNSProviderOps for CloudDnsClient {
                     existing_record_set,
                     &self.project,
                     &zone_name,
-                    &record.name,
+                    &name,
                     &record.type_.to_string(),
                 )
                 .doit()
@@ -194,14 +294,18 @@ impl DNSProviderOps for CloudDnsClient {
         // The incoming record may be a subset of an existing record, check to see if there are any
         // records that already cover what this incoming record does.
         for mut existing_record_set in existing_record_sets.into_iter() {
-            // If any existing record set fully covers our incoming record, then there is nothing
-            // left to do
             if existing_record_set.covers(&record) {
-                if let Some(rrdatas) = existing_record_set.rrdatas.as_mut() {
-                    rrdatas.retain(|existing_record| existing_record != &record.content);
-                }
+                let name = to_dns_name(&record.name);
 
-                if existing_record_set.rrdatas.as_ref().map(|data| data.len()).unwrap_or(0) > 0 {
+                let data_count = if let Some(rrdatas) = existing_record_set.rrdatas.as_mut() {
+                    rrdatas.retain(|existing_record| existing_record != &record.content);
+                    rrdatas.len()
+                } else {
+                    // rrdatas should always be returned, but we need a fallback
+                    0
+                };
+
+                if data_count > 0 {
                     // Write the updated record set back to GCP
                     let result = self
                         .inner
@@ -210,7 +314,7 @@ impl DNSProviderOps for CloudDnsClient {
                             existing_record_set,
                             &self.project,
                             &zone_name,
-                            &record.name,
+                            &name,
                             &record.type_.to_string(),
                         )
                         .doit()
@@ -222,7 +326,7 @@ impl DNSProviderOps for CloudDnsClient {
                     let result = self
                         .inner
                         .resource_record_sets()
-                        .delete(&self.project, &zone_name, &record.name, &record.type_.to_string())
+                        .delete(&self.project, &zone_name, &name, &record.type_.to_string())
                         .doit()
                         .await?;
 
