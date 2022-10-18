@@ -61,9 +61,9 @@ pub struct CloudDnsClient {
 }
 
 impl CloudDnsClient {
-    pub fn new(project: &str, client: CloudDnsInternalClient) -> Self {
+    pub fn new(project: String, client: CloudDnsInternalClient) -> Self {
         CloudDnsClient {
-            project: project.to_string(),
+            project,
             inner: Arc::new(client),
             zone_cache: Arc::new(RwLock::new(ZoneCache::new(vec![], 0))),
             zone_cache_ttl: 30,

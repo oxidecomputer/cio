@@ -1050,7 +1050,7 @@ impl Company {
         let authenticator = self.authenticate_gcp().await?;
 
         Ok(CloudDnsClient::new(
-            "",
+            std::env::var("CLOUD_DNS_PROJECT").expect("Failed to find CLOUD_DNS_PROJECT config"),
             Dns::new(
                 google_dns1::hyper::Client::builder().build(
                     HttpsConnectorBuilder::new()
