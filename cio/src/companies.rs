@@ -11,9 +11,13 @@ use cloudflare::framework::{
 };
 use docusign::DocuSign;
 use google_calendar::Client as GoogleCalendar;
+use google_dns1::Dns;
 use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
-use google_storage1::{hyper::client::HttpConnector, hyper_rustls::HttpsConnector};
+use google_storage1::{
+    hyper::client::HttpConnector,
+    hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
+};
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
 use log::{info, warn};
@@ -40,10 +44,12 @@ use zoom_api::Client as Zoom;
 use crate::{
     airtable::{AIRTABLE_COMPANIES_TABLE, AIRTABLE_GRID_VIEW},
     api_tokens::{APIToken, NewAPIToken},
+    cloud_dns::CloudDnsClient,
     cloudflare::CloudFlareClient,
     configs::{Building, Buildings},
     core::UpdateAirtableRecord,
     db::Database,
+    dns_proxy::DnsProviderProxy,
     schema::{api_tokens, companys},
 };
 
@@ -1038,6 +1044,32 @@ impl Company {
             ),
             _ => Err(anyhow::anyhow!("Unsupported authentication mechanism encountered. Instance metadata authentication is the only supported authentication method."))
         }
+    }
+
+    pub async fn authenticate_cloud_dns(&self) -> Result<CloudDnsClient> {
+        let authenticator = self.authenticate_gcp().await?;
+
+        Ok(CloudDnsClient::new(
+            "",
+            Dns::new(
+                google_dns1::hyper::Client::builder().build(
+                    HttpsConnectorBuilder::new()
+                        .with_native_roots()
+                        .https_or_http()
+                        .enable_http1()
+                        .enable_http2()
+                        .build(),
+                ),
+                authenticator,
+            ),
+        ))
+    }
+
+    pub async fn authenticate_dns_providers(&self) -> Result<DnsProviderProxy> {
+        Ok(DnsProviderProxy::new(
+            self.authenticate_cloudflare()?,
+            self.authenticate_cloud_dns().await?,
+        ))
     }
 
     pub fn rfd_static_storage(&self) -> String {

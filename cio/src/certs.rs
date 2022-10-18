@@ -171,7 +171,7 @@ impl NewCertificate {
     /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
     /// The DNS Challenge TXT record is added to Cloudflare automatically.
     pub async fn create_cert(&mut self, company: &Company) -> Result<()> {
-        let api_client = company.authenticate_cloudflare()?;
+        let api_client = company.authenticate_dns_providers().await?;
 
         // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
         let persist = FilePersist::new(env::temp_dir());

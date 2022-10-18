@@ -23,6 +23,7 @@ pub mod core;
 pub mod customers;
 pub mod db;
 pub mod dns_providers;
+pub mod dns_proxy;
 #[macro_use]
 pub mod enclose;
 pub mod features;

@@ -545,7 +545,7 @@ pub async fn handle_configs_push(
             &api_context.db,
             github,
             company,
-            &company.authenticate_cloudflare()?,
+            &company.authenticate_dns_providers().await?,
             &repo,
         )
         .await?;
@@ -636,10 +636,11 @@ pub async fn handle_repository_event(
         &api_context.db,
         github,
         company,
-        &company.authenticate_cloudflare()?,
+        &company.authenticate_dns_providers().await?,
         "configs",
     )
     .await?;
+
     a("[SUCCESS]: generated short urls");
 
     // Sync the settings for this repo.
