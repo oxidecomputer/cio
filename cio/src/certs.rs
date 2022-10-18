@@ -218,7 +218,7 @@ impl NewCertificate {
                         type_: DnsRecordType::TXT,
                         content: challenge.dns_proof(),
                     },
-                    DnsUpdateMode::Append,
+                    DnsUpdateMode::Replace,
                 )
                 .await?;
 
