@@ -1929,7 +1929,7 @@ The applicants Airtable \
         // Get the last ten character of the string.
         if let Ok(phone_number) = phonenumber::parse(Some(country), &phone) {
             if !phone_number.is_valid() {
-                info!("phone number is invalid: {}", phone);
+                info!("phone number is invalid: {}", self.id);
             }
 
             phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
@@ -2068,7 +2068,10 @@ The applicants Airtable \
                 .files()
                 .create_or_update(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
                 .await?;
-            info!("uploaded completed file `{}` to drive", filename);
+            info!(
+                "uploaded completed `{}` file for user {} to drive",
+                document.name, self.id
+            );
         }
 
         // In order to not "over excessively poll the API here, we need to sleep for 15
