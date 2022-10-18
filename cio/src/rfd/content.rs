@@ -4,7 +4,7 @@ use log::info;
 use regex::Regex;
 use std::{
     borrow::Cow,
-    env, fs,
+    env, fmt, fs,
     path::{Path, PathBuf},
     process::Command,
     str::from_utf8,
@@ -110,10 +110,18 @@ impl<'a> RFDContent<'a> {
 
     /// Generate a PDF by combining RFD contents with static resources that are stored for a given
     /// RFD number on a specific branch. Markdown documents do not support PDF generation
-    pub async fn to_pdf(&self, title: &str, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDPdf> {
+    pub async fn to_pdf(
+        &self,
+        title: &str,
+        number: &RFDNumber,
+        branch: &GitHubRFDBranch,
+    ) -> Result<RFDPdf, RFDOutputError> {
         match self {
-            Self::Asciidoc(adoc) => adoc.to_pdf(title, number, branch).await,
-            _ => Err(anyhow::anyhow!("Only asciidoc supports PDF generation")),
+            Self::Asciidoc(adoc) => adoc
+                .to_pdf(title, number, branch)
+                .await
+                .map_err(RFDOutputError::Generic),
+            _ => Err(RFDOutputError::FormatNotSupported(RFDOutputFormat::Pdf)),
         }
     }
 
@@ -291,7 +299,7 @@ impl<'a> RFDAsciidoc<'a> {
     pub async fn to_html(&self, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDHtml> {
         self.download_images(number, branch).await?;
 
-        let mut html = RFDHtml(from_utf8(&self.parse(RFDAsciidocOutputFormat::Html).await?)?.to_string());
+        let mut html = RFDHtml(from_utf8(&self.parse(RFDOutputFormat::Html).await?)?.to_string());
         html.clean_links(&number.as_number_string());
 
         Ok(html)
@@ -302,7 +310,7 @@ impl<'a> RFDAsciidoc<'a> {
     pub async fn to_pdf(&self, title: &str, number: &RFDNumber, branch: &GitHubRFDBranch) -> Result<RFDPdf> {
         self.download_images(number, branch).await?;
 
-        let content = self.parse(RFDAsciidocOutputFormat::Pdf).await?;
+        let content = self.parse(RFDOutputFormat::Pdf).await?;
 
         let filename = format!(
             "RFD {} {}.pdf",
@@ -319,7 +327,7 @@ impl<'a> RFDAsciidoc<'a> {
 
     /// Parse the asciidoc content and generate output data of the requested format. This relies on
     /// invoking an external asciidoctor binary to perform the actual transformation.
-    async fn parse(&self, format: RFDAsciidocOutputFormat) -> Result<Vec<u8>> {
+    async fn parse(&self, format: RFDOutputFormat) -> Result<Vec<u8>> {
         info!("[asciidoc] Parsing asciidoc file");
 
         // Create the path to the local tmp file for holding the asciidoc contents
@@ -425,12 +433,12 @@ impl<'a> RFDAsciidoc<'a> {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum RFDAsciidocOutputFormat {
+pub enum RFDOutputFormat {
     Html,
     Pdf,
 }
 
-impl RFDAsciidocOutputFormat {
+impl RFDOutputFormat {
     /// Generate a command for parsing asciidoctor content
     pub fn command(&self, working_dir: &PathBuf, file_path: &Path) -> Command {
         match self {
@@ -456,6 +464,30 @@ impl RFDAsciidocOutputFormat {
 
                 command
             }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum RFDOutputError {
+    FormatNotSupported(RFDOutputFormat),
+    Generic(anyhow::Error),
+}
+
+impl fmt::Display for RFDOutputError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::FormatNotSupported(format) => write!(f, "{:?} format is not supported", format),
+            Self::Generic(inner) => write!(f, "Failed to generate RFD output due to {:?}", inner),
+        }
+    }
+}
+
+impl std::error::Error for RFDOutputError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Generic(inner) => Some(inner.as_ref()),
+            _ => None,
         }
     }
 }
@@ -960,7 +992,7 @@ in velit.
 
         assert_eq!(
             expected,
-            from_utf8(&rfd.parse(RFDAsciidocOutputFormat::Html).await.unwrap()).unwrap()
+            from_utf8(&rfd.parse(RFDOutputFormat::Html).await.unwrap()).unwrap()
         );
     }
 
@@ -971,7 +1003,7 @@ in velit.
         let _ = env_logger::builder().is_test(true).try_init();
 
         let rfd = RFDAsciidoc::new(Cow::Borrowed(test_rfd_content()));
-        let pdf = rfd.parse(RFDAsciidocOutputFormat::Pdf).await.unwrap();
+        let pdf = rfd.parse(RFDOutputFormat::Pdf).await.unwrap();
 
         let ref_path = format!(
             "{}/tests/ref/asciidoc_to_pdf.pdf",
