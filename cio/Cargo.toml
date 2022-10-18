@@ -43,7 +43,6 @@ docusign = "^0.1.0"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
-futures-util = "0.3"
 google-calendar = "^0.3.0"
 #google-calendar = { path = "../../third-party-api-clients/google/calendar" }
 google-drive = "^0.4.0"

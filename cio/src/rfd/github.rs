@@ -2,10 +2,10 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use csv::ReaderBuilder;
-use log::{info, warn};
+use log::info;
 use octorust::Client as Octorust;
 use serde::Deserialize;
-use std::{borrow::Cow, fmt, str::from_utf8, sync::Arc};
+use std::{borrow::Cow, fmt, future::Future, pin::Pin, str::from_utf8, sync::Arc};
 
 use crate::{
     companies::Company,
@@ -225,66 +225,50 @@ impl GitHubRFDBranch {
     /// Get a list of images that are store in this branch
     pub async fn get_images(&self, rfd_number: &RFDNumber) -> Result<Vec<octorust::types::ContentFile>> {
         let dir = rfd_number.repo_directory();
+        Self::get_images_internal(self.clone(), dir, *rfd_number).await
+    }
 
-        let mut files: Vec<octorust::types::ContentFile> = Default::default();
+    fn get_images_internal(
+        branch: Self,
+        dir: String,
+        rfd_number: RFDNumber,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<octorust::types::ContentFile>>> + Send + 'static>> {
+        Box::pin(async move {
+            let mut files: Vec<octorust::types::ContentFile> = Default::default();
 
-        // Get all the images in the branch and make sure they are in the images directory on master.
-        let resp = self
-            .client
-            .repos()
-            .get_content_vec_entries(&self.owner, &self.repo, &dir, &self.branch)
-            .await?;
+            let resp = branch
+                .client
+                .repos()
+                .get_content_vec_entries(&branch.owner, &branch.repo, &dir, &branch.branch)
+                .await?;
 
-        for file in resp {
-            info!(
-                "[rfd.get_images] Processing file {} ({}) {} / {}",
-                file.path, file.type_, self.repo, self.branch
-            );
+            for file in resp {
+                info!(
+                    "[rfd.get_images] Processing file {} ({}) {} / {}",
+                    file.path, file.type_, branch.repo, branch.branch
+                );
 
-            if file.type_ == "dir" {
-                let path = file.path.trim_end_matches('/');
-                // We have a directory. We need to get the file contents recursively.
-                // TODO: find a better way to make this recursive without pissing off tokio.
-                let resp2 = self
-                    .client
-                    .repos()
-                    .get_content_vec_entries(&self.owner, &self.repo, path, &self.branch)
+                if file.type_ == "dir" {
+                    let images = Self::get_images_internal(branch.clone(), file.path, rfd_number).await?;
+
+                    for image in images {
+                        files.push(image)
+                    }
+                } else if is_image(&file.name) {
+                    let f = crate::utils::get_github_entry_contents(
+                        &branch.client,
+                        &branch.owner,
+                        &branch.repo,
+                        &branch.branch,
+                        &file,
+                    )
                     .await?;
-                for file2 in resp2 {
-                    info!(
-                        "[rfd.get_images] Processing inner file {} ({}) {} / {}",
-                        file.path, file.type_, self.repo, self.branch
-                    );
-
-                    if file2.type_ == "dir" {
-                        let path = file2.path.trim_end_matches('/');
-                        warn!("skipping directory second level directory for parsing images: {}", path);
-                        continue;
-                    }
-
-                    if is_image(&file2.name) {
-                        let f = crate::utils::get_github_entry_contents(
-                            &self.client,
-                            &self.owner,
-                            &self.repo,
-                            &self.branch,
-                            &file2,
-                        )
-                        .await?;
-                        files.push(f);
-                    }
+                    files.push(f);
                 }
             }
 
-            if is_image(&file.name) {
-                let f =
-                    crate::utils::get_github_entry_contents(&self.client, &self.owner, &self.repo, &self.branch, &file)
-                        .await?;
-                files.push(f);
-            }
-        }
-
-        Ok(files)
+            Ok(files)
+        })
     }
 
     /// Find any existing pull request coming from the branch for this RFD
