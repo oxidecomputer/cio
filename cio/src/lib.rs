@@ -14,6 +14,7 @@ pub mod application_form;
 pub mod asset_inventory;
 pub mod auth_logins;
 pub mod certs;
+pub mod cloud_dns;
 pub mod cloudflare;
 pub mod colors;
 pub mod companies;
@@ -22,6 +23,7 @@ pub mod core;
 pub mod customers;
 pub mod db;
 pub mod dns_providers;
+pub mod dns_proxy;
 #[macro_use]
 pub mod enclose;
 pub mod features;

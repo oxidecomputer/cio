@@ -480,7 +480,7 @@ impl GenerateShortUrls {
             &api_context.db,
             github,
             &api_context.company,
-            &api_context.company.authenticate_cloudflare()?,
+            &api_context.company.authenticate_dns_providers().await?,
             "configs",
         )
         .await?;

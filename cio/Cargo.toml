@@ -122,6 +122,7 @@ zoho-api = { path = "../zoho-client" }
 zoom-api = "^0.2.3"
 stacker = "0.1.14"
 google-storage1 = "4.0.1"
+google-dns1 = "4.0.1"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]
