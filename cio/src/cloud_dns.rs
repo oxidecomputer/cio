@@ -113,16 +113,38 @@ impl CloudDnsClient {
         let cache_available = self.rrsets_cache.read().unwrap().rrsets.get(zone).is_some();
 
         if !cache_available {
-            let (_, response) = self
-                .inner
-                .resource_record_sets()
-                .list(&self.project, zone)
-                .doit()
-                .await?;
+            let mut rrsets = vec![];
+            let mut page_token: Option<String> = None;
 
-            if let Some(sets) = response.rrsets {
-                self.rrsets_cache.write().unwrap().rrsets.insert(zone.to_string(), sets);
+            loop {
+                let mut req = self
+                    .inner
+                    .resource_record_sets()
+                    .list(&self.project, zone)
+                    .max_results(1000);
+
+                if let Some(token) = page_token.take() {
+                    req = req.page_token(token.as_str());
+                }
+
+                let (_, resp) = req.doit().await?;
+
+                if let Some(mut sets) = resp.rrsets {
+                    rrsets.append(&mut sets);
+                }
+
+                if resp.next_page_token.is_some() {
+                    page_token = resp.next_page_token;
+                } else {
+                    break;
+                }
             }
+
+            self.rrsets_cache
+                .write()
+                .unwrap()
+                .rrsets
+                .insert(zone.to_string(), rrsets);
         }
 
         let mut matches = vec![];
