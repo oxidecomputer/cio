@@ -167,7 +167,7 @@ impl<'a> RFDContent<'a> {
     pub fn get_title(&self) -> String {
         let content = self.raw();
 
-        let mut re = Regex::new(r"(?m)(RFD .*$)").unwrap();
+        let mut re = Regex::new(r"(?m)^[=# ]+(RFD .*$)").unwrap();
         match re.find(content) {
             Some(v) => {
                 // TODO: find less horrible way to do this.
@@ -737,12 +737,12 @@ sdf
     fn test_get_markdown_discussion_link() {
         let content = r#"sdfsdf
 sdfsdf
-discussion: https://github.com/oxidecomputer/rfd/pulls/1
+discussion: https://github.com/org/repo/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
         let discussion = RFDContent::new_markdown(content).get_discussion();
-        let expected = "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
+        let expected = "https://github.com/org/repo/pulls/1".to_string();
         assert_eq!(expected, discussion);
     }
 
@@ -750,12 +750,12 @@ authors: nope"#;
     fn test_get_asciidoc_discussion_link() {
         let content = r#"sdfsdf
 = sdfgsdfgsdfg
-:discussion: https://github.com/oxidecomputer/rfd/pulls/1
+:discussion: https://github.com/org/repo/pulls/1
 dsfsdf
 sdf
 :discussion: nope"#;
         let discussion = RFDContent::new_asciidoc(content).get_discussion();
-        let expected = "https://github.com/oxidecomputer/rfd/pulls/1".to_string();
+        let expected = "https://github.com/org/repo/pulls/1".to_string();
         assert_eq!(expected, discussion);
     }
 
@@ -763,11 +763,11 @@ sdf
 
     #[test]
     fn test_update_existing_markdown_discussion_link() {
-        let link = "https://github.com/oxidecomputer/rfd/pulls/2019";
+        let link = "https://github.com/org/repo/pulls/2019";
 
         let content = r#"sdfsdf
         sdfsdf
-        discussion:   https://github.com/oxidecomputer/rfd/pulls/1
+        discussion:   https://github.com/org/repo/pulls/1
         dsfsdf
         sdf
         authors: nope"#;
@@ -776,7 +776,7 @@ sdf
 
         let expected = r#"sdfsdf
         sdfsdf
-        discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+        discussion: https://github.com/org/repo/pulls/2019
         dsfsdf
         sdf
         authors: nope"#;
@@ -785,12 +785,12 @@ sdf
 
     #[test]
     fn test_update_existing_asciidoc_discussion_link_and_ignores_markdown_link() {
-        let link = "https://github.com/oxidecomputer/rfd/pulls/2019";
+        let link = "https://github.com/org/repo/pulls/2019";
 
         let content = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
-:discussion: https://github.com/oxidecomputer/rfd/pulls/1
+:discussion: https://github.com/org/repo/pulls/1
 dsfsdf
 sdf
 :discussion: nope"#;
@@ -800,7 +800,7 @@ sdf
         let expected = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
-:discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+:discussion: https://github.com/org/repo/pulls/2019
 dsfsdf
 sdf
 :discussion: nope"#;
@@ -809,7 +809,7 @@ sdf
 
     #[test]
     fn test_update_missing_asciidoc_discussion_link_and_ignores_markdown_link() {
-        let link = "https://github.com/oxidecomputer/rfd/pulls/2019";
+        let link = "https://github.com/org/repo/pulls/2019";
 
         let content = r#"sdfsdf
 = sdfgsd
@@ -824,7 +824,7 @@ sdf
         let expected = r#"sdfsdf
 = sdfgsd
 discussion: fgsdfg
-:discussion: https://github.com/oxidecomputer/rfd/pulls/2019
+:discussion: https://github.com/org/repo/pulls/2019
 dsfsdf
 sdf
 :discussion: nope"#;
@@ -905,7 +905,7 @@ sdf
         let content = r#"things
 # RFD 43 Identity and Access Management (IAM)
 sdfsdf
-title: https://github.com/oxidecomputer/rfd/pulls/1
+title: https://github.com/org/repo/pulls/1
 dsfsdf
 sdf
 authors: nope"#;
@@ -918,7 +918,7 @@ authors: nope"#;
     fn test_get_asciidoc_title() {
         let content = r#"sdfsdf
 = RFD 43 Identity and Access Management (IAM)
-:title: https://github.com/oxidecomputer/rfd/pulls/1
+:title: https://github.com/org/repo/pulls/1
 dsfsdf
 = RFD 53 Bye
 sdf
@@ -934,13 +934,37 @@ sdf
         // the title.
         let content = r#"sdfsdf
 = Identity and Access Management (IAM)
-:title: https://github.com/oxidecomputer/rfd/pulls/1
+:title: https://github.com/org/repo/pulls/1
 dsfsdf
 sdf
 :title: nope"#;
         let rfd = RFDContent::new_asciidoc(content);
         let expected = "Identity and Access Management (IAM)".to_string();
         assert_eq!(expected, rfd.get_title());
+    }
+
+    #[test]
+    fn test_get_asciidoc_title_with_rfd_in_preamble() {
+        let content = r#"
+:showtitle:
+:toc: left
+:numbered:
+:icons: font
+:state: published
+:revremark: State: {state} | {discussion}
+:authors: First Last <first@company.com>
+
+// This is a preamble comment that contains the literal title prefix in the line below
+// Previously an instance of the text RFD 123: would cause title parsing to fail
+
+= RFD 123 This should be the title
+{authors}
+"#;
+
+        let rfd = RFDContent::new_asciidoc(Cow::Borrowed(content));
+        let expected = "This should be the title";
+
+        assert_eq!(expected, &rfd.get_title());
     }
 
     fn test_rfd_content() -> &'static str {
