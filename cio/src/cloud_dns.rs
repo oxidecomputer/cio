@@ -79,10 +79,10 @@ impl CloudDnsClient {
             let (_, response) = self.inner.managed_zones().list(&self.project).doit().await?;
 
             if let Some(managed_zones) = response.managed_zones {
-                log::info!("Updated zone cache with {} zones", managed_zones.len());
+                log::info!("[CloudDNS] Updated zone cache with {} zones", managed_zones.len());
                 *self.zone_cache.write().unwrap() = ZoneCache::new(managed_zones, self.zone_cache_ttl);
             } else {
-                log::info!("Zone lookup during cache refresh returned an empty list of zones");
+                log::info!("[CloudDNS] Zone lookup during cache refresh returned an empty list of zones");
             }
         }
 
@@ -140,7 +140,7 @@ impl CloudDnsClient {
                 }
             }
 
-            log::info!("Populating Cloud DNS cache with {} entrie", rrsets.len());
+            log::info!("[CloudDNS] Populating Cloud DNS cache with {} entries", rrsets.len());
 
             self.rrsets_cache
                 .write()
@@ -203,16 +203,22 @@ impl DNSProviderOps for CloudDnsClient {
         let zone = self
             .translate_domain_to_zone(&record.name)
             .await?
-            .ok_or_else(|| anyhow::anyhow!("Failed to find zone for {}", record.name))?;
+            .ok_or_else(|| anyhow::anyhow!("[CloudDNS] Failed to find zone for {}", record.name))?;
         let zone_name = zone.name.ok_or_else(|| {
             anyhow::anyhow!(
-                "Unable to operate on zone that does not have a name for {}",
-                record.name
+                "[CloudDNS] Unable to operate on zone that does not have a name for {:?}",
+                record
             )
         })?;
 
         // Find all of the records that match the name and type of the incoming record
         let mut existing_record_sets = self.find_name_and_type_matches(&zone_name, &record).await?;
+
+        log::info!(
+            "[CloudDNS] Found {} record sets that match the incoming record {:?}",
+            existing_record_sets.len(),
+            record
+        );
 
         // The incoming record may be a subset of an existing record, check to see if there are any
         // records that already cover what this incoming record does.
@@ -220,7 +226,7 @@ impl DNSProviderOps for CloudDnsClient {
             // If any existing record set fully covers our incoming record, then there is nothing
             // left to do
             if existing_record_set.covers(&record) {
-                log::info!("Record for {} already exists. No updates needed.", record.name);
+                log::info!("[CloudDNS] Record for {:?} already exists. No updates needed.", record);
                 return Ok(());
             }
         }
@@ -234,7 +240,7 @@ impl DNSProviderOps for CloudDnsClient {
         // If there are no records matching the (name, type) pair, then we can simply create a new
         // record set
         if existing_record_sets.is_empty() {
-            log::info!("Could not find an existing record for {}", record.name);
+            log::info!("[CloudDNS] Could not find an existing record for {:?}", record);
 
             // Write the new record set to GCP
             let result = self
@@ -256,7 +262,12 @@ impl DNSProviderOps for CloudDnsClient {
                 .doit()
                 .await?;
 
-            log::info!("Created {}::{} record : {:?}", record.type_, record.name, result);
+            log::info!(
+                "[CloudDNS] Created {}::{} record : {:?}",
+                record.type_,
+                record.name,
+                result
+            );
         } else if existing_record_sets.len() == 1 {
             // We need to determine the record set to add the record to. We expect that for a given
             // (name, type) pair there is at most a single record set. If multiple are found then
@@ -291,9 +302,18 @@ impl DNSProviderOps for CloudDnsClient {
                 .doit()
                 .await?;
 
-            log::info!("Updated {}::{} record : {:?}", record.type_, record.name, result);
+            log::info!(
+                "[CloudDNS] Updated {}::{} record : {:?}",
+                record.type_,
+                record.name,
+                result
+            );
         } else {
-            log::warn!("Encountered multiple record sets for {}::{}", record.type_, record.name);
+            log::warn!(
+                "[CloudDNS] Encountered multiple record sets for {}::{}",
+                record.type_,
+                record.name
+            );
         }
 
         Ok(())
@@ -304,10 +324,10 @@ impl DNSProviderOps for CloudDnsClient {
         let zone = self
             .translate_domain_to_zone(&record.name)
             .await?
-            .ok_or_else(|| anyhow::anyhow!("Failed to find zone for {}", record.name))?;
+            .ok_or_else(|| anyhow::anyhow!("[CloudDNS] Failed to find zone for {}", record.name))?;
         let zone_name = zone.name.ok_or_else(|| {
             anyhow::anyhow!(
-                "Unable to operate on zone that does not have a name for {}",
+                "[CloudDNS] Unable to operate on zone that does not have a name for {}",
                 record.name
             )
         })?;
@@ -344,7 +364,12 @@ impl DNSProviderOps for CloudDnsClient {
                         .doit()
                         .await?;
 
-                    log::info!("Updated {}::{} record : {:?}", record.type_, record.name, result);
+                    log::info!(
+                        "[CloudDNS] Updated {}::{} record : {:?}",
+                        record.type_,
+                        record.name,
+                        result
+                    );
                 } else {
                     // Delete the record from GCP
                     let result = self
@@ -354,7 +379,12 @@ impl DNSProviderOps for CloudDnsClient {
                         .doit()
                         .await?;
 
-                    log::info!("Deleted {}::{} record : {:?}", record.type_, record.name, result);
+                    log::info!(
+                        "[CloudDNS] Deleted {}::{} record : {:?}",
+                        record.type_,
+                        record.name,
+                        result
+                    );
                 }
             }
         }
