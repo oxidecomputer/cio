@@ -140,6 +140,8 @@ impl CloudDnsClient {
                 }
             }
 
+            log::info!("Populating Cloud DNS cache with {} entrie", rrsets.len());
+
             self.rrsets_cache
                 .write()
                 .unwrap()
