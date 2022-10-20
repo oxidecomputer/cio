@@ -203,7 +203,7 @@ impl DNSProviderOps for CloudDnsClient {
         let zone = self
             .translate_domain_to_zone(&record.name)
             .await?
-            .ok_or_else(|| anyhow::anyhow!("[CloudDNS] Failed to find zone for {}", record.name))?;
+            .ok_or_else(|| anyhow::anyhow!("[CloudDNS] Failed to find zone for {:?}", record))?;
         let zone_name = zone.name.ok_or_else(|| {
             anyhow::anyhow!(
                 "[CloudDNS] Unable to operate on zone that does not have a name for {:?}",
