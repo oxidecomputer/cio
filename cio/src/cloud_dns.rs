@@ -199,7 +199,7 @@ impl RecordMatch<DnsRecord> for ResourceRecordSet {
 }
 
 fn to_dns_name(name: &str) -> String {
-    name.trim_end_matches('.').to_string() + "."
+    name.trim_end_matches('.').to_lowercase() + "."
 }
 
 #[async_trait]
