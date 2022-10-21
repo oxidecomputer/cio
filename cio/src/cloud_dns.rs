@@ -171,7 +171,13 @@ trait RecordMatch<T> {
 
 impl RecordMatch<DnsRecord> for ResourceRecordSet {
     fn name_match(&self, other: &DnsRecord) -> bool {
-        self.name.as_ref().map(|name| name == &other.name).unwrap_or(false)
+        self.name
+            .as_ref()
+            .map(|name| {
+                // Note that names are normalized to include a trailing dot
+                to_dns_name(name) == to_dns_name(&other.name)
+            })
+            .unwrap_or(false)
     }
 
     fn type_match(&self, other: &DnsRecord) -> bool {
