@@ -63,6 +63,7 @@ Inflector = "^0.11.4"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 log = { version = "0.4", features = ["serde"] }
 macros = { path = "../macros" }
+mailerlite = { path = "../mailerlite" }
 # mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
