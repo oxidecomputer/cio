@@ -256,11 +256,6 @@ pub async fn refresh_shorturls(db: &Database, company: &Company) -> Result<()> {
     generate_shorturls_for_rfds(db, &github, company, &provider, "configs").await?;
     generate_shorturls_for_configs_links(db, &github, company, &provider, "configs").await?;
 
-    // Only do this if we can auth with Tailscale.
-    if !company.tailscale_api_key.is_empty() {
-        generate_dns_for_tailscale_devices(company, &provider).await?;
-    }
-
     Ok(())
 }
 
