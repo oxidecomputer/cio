@@ -18,6 +18,7 @@ pub mod handlers_rfd;
 pub mod handlers_slack;
 // mod handlers_sendgrid;
 mod http;
+mod mailing_lists;
 mod repos;
 mod sagas;
 pub mod server;

@@ -5,10 +5,11 @@ use std::{str::FromStr, sync::Arc};
 use thiserror::Error;
 
 pub mod endpoints;
+mod additional_serde;
 pub mod types;
 
 use endpoints::MailerliteEndpoint;
-use types::*;
+pub use types::*;
 
 #[derive(Debug)]
 pub struct MailerliteClient {
