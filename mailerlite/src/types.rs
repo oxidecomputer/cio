@@ -20,8 +20,32 @@ pub struct Subscriber {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub fields: SubscriberFields,
+    pub groups: Vec<SubscriberGroup>,
     pub opted_in_at: Option<DateTime<Utc>>,
     pub optin_ip: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriberGroup {
+    id: String,
+    name: String,
+    active_count: u64,
+    sent_count: u64,
+    opens_count: u64,
+    open_rate: SubscriberGroupRate,
+    clicks_count: u64,
+    click_rate: SubscriberGroupRate,
+    unsubscribed_count: u64,
+    unconfirmed_count: u64,
+    bounced_count: u64,
+    junk_count: u64,
+    created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriberGroupRate {
+    float: f64,
+    string: String,
 }
 
 impl Subscriber {
@@ -51,6 +75,7 @@ pub struct ApiSubscriber {
     created_at: FormattedDateTime,
     updated_at: FormattedDateTime,
     fields: SubscriberFields,
+    groups: Vec<ApiSubscriberGroup>,
     opted_in_at: Option<FormattedDateTime>,
     optin_ip: Option<String>,
 }
@@ -73,8 +98,50 @@ impl ApiSubscriber {
             created_at: into_utc(self.created_at, tz)?,
             updated_at: into_utc(self.updated_at, tz)?,
             fields: self.fields,
+            groups: self
+                .groups
+                .into_iter()
+                .map(|g| g.into_group(tz))
+                .collect::<Result<Vec<SubscriberGroup>, FailedToTranslateDateError>>()?,
             opted_in_at: self.opted_in_at.map(|t| into_utc(t, tz)).transpose()?,
             optin_ip: self.optin_ip,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiSubscriberGroup {
+    id: String,
+    name: String,
+    active_count: u64,
+    sent_count: u64,
+    opens_count: u64,
+    open_rate: SubscriberGroupRate,
+    clicks_count: u64,
+    click_rate: SubscriberGroupRate,
+    unsubscribed_count: u64,
+    unconfirmed_count: u64,
+    bounced_count: u64,
+    junk_count: u64,
+    created_at: FormattedDateTime,
+}
+
+impl ApiSubscriberGroup {
+    pub fn into_group(self, tz: &impl TimeZone) -> Result<SubscriberGroup, FailedToTranslateDateError> {
+        Ok(SubscriberGroup {
+            id: self.id,
+            name: self.name,
+            active_count: self.active_count,
+            sent_count: self.sent_count,
+            opens_count: self.opens_count,
+            open_rate: self.open_rate,
+            clicks_count: self.clicks_count,
+            click_rate: self.click_rate,
+            unsubscribed_count: self.unsubscribed_count,
+            unconfirmed_count: self.unconfirmed_count,
+            bounced_count: self.bounced_count,
+            junk_count: self.junk_count,
+            created_at: into_utc(self.created_at, tz)?,
         })
     }
 }
@@ -168,6 +235,7 @@ mod tests {
             created_at: test_date.clone(),
             updated_at: test_date.clone(),
             fields: HashMap::new(),
+            groups: vec![],
             opted_in_at: Some(test_date.clone()),
             optin_ip: None,
         };

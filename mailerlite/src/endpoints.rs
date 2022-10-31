@@ -108,7 +108,7 @@ pub struct WriteSubscriberRequest {
     #[builder(default)]
     fields: Option<SubscriberFields>,
     #[builder(default)]
-    groups: Option<Vec<String>>,
+    groups: Vec<String>,
     #[builder(default)]
     status: Option<SubscriberStatus>,
     #[builder(default)]
@@ -127,7 +127,7 @@ pub struct WriteSubscriberRequest {
 pub struct WriteSubscriberRequestWithFormattedDateTimes {
     email: String,
     fields: Option<SubscriberFields>,
-    groups: Option<Vec<String>>,
+    groups: Vec<String>,
     status: Option<SubscriberStatus>,
     subscribed_at: Option<FormattedDateTime>,
     ip_address: Option<Ipv4Addr>,
@@ -197,7 +197,13 @@ impl MailerliteEndpoint for WriteSubscriberRequest {
         Self::Response: DeserializeOwned,
         Tz: TimeZone + Send + Sync,
     {
-        let raw_subscriber_data: WriteSubscriberResponse<ApiSubscriber> = response.json().await?;
+        let text = response.text().await?;
+
+        println!("{:#?}", text);
+
+        let raw_subscriber_data: WriteSubscriberResponse<ApiSubscriber> = serde_json::from_str(&text).unwrap();
+
+        println!("{:#?}", raw_subscriber_data);
 
         Ok(match raw_subscriber_data {
             WriteSubscriberResponse::Success { data } => WriteSubscriberResponse::Success {
@@ -361,11 +367,11 @@ mod tests {
             "phone": null,
             "state": null,
             "z_i_p": null
-        }
-    },
-    "groups": [],
-    "opted_in_at": null,
-    "optin_ip": null
+        },
+        "groups": [],
+        "opted_in_at": null,
+        "optin_ip": null
+    }
 }"#;
 
         let req = GetSubscriberRequest {
@@ -403,7 +409,7 @@ mod tests {
         let req = WriteSubscriberRequest {
             email: "test-email@test-domain.com".to_string(),
             fields: Some(fields),
-            groups: Some(vec![]),
+            groups: vec![],
             status: Some(SubscriberStatus::Junk),
             subscribed_at: None,
             ip_address: None,
