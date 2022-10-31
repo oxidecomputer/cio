@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
 use macros::db;
+use mailerlite::SubscriberFieldValue;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
@@ -309,5 +310,66 @@ impl Into<NewRackLineSubscriber> for mailchimp_minimal_api::Member {
             zoho_lead_id: Default::default(),
             zoho_lead_exclude: false,
         }
+    }
+}
+
+impl From<mailerlite::Subscriber> for NewRackLineSubscriber {
+    fn from(subscriber: mailerlite::Subscriber) -> Self {
+        let mut new_sub = NewRackLineSubscriber::default();
+
+        if let Some(name) = subscriber.get_field("name") {
+            match name {
+                SubscriberFieldValue::String(name) => new_sub.name = name.clone(),
+                _ => log::warn!(
+                    "Non-string field type found for name field for subscriber {}",
+                    subscriber.id
+                ),
+            }
+        }
+
+        if let Some(company) = subscriber.get_field("company") {
+            match company {
+                SubscriberFieldValue::String(company) => new_sub.company = company.clone(),
+                _ => log::warn!(
+                    "Non-string field type found for company field for subscriber {}",
+                    subscriber.id
+                ),
+            }
+        }
+
+        if let Some(company_size) = subscriber.get_field("company_size") {
+            match company_size {
+                SubscriberFieldValue::String(company_size) => new_sub.company_size = company_size.clone(),
+                _ => log::warn!(
+                    "Non-string field type found for company_size field for subscriber {}",
+                    subscriber.id
+                ),
+            }
+        }
+
+        if let Some(notes) = subscriber.get_field("notes") {
+            match notes {
+                SubscriberFieldValue::String(notes) => new_sub.interest = notes.clone(),
+                _ => log::warn!(
+                    "Non-string field type found for notes field for subscriber {}",
+                    subscriber.id
+                ),
+            }
+        }
+
+        new_sub.email = subscriber.email;
+
+        new_sub.date_added = subscriber.subscribed_at;
+
+        if let Some(opted_in_at) = subscriber.opted_in_at {
+            new_sub.date_optin = opted_in_at;
+        }
+
+        new_sub.date_last_changed = subscriber.updated_at;
+
+        // Hack to be removed later
+        new_sub.cio_company_id = 1;
+
+        new_sub
     }
 }

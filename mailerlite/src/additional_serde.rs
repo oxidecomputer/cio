@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use serde::{de, Serializer, Serialize, Deserializer, Deserialize};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
 use crate::FormattedDateTime;
@@ -26,7 +26,7 @@ impl<'de> de::Visitor<'de> for FormattedDateTimeVisitor {
     where
         E: de::Error,
     {
-        NaiveDateTime::parse_from_str(&value, "%Y-%m-%d %H:%M:%S")
+        NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S")
             .map(FormattedDateTime)
             .map_err(E::custom)
     }
@@ -49,13 +49,15 @@ mod tests {
     #[test]
     fn test_serde_formatted_date_time() {
         let date = NaiveDateTime::from_timestamp(1666708534, 0);
-        
+
         #[derive(Debug, Deserialize, Serialize, PartialEq)]
         struct Wrapper {
-            inner: Option<FormattedDateTime>
+            inner: Option<FormattedDateTime>,
         }
 
-        let expected = Wrapper { inner: Some(FormattedDateTime(date)) };
+        let expected = Wrapper {
+            inner: Some(FormattedDateTime(date)),
+        };
         let serialized = serde_json::to_string(&expected).unwrap();
         let test = serde_json::from_str(&serialized).unwrap();
 

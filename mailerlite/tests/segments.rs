@@ -1,7 +1,8 @@
+use chrono::Utc;
 use mailerlite::{endpoints::ListSegmentSubscribersRequestBuilder, MailerliteClient};
 
-fn client() -> MailerliteClient {
-    MailerliteClient::new(std::env::var("API_KEY").unwrap())
+fn client() -> MailerliteClient<Utc> {
+    MailerliteClient::new(std::env::var("API_KEY").unwrap(), Utc)
 }
 
 #[ignore]

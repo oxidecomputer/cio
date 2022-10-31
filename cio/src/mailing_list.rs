@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use chrono::{offset::Utc, DateTime, TimeZone};
 use chrono_humanize::HumanTime;
 use macros::db;
+use mailerlite::SubscriberFieldValue;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use slack_chat_api::{FormattedMessage, MessageBlock, MessageBlockText, MessageBlockType, MessageType};
@@ -386,5 +387,56 @@ impl Into<NewMailingListSubscriber> for mailchimp_minimal_api::Member {
         ns.populate_formatted_address();
 
         ns
+    }
+}
+
+impl From<mailerlite::Subscriber> for NewMailingListSubscriber {
+    fn from(subscriber: mailerlite::Subscriber) -> Self {
+        let mut new_sub = NewMailingListSubscriber::default();
+
+        if let Some(name) = subscriber.get_field("name") {
+            match name {
+                SubscriberFieldValue::String(name) => new_sub.name = name.clone(),
+                _ => log::warn!(
+                    "Non-string field type found for name field for subscriber {}",
+                    subscriber.id
+                ),
+            }
+        }
+
+        if let Some(company) = subscriber.get_field("company") {
+            match company {
+                SubscriberFieldValue::String(company) => new_sub.company = company.clone(),
+                _ => log::warn!(
+                    "Non-string field type found for company field for subscriber {}",
+                    subscriber.id
+                ),
+            }
+        }
+
+        if let Some(company) = subscriber.get_field("company") {
+            match company {
+                SubscriberFieldValue::String(company) => new_sub.company = company.clone(),
+                _ => log::warn!(
+                    "Non-string field type found for company field for subscriber {}",
+                    subscriber.id
+                ),
+            }
+        }
+
+        new_sub.email = subscriber.email;
+
+        new_sub.date_added = subscriber.subscribed_at;
+
+        if let Some(opted_in_at) = subscriber.opted_in_at {
+            new_sub.date_optin = opted_in_at;
+        }
+
+        new_sub.date_last_changed = subscriber.updated_at;
+
+        // Hack to be removed later
+        new_sub.cio_company_id = 1;
+
+        new_sub
     }
 }
