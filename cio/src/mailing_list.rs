@@ -426,7 +426,9 @@ impl From<mailerlite::Subscriber> for NewMailingListSubscriber {
 
         new_sub.email = subscriber.email;
 
-        new_sub.date_added = subscriber.subscribed_at;
+        if let Some(subscribed_at) = subscriber.subscribed_at {
+            new_sub.date_added = subscribed_at;
+        }
 
         if let Some(opted_in_at) = subscriber.opted_in_at {
             new_sub.date_optin = opted_in_at;

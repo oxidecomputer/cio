@@ -27,7 +27,7 @@ pub struct MailerliteClient<Tz> {
 
 #[derive(Debug, Clone, Error)]
 pub enum MailerliteError {
-    #[error("Inner request failed")]
+    #[error("Inner request failed {0}")]
     Inner(Arc<ReqwestError>),
     #[error("Failed to translate from API date representation to UTC")]
     DateTranslationError(FailedToTranslateDateError),

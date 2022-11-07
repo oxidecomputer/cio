@@ -50,6 +50,7 @@ pub trait MailerliteEndpoint {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Builder)]
+#[builder(pattern = "owned")]
 pub struct GetSubscriberRequest {
     /// Subscriber identifer can be either and id number or an email
     subscriber_identifier: String,
@@ -103,6 +104,7 @@ impl MailerliteEndpoint for GetSubscriberRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Builder)]
+#[builder(pattern = "owned")]
 pub struct WriteSubscriberRequest {
     email: String,
     #[builder(default)]
@@ -197,15 +199,9 @@ impl MailerliteEndpoint for WriteSubscriberRequest {
         Self::Response: DeserializeOwned,
         Tz: TimeZone + Send + Sync,
     {
-        let text = response.text().await?;
+        let response: WriteSubscriberResponse<ApiSubscriber> = response.json().await?;
 
-        println!("{:#?}", text);
-
-        let raw_subscriber_data: WriteSubscriberResponse<ApiSubscriber> = serde_json::from_str(&text).unwrap();
-
-        println!("{:#?}", raw_subscriber_data);
-
-        Ok(match raw_subscriber_data {
+        Ok(match response {
             WriteSubscriberResponse::Success { data } => WriteSubscriberResponse::Success {
                 data: data.into_subscriber(&ctx.time_zone)?,
             },
@@ -215,27 +211,35 @@ impl MailerliteEndpoint for WriteSubscriberRequest {
 }
 
 #[derive(Debug, Clone, Builder)]
+#[builder(pattern = "owned")]
 pub struct ListSegmentSubscribersRequest {
     segment_id: String,
-    #[builder(default)]
+    #[builder(setter(strip_option), default)]
     filter_status: Option<SubscriberStatus>,
-    #[builder(default)]
+    #[builder(setter(strip_option), default)]
     limit: Option<u64>,
-    #[builder(default)]
-    after: Option<String>,
+    #[builder(setter(strip_option), default)]
+    after: Option<u64>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ListSegmentSubscribersResponse<T> {
-    pub data: Vec<T>,
-    pub meta: ListSegmentSubscribersResponseMeta,
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ListSegmentSubscribersResponse<T> {
+    Success {
+        data: Vec<T>,
+        meta: ListSegmentSubscribersResponseMeta
+    },
+    Error {
+        message: String
+    },
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ListSegmentSubscribersResponseMeta {
     pub total: u64,
     pub count: u64,
-    pub last: u64,
+    pub last: Option<u64>,
 }
 
 #[async_trait]
@@ -268,25 +272,31 @@ impl MailerliteEndpoint for ListSegmentSubscribersRequest {
         Tz: TimeZone + Send + Sync,
     {
         if response.status() == StatusCode::NOT_FOUND {
-            Ok(ListSegmentSubscribersResponse {
+            Ok(ListSegmentSubscribersResponse::Success {
                 data: vec![],
                 meta: ListSegmentSubscribersResponseMeta {
                     total: 0,
                     count: 0,
-                    last: 0,
+                    last: None,
                 },
             })
         } else {
-            let raw_subscriber_data: ListSegmentSubscribersResponse<ApiSubscriber> = response.json().await?;
+            let response: ListSegmentSubscribersResponse<ApiSubscriber> = response.json().await?;
 
-            Ok(ListSegmentSubscribersResponse {
-                data: raw_subscriber_data
-                    .data
-                    .into_iter()
-                    .map(|s| s.into_subscriber(&ctx.time_zone))
-                    .collect::<Result<Vec<Subscriber>, FailedToTranslateDateError>>()?,
-                meta: raw_subscriber_data.meta,
-            })
+            match response {
+                ListSegmentSubscribersResponse::Success { data, meta } => {
+                    Ok(ListSegmentSubscribersResponse::Success {
+                        data: data
+                            .into_iter()
+                            .map(|s| s.into_subscriber(&ctx.time_zone))
+                            .collect::<Result<Vec<Subscriber>, FailedToTranslateDateError>>()?,
+                        meta,
+                    })
+                },
+                ListSegmentSubscribersResponse::Error { message } => {
+                    Ok(ListSegmentSubscribersResponse::Error { message })
+                }
+            }
         }
     }
 }
@@ -439,7 +449,7 @@ mod tests {
             segment_id: "test_segment".to_string(),
             filter_status: Some(SubscriberStatus::Junk),
             limit: Some(5),
-            after: Some("2".to_string()),
+            after: Some(2),
         };
 
         let builder = req.to_request_builder("https://localhost:1234/api", &Client::new(), &ctx());

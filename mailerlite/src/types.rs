@@ -15,7 +15,7 @@ pub struct Subscriber {
     pub open_rate: f64,
     pub click_rate: f64,
     pub ip_address: Option<String>,
-    pub subscribed_at: DateTime<Utc>,
+    pub subscribed_at: Option<DateTime<Utc>>,
     pub unsubscribed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -70,7 +70,7 @@ pub struct ApiSubscriber {
     open_rate: f64,
     click_rate: f64,
     ip_address: Option<String>,
-    subscribed_at: FormattedDateTime,
+    subscribed_at: Option<FormattedDateTime>,
     unsubscribed_at: Option<FormattedDateTime>,
     created_at: FormattedDateTime,
     updated_at: FormattedDateTime,
@@ -93,7 +93,7 @@ impl ApiSubscriber {
             open_rate: self.open_rate,
             click_rate: self.click_rate,
             ip_address: self.ip_address,
-            subscribed_at: into_utc(self.subscribed_at, tz)?,
+            subscribed_at: self.subscribed_at.map(|t| into_utc(t, tz)).transpose()?,
             unsubscribed_at: self.unsubscribed_at.map(|t| into_utc(t, tz)).transpose()?,
             created_at: into_utc(self.created_at, tz)?,
             updated_at: into_utc(self.updated_at, tz)?,
@@ -180,6 +180,7 @@ pub enum SubscriberFieldValue {
     String(String),
     Number(i64),
     Date(FormattedDateTime),
+    Null,
 }
 
 impl From<String> for SubscriberFieldValue {
