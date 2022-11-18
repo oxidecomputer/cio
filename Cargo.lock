@@ -79,7 +79,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "schemars",
  "serde",
  "serde_json",
@@ -96,7 +96,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "schemars",
  "serde",
  "serde_json",
@@ -278,6 +278,17 @@ name = "async-recursion"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7d78656ba01f1b93024b7c3a0467f1608e4be67d725749fdcd7d2c7678fd7a2"
+dependencies = [
+ "proc-macro2 1.0.41",
+ "quote 1.0.20",
+ "syn 1.0.98",
+]
+
+[[package]]
+name = "async-recursion"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cda8f4bcc10624c4e85bc66b3f452cca98cfa5ca002dc83a16aad2367641bea"
 dependencies = [
  "proc-macro2 1.0.41",
  "quote 1.0.20",
@@ -803,7 +814,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "revai",
  "ring",
  "schemars",
@@ -814,7 +825,7 @@ dependencies = [
  "sheets",
  "shipbob",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slack-chat-api 0.3.1",
  "sodiumoxide",
  "stacker",
  "steno",
@@ -1991,23 +2002,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "700d0bff7f4db2ebd7c7a7e509835fbb06ca3d4e88711b8579b9122f53f46df0"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "base64 0.12.3",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
- "pem",
+ "pem 0.8.3",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "ring",
  "schemars",
  "serde",
@@ -2047,23 +2058,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94180d57cf63bba32c511737f8db1f500c4d4b87d247d2d8daf8ad5d65c460de"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "base64 0.12.3",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
- "pem",
+ "pem 0.8.3",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "ring",
  "schemars",
  "serde",
@@ -2103,23 +2114,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "406c77abe1b68623d58cd514fc6865e787844d29db3f7245f120542102b3c207"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "base64 0.12.3",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
- "pem",
+ "pem 0.8.3",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "ring",
  "schemars",
  "serde",
@@ -2170,23 +2181,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "18ee21a2763d7ee89f5394c24ba1c23b4c177637f3209d6f4450d4864489836e"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "base64 0.12.3",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
- "pem",
+ "pem 0.8.3",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "ring",
  "schemars",
  "serde",
@@ -2206,20 +2217,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcddc0bc031f8bfe092113c1d7125d0305bb52e5867e64dd58fc0db9b4a2649e"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "schemars",
  "serde",
  "serde_json",
@@ -2691,11 +2702,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "afabcc15e437a6484fc4f12d0fd63068fe457bf93f1c148d3d9649c60b103f32"
 dependencies = [
  "base64 0.12.3",
- "pem",
+ "pem 0.8.3",
  "ring",
  "serde",
  "serde_json",
- "simple_asn1",
+ "simple_asn1 0.4.1",
+]
+
+[[package]]
+name = "jsonwebtoken"
+version = "8.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aa4b4af834c6cfd35d8763d359661b90f2e45d8f750a0849156c7f4671af09c"
+dependencies = [
+ "base64 0.13.0",
+ "pem 1.1.0",
+ "ring",
+ "serde",
+ "serde_json",
+ "simple_asn1 0.6.2",
 ]
 
 [[package]]
@@ -3176,6 +3201,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-bigint"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f93ab6289c7b344a8a9f60f88d80aa20032336fe78da341afc91c8a2341fc75f"
+dependencies = [
+ "autocfg 1.1.0",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
 name = "num-derive"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3273,21 +3309,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9541376e7f3dd40c4efdf2a7342d961ce506f33cf0cb828b7ca5b7b1d83dce87"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "chrono",
  "dirs 3.0.2",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
- "pem",
+ "pem 0.8.3",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "ring",
  "schemars",
  "serde",
@@ -3304,20 +3340,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f1235b6a27c1755c1979dcad14d2b5be92c33513e392c822497a42aea64e33d"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "schemars",
  "serde",
  "serde_json",
@@ -3594,6 +3630,15 @@ dependencies = [
  "base64 0.13.0",
  "once_cell",
  "regex",
+]
+
+[[package]]
+name = "pem"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03c64931a1a212348ec4f3b4362585eca7159d0d09cbdf4a7f74f02173596fd4"
+dependencies = [
+ "base64 0.13.0",
 ]
 
 [[package]]
@@ -4109,20 +4154,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "846034baac1a91b8437044a3c0cc5d78cee672112aed338af49d1cafc125ba8f"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "schemars",
  "serde",
  "serde_json",
@@ -4473,6 +4518,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "reqwest-tracing"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64977f9a47fa7768cc88751e29026e569730ac1667c2eaeaac04b32624849fbe"
+dependencies = [
+ "async-trait",
+ "opentelemetry",
+ "reqwest",
+ "reqwest-middleware",
+ "task-local-extensions",
+ "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+]
+
+[[package]]
 name = "retry-policies"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4490,22 +4551,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "752d03507ca7184a5e75dca3c36ebcf579fe3dbaaef30200ec368a9e09de00b5"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
- "pem",
+ "pem 0.8.3",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "ring",
  "schemars",
  "serde",
@@ -4826,21 +4887,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13411cc8364e5a173eac568476d55fcba897f1c15fd9543363724a4915b5f038"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
- "pem",
+ "pem 0.8.3",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "ring",
  "schemars",
  "serde",
@@ -5204,23 +5265,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a04959747f7884c871810597e0c1de0a638f988e949697b9691887676869fdd"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "base64 0.12.3",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
- "pem",
+ "pem 0.8.3",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-conditional-middleware",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "ring",
  "schemars",
  "serde",
@@ -5246,20 +5307,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5a67e1634c35c60276c64ee45b22ee1c6aaeb300c58a5ed3e4541c25d01c9ab"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "schemars",
  "serde",
  "serde_json",
@@ -5335,8 +5396,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "692ca13de57ce0613a363c8c2f1de925adebc81b04c923ac60c5488bb44abe4b"
 dependencies = [
  "chrono",
- "num-bigint",
+ "num-bigint 0.2.6",
  "num-traits",
+]
+
+[[package]]
+name = "simple_asn1"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adc4e5204eb1910f40f9cfa375f6f05b68c3abac4b6fd879c8ff5e7ae8a0a085"
+dependencies = [
+ "num-bigint 0.4.3",
+ "num-traits",
+ "thiserror",
+ "time 0.3.11",
 ]
 
 [[package]]
@@ -5375,18 +5448,35 @@ dependencies = [
 
 [[package]]
 name = "slack-chat-api"
-version = "0.1.46"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b0fda63848f9645d90a01a22110b261b5d84f26acb555780091ad321084e5c7"
+checksum = "8c761750b96c3cf3119c988a4ad13df0e209f63b5d41fb5a6c282dd00490697e"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 1.0.0",
+ "async-trait",
+ "bytes",
  "chrono",
+ "http",
+ "hyperx",
+ "jsonwebtoken 8.1.1",
+ "log 0.4.17",
+ "mime 0.3.16",
+ "pem 1.1.0",
+ "percent-encoding 2.1.0",
  "reqwest",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing 0.3.1",
+ "ring",
  "schemars",
  "serde",
  "serde_json",
- "uuid 0.8.2",
+ "serde_urlencoded",
+ "tokio",
+ "url 2.2.2",
+ "uuid 1.1.2",
 ]
 
 [[package]]
@@ -6124,20 +6214,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d56c05a59116596f9319a25d17fd90633ef3c9de70c1461cb73d9121ce03d77"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "schemars",
  "serde",
  "serde_json",
@@ -6573,7 +6663,7 @@ dependencies = [
  "shipbob",
  "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook",
- "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slack-chat-api 0.3.1",
  "slog",
  "slog-async",
  "slog-json",
@@ -6843,20 +6933,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "01a6cea2b4f67aa5e78acf4bfaf0e3bdd11fd08a39efd285d84eb1cdd71eb566"
 dependencies = [
  "anyhow",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-trait",
  "bytes",
  "chrono",
  "http",
  "hyperx",
- "jsonwebtoken",
+ "jsonwebtoken 7.2.0",
  "log 0.4.17",
  "mime 0.3.16",
  "percent-encoding 2.1.0",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "reqwest-tracing",
+ "reqwest-tracing 0.2.3",
  "schemars",
  "serde",
  "serde_json",
