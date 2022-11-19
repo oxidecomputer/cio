@@ -866,7 +866,7 @@ pub struct Extra {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Insurance {
     /// The value of the parcel or shipment to insure.
-    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[serde(default)]
     pub amount: f64,
     /// The currency to use for the previous amount value.
     /// "USD" | "CAD", etc.
