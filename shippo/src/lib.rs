@@ -872,10 +872,10 @@ pub struct Insurance {
     /// "USD" | "CAD", etc.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub currency: String,
-    /// A short description of the contents of the parcel or shipment.
-    /// "5 t-shirts"
+    /// The shipping insurance provider.
+    /// "FEDEX" | "UPS"
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub content: String,
+    pub provider: String,
 }
 
 /// The data type for a rate.
