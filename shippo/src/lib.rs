@@ -657,6 +657,9 @@ pub struct Shipment {
     /// Indicates whether the object has been created in test mode.
     #[serde(default)]
     pub test: bool,
+    /// Add extra options to the parcel request, such as shipping insurance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extra: Option<Extra>,
 }
 
 /// The data type for a carrier account.
@@ -840,6 +843,39 @@ pub struct Parcel {
     /// Indicates whether the object has been created in test mode.
     #[serde(default)]
     pub test: bool,
+    /// Add extra options to the parcel request, such as shipping insurance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extra: Option<Extra>,
+}
+
+/// The data type for extra Parcel or Shipment features, such as requesting
+/// insurance rates.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Extra {
+    /// Add extra insurance to the parcel or shipment.
+    /// If there's more than one parcel in the shipment,
+    /// you have to request insurance per-parcel on the
+    /// Parcel struct, otherwise, you can request it on
+    /// the Shipment struct instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub insurance: Option<Insurance>,
+}
+
+/// The data type for requesting shipping rates with extra insurance.
+/// FROM: https://goshippo.com/docs/insurance/
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct Insurance {
+    /// The value of the parcel or shipment to insure.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub amount: String,
+    /// The currency to use for the previous amount value.
+    /// "USD" | "CAD", etc.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub currency: String,
+    /// A short description of the contents of the parcel or shipment.
+    /// "5 t-shirts"
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub content: String,
 }
 
 /// The data type for a rate.
