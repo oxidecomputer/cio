@@ -22,7 +22,11 @@ impl DnsProviderProxy {
 impl DNSProviderOps for DnsProviderProxy {
     /// Ensure the record exists and has the correct information.
     async fn ensure_record(&self, record: DnsRecord, mode: DnsUpdateMode) -> Result<()> {
-        self.cloudflare.ensure_record(record.clone(), mode.clone()).await?;
+        // Do not exit on CF failures
+        if let Err(err) = self.cloudflare.ensure_record(record.clone(), mode.clone()).await {
+            log::info!("Failed to ensure dns record for {} in CloudFlare. This may be expected if the domain is not configured yet. :: {}", record.name, err);
+        }
+
         self.cloud_dns.ensure_record(record, mode).await?;
 
         Ok(())
@@ -30,7 +34,11 @@ impl DNSProviderOps for DnsProviderProxy {
 
     /// Delete the record if it exists.
     async fn delete_record(&self, record: DnsRecord) -> Result<()> {
-        self.cloudflare.delete_record(record.clone()).await?;
+        // Do not exit on CF failures
+        if let Err(err) = self.cloudflare.delete_record(record.clone()).await {
+            log::info!("Failed to delete dns record for {} from CloudFlare. This may be expected if the domain is not configured yet. :: {}", record.name, err);
+        }
+
         self.cloud_dns.delete_record(record).await?;
 
         Ok(())

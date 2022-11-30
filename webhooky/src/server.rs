@@ -26,7 +26,6 @@ use gusto_api::Client as Gusto;
 use http::{header::HeaderValue, StatusCode};
 use log::{info, warn};
 use quickbooks::QuickBooks;
-use ramp_api::Client as Ramp;
 use schemars::JsonSchema;
 use sentry::{protocol, Hub};
 use serde::{Deserialize, Serialize};
@@ -119,8 +118,6 @@ fn create_api() -> ApiDescription<Context> {
     api.register(listen_auth_gusto_callback).unwrap();
     api.register(listen_auth_gusto_consent).unwrap();
     api.register(listen_auth_plaid_callback).unwrap();
-    api.register(listen_auth_ramp_callback).unwrap();
-    api.register(listen_auth_ramp_consent).unwrap();
     api.register(listen_auth_zoom_callback).unwrap();
     api.register(listen_auth_zoom_consent).unwrap();
     api.register(listen_auth_zoom_deauthorization).unwrap();
@@ -1712,59 +1709,6 @@ async fn listen_auth_zoom_callback(
 
     if let Err(e) = txn
         .run(|| crate::handlers_auth::handle_auth_zoom_callback(rqctx, query_args))
-        .await
-    {
-        // Send the error to sentry.
-        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-        return Err(handle_anyhow_err_as_http_err(e));
-    }
-
-    txn.finish(http::StatusCode::ACCEPTED);
-
-    Ok(HttpResponseAccepted("ok".to_string()))
-}
-
-/** Get the consent URL for Ramp auth. */
-#[endpoint {
-    method = GET,
-    path = "/auth/ramp/consent",
-}]
-async fn listen_auth_ramp_consent(
-    rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
-
-    // Initialize the Ramp client.
-    let g = txn.run(|| Ramp::new_from_env("", ""));
-
-    txn.finish(http::StatusCode::OK);
-
-    Ok(HttpResponseOk(UserConsentURL {
-        url: g.user_consent_url(&[
-            "transactions:read".to_string(),
-            "users:read".to_string(),
-            "users:write".to_string(),
-            "receipts:read".to_string(),
-            "cards:read".to_string(),
-            "departments:read".to_string(),
-            "reimbursements:read".to_string(),
-        ]),
-    }))
-}
-
-/** Listen for callbacks to Ramp auth. */
-#[endpoint {
-    method = GET,
-    path = "/auth/ramp/callback",
-}]
-async fn listen_auth_ramp_callback(
-    rqctx: Arc<RequestContext<Context>>,
-    query_args: Query<AuthCallback>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
-
-    if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_ramp_callback(rqctx, query_args))
         .await
     {
         // Send the error to sentry.
