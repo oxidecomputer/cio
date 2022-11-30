@@ -120,7 +120,7 @@ impl Airtable {
 
     /// Get the currently set API key.
     pub fn get_key(&self) -> &str {
-        &self.inner.key()
+        self.inner.key()
     }
 
     fn base_url(&self) -> Result<Url> {
@@ -130,7 +130,7 @@ impl Airtable {
 
     fn url(&self, path: &str) -> Result<Url> {
         let base = self.base_url()?;
-        Ok(base.join(&path)?)
+        Ok(base.join(path)?)
     }
 
     fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Result<Request>
@@ -271,7 +271,7 @@ impl Airtable {
             ),
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {

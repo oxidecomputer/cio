@@ -83,7 +83,7 @@ impl ApiClient for InnerClient {
             header::HeaderValue::from_static("application/json"),
         );
 
-        let mut rb = self.client.request(method.clone(), url).headers(headers);
+        let mut rb = self.client.request(method, url).headers(headers);
 
         match query {
             None => (),

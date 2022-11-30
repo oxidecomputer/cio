@@ -39,7 +39,7 @@ async fn to_client_response<T>(response: Response) -> Result<T, ScimClientError>
 where
     T: DeserializeOwned,
 {
-    let status = response.status().clone();
+    let status = response.status();
 
     if status == StatusCode::OK {
         let data: T = response.json().await?;
