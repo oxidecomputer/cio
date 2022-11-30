@@ -29,7 +29,7 @@ use octorust::{
 };
 use okta::Client as Okta;
 use quickbooks::QuickBooks;
-use ramp_api::Client as Ramp;
+use ramp_minimal_api::RampClient as Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sheets::Client as GoogleSheets;
@@ -471,37 +471,18 @@ impl Company {
     }
 
     /// Authenticate with Ramp.
-    pub async fn authenticate_ramp(&self, db: &Database) -> Result<Ramp> {
-        // Get the APIToken from the database.
-        if let Some(mut t) = APIToken::get_from_db(db, self.id, "ramp".to_string()).await {
-            // Initialize the Ramp client.
-            let mut ramp = Ramp::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
-
-            if t.is_expired() {
-                // Only refresh the token if it is expired.
-                let nt = ramp.refresh_access_token().await?;
-                if !nt.access_token.is_empty() {
-                    t.access_token = nt.access_token.to_string();
-                }
-                if nt.expires_in > 0 {
-                    t.expires_in = nt.expires_in as i32;
-                }
-                t.last_updated_at = Utc::now();
-                if !nt.refresh_token.is_empty() {
-                    t.refresh_token = nt.refresh_token.to_string();
-                }
-                if nt.refresh_token_expires_in > 0 {
-                    t.refresh_token_expires_in = nt.refresh_token_expires_in as i32;
-                }
-                t.expand();
-                // Update the token in the database.
-                t.update(db).await?;
-            }
-
-            return Ok(ramp);
-        }
-
-        bail!("no token");
+    pub fn authenticate_ramp(&self) -> Result<Ramp> {
+        Ok(Ramp::new(
+            std::env::var("RAMP_CLIENT_ID")?,
+            std::env::var("RAMP_CLIENT_SECRET")?,
+            vec![
+                "users:read".to_string(),
+                "users:write".to_string(),
+                "departments:read".to_string(),
+                "transactions:read".to_string(),
+                "reimbursements:read".to_string(),
+            ]
+        ))
     }
 
     /// Authenticate with Zoom.

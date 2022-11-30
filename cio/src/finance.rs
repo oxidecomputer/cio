@@ -389,17 +389,7 @@ impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
 
 pub async fn refresh_ramp_transactions(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     // Create the Ramp client.
-    let r = company.authenticate_ramp(db).await;
-    if let Err(e) = r {
-        if e.to_string().contains("no token") {
-            // Return early, this company does not use Zoom.
-            return Ok(());
-        }
-
-        bail!("authenticating ramp failed: {}", e);
-    }
-
-    let ramp = r?;
+    let ramp = company.authenticate_ramp()?;
 
     // List all our users.
     let users = ramp.list_provider_users(company).await?;
@@ -410,24 +400,9 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company, config:
 
     let transactions = ramp
         .transactions()
-        .get_all(
-            "",    // department id
-            "",    // location id
-            None,  // from date
-            None,  // to date
-            "",    // merchant id
-            "",    // category id
-            false, // order by date desc
-            false, // order by date asc
-            false, // order by amount desc
-            false, // order by amount asc
-            "",    // state
-            0.0,   // min amount
-            0.0,   // max amount
-            false, // requires memo
-        )
+        .list(&ramp_minimal_api::ListTransactionsQuery::default())
         .await?;
-    for transaction in transactions {
+    for transaction in transactions.data {
         let mut attachments = Vec::new();
         // Get the reciept for the transaction, if they exist.
         for receipt_id in transaction.receipts {
@@ -486,17 +461,7 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company, config:
 
 pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
     // Create the Ramp client.
-    let r = company.authenticate_ramp(db).await;
-    if let Err(e) = r {
-        if e.to_string().contains("no token") {
-            // Return early, this company does not use Zoom.
-            return Ok(());
-        }
-
-        bail!("authenticating ramp failed: {}", e);
-    }
-
-    let ramp = r?;
+    let ramp = company.authenticate_ramp()?;
 
     // List all our users.
     let users = ramp.list_provider_users(company).await?;
@@ -505,8 +470,8 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company, confi
         ramp_users.insert(user.id.to_string(), user.email.to_string());
     }
 
-    let reimbursements = ramp.reimbursements().get_all().await?;
-    for reimbursement in reimbursements {
+    let reimbursements = ramp.reimbursements().list().await?;
+    for reimbursement in reimbursements.data {
         let mut attachments = Vec::new();
         // Get the reciepts for the reimbursement, if they exist.
         for receipt_id in reimbursement.receipts {
@@ -514,11 +479,13 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company, confi
             attachments.push(receipt.receipt_url.to_string());
         }
 
+        let merchant = reimbursement.merchant.map(|merchant| merchant.to_string()).unwrap_or_else(String::new);
+
         // Get the user's email for the reimbursement.
         let email = ramp_users.get(&reimbursement.user_id).unwrap();
 
         let mut link_to_vendor: Vec<String> = Default::default();
-        let vendor = clean_vendor_name(&reimbursement.merchant, config);
+        let vendor = clean_vendor_name(&merchant, config);
         // Try to find the merchant in our list of vendors.
         match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
             Some(v) => {
@@ -537,7 +504,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company, confi
             category_id: 0,
             category_name: "".to_string(),
             merchant_id: "".to_string(),
-            merchant_name: reimbursement.merchant.to_string(),
+            merchant_name: merchant,
             state: "CLEARED".to_string(),
             receipts: attachments,
             card_id: "".to_string(),

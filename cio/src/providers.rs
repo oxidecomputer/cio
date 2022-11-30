@@ -1,6 +1,8 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use log::{info, warn};
+use sodiumoxide::crypto::hash;
+use std::convert::TryInto;
 
 use crate::{
     app_config::AppConfig,
@@ -41,7 +43,7 @@ pub trait ProviderReadOps {
 }
 
 #[async_trait]
-impl ProviderWriteOps for ramp_api::Client {
+impl ProviderWriteOps for ramp_minimal_api::RampClient {
     async fn ensure_user(&self, db: &Database, _company: &Company, user: &User, _config: &AppConfig) -> Result<String> {
         if user.denied_services.contains(&ExternalServices::Ramp) {
             log::info!(
@@ -64,7 +66,7 @@ impl ProviderWriteOps for ramp_api::Client {
         }
 
         // TODO: this is wasteful find another way to do this.
-        let departments = self.departments().get_all().await?;
+        let departments = self.departments().list().await?.data;
         // TODO: we need to create the department if it doesn't exist.
 
         if !user.ramp_id.is_empty() {
@@ -76,49 +78,43 @@ impl ProviderWriteOps for ramp_api::Client {
 
             // Set the department.
             // TODO: this loop is wasteful.
-            let mut department_id = "".to_string();
+            let mut department_id = None;
             for dept in departments {
                 if dept.name == user.department {
-                    department_id = dept.id;
+                    department_id = Some(dept.id);
                     break;
                 }
             }
 
             let manager = user.manager(db).await;
-            let manager_ramp_id = if manager.id == user.id {
-                "".to_string()
-            } else {
-                manager.ramp_id.to_string()
-            };
-
-            let mut location_id = "".to_string();
-            if !ramp_user.location_id.is_empty() {
-                location_id = ramp_user.location_id.to_string();
-            }
-
-            let role = if ramp_user.role == ramp_api::types::Role::BusinessOwner {
+            let manager_ramp_id = if
+                manager.id == user.id ||
+                ramp_user.role == ramp_minimal_api::Role::Owner ||
+                ramp_user.role == ramp_minimal_api::Role::Admin
+            {
                 None
             } else {
-                Some(ramp_user.role.clone())
+                Some(manager.ramp_id)
             };
 
-            // Admins and Owners should not have a manager.
-            let manager_ramp_id = if ramp_user.role == ramp_api::types::Role::BusinessOwner
-                || ramp_user.role == ramp_api::types::Role::BusinessAdmin
-            {
-                "".to_string()
+            let role = if ramp_user.role == ramp_minimal_api::Role::Owner {
+                None
             } else {
-                manager_ramp_id
+                let role: ramp_minimal_api::WriteableRole = ramp_user.role.try_into()?;
+                Some(role)
             };
 
-            let updated_user = ramp_api::types::PatchUsersRequest {
+            let updated_user = ramp_minimal_api::UpdateUser {
                 department_id,
                 direct_manager_id: manager_ramp_id,
                 role,
-                location_id,
+                location: Some(ramp_user.location_id),
             };
 
-            self.users().patch(&user.ramp_id, &updated_user).await?;
+            self.users().update(
+                &user.ramp_id,
+                &updated_user
+            ).await?;
 
             info!("updated ramp user `{}`", user.email);
 
@@ -127,23 +123,26 @@ impl ProviderWriteOps for ramp_api::Client {
         }
 
         // Invite the new ramp user.
-        let mut ramp_user = ramp_api::types::PostUsersDeferredRequest {
+        let mut ramp_user = ramp_minimal_api::CreateUserDeferred {
+            // Hashing here is only used to get a stable random value, so we are re-using what the
+            // crate already has available
+            idempotency_key: std::str::from_utf8(hash::hash(user.email.as_bytes()).as_ref())?.to_string(),
             email: user.email.to_string(),
             first_name: user.first_name.to_string(),
             last_name: user.last_name.to_string(),
             phone: user.recovery_phone.to_string(),
-            role: ramp_api::types::Role::BusinessUser,
+            role: ramp_minimal_api::WriteableRole::User,
             // Add the manager.
-            direct_manager_id: user.manager(db).await.ramp_id,
-            department_id: "".to_string(),
-            location_id: "".to_string(),
+            direct_manager_id: Some(user.manager(db).await.ramp_id),
+            department_id: None,
+            location_id: None,
         };
 
         // Set the department.
         // TODO: this loop is wasteful.
         for dept in departments {
             if dept.name == user.department {
-                ramp_user.department_id = dept.id;
+                ramp_user.department_id = Some(dept.id);
                 break;
             }
         }
@@ -152,13 +151,13 @@ impl ProviderWriteOps for ramp_api::Client {
         // have a Ramp department, create it.
 
         // Add the manager.
-        let r = self.users().post_deferred(&ramp_user).await?;
+        let r = self.users().deferred_create(&ramp_user).await?;
 
         info!("created new ramp user `{}`", user.email);
 
         // TODO(should we?): Create them a card.
 
-        Ok(r.id)
+        Ok(r.id.to_string())
     }
 
     // Ramp does not have groups so this is a no-op.
@@ -193,17 +192,12 @@ impl ProviderWriteOps for ramp_api::Client {
 }
 
 #[async_trait]
-impl ProviderReadOps for ramp_api::Client {
-    type ProviderUser = ramp_api::types::User;
+impl ProviderReadOps for ramp_minimal_api::RampClient {
+    type ProviderUser = ramp_minimal_api::User;
     type ProviderGroup = ();
 
-    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<ramp_api::types::User>> {
-        self.users()
-            .get_all(
-                "", // department id
-                "", // location id
-            )
-            .await
+    async fn list_provider_users(&self, _company: &Company) -> Result<Vec<Self::ProviderUser>> {
+        Ok(self.users().list().await?.data)
     }
 
     // Ramp does not have groups so this is a no-op.
