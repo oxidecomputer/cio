@@ -15,6 +15,7 @@ members = [
 	"partial-struct",
 	"printy",
 	"quickbooks",
+	"ramp-minimal-api",
 	"shippo",
 	"slack",
 	"tailscale",

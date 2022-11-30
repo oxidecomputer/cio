@@ -79,8 +79,8 @@ pretty_env_logger = "0.4"
 printpdf = { version = "^0.5.2", features = ["embedded_images"] }
 quickbooks = "^0.1.12"
 #quickbooks = { path = "../quickbooks" }
-ramp-api = "^0.2.2"
-#ramp-api = { path = "../../third-party-api-clients/ramp" }
+# ramp-api = "^0.2.2"
+ramp-minimal-api = { path = "../ramp-minimal-api" }
 rand = { version = "^0.8.5", features = ["alloc"] }
 regex = "1"
 reqwest = { version = "0.11", features = ["json"] }

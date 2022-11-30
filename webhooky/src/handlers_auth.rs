@@ -14,7 +14,6 @@ use dropshot::{Query, RequestContext};
 use google_drive::Client as GoogleDrive;
 use gusto_api::Client as Gusto;
 use quickbooks::QuickBooks;
-use ramp_api::Client as Ramp;
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
@@ -214,86 +213,6 @@ pub async fn handle_auth_zoom_callback(
         company_id: cu.user_response.company.to_string(),
         item_id: "".to_string(),
         user_email: cu.user.email.to_string(),
-        last_updated_at: Utc::now(),
-        expires_date: None,
-        refresh_token_expires_date: None,
-        endpoint: "".to_string(),
-        auth_company_id: company.id,
-        company: Default::default(),
-        // THIS SHOULD ALWAYS BE OXIDE SO THAT IT SAVES TO OUR AIRTABLE.
-        cio_company_id: 1,
-    };
-    token.expand();
-    // Update it in the database.
-    token.upsert(&api_context.db).await?;
-
-    Ok(())
-}
-
-pub async fn handle_auth_ramp_callback(
-    rqctx: Arc<RequestContext<Context>>,
-    query_args: Query<AuthCallback>,
-) -> Result<()> {
-    let api_context = rqctx.context();
-    let event = query_args.into_inner();
-
-    // Initialize the Ramp client.
-    let mut g = Ramp::new_from_env("", "");
-
-    // Let's get the token from the code.
-    let t = g.get_access_token(&event.code, &event.state).await?;
-
-    let ru = g
-        .users()
-        .get_all(
-            "", // department id
-            "", // location id
-        )
-        .await?;
-
-    // Let's get the domain from the email.
-    let mut domain = "".to_string();
-    if !ru.is_empty() {
-        let split = ru.get(0).unwrap().email.split('@');
-        let vec: Vec<&str> = split.collect();
-        if vec.len() > 1 {
-            domain = vec.get(1).unwrap().to_string();
-        }
-    }
-
-    // If the returned token is missing either the access token or refresh token then we can
-    // not accept the authentication. We require both during normal processing.
-    if t.access_token.is_empty() || t.refresh_token.is_empty() {
-        let access_status = if t.access_token.is_empty() {
-            "missing"
-        } else {
-            "present"
-        };
-        let refresh_status = if t.refresh_token.is_empty() {
-            "missing"
-        } else {
-            "present"
-        };
-        return Err(anyhow::anyhow!(
-            "Unable to finish Ramp authentication without both an access token ({}) and refresh token ({})",
-            access_status,
-            refresh_status
-        ));
-    }
-
-    let company = Company::get_from_domain(&api_context.db, &domain).await?;
-
-    // Save the token to the database.
-    let mut token = NewAPIToken {
-        product: "ramp".to_string(),
-        token_type: t.token_type.to_string(),
-        access_token: t.access_token.to_string(),
-        expires_in: t.expires_in as i32,
-        refresh_token: t.refresh_token.to_string(),
-        refresh_token_expires_in: t.refresh_token_expires_in as i32,
-        company_id: "".to_string(),
-        item_id: "".to_string(),
-        user_email: "".to_string(),
         last_updated_at: Utc::now(),
         expires_date: None,
         refresh_token_expires_date: None,

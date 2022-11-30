@@ -50,8 +50,6 @@ octorust = { version = "^0.1.35", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
 pretty_env_logger = "0.4"
 quickbooks = "^0.1.12"
-ramp-api = "^0.2.2"
-#ramp-api = { path = "../../third-party-api-clients/ramp" }
 rand = "^0.8.5"
 regex = "^1.5.5"
 reqwest = { version = "0.11", features = ["json"] }

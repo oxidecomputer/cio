@@ -116,7 +116,7 @@ impl ExternalServices {
                     .authenticate_okta()
                     .ok_or_else(|| anyhow::anyhow!("Failed to instantiate Okta client"))?,
             ),
-            ExternalServices::Ramp => Box::new(company.authenticate_ramp(db).await?),
+            ExternalServices::Ramp => Box::new(company.authenticate_ramp()?),
             ExternalServices::Zoom => Box::new(company.authenticate_zoom(db).await?),
         })
     }
@@ -378,7 +378,7 @@ impl UserConfig {
         github: &octorust::Client,
         gsuite_users_map: &BTreeMap<String, GSuiteUser>,
         okta_users: &HashMap<String, okta::types::User>,
-        ramp_users: &HashMap<String, ramp_api::types::User>,
+        ramp_users: &HashMap<String, ramp_minimal_api::User>,
         zoom_users: &HashMap<String, zoom_api::types::UsersResponse>,
         zoom_users_pending: &HashMap<String, zoom_api::types::UsersResponse>,
         gusto_users: &HashMap<String, gusto_api::types::Employee>,
@@ -398,7 +398,7 @@ impl UserConfig {
         let okta_auth = company.authenticate_okta();
 
         // Initialize the Ramp client.
-        let ramp_auth = company.authenticate_ramp(db).await;
+        let ramp = company.authenticate_ramp()?;
 
         // Initialize the Zoom client.
         let zoom_auth = company.authenticate_zoom(db).await;
@@ -539,17 +539,15 @@ impl UserConfig {
             }?;
         }
 
-        if let Ok(ref ramp) = ramp_auth {
-            match ramp.ensure_user(db, company, &new_user, config).await {
-                Ok(ramp_id) => {
-                    // Set the Ramp ID for the user.
-                    new_user.ramp_id = ramp_id.to_string();
-                    // Update the user in the database.
-                    new_user = new_user.update(db).await?;
-                }
-                Err(e) => {
-                    warn!("Failed to ensure ramp user `{}`: {}", new_user.id, e);
-                }
+        match ramp.ensure_user(db, company, &new_user, config).await {
+            Ok(ramp_id) => {
+                // Set the Ramp ID for the user.
+                new_user.ramp_id = ramp_id.to_string();
+                // Update the user in the database.
+                new_user = new_user.update(db).await?;
+            }
+            Err(e) => {
+                warn!("Failed to ensure ramp user `{}`: {}", new_user.id, e);
             }
         }
 
@@ -1931,18 +1929,16 @@ pub async fn sync_users(
     }
 
     // Initialize the Ramp client.
-    let mut ramp_users: HashMap<String, ramp_api::types::User> = HashMap::new();
-    let mut ramp_departments: HashMap<String, ramp_api::types::Department> = HashMap::new();
-    let ramp_auth = company.authenticate_ramp(db).await;
-    if let Ok(ref ramp) = ramp_auth {
-        let ru = ramp.list_provider_users(company).await?;
-        for r in ru {
-            ramp_users.insert(r.email.to_string(), r);
-        }
-        let rd = ramp.departments().get_all().await?;
-        for r in rd {
-            ramp_departments.insert(r.name.to_string(), r);
-        }
+    let mut ramp_users: HashMap<String, ramp_minimal_api::User> = HashMap::new();
+    let mut ramp_departments: HashMap<String, ramp_minimal_api::Department> = HashMap::new();
+    let ramp = company.authenticate_ramp()?;
+    let ru = ramp.list_provider_users(company).await?;
+    for r in ru {
+        ramp_users.insert(r.email.to_string(), r);
+    }
+    let rd = ramp.departments().list().await?;
+    for r in rd.data {
+        ramp_departments.insert(r.name.to_string(), r);
     }
 
     // Initialize the Zoom client.
