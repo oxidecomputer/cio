@@ -1,4 +1,10 @@
-use airtable_api::{Airtable, scim::{ScimClientError, group::{ScimGroupIndex, ScimCreateGroup, ScimUpdateGroup}}};
+use airtable_api::{
+    scim::{
+        group::{ScimCreateGroup, ScimGroupIndex, ScimUpdateGroup},
+        ScimClientError,
+    },
+    Airtable,
+};
 
 #[cfg(feature = "live-tests")]
 #[tokio::test]
@@ -11,7 +17,7 @@ async fn test_read_scim_users() {
 
     let user = users.get(&test_id).await.unwrap();
     let mut user_list = users.list(None).await.unwrap();
-    
+
     user_list.resources.retain(|u| u.id == test_id);
 
     let test_user = user_list.resources.into_iter().next();
@@ -23,9 +29,7 @@ async fn test_read_scim_users() {
 
 #[cfg(feature = "live-tests")]
 #[tokio::test]
-async fn test_update_scim_users() {
-
-}
+async fn test_update_scim_users() {}
 
 #[cfg(feature = "live-tests")]
 #[tokio::test]
@@ -39,7 +43,7 @@ async fn test_read_scim_groups() {
     let group = groups.get(&test_id).await.unwrap();
 
     let mut group_list = groups.list(None).await.unwrap();
-    
+
     group_list.resources.retain(|u| u.id == test_id);
 
     let test_group = group_list.resources.into_iter().next();
@@ -58,21 +62,27 @@ async fn test_create_delete_groups() {
     let scim = airtable.scim();
     let groups = scim.group();
 
-    let group = groups.create(&ScimCreateGroup {
-        schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:Group".to_string()],
-        display_name: "Enterprise API Integration Test Temporary Group".to_string(),
-    }).await.unwrap();
+    let group = groups
+        .create(&ScimCreateGroup {
+            schemas: vec!["urn:ietf:params:scim:schemas:core:2.0:Group".to_string()],
+            display_name: "Enterprise API Integration Test Temporary Group".to_string(),
+        })
+        .await
+        .unwrap();
 
     let id = group.id;
 
-    let updated_group = groups.update(
-        &id,
-        &ScimUpdateGroup {
-            schemas: None,
-            display_name: Some("Enterprise API Integration Test Temporary Group Post-Update".to_string()),
-            members: None
-        }
-    ).await.unwrap();
+    let updated_group = groups
+        .update(
+            &id,
+            &ScimUpdateGroup {
+                schemas: None,
+                display_name: Some("Enterprise API Integration Test Temporary Group Post-Update".to_string()),
+                members: None,
+            },
+        )
+        .await
+        .unwrap();
 
     assert_eq!(
         "Enterprise API Integration Test Temporary Group Post-Update".to_string(),
@@ -89,6 +99,9 @@ async fn test_create_delete_groups() {
         ScimClientError::Api(inner) => {
             assert_eq!(404, inner.status);
         }
-        other => panic!("Expected to receive a 404 error for a deleted group, but instead found {:?}", other)
+        other => panic!(
+            "Expected to receive a 404 error for a deleted group, but instead found {:?}",
+            other
+        ),
     }
 }

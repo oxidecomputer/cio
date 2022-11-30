@@ -215,8 +215,8 @@ pub struct ScimUpdateUser {
 
 #[cfg(test)]
 mod tests {
-    use reqwest::Url;
     use super::{AirtableScimUserClient, ScimListUserFilter, ScimListUserOptions};
+    use reqwest::Url;
 
     #[test]
     fn test_url_construction() {

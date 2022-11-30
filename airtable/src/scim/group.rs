@@ -55,11 +55,7 @@ impl AirtableScimGroupClient {
     pub async fn get<T: AsRef<str>>(&self, id: T) -> Result<Option<ScimGroup>, ScimClientError> {
         let req = self
             .inner
-            .request(
-                Method::GET,
-                Self::url(Self::base_endpoint(), Some(id.as_ref()))?,
-                None,
-            )?
+            .request(Method::GET, Self::url(Self::base_endpoint(), Some(id.as_ref()))?, None)?
             .body("")
             .build()?;
         let resp = self.inner.execute(req).await?;
@@ -94,11 +90,7 @@ impl AirtableScimGroupClient {
     ) -> Result<ScimWriteGroupResponse, ScimClientError> {
         let req = self
             .inner
-            .request(
-                Method::PUT,
-                Self::url(Self::base_endpoint(), Some(id.as_ref()))?,
-                None,
-            )?
+            .request(Method::PUT, Self::url(Self::base_endpoint(), Some(id.as_ref()))?, None)?
             .json(group)
             .build()?;
         let resp = self.inner.execute(req).await?;
@@ -239,8 +231,8 @@ pub struct ScimWriteGroupResponse {
 
 #[cfg(test)]
 mod tests {
-    use reqwest::Url;
     use super::{AirtableScimGroupClient, ScimListGroupFilter, ScimListGroupOptions};
+    use reqwest::Url;
 
     #[test]
     fn test_url_construction() {
