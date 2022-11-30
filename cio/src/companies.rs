@@ -481,7 +481,7 @@ impl Company {
                 "departments:read".to_string(),
                 "transactions:read".to_string(),
                 "reimbursements:read".to_string(),
-            ]
+            ],
         ))
     }
 

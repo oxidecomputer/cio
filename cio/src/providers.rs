@@ -87,10 +87,9 @@ impl ProviderWriteOps for ramp_minimal_api::RampClient {
             }
 
             let manager = user.manager(db).await;
-            let manager_ramp_id = if
-                manager.id == user.id ||
-                ramp_user.role == ramp_minimal_api::Role::Owner ||
-                ramp_user.role == ramp_minimal_api::Role::Admin
+            let manager_ramp_id = if manager.id == user.id
+                || ramp_user.role == ramp_minimal_api::Role::Owner
+                || ramp_user.role == ramp_minimal_api::Role::Admin
             {
                 None
             } else {
@@ -111,10 +110,7 @@ impl ProviderWriteOps for ramp_minimal_api::RampClient {
                 location: Some(ramp_user.location_id),
             };
 
-            self.users().update(
-                &user.ramp_id,
-                &updated_user
-            ).await?;
+            self.users().update(&user.ramp_id, &updated_user).await?;
 
             info!("updated ramp user `{}`", user.email);
 
@@ -157,7 +153,7 @@ impl ProviderWriteOps for ramp_minimal_api::RampClient {
 
         // TODO(should we?): Create them a card.
 
-        Ok(r.id.to_string())
+        Ok(r.id)
     }
 
     // Ramp does not have groups so this is a no-op.

@@ -479,7 +479,7 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company, confi
             attachments.push(receipt.receipt_url.to_string());
         }
 
-        let merchant = reimbursement.merchant.map(|merchant| merchant.to_string()).unwrap_or_else(String::new);
+        let merchant = reimbursement.merchant.unwrap_or_default();
 
         // Get the user's email for the reimbursement.
         let email = ramp_users.get(&reimbursement.user_id).unwrap();

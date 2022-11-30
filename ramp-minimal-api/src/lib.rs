@@ -1,28 +1,15 @@
 use chrono::{DateTime, Utc};
 use oauth2::{
     basic::{BasicClient, BasicErrorResponseType},
-    AuthUrl,
-    ClientId,
-    ClientSecret,
-    Scope,
-    TokenUrl,
-    TokenResponse,
     reqwest::async_http_client,
-    StandardErrorResponse,
+    AuthUrl, ClientId, ClientSecret, Scope, StandardErrorResponse, TokenResponse, TokenUrl,
 };
-use reqwest::{
-    Client,
-    header::HeaderValue,
-    Response,
-    Method,
-    RequestBuilder,
-    StatusCode,
-};
+use reqwest::{header::HeaderValue, Client, Method, RequestBuilder, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 
 use std::{
     sync::{Arc, RwLock},
-    time::Instant
+    time::Instant,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -141,7 +128,7 @@ pub struct Location {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub enum Role {
-    #[serde(rename = "BUSINESS_ADMIN")]    
+    #[serde(rename = "BUSINESS_ADMIN")]
     Admin,
     #[serde(rename = "BUSINESS_BOOKKEEPER")]
     Bookkeeper,
@@ -185,7 +172,7 @@ pub struct User {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum WriteableRole {
-    #[serde(rename = "BUSINESS_ADMIN")]    
+    #[serde(rename = "BUSINESS_ADMIN")]
     Admin,
     #[serde(rename = "BUSINESS_BOOKKEEPER")]
     Bookkeeper,
@@ -258,12 +245,12 @@ pub struct UpdateUser {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ResponseList<T> {
     pub data: Vec<T>,
-    pub page: ResponsePagination
+    pub page: ResponsePagination,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ResponsePagination {
-    pub next: Option<String>
+    pub next: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -273,7 +260,7 @@ pub struct DeferredTaskId {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ApiError {
-    error_v2: ApiErrorDetails
+    error_v2: ApiErrorDetails,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -287,7 +274,7 @@ pub struct ApiErrorDetails {
 #[derive(Debug)]
 struct AccessToken {
     pub secret: String,
-    pub expires_at: Instant
+    pub expires_at: Instant,
 }
 
 pub struct RampClient {
@@ -306,9 +293,9 @@ impl RampClient {
                 ClientId::new(client_id),
                 Some(ClientSecret::new(client_secret)),
                 AuthUrl::new("https://app.ramp.com/v1/authorize".to_string()).unwrap(),
-                Some(TokenUrl::new("https://api.ramp.com/developer/v1/token".to_string()).unwrap())
+                Some(TokenUrl::new("https://api.ramp.com/developer/v1/token".to_string()).unwrap()),
             ),
-            scopes: scopes.into_iter().map(|scope| Scope::new(scope)).collect::<Vec<_>>(),
+            scopes: scopes.into_iter().map(Scope::new).collect::<Vec<_>>(),
         }
     }
 
@@ -325,7 +312,11 @@ impl RampClient {
         }
 
         let token = req.request_async(async_http_client).await?;
-        let expires_at = token.expires_in().as_ref().and_then(|duration| now.checked_add(*duration)).ok_or(Error::ExpirationOutOfBounds)?;
+        let expires_at = token
+            .expires_in()
+            .as_ref()
+            .and_then(|duration| now.checked_add(*duration))
+            .ok_or(Error::ExpirationOutOfBounds)?;
 
         *self.access_token.write().unwrap() = Some(AccessToken {
             secret: token.access_token().secret().to_string(),
@@ -337,9 +328,11 @@ impl RampClient {
 
     fn token_is_expired(&self) -> bool {
         if let Ok(guard) = self.access_token.read() {
-            guard.as_ref().map(|token| token.expires_at <= Instant::now()).unwrap_or(true)
+            guard
+                .as_ref()
+                .map(|token| token.expires_at <= Instant::now())
+                .unwrap_or(true)
         } else {
-
             // If we do not have an access token then we consider it to be expired
             true
         }
@@ -356,14 +349,16 @@ impl RampClient {
             }
         }
 
-        builder = builder.header(reqwest::header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        builder = builder.header(
+            reqwest::header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json"),
+        );
 
         let request = builder.build()?;
         let response = self.client.execute(request).await?;
-        
-        if response.status().is_informational() ||
-            response.status().is_success() ||
-            response.status().is_redirection() {
+
+        if response.status().is_informational() || response.status().is_success() || response.status().is_redirection()
+        {
             Ok(response)
         } else {
             let status = response.status();
@@ -373,37 +368,28 @@ impl RampClient {
     }
 
     fn request(&self, method: Method, path: &str) -> RequestBuilder {
-        self.client.request(method, format!("https://api.ramp.com/developer/v1/{}", path))
+        self.client
+            .request(method, format!("https://api.ramp.com/developer/v1/{}", path))
     }
 
     pub fn departments(&self) -> DepartmentClient {
-        DepartmentClient {
-            client: self
-        }
+        DepartmentClient { client: self }
     }
 
     pub fn receipts(&self) -> ReceiptClient {
-        ReceiptClient {
-            client: self
-        }
+        ReceiptClient { client: self }
     }
 
     pub fn reimbursements(&self) -> ReimbursementClient {
-        ReimbursementClient {
-            client: self
-        }
+        ReimbursementClient { client: self }
     }
 
     pub fn transactions(&self) -> TransactionClient {
-        TransactionClient {
-            client: self
-        }
+        TransactionClient { client: self }
     }
 
     pub fn users(&self) -> UserClient {
-        UserClient {
-            client: self
-        }
+        UserClient { client: self }
     }
 }
 
@@ -419,7 +405,7 @@ impl<'a> DepartmentClient<'a> {
 }
 
 pub struct ReceiptClient<'a> {
-    client: &'a RampClient
+    client: &'a RampClient,
 }
 
 impl<'a> ReceiptClient<'a> {
@@ -430,7 +416,7 @@ impl<'a> ReceiptClient<'a> {
 }
 
 pub struct ReimbursementClient<'a> {
-    client: &'a RampClient
+    client: &'a RampClient,
 }
 
 impl<'a> ReimbursementClient<'a> {
@@ -476,7 +462,9 @@ pub struct ListTransactionsQuery {
 
 impl<'a> TransactionClient<'a> {
     pub async fn get(&self, transaction_id: &str) -> Result<Transaction, Error> {
-        let req = self.client.request(Method::GET, &format!("transactions/{}", transaction_id));
+        let req = self
+            .client
+            .request(Method::GET, &format!("transactions/{}", transaction_id));
         Ok(self.client.execute(req).await?.json().await?)
     }
 
@@ -487,7 +475,7 @@ impl<'a> TransactionClient<'a> {
 }
 
 pub struct UserClient<'a> {
-    client: &'a RampClient
+    client: &'a RampClient,
 }
 
 impl<'a> UserClient<'a> {
@@ -507,7 +495,10 @@ impl<'a> UserClient<'a> {
     }
 
     pub async fn update(&self, user_id: &str, payload: &UpdateUser) -> Result<DeferredTaskId, Error> {
-        let req = self.client.request(Method::PATCH, &format!("users/{}", user_id)).json(payload);
+        let req = self
+            .client
+            .request(Method::PATCH, &format!("users/{}", user_id))
+            .json(payload);
         Ok(self.client.execute(req).await?.json().await?)
     }
 }
@@ -518,9 +509,14 @@ pub enum Error {
     ExpirationOutOfBounds,
     RequestFailed {
         status: StatusCode,
-        error: Option<ApiError>
+        error: Option<ApiError>,
     },
-    Token(oauth2::RequestTokenError<oauth2::reqwest::Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>),
+    Token(
+        oauth2::RequestTokenError<
+            oauth2::reqwest::Error<reqwest::Error>,
+            StandardErrorResponse<BasicErrorResponseType>,
+        >,
+    ),
 }
 
 impl From<reqwest::Error> for Error {
@@ -529,8 +525,20 @@ impl From<reqwest::Error> for Error {
     }
 }
 
-impl From<oauth2::RequestTokenError<oauth2::reqwest::Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>> for Error {
-    fn from(err: oauth2::RequestTokenError<oauth2::reqwest::Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>) -> Self {
+impl
+    From<
+        oauth2::RequestTokenError<
+            oauth2::reqwest::Error<reqwest::Error>,
+            StandardErrorResponse<BasicErrorResponseType>,
+        >,
+    > for Error
+{
+    fn from(
+        err: oauth2::RequestTokenError<
+            oauth2::reqwest::Error<reqwest::Error>,
+            StandardErrorResponse<BasicErrorResponseType>,
+        >,
+    ) -> Self {
         Self::Token(err)
     }
 }
@@ -540,8 +548,12 @@ impl std::fmt::Display for Error {
         match self {
             Error::Client(inner) => write!(f, "Client error: {}", inner),
             Error::ExpirationOutOfBounds => write!(f, "Access token contains an invalid expiration duration"),
-            Error::RequestFailed { status, .. } => write!(f, "Request failed to return a successful response. Instead a {} was returned", status),
-            Error::Token(inner) => write!(f, "Failure to retrieve access token: {}", inner)
+            Error::RequestFailed { status, .. } => write!(
+                f,
+                "Request failed to return a successful response. Instead a {} was returned",
+                status
+            ),
+            Error::Token(inner) => write!(f, "Failure to retrieve access token: {}", inner),
         }
     }
 }
@@ -557,5 +569,5 @@ impl std::error::Error for Error {
 }
 
 fn is_false(value: &bool) -> bool {
-    *value == false
+    !(*value)
 }
