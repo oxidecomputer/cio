@@ -271,10 +271,9 @@ pub struct ApiErrorDetails {
     notes: String,
 }
 
-#[derive(Debug)]
 struct AccessToken {
-    pub secret: String,
-    pub expires_at: Instant,
+    secret: String,
+    expires_at: Instant,
 }
 
 pub struct RampClient {
@@ -299,7 +298,7 @@ impl RampClient {
         }
     }
 
-    pub async fn auth(&self) -> Result<(), Error> {
+    async fn fetch_token(&self) -> Result<(), Error> {
         // Snapshot the time before the token request. Given that we only receive back an
         // "expires_in" duration we want to be conservative about determining when our access
         // will expire
@@ -340,7 +339,7 @@ impl RampClient {
 
     pub async fn execute(&self, mut builder: reqwest::RequestBuilder) -> Result<Response, Error> {
         if self.token_is_expired() {
-            self.auth().await?;
+            self.fetch_token().await?;
         }
 
         if let Ok(guard) = self.access_token.read() {
