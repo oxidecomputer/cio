@@ -25,12 +25,10 @@ impl AirtableScimUserClient {
     }
 
     fn url(base: &str, path: Option<&str>) -> Result<Url, ScimClientError> {
-        let url = Url::parse(base)?;
-
         if let Some(path) = path {
-            Ok(url.join("/")?.join(path)?)
+            Ok(Url::parse(&(base.to_string() + "/" + path))?)
         } else {
-            Ok(url)
+            Ok(Url::parse(base)?)
         }
     }
 
@@ -217,7 +215,21 @@ pub struct ScimUpdateUser {
 
 #[cfg(test)]
 mod tests {
-    use super::{ScimListUserFilter, ScimListUserOptions};
+    use reqwest::Url;
+    use super::{AirtableScimUserClient, ScimListUserFilter, ScimListUserOptions};
+
+    #[test]
+    fn test_url_construction() {
+        assert_eq!(
+            Url::parse("https://airtable.com/scim/v2/Users").unwrap(),
+            AirtableScimUserClient::url(AirtableScimUserClient::base_endpoint(), None).unwrap(),
+        );
+
+        assert_eq!(
+            Url::parse("https://airtable.com/scim/v2/Users/a_user_id").unwrap(),
+            AirtableScimUserClient::url(AirtableScimUserClient::base_endpoint(), Some("a_user_id")).unwrap(),
+        );
+    }
 
     #[test]
     fn test_serialize_list_options() {

@@ -1,4 +1,4 @@
-use reqwest::{Method, StatusCode, Url};
+use reqwest::{Method, Url};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -18,21 +18,15 @@ impl AirtableScimGroupClient {
         Self { inner }
     }
 
-    fn singular_endpoint() -> &'static str {
-        "https://airtable.com/scim/v2/Group"
-    }
-
-    fn plural_endpoint() -> &'static str {
+    fn base_endpoint() -> &'static str {
         "https://airtable.com/scim/v2/Groups"
     }
 
     fn url(base: &str, path: Option<&str>) -> Result<Url, ScimClientError> {
-        let url = Url::parse(base)?;
-
         if let Some(path) = path {
-            Ok(url.join("/")?.join(path)?)
+            Ok(Url::parse(&(base.to_string() + "/" + path))?)
         } else {
-            Ok(url)
+            Ok(Url::parse(base)?)
         }
     }
 
@@ -47,7 +41,7 @@ impl AirtableScimGroupClient {
 
         let req = self
             .inner
-            .request(Method::GET, Self::url(Self::plural_endpoint(), None)?, query_args)?
+            .request(Method::GET, Self::url(Self::base_endpoint(), None)?, query_args)?
             .body("")
             .build()?;
         let resp = self.inner.execute(req).await?;
@@ -63,7 +57,7 @@ impl AirtableScimGroupClient {
             .inner
             .request(
                 Method::GET,
-                Self::url(Self::plural_endpoint(), Some(id.as_ref()))?,
+                Self::url(Self::base_endpoint(), Some(id.as_ref()))?,
                 None,
             )?
             .body("")
@@ -80,7 +74,7 @@ impl AirtableScimGroupClient {
     pub async fn create(&self, new_group: &ScimCreateGroup) -> Result<ScimWriteGroupResponse, ScimClientError> {
         let req = self
             .inner
-            .request(Method::POST, Self::url(Self::singular_endpoint(), None)?, None)?
+            .request(Method::POST, Self::url(Self::base_endpoint(), None)?, None)?
             .json(new_group)
             .build()?;
         let resp = self.inner.execute(req).await?;
@@ -102,7 +96,7 @@ impl AirtableScimGroupClient {
             .inner
             .request(
                 Method::PUT,
-                Self::url(Self::singular_endpoint(), Some(id.as_ref()))?,
+                Self::url(Self::base_endpoint(), Some(id.as_ref()))?,
                 None,
             )?
             .json(group)
@@ -125,7 +119,7 @@ impl AirtableScimGroupClient {
             .inner
             .request(
                 Method::DELETE,
-                Self::url(Self::plural_endpoint(), Some(id.as_ref()))?,
+                Self::url(Self::base_endpoint(), Some(id.as_ref()))?,
                 None,
             )?
             .body("")
@@ -133,7 +127,7 @@ impl AirtableScimGroupClient {
         let resp = self.inner.execute(req).await?;
 
         // Delete does not return a body on success
-        if resp.status() == StatusCode::OK {
+        if resp.status().is_success() {
             Ok(())
         } else {
             to_client_response(resp).await
@@ -183,16 +177,6 @@ impl ScimListGroupOptions {
     }
 }
 
-/// A partial SCIM group that does not contain membership data. Partial groups are returned from
-/// the list group endpoints
-#[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
-pub struct ScimGroupIndex {
-    pub schemas: Vec<String>,
-    pub id: String,
-    #[serde(rename = "displayName")]
-    pub display_name: String,
-}
-
 /// A SCIM group
 ///
 /// See: <https://airtable.com/api/enterprise#scimGroupFieldTypes>
@@ -208,6 +192,26 @@ pub struct ScimGroup {
 #[derive(Debug, PartialEq, Default, Clone, Serialize, JsonSchema, Deserialize)]
 pub struct ScimGroupMember {
     pub value: String,
+}
+
+/// A partial SCIM group that does not contain membership data. Partial groups are returned from
+/// the list group endpoints
+#[derive(Debug, PartialEq, Clone, Serialize, JsonSchema, Deserialize)]
+pub struct ScimGroupIndex {
+    pub schemas: Vec<String>,
+    pub id: String,
+    #[serde(rename = "displayName")]
+    pub display_name: String,
+}
+
+impl From<ScimGroup> for ScimGroupIndex {
+    fn from(group: ScimGroup) -> Self {
+        ScimGroupIndex {
+            schemas: group.schemas,
+            id: group.id,
+            display_name: group.display_name,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Serialize, JsonSchema, Deserialize)]
@@ -235,7 +239,21 @@ pub struct ScimWriteGroupResponse {
 
 #[cfg(test)]
 mod tests {
-    use super::{ScimListGroupFilter, ScimListGroupOptions};
+    use reqwest::Url;
+    use super::{AirtableScimGroupClient, ScimListGroupFilter, ScimListGroupOptions};
+
+    #[test]
+    fn test_url_construction() {
+        assert_eq!(
+            Url::parse("https://airtable.com/scim/v2/Groups").unwrap(),
+            AirtableScimGroupClient::url(AirtableScimGroupClient::base_endpoint(), None).unwrap(),
+        );
+
+        assert_eq!(
+            Url::parse("https://airtable.com/scim/v2/Groups/a_group_id").unwrap(),
+            AirtableScimGroupClient::url(AirtableScimGroupClient::base_endpoint(), Some("a_group_id")).unwrap(),
+        );
+    }
 
     #[test]
     fn test_serialize_list_options() {

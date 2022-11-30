@@ -41,7 +41,7 @@ where
 {
     let status = response.status();
 
-    if status == StatusCode::OK {
+    if status.is_success() {
         let data: T = response.json().await?;
         Ok(data)
     } else if status == StatusCode::UNAUTHORIZED {
@@ -52,7 +52,6 @@ where
             detail: error.error.message,
         }))
     } else {
-        // Capture SCIM errors
         let error: AirtableScimApiError = response.json().await?;
         Err(ScimClientError::Api(error))
     }

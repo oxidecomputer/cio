@@ -8,6 +8,9 @@ license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/airtable-api"
 
+[features]
+live-tests = []
+
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
