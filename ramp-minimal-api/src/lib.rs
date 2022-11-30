@@ -359,9 +359,6 @@ impl RampClient {
         builder = builder.header(reqwest::header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
         let request = builder.build()?;
-
-        log::info!("Sending Ramp request {:?}", request);
-
         let response = self.client.execute(request).await?;
         
         if response.status().is_informational() ||
