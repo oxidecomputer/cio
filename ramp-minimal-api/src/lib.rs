@@ -494,7 +494,7 @@ impl<'a> UserClient<'a> {
         Ok(self.client.execute(req).await?.json().await?)
     }
 
-    pub async fn update(&self, user_id: &str, payload: &UpdateUser) -> Result<DeferredTaskId, Error> {
+    pub async fn update(&self, user_id: &str, payload: &UpdateUser) -> Result<(), Error> {
         let req = self
             .client
             .request(Method::PATCH, &format!("users/{}", user_id))
