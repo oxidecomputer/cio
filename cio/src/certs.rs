@@ -13,7 +13,6 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use chrono_humanize::HumanTime;
-use cloudflare::endpoints::dns;
 use log::info;
 use macros::db;
 use openssl::x509::X509;
@@ -29,7 +28,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
-    dns_providers::DNSProviderOps,
+    dns_providers::{DNSProviderOps, DnsRecord, DnsRecordType, DnsUpdateMode},
     schema::certificates,
     utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
 };
@@ -172,7 +171,7 @@ impl NewCertificate {
     /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
     /// The DNS Challenge TXT record is added to Cloudflare automatically.
     pub async fn create_cert(&mut self, company: &Company) -> Result<()> {
-        let api_client = company.authenticate_cloudflare()?;
+        let api_client = company.authenticate_dns_providers().await?;
 
         // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
         let persist = FilePersist::new(env::temp_dir());
@@ -211,12 +210,17 @@ impl NewCertificate {
             // Use the Cloudflare API for this.
             let record_name = format!("_acme-challenge.{}", &self.domain.replace("*.", ""));
 
-            let content = dns::DnsContent::TXT {
-                content: challenge.dns_proof(),
-            };
-
             // Ensure our DNS record exists.
-            api_client.ensure_record(&record_name, content).await?;
+            api_client
+                .ensure_record(
+                    DnsRecord {
+                        name: record_name.to_string(),
+                        type_: DnsRecordType::TXT,
+                        content: challenge.dns_proof(),
+                    },
+                    DnsUpdateMode::Replace,
+                )
+                .await?;
 
             // TODO: make this less awful than a sleep.
             info!("validating the proof...");

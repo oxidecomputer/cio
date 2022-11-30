@@ -28,10 +28,12 @@ checkr = "^0.0.10"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-humanize = "0.2.1"
 chrono-tz = { version = "0.6", features = ["serde"] }
-cloudflare = "^0.9.1"
+cio-api-types = { path = "../cio-api-types" }
+# Swap to branch due to breaking change in CloudFlare API
+# cloudflare = "^0.9.1"
+cloudflare = { git = "https://github.com/augustuswm/cloudflare-rs" }
 csv = "1.1"
 comrak = "0.12"
-deunicode = "1.3.0"
 # Tracking pending 2.0 version.
 diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
 diesel-sentry = { path = "../diesel-sentry" }
@@ -41,7 +43,6 @@ docusign = "^0.1.0"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
-futures-util = "0.3"
 google-calendar = "^0.3.0"
 #google-calendar = { path = "../../third-party-api-clients/google/calendar" }
 google-drive = "^0.4.0"
@@ -120,7 +121,10 @@ zip = "0.6.2"
 zoho-api = { path = "../zoho-client" }
 zoom-api = "^0.2.3"
 stacker = "0.1.14"
+google-storage1 = "4.0.1"
+google-dns1 = "4.0.1"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]
 tracing-subscriber = "0.3.15"
+env_logger = "0.9.1"

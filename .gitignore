@@ -17,7 +17,7 @@ tailscale/Cargo.lock
 # github cache
 .cache
 
-rfd/
+# rfd/
 
 *.key
 *.crt

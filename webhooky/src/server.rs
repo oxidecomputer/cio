@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use cio_api::{
     analytics::NewPageView,
     functions::Function,
-    rfds::{RFDEntry, RFDIndexEntry},
+    rfd::{RFDEntry, RFDIndexEntry},
     swag_store::Order,
 };
 use clokwerk::{AsyncScheduler, Job, TimeUnits};
@@ -78,6 +78,7 @@ fn create_api() -> ApiDescription<Context> {
     api.register(listen_airtable_applicants_request_background_check_webhooks)
         .unwrap();
     api.register(listen_airtable_applicants_update_webhooks).unwrap();
+    api.register(listen_airtable_applicants_recreate_piia_webhooks).unwrap();
     api.register(listen_airtable_assets_items_print_barcode_label_webhooks)
         .unwrap();
     api.register(listen_airtable_employees_print_home_address_label_webhooks)
@@ -690,6 +691,36 @@ async fn listen_airtable_applicants_update_webhooks(
 
     if let Err(e) = txn
         .run(|| crate::handlers::handle_airtable_applicants_update(rqctx, body))
+        .await
+    {
+        // Send the error to sentry.
+        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
+        return Err(handle_anyhow_err_as_http_err(e));
+    }
+
+    txn.finish(http::StatusCode::ACCEPTED);
+
+    Ok(HttpResponseAccepted("ok".to_string()))
+}
+
+/**
+ * Listen for requests to recreate and resend PIIA documents for a given applicant
+ * These are set up with an Airtable script on the workspaces themselves.
+ */
+#[endpoint {
+    method = POST,
+    path = "/airtable/applicants/recreate_piia",
+}]
+async fn listen_airtable_applicants_recreate_piia_webhooks(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<AirtableToken>,
+    body_param: TypedBody<AirtableRowEvent>,
+) -> Result<HttpResponseAccepted<String>, HttpError> {
+    let body = body_param.into_inner();
+    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+
+    if let Err(e) = txn
+        .run(|| crate::handlers::listen_airtable_applicants_recreate_piia_webhooks(rqctx, body))
         .await
     {
         // Send the error to sentry.

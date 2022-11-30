@@ -1,13 +1,19 @@
 use std::{env, fs::File, io::Write, process::Command, str::from_utf8, sync::Arc};
 
-use cio_api::swag_inventory::PrintRequest;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseOk, HttpServerStarter, RequestContext, TypedBody,
 };
+use dropshot_verify_request::bearer::Bearer;
 use log::{info, warn};
 use sentry::IntoDsn;
 use uuid::Uuid;
+
+use cio_api_types::swag_inventory::PrintRequest;
+
+mod bearer;
+
+use bearer::EnvToken;
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -32,7 +38,12 @@ async fn main() -> Result<(), String> {
             .output()
             .expect("failed to execute process");
         let o = std::str::from_utf8(&output.stdout).unwrap();
-        o[0..8].to_string()
+
+        if o.len() < 8 {
+            "unknown".to_string()
+        } else {
+            o[0..8].to_string()
+        }
     };
     info!("git hash: {}", git_hash);
 
@@ -142,7 +153,10 @@ impl Context {
     method = GET,
     path = "/",
 }]
-async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn api_get_schema(
+    rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<EnvToken>,
+) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
 
     Ok(HttpResponseOk(api_context.schema.to_string()))
@@ -164,6 +178,7 @@ async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Str
 }]
 async fn listen_print_rollo_requests(
     _rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<EnvToken>,
     body_param: TypedBody<String>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
@@ -191,6 +206,7 @@ async fn listen_print_rollo_requests(
 }]
 async fn listen_print_zebra_requests(
     _rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<EnvToken>,
     body_param: TypedBody<PrintRequest>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();
@@ -218,6 +234,7 @@ async fn listen_print_zebra_requests(
 }]
 async fn listen_print_receipt_requests(
     _rqctx: Arc<RequestContext<Context>>,
+    _auth: Bearer<EnvToken>,
     body_param: TypedBody<PrintRequest>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     sentry::start_session();

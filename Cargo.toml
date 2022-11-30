@@ -5,6 +5,7 @@ members = [
 	"checkr",
 	"cfcert",
 	"cio",
+	"cio-api-types",
 	"diesel-sentry",
 	"docusign",
 	"dropshot-verify-request",

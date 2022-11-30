@@ -202,6 +202,8 @@ pub struct GitHubPullRequest {
     pub user: crate::repos::GitHubUser,
     #[serde(default)]
     pub merged: bool,
+    #[serde(default)]
+    pub labels: Vec<octorust::types::LabelsData>,
 }
 
 impl From<octorust::types::PullRequestSimple> for GitHubPullRequest {
@@ -255,6 +257,7 @@ impl From<octorust::types::PullRequestSimple> for GitHubPullRequest {
             // TODO: actually do these.
             user: Default::default(),
             merged: item.merged_at.is_some(),
+            labels: item.labels,
         }
     }
 }

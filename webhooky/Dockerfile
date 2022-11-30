@@ -3,6 +3,9 @@
 # ------------------------------------------------------------------------------
 FROM debian:bullseye AS app-base
 
+RUN groupadd -g 1023 webhooky && \
+    useradd -r -u 1023 -g webhooky webhooky
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/src/webhooky
@@ -23,21 +26,28 @@ RUN apt-get update && apt-get install -y \
 	texlive-fonts-recommended \
 	texlive-fonts-extra \
 	texlive-latex-extra \
+	# Additional deps for Pupeteer
+	libatk-bridge2.0-0 \
+	libgtk-3.0 \
+	libasound2 \
+	libgbm-dev \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
-	apt install -y --no-install-recommends \
+	apt-get install -y --no-install-recommends \
 	nodejs
 
-RUN gem install \
-	asciidoctor-pdf \
-	asciidoctor-mermaid \
-	rouge
+RUN gem install rouge
+
+RUN gem install asciidoctor-pdf -v 2.3.2
+RUN gem install asciidoctor-mermaid -v 0.4.1
 
 RUN cd /usr/local/lib && \
 	npm install @mermaid-js/mermaid-cli && \
 	ln -s ../lib/node_modules/.bin/mmdc /usr/local/bin/mmdc
+
+USER webhooky
 
 # ------------------------------------------------------------------------------
 # Cargo Nightly Stage
@@ -76,6 +86,8 @@ COPY rust-toolchain ./rust-toolchain
 
 # Move the deps we need to compile.
 COPY cio ../cio
+
+COPY cio-api-types ../cio-api-types
 
 COPY macros ../macros
 

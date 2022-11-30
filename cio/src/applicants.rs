@@ -276,16 +276,6 @@ impl NewApplicant {
 
         HumanTime::from(dur)
     }
-
-    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
-        let mut msg: FormattedMessage = self.clone().into();
-        // Set the channel.
-        msg.channel = company.slack_channel_applicants.to_string();
-        // Post the message.
-        company.post_to_slack_channel(db, &msg).await?;
-
-        Ok(())
-    }
 }
 
 fn get_color_based_on_status(s: &str) -> String {
@@ -482,7 +472,7 @@ impl Applicant {
         }
 
         // Update the applicant's status based on other criteria.
-        self.update_status(db, company).await?;
+        self.update_status().await?;
 
         // Update airtable and the database again, we want to save our status just in
         // case there is an error.
@@ -510,179 +500,14 @@ impl Applicant {
         Ok(())
     }
 
-    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
-        let n: NewApplicant = self.into();
-        n.send_slack_notification(db, company).await
-    }
-
-    pub async fn send_slack_notification_background_check_status_changed(
-        &self,
-        db: &Database,
-        company: &Company,
-    ) -> Result<()> {
-        let mut msg: FormattedMessage = self.clone().into();
-        // Set the channel.
-        msg.channel = company.slack_channel_applicants.to_string();
-
-        let update = MessageBlock {
-            block_type: MessageBlockType::Section,
-            text: Some(MessageBlockText {
-                text_type: MessageType::Markdown,
-                text: format!(
-                    "background check status is now `{}`",
-                    self.criminal_background_check_status
-                ),
-            }),
-            elements: Default::default(),
-            accessory: Default::default(),
-            block_id: Default::default(),
-            fields: Default::default(),
-        };
-
-        // Make the new block be the second thing.
-        msg.attachments[0].blocks.insert(1, update);
-
-        // Post the message.
-        company.post_to_slack_channel(db, &msg).await?;
-
-        Ok(())
-    }
-
-    pub async fn send_slack_notification_status_changed(&self, db: &Database, company: &Company) -> Result<()> {
-        let mut msg: FormattedMessage = self.clone().into();
-        // Set the channel.
-        msg.channel = company.slack_channel_applicants.to_string();
-
-        let update = MessageBlock {
-            block_type: MessageBlockType::Section,
-            text: Some(MessageBlockText {
-                text_type: MessageType::Markdown,
-                text: format!("status is now `{}`", self.status),
-            }),
-            elements: Default::default(),
-            accessory: Default::default(),
-            block_id: Default::default(),
-            fields: Default::default(),
-        };
-
-        // Make the new block be the second thing.
-        msg.attachments[0].blocks.insert(1, update);
-
-        // Post the message.
-        company.post_to_slack_channel(db, &msg).await?;
-
-        Ok(())
-    }
-
-    pub async fn send_slack_notification_start_date_changed(&self, db: &Database, company: &Company) -> Result<()> {
-        if self.start_date.is_none() {
-            // Return early, we don't care.
-            return Ok(());
-        }
-
-        let mut msg: FormattedMessage = self.clone().into();
-        // Set the channel.
-        msg.channel = company.slack_channel_applicants.to_string();
-
-        let start_date = self.start_date.unwrap();
-        let dur = start_date - Utc::now().date().naive_utc();
-        let human_date = HumanTime::from(dur);
-
-        let update = MessageBlock {
-            block_type: MessageBlockType::Section,
-            text: Some(MessageBlockText {
-                text_type: MessageType::Markdown,
-                text: format!("start date is now `{}`, {}", start_date.format("%F"), human_date),
-            }),
-            elements: Default::default(),
-            accessory: Default::default(),
-            block_id: Default::default(),
-            fields: Default::default(),
-        };
-
-        // Make the new block be the second thing.
-        msg.attachments[0].blocks.insert(1, update);
-
-        // Post the message.
-        company.post_to_slack_channel(db, &msg).await?;
-
-        Ok(())
-    }
-
-    pub async fn send_slack_notification_docusign_offer_status_changed(
-        &self,
-        db: &Database,
-        company: &Company,
-    ) -> Result<()> {
-        let mut msg: FormattedMessage = self.clone().into();
-        // Set the channel.
-        msg.channel = company.slack_channel_applicants.to_string();
-
-        let update = MessageBlock {
-            block_type: MessageBlockType::Section,
-            text: Some(MessageBlockText {
-                text_type: MessageType::Markdown,
-                text: format!("docusign offer status is now `{}`", self.docusign_envelope_status),
-            }),
-            elements: Default::default(),
-            accessory: Default::default(),
-            block_id: Default::default(),
-            fields: Default::default(),
-        };
-
-        // Make the new block be the second thing.
-        msg.attachments[0].blocks.insert(1, update);
-
-        // Post the message.
-        company.post_to_slack_channel(db, &msg).await?;
-
-        Ok(())
-    }
-
-    pub async fn send_slack_notification_docusign_piia_status_changed(
-        &self,
-        db: &Database,
-        company: &Company,
-    ) -> Result<()> {
-        let mut msg: FormattedMessage = self.clone().into();
-        // Set the channel.
-        msg.channel = company.slack_channel_applicants.to_string();
-
-        let update = MessageBlock {
-            block_type: MessageBlockType::Section,
-            text: Some(MessageBlockText {
-                text_type: MessageType::Markdown,
-                text: format!(
-                    "docusign employee agreements status is now `{}`",
-                    self.docusign_piia_envelope_status
-                ),
-            }),
-            elements: Default::default(),
-            accessory: Default::default(),
-            block_id: Default::default(),
-            fields: Default::default(),
-        };
-
-        // Make the new block be the second thing.
-        msg.attachments[0].blocks.insert(1, update);
-
-        // Post the message.
-        company.post_to_slack_channel(db, &msg).await?;
-
-        Ok(())
-    }
-
     /// Update an applicant's status based on dates, interviews, etc.
-    pub async fn update_status(&mut self, db: &Database, company: &Company) -> Result<()> {
-        let mut send_notification = false;
-
+    pub async fn update_status(&mut self) -> Result<()> {
         // If we know they have more than 1 interview AND their current status is "next steps",
         // THEN we can mark the applicant as in the "interviewing" state.
         if self.interviews.len() > 1
             && (self.status == crate::applicant_status::Status::NextSteps.to_string()
                 || self.status == crate::applicant_status::Status::NeedsToBeTriaged.to_string())
         {
-            send_notification = self.status != crate::applicant_status::Status::Interviewing.to_string();
             self.status = crate::applicant_status::Status::Interviewing.to_string();
         }
 
@@ -696,14 +521,7 @@ impl Applicant {
             // We shouldn't also check if we have an employee for the user, only if the employee had
             // been hired and left.
             // TODO: Have a status for if the employee was hired but then left the company.
-            send_notification = self.status != crate::applicant_status::Status::Hired.to_string();
             self.status = crate::applicant_status::Status::Hired.to_string();
-        }
-
-        if send_notification {
-            // Update the database first just in case.
-            self.update(db).await?;
-            self.send_slack_notification_status_changed(db, company).await?;
         }
 
         Ok(())
@@ -957,9 +775,6 @@ impl Applicant {
 
                     self.update(db).await?;
 
-                    self.send_slack_notification_background_check_status_changed(db, &company)
-                        .await?;
-
                     info!("sent background check invitation to: {}", self.email);
                 }
                 // We can return early they already exist as a candidate and we have sent them an
@@ -978,9 +793,6 @@ impl Applicant {
         self.criminal_background_check_status = "requested".to_string();
 
         self.update(db).await?;
-
-        self.send_slack_notification_background_check_status_changed(db, &company)
-            .await?;
 
         info!("sent background check invitation to: {}", self.email);
 
@@ -1540,11 +1352,11 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company, c
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
         applicant
-            .do_docusign_offer(db, &ds, company, config.envelopes.create_offer_letter(&applicant))
+            .do_docusign_offer(db, &ds, config.envelopes.create_offer_letter(&applicant))
             .await?;
 
         applicant
-            .do_docusign_piia(db, &ds, company, config.envelopes.create_piia_letter(&applicant))
+            .do_docusign_piia(db, &ds, config.envelopes.create_piia_letter(&applicant))
             .await?;
     }
 
@@ -2117,7 +1929,7 @@ The applicants Airtable \
         // Get the last ten character of the string.
         if let Ok(phone_number) = phonenumber::parse(Some(country), &phone) {
             if !phone_number.is_valid() {
-                info!("phone number is invalid: {}", phone);
+                info!("phone number is invalid: {}", self.id);
             }
 
             phone = format!("{}", phone_number.format().mode(phonenumber::Mode::International));
@@ -2130,7 +1942,6 @@ The applicants Airtable \
         &mut self,
         db: &Database,
         ds: &DocuSign,
-        company: &Company,
         new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
@@ -2164,10 +1975,6 @@ The applicants Airtable \
 
             // Update the applicant in the database.
             self.update(db).await?;
-
-            // Send a slack notification that the docusign status changed.
-            self.send_slack_notification_docusign_offer_status_changed(db, company)
-                .await?;
         } else if !self.docusign_envelope_id.is_empty() {
             // We have sent their offer.
             // Let's get the status of the envelope in Docusign.
@@ -2191,8 +1998,6 @@ The applicants Airtable \
 
         let company = self.company(db).await?;
 
-        let send_notification = self.docusign_envelope_status != envelope.status;
-
         // Set the status in the database and airtable.
         self.docusign_envelope_status = envelope.status.to_string();
         self.offer_created = envelope.created_date_time;
@@ -2202,11 +2007,6 @@ The applicants Airtable \
             // We will skip to the end and return early, only updating the status.
             self.update(db).await?;
 
-            if send_notification {
-                // Send a slack notification that the docusign status changed.
-                self.send_slack_notification_docusign_offer_status_changed(db, &company)
-                    .await?;
-            }
             return Ok(());
         }
 
@@ -2268,7 +2068,10 @@ The applicants Airtable \
                 .files()
                 .create_or_update(&drive_id, &name_folder_id, &filename, "application/pdf", &bytes)
                 .await?;
-            info!("uploaded completed file `{}` to drive", filename);
+            info!(
+                "uploaded completed `{}` file for user {} to drive",
+                document.name, self.id
+            );
         }
 
         // In order to not "over excessively poll the API here, we need to sleep for 15
@@ -2323,34 +2126,17 @@ The applicants Airtable \
             employee.update(db).await?;
         }
 
-        let mut send_notification_start_date = false;
-
         for fd in form_data {
             // TODO: we could somehow use the manager data here or above. The manager data is in
             // the docusign data.
             // Only set the start date if we haven't set it already.
             if fd.name == "Start Date" && self.start_date.is_none() {
                 let start_date = NaiveDate::parse_from_str(fd.value.trim(), "%m/%d/%Y")?;
-
-                send_notification_start_date = self.start_date.is_none() || self.start_date.unwrap() != start_date;
-
                 self.start_date = Some(start_date);
             }
         }
 
         self.update(db).await?;
-
-        // Send the slack notification if we should.
-        if send_notification {
-            // Send a slack notification that the docusign status changed.
-            self.send_slack_notification_docusign_offer_status_changed(db, &company)
-                .await?;
-        }
-
-        if send_notification_start_date {
-            // Send a slack notification that the start date changed.
-            self.send_slack_notification_start_date_changed(db, &company).await?;
-        }
 
         Ok(())
     }
@@ -2359,7 +2145,6 @@ The applicants Airtable \
         &mut self,
         db: &Database,
         ds: &DocuSign,
-        company: &Company,
         new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
@@ -2379,8 +2164,8 @@ The applicants Airtable \
             && self.status == crate::applicant_status::Status::GivingOffer.to_string()
         {
             info!(
-                "applicant has status giving offer: {}, generating employee agreements in docusign for them!",
-                self.name
+                "applicant {} has status giving offer: generating employee agreements in docusign for them!",
+                self.id
             );
 
             // Let's create the envelope.
@@ -2393,10 +2178,6 @@ The applicants Airtable \
 
             // Update the applicant in the database.
             self.update(db).await?;
-
-            // Send a slack notification that the docusign status changed.
-            self.send_slack_notification_docusign_piia_status_changed(db, company)
-                .await?;
         } else if !self.docusign_piia_envelope_id.is_empty() {
             // We have sent their employee agreements.
             // Let's get the status of the envelope in Docusign.
@@ -2407,6 +2188,52 @@ The applicants Airtable \
         }
 
         Ok(())
+    }
+
+    pub async fn send_new_piia_for_accepted_applicant(
+        &mut self,
+        db: &Database,
+        ds: &DocuSign,
+        new_envelope: docusign::Envelope,
+    ) -> Result<()> {
+        // Keep the fields from Airtable we need just in case they changed.
+        self.keep_fields_from_airtable(db).await;
+
+        // Only allow documents to be re-generated if we are in the process of or have already
+        // hired this applicant
+        if self.status == crate::applicant_status::Status::GivingOffer.to_string()
+            && self.status == crate::applicant_status::Status::Onboarding.to_string()
+            && self.status == crate::applicant_status::Status::Hired.to_string()
+        {
+            info!(
+                "generating new employee agreements for applicant {} in docusign",
+                self.id
+            );
+
+            // Reset the current piia fields
+            self.docusign_piia_envelope_id = String::new();
+            self.docusign_piia_envelope_status = String::new();
+            self.piia_envelope_created = None;
+            self.piia_envelope_completed = None;
+
+            // Let's create the envelope.
+            let envelope = ds.create_envelope(new_envelope).await?;
+
+            // Set the id of the envelope.
+            self.docusign_piia_envelope_id = envelope.envelope_id.to_string();
+
+            // Set the status of the envelope.
+            self.docusign_piia_envelope_status = envelope.status.to_string();
+
+            // Update the applicant in the database.
+            self.update(db).await?;
+
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!(
+                "Unable to regenerate PIIA documents for non-hiring employees"
+            ))
+        }
     }
 
     pub async fn keep_fields_from_airtable(&mut self, db: &Database) {
@@ -2450,8 +2277,6 @@ The applicants Airtable \
 
         let company = self.company(db).await?;
 
-        let send_notification = self.docusign_piia_envelope_status != envelope.status;
-
         // Set the status in the database and airtable.
         self.docusign_piia_envelope_status = envelope.status.to_string();
         self.piia_envelope_created = envelope.created_date_time;
@@ -2460,12 +2285,6 @@ The applicants Airtable \
         if envelope.status != "completed" {
             // We will skip to the end and return early, only updating the status.
             self.update(db).await?;
-
-            if send_notification {
-                // Send a slack notification that the docusign status changed.
-                self.send_slack_notification_docusign_piia_status_changed(db, &company)
-                    .await?;
-            }
             return Ok(());
         }
 
@@ -2478,12 +2297,6 @@ The applicants Airtable \
 
         // Let's update the database here since nothing else has to do with that.
         self.update(db).await?;
-
-        if send_notification {
-            // Send a slack notification that the docusign status changed.
-            self.send_slack_notification_docusign_piia_status_changed(db, &company)
-                .await?;
-        }
 
         // Initialize the Google Drive client.
         let drive_client = company.authenticate_google_drive(db).await?;

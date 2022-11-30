@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     airtable::AIRTABLE_ASSET_ITEMS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
-    schema::asset_items, swag_inventory::generate_pdf_barcode_label,
+    printer::Printer, schema::asset_items, swag_inventory::generate_pdf_barcode_label,
 };
 
 #[db {
@@ -261,9 +261,12 @@ impl AssetItem {
         };
 
         let printer_url = format!("{}/zebra", company.printer_url);
+        let printer_key = Printer::key();
+
         let client = reqwest::Client::new();
         let resp = client
             .post(&printer_url)
+            .bearer_auth(printer_key)
             .body(json!(PrintLabelsRequest { url, quantity: 1 }).to_string())
             .send()
             .await?;

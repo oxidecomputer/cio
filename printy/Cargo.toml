@@ -8,8 +8,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cio-api = { path = "../cio" }
+anyhow = "1"
+async-trait = "0.1.56"
+cio-api-types = { path = "../cio-api-types" }
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
+dropshot-verify-request = { path = "../dropshot-verify-request" }
 http = "0.2.6"
 log = { version = "0.4", features = ["serde"] }
 reqwest = "^0.11"
@@ -17,3 +20,5 @@ pretty_env_logger = "0.4"
 sentry = { version = "^0.27.0", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "debug-images", "tracing"] }
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "^1.0", features = ["serde", "v4"] }
+schemars = "0.8"
+serde = { version = "1.0", features = ["derive"] }

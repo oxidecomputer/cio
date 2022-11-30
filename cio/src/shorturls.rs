@@ -1,9 +1,13 @@
 use anyhow::{bail, Result};
-use cloudflare::endpoints::dns;
 use serde::Serialize;
 
 use crate::{
-    companies::Company, configs::Links, db::Database, dns_providers::DNSProviderOps, repos::GithubRepos, rfds::RFDs,
+    companies::Company,
+    configs::Links,
+    db::Database,
+    dns_providers::{DNSProviderOps, DnsRecord, DnsRecordType, DnsUpdateMode},
+    repos::GithubRepos,
+    rfd::RFDs,
     templates::generate_nginx_files_for_shorturls,
 };
 
@@ -246,16 +250,11 @@ where
 /// Update all the short URLs and DNS.
 pub async fn refresh_shorturls(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
-    let cloudflare = company.authenticate_cloudflare()?;
+    let provider = company.authenticate_dns_providers().await?;
 
-    generate_shorturls_for_repos(db, &github, company, &cloudflare, "configs").await?;
-    generate_shorturls_for_rfds(db, &github, company, &cloudflare, "configs").await?;
-    generate_shorturls_for_configs_links(db, &github, company, &cloudflare, "configs").await?;
-
-    // Only do this if we can auth with Tailscale.
-    if !company.tailscale_api_key.is_empty() {
-        generate_dns_for_tailscale_devices(company, &cloudflare).await?;
-    }
+    generate_shorturls_for_repos(db, &github, company, &provider, "configs").await?;
+    generate_shorturls_for_rfds(db, &github, company, &provider, "configs").await?;
+    generate_shorturls_for_configs_links(db, &github, company, &provider, "configs").await?;
 
     Ok(())
 }
@@ -293,10 +292,12 @@ where
         name = format!("{}.{}.{}", name, s.subdomain, company.domain);
         if dns_client
             .ensure_record(
-                &name,
-                dns::DnsContent::A {
+                DnsRecord {
+                    name: name.to_string(),
+                    type_: DnsRecordType::A,
                     content: company.nginx_ip.parse()?,
                 },
+                DnsUpdateMode::Replace,
             )
             .await
             .is_err()
@@ -304,10 +305,12 @@ where
             // Try it again, it might just have been a time out error.
             if let Err(e) = dns_client
                 .ensure_record(
-                    &name,
-                    dns::DnsContent::A {
+                    DnsRecord {
+                        name: name.to_string(),
+                        type_: DnsRecordType::A,
                         content: company.nginx_ip.parse()?,
                     },
+                    DnsUpdateMode::Replace,
                 )
                 .await
             {

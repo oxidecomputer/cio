@@ -11,8 +11,13 @@ use cloudflare::framework::{
 };
 use docusign::DocuSign;
 use google_calendar::Client as GoogleCalendar;
+use google_dns1::Dns;
 use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
+use google_storage1::{
+    hyper::client::HttpConnector,
+    hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
+};
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
 use log::{info, warn};
@@ -32,16 +37,19 @@ use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
 use tailscale_api::Tailscale;
 use tripactions::Client as TripActions;
+use yup_oauth2::authenticator::Authenticator;
 use zoho_api::Zoho;
 use zoom_api::Client as Zoom;
 
 use crate::{
     airtable::{AIRTABLE_COMPANIES_TABLE, AIRTABLE_GRID_VIEW},
     api_tokens::{APIToken, NewAPIToken},
+    cloud_dns::CloudDnsClient,
     cloudflare::CloudFlareClient,
     configs::{Building, Buildings},
     core::UpdateAirtableRecord,
     db::Database,
+    dns_proxy::DnsProviderProxy,
     schema::{api_tokens, companys},
 };
 
@@ -1004,7 +1012,7 @@ impl Company {
         let jwt = JWTCredentials::new(app_id, key.data)?;
 
         // Create the HTTP cache.
-        let http_cache = Box::new(FileBasedCache::new(format!("{}/.cache/github", env::var("HOME")?)));
+        let http_cache = Box::new(FileBasedCache::new("/tmp/.cache/github"));
 
         let token_generator = InstallationTokenGenerator::new(self.github_app_installation_id.try_into()?, jwt);
 
@@ -1024,6 +1032,48 @@ impl Company {
             client,
             http_cache,
         ))
+    }
+
+    // Authenticate with GCP using the instances assigned permissions
+    pub async fn authenticate_gcp(&self) -> Result<Authenticator<HttpsConnector<HttpConnector>>> {
+        let opts = yup_oauth2::ApplicationDefaultCredentialsFlowOpts::default();
+        match yup_oauth2::ApplicationDefaultCredentialsAuthenticator::builder(opts).await {
+            yup_oauth2::authenticator::ApplicationDefaultCredentialsTypes::InstanceMetadata(auth) => Ok(auth
+                .build()
+                .await?
+            ),
+            _ => Err(anyhow::anyhow!("Unsupported authentication mechanism encountered. Instance metadata authentication is the only supported authentication method."))
+        }
+    }
+
+    pub async fn authenticate_cloud_dns(&self) -> Result<CloudDnsClient> {
+        let authenticator = self.authenticate_gcp().await?;
+
+        Ok(CloudDnsClient::new(
+            std::env::var("CLOUD_DNS_PROJECT").expect("Failed to find CLOUD_DNS_PROJECT config"),
+            Dns::new(
+                google_dns1::hyper::Client::builder().build(
+                    HttpsConnectorBuilder::new()
+                        .with_native_roots()
+                        .https_or_http()
+                        .enable_http1()
+                        .enable_http2()
+                        .build(),
+                ),
+                authenticator,
+            ),
+        ))
+    }
+
+    pub async fn authenticate_dns_providers(&self) -> Result<DnsProviderProxy> {
+        Ok(DnsProviderProxy::new(
+            self.authenticate_cloudflare()?,
+            self.authenticate_cloud_dns().await?,
+        ))
+    }
+
+    pub fn rfd_static_storage(&self) -> String {
+        std::env::var("RFD_STATIC_BUCKET").unwrap()
     }
 
     // TODO: Extract out the hardcoded repo name so that it can be configurable

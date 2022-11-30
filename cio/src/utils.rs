@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, HashMap},
     env,
-    path::{Path, PathBuf},
+    path::Path,
     str::from_utf8,
 };
 
@@ -30,6 +30,11 @@ pub async fn write_file(file: &Path, contents: &[u8]) -> Result<()> {
     info!("wrote file: {}", file.to_str().unwrap());
 
     Ok(())
+}
+
+/// Utility function for checking if a file extension looks like an image extension
+pub fn is_image(file: &str) -> bool {
+    file.ends_with(".svg") || file.ends_with(".png") || file.ends_with(".jpg") || file.ends_with(".jpeg")
 }
 
 /// Create a comment on a commit for a repo.
@@ -110,58 +115,21 @@ pub async fn get_file_content_from_repo(
         file_path = "/".to_owned() + path;
     }
 
-    // Try to get the content for the file from the repo.
-    match github.repos().get_content_file(owner, repo, &file_path, branch).await {
-        Ok(file) => Ok((decode_base64(&file.content), file.sha.to_string())),
-        Err(e) => {
-            // TODO: better match on errors
-            if e.to_string().contains("rate limit") {
-                // We got a rate limit error.
-                bail!("We got rate limited! {}", e);
-            } else if e.to_string().contains("too large") {
-                // The file is too big for us to get it's contents through this API.
-                // The error suggests we use the Git Data API but we need the file sha for
-                // that.
-                // Get all the items in the directory and try to find our file and get the sha
-                // for it so we can update it.
-                let mut p = PathBuf::from(&file_path);
-                p.pop();
+    let file = get_github_file(github, owner, repo, branch, &file_path)
+        .await
+        .map_err(|err| {
+            log::warn!(
+                "[github content] Getting the file at {} on {}/{}/{} failed: {:?}",
+                file_path,
+                owner,
+                repo,
+                branch,
+                err
+            );
+            err
+        })?;
 
-                let files = github
-                    .repos()
-                    .get_content_vec_entries(owner, repo, p.to_str().unwrap(), branch)
-                    .await?;
-                for item in files {
-                    if file_path.trim_start_matches('/') != item.path {
-                        // Continue early.
-                        continue;
-                    }
-
-                    // Otherwise, this is our file.
-                    // We have the sha we can see if the files match using the
-                    // Git Data API.
-                    let blob = github.git().get_blob(owner, repo, &item.sha).await?;
-                    // Base64 decode the contents.
-
-                    return Ok((decode_base64(&blob.content), item.sha.to_string()));
-                }
-
-                bail!(
-                    "[github content] Getting the file at {} on branch {} failed: {:?}",
-                    file_path,
-                    branch,
-                    e
-                );
-            } else {
-                bail!(
-                    "[github content] Getting the file at {} on branch {} failed: {:?}",
-                    file_path,
-                    branch,
-                    e
-                );
-            }
-        }
-    }
+    Ok((decode_base64(&file.content), file.sha.to_string()))
 }
 
 /// Create or update a file in a GitHub repository.
@@ -431,53 +399,37 @@ pub fn setup_logger() {
     }
 }
 
-// TODO: this is repetitive with some other functions.
-// see `get_file_content_from_repo`
-pub async fn get_github_file(
+pub async fn get_github_entry_contents(
     github: &octorust::Client,
     owner: &str,
     repo: &str,
     branch: &str,
     file: &octorust::types::Entries,
 ) -> Result<octorust::types::ContentFile> {
-    // Get the contents of the image.
-    match github.repos().get_content_file(owner, repo, &file.path, branch).await {
-        Ok(f) => {
-            // Push the file to our vector.
-            Ok(f)
-        }
-        Err(e) => {
-            // TODO: better match on errors
-            if e.to_string().contains("too large") {
-                // The file is too big for us to get it's contents through this API.
-                // The error suggests we use the Git Data API but we need the file sha for
-                // that.
-                // We have the sha we can see if the files match using the
-                // Git Data API.
-                let blob = github.git().get_blob(owner, repo, &file.sha).await?;
+    get_github_file(github, owner, repo, branch, &file.path).await
+}
 
-                // Push the new file.
-                return Ok(octorust::types::ContentFile {
-                    type_: Default::default(),
-                    encoding: Default::default(),
-                    submodule_git_url: Default::default(),
-                    target: Default::default(),
-                    size: blob.size,
-                    name: file.name.clone(),
-                    path: file.path.clone(),
-                    content: blob.content,
-                    sha: file.sha.clone(),
-                    url: file.url.clone(),
-                    git_url: file.git_url.clone(),
-                    html_url: file.html_url.clone(),
-                    download_url: file.download_url.clone(),
-                    links: file.links.clone(),
-                });
-            }
+pub async fn get_github_file(
+    github: &octorust::Client,
+    owner: &str,
+    repo: &str,
+    branch: &str,
+    file: &str,
+) -> Result<octorust::types::ContentFile> {
+    let mut file = github.repos().get_content_file(owner, repo, file, branch).await?;
 
-            bail!("[rfd] getting file contents for {} failed: {}", file.path, e);
-        }
+    // If the content is empty and the encoding is none then we likely hit a "too large" file case.
+    // Try requesting the blob directly
+    if file.content.is_empty() && file.encoding == "none" {
+        let blob = github.git().get_blob(owner, repo, &file.sha).await?;
+
+        // We are only interested in the copying over the content and encoding fields, everything
+        // else from the original response should still be valid
+        file.content = blob.content;
+        file.encoding = blob.encoding;
     }
+
+    Ok(file)
 }
 
 pub fn trim<'de, D>(deserializer: D) -> Result<String, D::Error>

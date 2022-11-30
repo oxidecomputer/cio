@@ -111,8 +111,6 @@ impl ApplicationForm {
         // Update airtable and the database again.
         applicant.update(db).await?;
 
-        applicant.send_slack_notification(db, &company).await?;
-
         Ok(())
     }
 }

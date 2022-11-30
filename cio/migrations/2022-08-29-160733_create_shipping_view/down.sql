@@ -1,0 +1,1 @@
+DROP VIEW read_user_shipping;

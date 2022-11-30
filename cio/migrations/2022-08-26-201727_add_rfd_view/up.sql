@@ -1,0 +1,1 @@
+CREATE VIEW read_rfds AS SELECT authors, commit_date, discussion, id, name, number_string, number, short_link, state, title, html FROM rfds;

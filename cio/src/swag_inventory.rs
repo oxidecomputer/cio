@@ -28,6 +28,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
+    printer::Printer,
     schema::{barcode_scans, swag_inventory_items, swag_items},
 };
 
@@ -499,17 +500,6 @@ pub fn generate_pdf_barcode_label(
     Ok(bw.into_inner()?)
 }
 
-/// A request to print labels.
-#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
-pub struct PrintRequest {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub url: String,
-    #[serde(default)]
-    pub quantity: i32,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub content: String,
-}
-
 impl SwagInventoryItem {
     /// Send the label to our printer.
     pub async fn print_label(&self, db: &Database) -> Result<()> {
@@ -540,11 +530,14 @@ impl SwagInventoryItem {
         };
 
         let printer_url = format!("{}/zebra", company.printer_url);
+        let printer_key = Printer::key();
+
         let client = reqwest::Client::new();
         let resp = client
             .post(&printer_url)
+            .bearer_auth(printer_key)
             .body(
-                json!(PrintRequest {
+                json!(cio_api_types::swag_inventory::PrintRequest {
                     url,
                     quantity: self.print_barcode_label_quantity,
                     content: String::new(),

@@ -10,5 +10,7 @@ path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-cloudflare = "^0.9.1"
+# Swap to branch due to breaking change in CloudFlare API
+# cloudflare = "^0.9.1"
+cloudflare = { git = "https://github.com/augustuswm/cloudflare-rs" }
 tokio = { version = "=1", features = ["full"] }
