@@ -164,7 +164,7 @@ pub struct User {
     pub email: String,
     pub first_name: String,
     pub last_name: String,
-    pub phone: String,
+    pub phone: Option<String>,
     pub status: UserStatus,
     pub role: Role,
     pub is_manager: bool,
