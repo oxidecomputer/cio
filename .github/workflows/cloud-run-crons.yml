@@ -12,6 +12,7 @@ on:
       - 'macros/**'
       - 'diesel-sentry/**'
       - 'dropshot-verify-request/**'
+      - 'ramp-minimal-api/**'
       - 'zoho-client/**'
   workflow_dispatch:
     inputs:
