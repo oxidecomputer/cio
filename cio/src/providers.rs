@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use log::{info, warn};
-use sodiumoxide::crypto::hash;
+use sodiumoxide::{base64, crypto::hash};
 use std::convert::TryInto;
 
 use crate::{
@@ -122,7 +122,7 @@ impl ProviderWriteOps for ramp_minimal_api::RampClient {
         let mut ramp_user = ramp_minimal_api::CreateUserDeferred {
             // Hashing here is only used to get a stable random value, so we are re-using what the
             // crate already has available
-            idempotency_key: std::str::from_utf8(hash::hash(user.email.as_bytes()).as_ref())?.to_string(),
+            idempotency_key: base64::encode(hash::hash(user.email.as_bytes()).as_ref(), base64::Variant::Original),
             email: user.email.to_string(),
             first_name: user.first_name.to_string(),
             last_name: user.last_name.to_string(),
