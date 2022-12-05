@@ -1,7 +1,7 @@
 [package]
 name = "airtable-api"
 description = "An API client for Airtable"
-version = "0.1.36"
+version = "0.2.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
 edition = "2018"
 license = "Apache-2.0"

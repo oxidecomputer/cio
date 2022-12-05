@@ -95,6 +95,8 @@ COPY mailchimp-minimal-api ../mailchimp-minimal-api
 
 COPY partial-struct ../partial-struct
 
+COPY ramp-minimal-api ../ramp-minimal-api
+
 COPY diesel-sentry ../diesel-sentry
 
 COPY dropshot-verify-request ../dropshot-verify-request

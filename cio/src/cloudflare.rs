@@ -103,15 +103,20 @@ impl CloudFlareClient {
             .await?
             .result;
 
-        let entry = ZoneEntry {
-            id: zones[0].id.to_string(),
-            expires_at: Instant::now().checked_add(Duration::from_secs(60 * 60)).unwrap(),
-        };
+        if !zones.is_empty() {
+            let entry = ZoneEntry {
+                id: zones[0].id.to_string(),
+                expires_at: Instant::now().checked_add(Duration::from_secs(60 * 60)).unwrap(),
+            };
 
-        self.zone_cache.write().unwrap().insert(root_domain, entry.clone());
+            self.zone_cache.write().unwrap().insert(root_domain, entry.clone());
 
-        // Our zone identifier should be the first record's ID.
-        Ok(entry)
+            // Our zone identifier should be the first record's ID.
+            Ok(entry)
+        } else {
+            log::info!("Failed to find zone zone identifier for {}", root_domain);
+            Err(anyhow::anyhow!("Failed to find zone identifier for {}", domain))
+        }
     }
 
     async fn get_dns_records_in_zone(&self, zone_identifier: &str, page: u32) -> ApiResponse<Vec<CloudFlareDnsRecord>> {
