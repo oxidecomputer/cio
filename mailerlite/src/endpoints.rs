@@ -222,16 +222,15 @@ pub struct ListSegmentSubscribersRequest {
     after: Option<u64>,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ListSegmentSubscribersResponse<T> {
     Success {
         data: Vec<T>,
-        meta: ListSegmentSubscribersResponseMeta
+        meta: ListSegmentSubscribersResponseMeta,
     },
     Error {
-        message: String
+        message: String,
     },
 }
 
@@ -284,15 +283,13 @@ impl MailerliteEndpoint for ListSegmentSubscribersRequest {
             let response: ListSegmentSubscribersResponse<ApiSubscriber> = response.json().await?;
 
             match response {
-                ListSegmentSubscribersResponse::Success { data, meta } => {
-                    Ok(ListSegmentSubscribersResponse::Success {
-                        data: data
-                            .into_iter()
-                            .map(|s| s.into_subscriber(&ctx.time_zone))
-                            .collect::<Result<Vec<Subscriber>, FailedToTranslateDateError>>()?,
-                        meta,
-                    })
-                },
+                ListSegmentSubscribersResponse::Success { data, meta } => Ok(ListSegmentSubscribersResponse::Success {
+                    data: data
+                        .into_iter()
+                        .map(|s| s.into_subscriber(&ctx.time_zone))
+                        .collect::<Result<Vec<Subscriber>, FailedToTranslateDateError>>()?,
+                    meta,
+                }),
                 ListSegmentSubscribersResponse::Error { message } => {
                     Ok(ListSegmentSubscribersResponse::Error { message })
                 }

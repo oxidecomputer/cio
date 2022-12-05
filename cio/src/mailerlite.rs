@@ -23,7 +23,7 @@ pub struct MailerliteSegments {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CioState {
     #[serde(default)]
-    processed_groups: Vec<String>
+    processed_groups: Vec<String>,
 }
 
 impl Mailerlite<chrono_tz::Tz> {
@@ -54,7 +54,11 @@ impl Mailerlite<chrono_tz::Tz> {
         self.mark_subscriber(email, "wait_list").await
     }
 
-    async fn get_pending_list_page(&self, segment_id: &str, start: Option<u64>) -> Result<ListSegmentSubscribersResponse<Subscriber>> {
+    async fn get_pending_list_page(
+        &self,
+        segment_id: &str,
+        start: Option<u64>,
+    ) -> Result<ListSegmentSubscribersResponse<Subscriber>> {
         let mut req = ListSegmentSubscribersRequestBuilder::default()
             .segment_id(segment_id.to_string())
             .limit(1000);
@@ -63,7 +67,8 @@ impl Mailerlite<chrono_tz::Tz> {
             req = req.after(start);
         }
 
-        self.client.run(req.build()?)
+        self.client
+            .run(req.build()?)
             .await
             .map_err(anyhow::Error::new)
             .and_then(|response| match response {
@@ -101,7 +106,11 @@ impl Mailerlite<chrono_tz::Tz> {
                     }
                 }
                 ListSegmentSubscribersResponse::Error { message } => {
-                    return Err(anyhow!("Requesting segment {} from Mailerlite failed with {}", segment_id, message))
+                    return Err(anyhow!(
+                        "Requesting segment {} from Mailerlite failed with {}",
+                        segment_id,
+                        message
+                    ))
                 }
             }
         }
@@ -132,7 +141,7 @@ impl Mailerlite<chrono_tz::Tz> {
                         SubscriberFieldValue::String(current_value) => {
                             let new_marker = state_marker.to_string();
 
-                            let mut state: CioState = serde_json::from_str(&current_value)?;
+                            let mut state: CioState = serde_json::from_str(current_value)?;
 
                             if !state.processed_groups.contains(&new_marker) {
                                 state.processed_groups.push(new_marker);
@@ -147,8 +156,9 @@ impl Mailerlite<chrono_tz::Tz> {
                     }
                 } else {
                     serde_json::to_string(&CioState {
-                        processed_groups: vec![state_marker.to_string()]
-                    })?.into()
+                        processed_groups: vec![state_marker.to_string()],
+                    })?
+                    .into()
                 };
 
                 fields.insert("cio_state".to_string(), Some(new_value));

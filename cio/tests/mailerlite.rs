@@ -3,10 +3,7 @@
 async fn test_get_pending_mailing_list_users() {
     let client = cio_api::mailerlite::Mailerlite::new().unwrap();
 
-    let subscribers = client
-        .pending_mailing_list_subscribers()
-        .await
-        .unwrap();
+    let subscribers = client.pending_mailing_list_subscribers().await.unwrap();
 
     println!("{}", subscribers.len());
 
