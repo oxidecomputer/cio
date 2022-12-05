@@ -12,8 +12,6 @@ use cio_api::{
     companies::Company,
     configs::User,
     journal_clubs::JournalClubMeeting,
-    mailing_list::MailingListSubscriber,
-    rack_line::RackLineSubscriber,
     rfd::RFD,
     schema::{applicants, inbound_shipments, journal_club_meetings, outbound_shipments},
     shipments::{InboundShipment, NewInboundShipment, OutboundShipment, OutboundShipments},
@@ -25,9 +23,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, 
 use dropshot::{Path, RequestContext};
 use google_drive::traits::{DriveOps, FileOps};
 use log::{info, warn};
-use mailchimp_minimal_api::Webhook as MailChimpWebhook;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use serde_qs::Config as QSConfig;
 use slack_chat_api::{
     BotCommand, FormattedMessage, InputBlock, InputBlockElement, InputType, InteractivePayload, InteractiveResponse,
     MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageResponse, MessageResponseType,
@@ -1410,92 +1406,6 @@ pub async fn handle_analytics_page_view(rqctx: Arc<RequestContext<Context>>, mut
     let pv = event.create(db).await?;
 
     info!("page_view `{} | {}` created successfully", pv.page_link, pv.user_email);
-    Ok(())
-}
-
-pub async fn handle_mailchimp_mailing_list(rqctx: Arc<RequestContext<Context>>, event_string: String) -> Result<()> {
-    let api_context = rqctx.context();
-    let db = &api_context.db;
-
-    // We should have a string, which we will then parse into our args.
-    info!("Handling MailChimp mailing_list webhook {}", event_string);
-
-    let qs_non_strict = QSConfig::new(10, false);
-
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map_err(|err| {
-        warn!("Failed to parse MailChimp mailing list webhook. err: {:?}", err);
-        err
-    })?;
-
-    if event.webhook_type != *"subscribe" {
-        info!("not a `subscribe` event, got `{}`", event.webhook_type);
-        return Ok(());
-    }
-
-    // Parse the webhook as a new mailing list subscriber.
-    let new_subscriber = cio_api::mailing_list::as_mailing_list_subscriber(event, db).await?;
-
-    let existing = MailingListSubscriber::get_from_db(db, new_subscriber.email.to_string()).await;
-    if existing.is_none() {
-        // Update the subscriber in the database.
-        let subscriber = new_subscriber.upsert(db).await?;
-
-        // Parse the signup into a slack message.
-        // Send the message to the slack channel.
-        let company = Company::get_by_id(db, new_subscriber.cio_company_id).await?;
-        subscriber.send_slack_notification(db, &company).await?;
-        info!("subscriber {} posted to Slack", subscriber.email);
-
-        info!("subscriber {} created successfully", subscriber.email);
-    } else {
-        info!("subscriber {} already exists", new_subscriber.email);
-    }
-
-    Ok(())
-}
-
-pub async fn handle_mailchimp_rack_line(rqctx: Arc<RequestContext<Context>>, event_string: String) -> Result<()> {
-    let api_context = rqctx.context();
-    let db = &api_context.db;
-
-    info!("Handling MailChimp rack_line webhook {}", event_string);
-
-    let qs_non_strict = QSConfig::new(10, false);
-
-    let event: MailChimpWebhook = qs_non_strict.deserialize_str(&event_string).map_err(|err| {
-        warn!("Failed to parse MailChimp rack_line webhook. err: {:?}", err);
-        err
-    })?;
-
-    if event.webhook_type != *"subscribe" {
-        info!("not a `subscribe` event, got `{}`", event.webhook_type);
-        return Ok(());
-    }
-
-    // Parse the webhook as a new rack line subscriber.
-    let new_subscriber = cio_api::rack_line::as_rack_line_subscriber(event, db).await?;
-
-    let existing = RackLineSubscriber::get_from_db(db, new_subscriber.email.to_string()).await;
-    if existing.is_none() {
-        // Update the subscriber in the database.
-        let subscriber = new_subscriber.upsert(db).await?;
-
-        // Parse the signup into a slack message.
-        // Send the message to the slack channel.
-        let company = Company::get_by_id(db, new_subscriber.cio_company_id).await?;
-        subscriber.send_slack_notification(db, &company).await?;
-
-        let mut subscribers = vec![subscriber];
-
-        info!("subscriber {} posted to Slack", subscribers[0].id);
-
-        cio_api::zoho::push_new_rack_line_subscribers_to_zoho(&mut subscribers, db, &company).await?;
-
-        info!("subscriber {} created successfully", subscribers[0].id);
-    } else {
-        info!("subscriber already exists");
-    }
-
     Ok(())
 }
 

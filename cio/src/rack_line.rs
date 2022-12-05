@@ -1,10 +1,7 @@
-#![allow(clippy::from_over_into)]
-use std::env;
-
-use anyhow::{bail, Result};
+use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
-use chrono::{offset::Utc, DateTime, TimeZone};
+use chrono::{offset::Utc, DateTime};
 use chrono_humanize::HumanTime;
 use macros::db;
 use mailerlite::SubscriberFieldValue;
@@ -189,127 +186,6 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
         self.tags = record.tags;
 
         Ok(())
-    }
-}
-
-/// Sync the rack_line_subscribers from Mailchimp with our database.
-pub async fn refresh_db_rack_line_subscribers(db: &Database, company: &Company) -> Result<()> {
-    let mailchimp_auth = company.authenticate_mailchimp().await;
-    if let Err(e) = mailchimp_auth {
-        bail!("authenticating mailchimp failed: {}", e);
-    }
-
-    let mailchimp = mailchimp_auth.unwrap();
-
-    // TODO: remove this env variable.
-    let members = mailchimp
-        .get_subscribers(
-            &env::var("MAILCHIMP_LIST_ID_RACK_LINE")
-                .map_err(|e| anyhow::anyhow!("getting env var MAILCHIMP_LIST_ID_RACK_LINE failed: {}", e))?,
-        )
-        .await?;
-
-    // Sync subscribers.
-    for member in members {
-        let mut ns: NewRackLineSubscriber = member.into();
-        ns.cio_company_id = company.id;
-        ns.upsert(db).await?;
-    }
-
-    RackLineSubscribers::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    // Pull down any tags and notes stored remotely, and ensure they are persisted locally
-    let airtable_records = RackLineSubscribers::get_from_airtable(db, company.id).await?;
-
-    for (id, record) in airtable_records {
-        // Airtable records carry with them the most up to date tags and notes data, so we
-        // can easily save them here. Ideally this could be a bulk update
-        if let Err(err) = record.fields.update_in_db(db).await {
-            log::error!("Failed to store tags and notes from remote for {}. {:?}", id, err);
-        }
-    }
-
-    Ok(())
-}
-
-/// Convert to a signup data type.
-pub async fn as_rack_line_subscriber(
-    webhook: mailchimp_minimal_api::Webhook,
-    db: &Database,
-) -> Result<NewRackLineSubscriber> {
-    let mut signup: NewRackLineSubscriber = Default::default();
-
-    let _list_id = webhook.data.list_id.as_ref().unwrap();
-
-    // Get the company from the list id.
-    // TODO: eventually change this when we have more than one.
-    if let Some(company) = Company::get_from_db(db, "Oxide".to_string()).await {
-        if webhook.data.merges.is_some() {
-            let merges = webhook.data.merges.as_ref().unwrap();
-
-            if let Some(e) = &merges.email {
-                signup.email = e.trim().to_string();
-            }
-            if let Some(f) = &merges.name {
-                signup.name = f.trim().to_string();
-            }
-            if let Some(c) = &merges.company {
-                signup.company = c.trim().to_string();
-            }
-            if let Some(c) = &merges.company_size {
-                signup.company_size = c.trim().to_string();
-            }
-            if let Some(i) = &merges.notes {
-                signup.interest = i.trim().to_string();
-            }
-        }
-
-        signup.date_added = webhook.fired_at;
-        signup.date_optin = webhook.fired_at;
-        signup.date_last_changed = webhook.fired_at;
-
-        signup.cio_company_id = company.id;
-
-        Ok(signup)
-    } else {
-        bail!("Could not find company with name 'Oxide'")
-    }
-}
-
-impl Into<NewRackLineSubscriber> for mailchimp_minimal_api::Member {
-    fn into(self) -> NewRackLineSubscriber {
-        let mut tags: Vec<String> = Default::default();
-        for t in &self.tags {
-            tags.push(t.name.to_string());
-        }
-        let mut timestamp = Utc::now();
-
-        if !self.timestamp_opt.is_empty() {
-            timestamp = Utc.datetime_from_str(&self.timestamp_opt, "%+").unwrap();
-        }
-        if !self.timestamp_signup.is_empty() {
-            timestamp = Utc.datetime_from_str(&self.timestamp_signup, "%+").unwrap();
-        }
-
-        NewRackLineSubscriber {
-            email: self.email_address,
-            name: self.merge_fields.name.to_string(),
-            company: self.merge_fields.company,
-            company_size: self.merge_fields.company_size,
-            interest: self.merge_fields.notes,
-            date_added: timestamp,
-            date_optin: timestamp,
-            date_last_changed: self.last_changed,
-            notes: self.last_note.note,
-            tags,
-            link_to_people: Default::default(),
-            cio_company_id: Default::default(),
-            zoho_lead_id: Default::default(),
-            zoho_lead_exclude: false,
-        }
     }
 }
 
