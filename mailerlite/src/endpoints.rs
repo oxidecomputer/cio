@@ -397,7 +397,7 @@ mod tests {
             GetSubscriberResponse::Success { data } => {
                 let expected_date_time = Utc.timestamp(1630519430, 0);
 
-                assert_eq!(data.subscribed_at, expected_date_time);
+                assert_eq!(data.subscribed_at, Some(expected_date_time));
                 assert_eq!(data.created_at, expected_date_time);
                 assert_eq!(data.updated_at, expected_date_time);
             }

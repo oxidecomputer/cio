@@ -231,7 +231,7 @@ mod tests {
             open_rate: 0.0,
             click_rate: 0.0,
             ip_address: None,
-            subscribed_at: test_date.clone(),
+            subscribed_at: Some(test_date.clone()),
             unsubscribed_at: Some(test_date.clone()),
             created_at: test_date.clone(),
             updated_at: test_date.clone(),
@@ -247,7 +247,7 @@ mod tests {
         // the timezone post conversion is five hours ahead
         let expected_date = Utc.timestamp(1667229189 + (5 * 60 * 60), 0);
 
-        assert_eq!(converted.subscribed_at, expected_date);
+        assert_eq!(converted.subscribed_at, Some(expected_date));
         assert_eq!(converted.unsubscribed_at, Some(expected_date));
         assert_eq!(converted.created_at, expected_date);
         assert_eq!(converted.updated_at, expected_date);
