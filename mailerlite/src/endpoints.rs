@@ -128,13 +128,20 @@ pub struct WriteSubscriberRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WriteSubscriberRequestWithFormattedDateTimes {
     email: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     fields: Option<SubscriberFields>,
     groups: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     status: Option<SubscriberStatus>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     subscribed_at: Option<FormattedDateTime>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     ip_address: Option<Ipv4Addr>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     opted_in_at: Option<FormattedDateTime>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     optin_up: Option<Ipv4Addr>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     unsubscribed_at: Option<FormattedDateTime>,
 }
 

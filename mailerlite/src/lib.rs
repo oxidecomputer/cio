@@ -1,5 +1,5 @@
 use chrono::TimeZone;
-use reqwest::{Client, Error as ReqwestError, RequestBuilder};
+use reqwest::{Client, Error as ReqwestError, RequestBuilder, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{str::FromStr, sync::Arc};
@@ -27,15 +27,21 @@ pub struct MailerliteClient<Tz> {
 
 #[derive(Debug, Clone, Error)]
 pub enum MailerliteError {
-    #[error("Inner request failed {0}")]
-    Inner(Arc<ReqwestError>),
+    #[error("Inner request failed ({status:?}) {error}")]
+    Inner {
+        status: Option<StatusCode>,
+        error: Arc<ReqwestError>,
+    },
     #[error("Failed to translate from API date representation to UTC")]
     DateTranslationError(FailedToTranslateDateError),
 }
 
 impl From<ReqwestError> for MailerliteError {
     fn from(inner: ReqwestError) -> Self {
-        Self::Inner(Arc::new(inner))
+        Self::Inner {
+            status: inner.status(),
+            error: Arc::new(inner),
+        }
     }
 }
 
