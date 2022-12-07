@@ -87,6 +87,13 @@ where
         let request = self.auth(endpoint.to_request_builder(&self.base_url, &self.inner, &self.context));
         let response = request.send().await?;
 
+        let headers = response.headers();
+        log::info!(
+            "[mailerlite] Rate-limit max: {:?} remaining: {:?}",
+            headers.get("x-ratelimit-limit"),
+            headers.get("x-ratelimit-remaining")
+        );
+
         // Handle general case errors like failed authentication. Afterwards, individual endpoints
         // are responsible for parsing their own errors
         if response.status() == 401 {

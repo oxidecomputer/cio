@@ -3139,6 +3139,7 @@ dependencies = [
  "chrono-tz 0.7.0",
  "derive_builder",
  "http",
+ "log 0.4.17",
  "reqwest",
  "secrecy",
  "serde",
