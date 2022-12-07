@@ -175,7 +175,7 @@ pub enum WriteSubscriberResponse<T> {
     },
     Error {
         message: String,
-        errors: HashMap<String, Vec<String>>,
+        errors: Option<HashMap<String, Vec<String>>>,
     },
 }
 
@@ -437,7 +437,7 @@ mod tests {
         let request = builder.build().unwrap();
 
         let expected_url = reqwest::Url::parse("https://localhost:1234/api/subscribers").unwrap();
-        let expected_body = r#"{"email":"test-email@test-domain.com","fields":{"Foo":"Value"},"groups":[],"status":"junk","subscribed_at":null,"ip_address":null,"opted_in_at":"2022-10-25 10:35:34","optin_up":"127.0.0.1","unsubscribed_at":null}"#;
+        let expected_body = r#"{"email":"test-email@test-domain.com","fields":{"Foo":"Value"},"groups":[],"status":"junk","opted_in_at":"2022-10-25 10:35:34","optin_up":"127.0.0.1"}"#;
 
         assert_eq!(&reqwest::Method::POST, request.method());
         assert_eq!(&expected_url, request.url());
