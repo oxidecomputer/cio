@@ -305,6 +305,70 @@ impl MailerliteEndpoint for ListSegmentSubscribersRequest {
     }
 }
 
+// requests	array	required	Array of objects containing required method and path properties and optional body
+// requests.*.method	string	required	The method type of the intended request: GET, POST, PUT, DELETE, PATCH
+// requests.*.path	string	required	The relative path of api endpoint. Must start with api/
+// requests.*.body	array	optional	Array of properties for the body of the request
+
+#[derive(Debug, Serialize, Clone, Builder)]
+#[builder(pattern = "owned")]
+pub struct BatchRequestEntry<T> {
+    method: String,
+    path: String,
+    body: T,
+}
+
+#[derive(Debug, Clone, Serialize, Builder)]
+pub struct BatchRequest<T> {
+    requests: Vec<BatchRequestEntry<T>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum BatchResponse {
+    Success {
+        responses: Vec<serde_json::Value>,
+        total: u64,
+        successful: u64,
+        failed: u64,
+    },
+    Error {
+        message: String,
+    },
+}
+
+#[async_trait]
+impl<T> MailerliteEndpoint for BatchRequest<T>
+where
+    T: Serialize + Sync,
+{
+    type Response = BatchResponse;
+
+    fn to_request_builder<Tz>(
+        &self,
+        base_url: &str,
+        client: &Client,
+        _ctx: &MailerliteClientContext<Tz>,
+    ) -> RequestBuilder
+    where
+        Tz: TimeZone + Send + Sync,
+    {
+        client.post(format!("{}/batch", base_url))
+    }
+
+    async fn handle_response<Tz>(
+        &self,
+        response: Response,
+        _ctx: &MailerliteClientContext<Tz>,
+    ) -> Result<Self::Response, MailerliteError>
+    where
+        Self::Response: DeserializeOwned,
+        Tz: TimeZone + Send + Sync,
+    {
+        Ok(response.json().await?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

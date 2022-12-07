@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Result};
 use mailerlite::{
     endpoints::{
+        BatchRequestBuilder, BatchRequestEntryBuilder, BatchRequestEntryBuilderError, BatchResponse,
         GetSubscriberRequestBuilder, GetSubscriberResponse, ListSegmentSubscribersRequestBuilder,
-        ListSegmentSubscribersResponse, WriteSubscriberRequestBuilder, WriteSubscriberResponse,
+        ListSegmentSubscribersResponse, WriteSubscriberRequestBuilder, WriteSubscriberRequestBuilderError,
+        WriteSubscriberResponse,
     },
     MailerliteClient, MailerliteResponse, Subscriber, SubscriberFieldValue,
 };
@@ -46,12 +48,20 @@ impl Mailerlite<chrono_tz::Tz> {
         self.mark_subscriber(email, "mailing_list").await
     }
 
+    pub async fn mark_mailing_list_subscribers(&self, subscribers: Vec<Subscriber>) -> Result<BatchResponse> {
+        self.mark_batch(subscribers, "mailing_list").await
+    }
+
     pub async fn pending_wait_list_subscribers(&self) -> Result<Vec<Subscriber>> {
         self.get_pending_list(&self.segments.wait_list).await
     }
 
     pub async fn mark_wait_list_subscriber(&self, email: &str) -> Result<WriteSubscriberResponse<Subscriber>> {
         self.mark_subscriber(email, "wait_list").await
+    }
+
+    pub async fn mark_wait_list_subscribers(&self, subscribers: Vec<Subscriber>) -> Result<BatchResponse> {
+        self.mark_batch(subscribers, "wait_list").await
     }
 
     async fn get_pending_list_page(
@@ -181,6 +191,75 @@ impl Mailerlite<chrono_tz::Tz> {
                 Err(anyhow!("Failed to find subscriber"))
             }
         }
+    }
+
+    async fn mark_batch(&self, subscribers: Vec<Subscriber>, state_marker: &str) -> Result<BatchResponse> {
+        let requests = subscribers
+            .into_iter()
+            .map(
+                |Subscriber {
+                     id, email, mut fields, ..
+                 }| {
+                    let new_value: Result<SubscriberFieldValue, serde_json::Error> =
+                        if let Some(cio_state) = fields.get_mut("cio_state").and_then(|v| v.as_mut()) {
+                            match cio_state {
+                                SubscriberFieldValue::String(current_value) => {
+                                    let new_marker = state_marker.to_string();
+
+                                    serde_json::from_str::<CioState>(current_value).and_then(|mut state| {
+                                        if !state.processed_groups.contains(&new_marker) {
+                                            state.processed_groups.push(new_marker);
+                                        }
+
+                                        serde_json::to_string(&state).map(|value| value.into())
+                                    })
+                                }
+                                invalid_field_value => {
+                                    log::warn!("Invalid value type found for stored cio_state on subscriber {}", id);
+                                    Ok(invalid_field_value.to_owned())
+                                }
+                            }
+                        } else {
+                            serde_json::to_string(&CioState {
+                                processed_groups: vec![state_marker.to_string()],
+                            })
+                            .map(|value| value.into())
+                        };
+
+                    new_value.map(|value| {
+                        fields.insert("cio_state".to_string(), Some(value));
+
+                        WriteSubscriberRequestBuilder::default()
+                            .email(email.to_string())
+                            .fields(Some(fields))
+                            .build()
+                            .map(|body| {
+                                BatchRequestEntryBuilder::default()
+                                    .method("POST".to_string())
+                                    .path("/subscribers".to_string())
+                                    .body(body)
+                                    .build()
+                            })
+                    })
+                },
+            )
+            .collect::<Result<
+                Result<Result<Vec<_>, BatchRequestEntryBuilderError>, WriteSubscriberRequestBuilderError>,
+                serde_json::Error,
+            >>()???;
+
+        let request = BatchRequestBuilder::default().requests(requests).build()?;
+
+        self.client
+            .run(request)
+            .await
+            .map_err(anyhow::Error::new)
+            .and_then(|response| match response {
+                MailerliteResponse::AuthenticationError { .. } => {
+                    Err(anyhow!("Failed to authenticate with Mailerlite"))
+                }
+                MailerliteResponse::EndpointResponse(data) => Ok(data),
+            })
     }
 }
 
