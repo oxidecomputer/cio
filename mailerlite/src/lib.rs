@@ -80,7 +80,7 @@ where
     pub async fn run<T>(
         &self,
         endpoint: impl MailerliteEndpoint<Response = T> + Sync,
-    ) -> Result<MailerliteResponse<T>, MailerliteError>
+    ) -> Result<ClientResponse<T>, MailerliteError>
     where
         T: DeserializeOwned,
     {
@@ -88,23 +88,37 @@ where
         let response = request.send().await?;
 
         let headers = response.headers();
-        log::info!(
-            "[mailerlite] Rate-limit max: {:?} remaining: {:?}",
-            headers.get("x-ratelimit-limit"),
-            headers.get("x-ratelimit-remaining")
-        );
+        let rate_limit = headers
+            .get("x-ratelimit-limit")
+            .and_then(|h| h.to_str().ok().map(|s| s.to_string()));
+        let rate_limit_remaining = headers
+            .get("x-ratelimit-remaining")
+            .and_then(|h| h.to_str().ok().map(|s| s.to_string()));
 
         // Handle general case errors like failed authentication. Afterwards, individual endpoints
         // are responsible for parsing their own errors
-        if response.status() == 401 {
-            Ok(response.json::<MailerliteResponse<T>>().await?)
+        let api_response = if response.status() == 401 {
+            response.json::<MailerliteResponse<T>>().await?
         } else {
             endpoint
                 .handle_response(response, &self.context)
                 .await
-                .map(MailerliteResponse::EndpointResponse)
-        }
+                .map(MailerliteResponse::EndpointResponse)?
+        };
+
+        Ok(ClientResponse {
+            response: api_response,
+            rate_limit,
+            rate_limit_remaining,
+        })
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClientResponse<T> {
+    pub response: MailerliteResponse<T>,
+    pub rate_limit: Option<String>,
+    pub rate_limit_remaining: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
