@@ -1,0 +1,21 @@
+[package]
+name = "mailerlite"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.58"
+chrono = { version = "0.4.22", features = ["serde"] }
+chrono-tz = "0.7.0"
+derive_builder = { version = "0.11.2" }
+reqwest = { version = "0.11.12", features = ["json"] }
+secrecy = "0.8.0"
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = { version = "1.0.87" }
+thiserror = "1.0"
+
+[dev-dependencies]
+http = "0.2.8"
+tokio = { version = "1.21.2", features = ["full"] }
