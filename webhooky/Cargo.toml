@@ -43,6 +43,7 @@ lazy_static = "^1.4.0"
 log = { version = "0.4", features = ["serde"] }
 # mailchimp-api = "^0.1.11"
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
+mailerlite = { path = "../mailerlite" }
 mime = "0.2"
 mime_guess = "1"
 mime_guess_2 = { package = "mime_guess", version = "2" }

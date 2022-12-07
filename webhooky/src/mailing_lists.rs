@@ -2,6 +2,7 @@ use anyhow::Result;
 use cio_api::{
     db::Database, mailerlite::Mailerlite, mailing_list::MailingListSubscriber, rack_line::RackLineSubscriber,
 };
+use mailerlite::endpoints::BatchResponse;
 
 pub async fn sync_pending_mailing_list_subscribers(db: &Database) -> Result<()> {
     let client = Mailerlite::new()?;
@@ -31,8 +32,20 @@ pub async fn sync_pending_mailing_list_subscribers(db: &Database) -> Result<()> 
             }
         }
 
-        if let Err(err) = client.mark_mailing_list_subscribers(chunk.to_vec()).await {
-            log::warn!("Failed to mark mailerlite subscribers as processed due to {:?}", err);
+        match client.mark_mailing_list_subscribers(chunk.to_vec()).await {
+            Ok(BatchResponse::Success {
+                total,
+                successful,
+                failed,
+                ..
+            }) => log::info!(
+                "Processed {} subscribers with {} successes and {} failures",
+                total,
+                successful,
+                failed
+            ),
+            Ok(BatchResponse::Error { message }) => log::warn!("Batch endpoint failed with {:#?}", message),
+            Err(err) => log::warn!("Failed to mark mailerlite subscribers as processed due to {:?}", err),
         }
     }
 
@@ -61,8 +74,20 @@ pub async fn sync_pending_wait_list_subscribers(db: &Database) -> Result<()> {
             }
         }
 
-        if let Err(err) = client.mark_wait_list_subscribers(chunk.to_vec()).await {
-            log::warn!("Failed to mark mailerlite subscribers as processed due to {:?}", err);
+        match client.mark_wait_list_subscribers(chunk.to_vec()).await {
+            Ok(BatchResponse::Success {
+                total,
+                successful,
+                failed,
+                ..
+            }) => log::info!(
+                "Processed {} subscribers with {} successes and {} failures",
+                total,
+                successful,
+                failed
+            ),
+            Ok(BatchResponse::Error { message }) => log::warn!("Batch endpoint failed with {:#?}", message),
+            Err(err) => log::warn!("Failed to mark mailerlite subscribers as processed due to {:?}", err),
         }
     }
 
