@@ -77,16 +77,18 @@ impl Mailerlite<chrono_tz::Tz> {
             req = req.after(start);
         }
 
-        self.client
-            .run(req.build()?)
-            .await
-            .map_err(anyhow::Error::new)
-            .and_then(|response| match response {
-                MailerliteResponse::AuthenticationError { .. } => {
-                    Err(anyhow!("Failed to authenticate with Mailerlite"))
-                }
-                MailerliteResponse::EndpointResponse(data) => Ok(data),
-            })
+        let response = self.client.run(req.build()?).await?;
+
+        log::info!(
+            "[mailerlite:get_list] Rate-limit max: {:?} remaining: {:?}",
+            response.rate_limit,
+            response.rate_limit_remaining,
+        );
+
+        match response.response {
+            MailerliteResponse::AuthenticationError { .. } => Err(anyhow!("Failed to authenticate with Mailerlite")),
+            MailerliteResponse::EndpointResponse(data) => Ok(data),
+        }
     }
 
     async fn get_pending_list(&self, segment_id: &str) -> Result<Vec<Subscriber>> {
@@ -139,7 +141,13 @@ impl Mailerlite<chrono_tz::Tz> {
             )
             .await?;
 
-        match response {
+        log::info!(
+            "[mailerlite:get_subscriber] Rate-limit max: {:?} remaining: {:?}",
+            response.rate_limit,
+            response.rate_limit_remaining,
+        );
+
+        match response.response {
             MailerliteResponse::AuthenticationError { .. } => Err(anyhow!("Failed to authenticate with Mailerlite")),
             MailerliteResponse::EndpointResponse(GetSubscriberResponse::Success { data: subscriber }) => {
                 let Subscriber { id, mut fields, .. } = subscriber;
@@ -171,21 +179,28 @@ impl Mailerlite<chrono_tz::Tz> {
 
                 fields.insert("cio_state".to_string(), Some(new_value));
 
-                self.client
+                let response = self
+                    .client
                     .run(
                         WriteSubscriberRequestBuilder::default()
                             .email(email.to_string())
                             .fields(Some(fields))
                             .build()?,
                     )
-                    .await
-                    .map_err(anyhow::Error::new)
-                    .and_then(|response| match response {
-                        MailerliteResponse::AuthenticationError { .. } => {
-                            Err(anyhow!("Failed to authenticate with Mailerlite"))
-                        }
-                        MailerliteResponse::EndpointResponse(data) => Ok(data),
-                    })
+                    .await?;
+
+                log::info!(
+                    "[mailerlite:update_subscriber] Rate-limit max: {:?} remaining: {:?}",
+                    response.rate_limit,
+                    response.rate_limit_remaining,
+                );
+
+                match response.response {
+                    MailerliteResponse::AuthenticationError { .. } => {
+                        Err(anyhow!("Failed to authenticate with Mailerlite"))
+                    }
+                    MailerliteResponse::EndpointResponse(data) => Ok(data),
+                }
             }
             MailerliteResponse::EndpointResponse(GetSubscriberResponse::NotFound) => {
                 Err(anyhow!("Failed to find subscriber"))
@@ -250,16 +265,18 @@ impl Mailerlite<chrono_tz::Tz> {
 
         let request = BatchRequestBuilder::default().requests(requests).build()?;
 
-        self.client
-            .run(request)
-            .await
-            .map_err(anyhow::Error::new)
-            .and_then(|response| match response {
-                MailerliteResponse::AuthenticationError { .. } => {
-                    Err(anyhow!("Failed to authenticate with Mailerlite"))
-                }
-                MailerliteResponse::EndpointResponse(data) => Ok(data),
-            })
+        let response = self.client.run(request).await?;
+
+        log::info!(
+            "[mailerlite:batch_update] Rate-limit max: {:?} remaining: {:?}",
+            response.rate_limit,
+            response.rate_limit_remaining,
+        );
+
+        match response.response {
+            MailerliteResponse::AuthenticationError { .. } => Err(anyhow!("Failed to authenticate with Mailerlite")),
+            MailerliteResponse::EndpointResponse(data) => Ok(data),
+        }
     }
 }
 

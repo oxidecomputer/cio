@@ -47,6 +47,9 @@ pub async fn sync_pending_mailing_list_subscribers(db: &Database) -> Result<()> 
             Ok(BatchResponse::Error { message }) => log::warn!("Batch endpoint failed with {:#?}", message),
             Err(err) => log::warn!("Failed to mark mailerlite subscribers as processed due to {:?}", err),
         }
+
+        // Sleep to avoid hitting rate-limits
+        tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
     }
 
     Ok(())
@@ -89,6 +92,8 @@ pub async fn sync_pending_wait_list_subscribers(db: &Database) -> Result<()> {
             Ok(BatchResponse::Error { message }) => log::warn!("Batch endpoint failed with {:#?}", message),
             Err(err) => log::warn!("Failed to mark mailerlite subscribers as processed due to {:?}", err),
         }
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
     }
 
     Ok(())
