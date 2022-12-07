@@ -27,19 +27,19 @@ pub struct Subscriber {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriberGroup {
-    id: String,
-    name: String,
-    active_count: u64,
-    sent_count: u64,
-    opens_count: u64,
-    open_rate: SubscriberGroupRate,
-    clicks_count: u64,
-    click_rate: SubscriberGroupRate,
-    unsubscribed_count: u64,
-    unconfirmed_count: u64,
-    bounced_count: u64,
-    junk_count: u64,
-    created_at: DateTime<Utc>,
+    pub id: String,
+    pub name: String,
+    pub active_count: u64,
+    pub sent_count: u64,
+    pub opens_count: u64,
+    pub open_rate: SubscriberGroupRate,
+    pub clicks_count: u64,
+    pub click_rate: SubscriberGroupRate,
+    pub unsubscribed_count: u64,
+    pub unconfirmed_count: u64,
+    pub bounced_count: u64,
+    pub junk_count: u64,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
