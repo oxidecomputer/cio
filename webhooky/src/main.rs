@@ -18,6 +18,7 @@ mod handlers_rfd;
 mod handlers_slack;
 // mod handlers_sendgrid;
 mod http;
+mod mailing_lists;
 mod repos;
 mod sagas;
 mod server;
@@ -235,9 +236,15 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
             cio_api::journal_clubs::refresh_db_journal_club_meetings(&db, &company).await?;
         }
         crate::core::SubCommand::SyncMailingLists(_) => {
-            let Context { db, company, .. } = context;
-            cio_api::mailing_list::refresh_db_mailing_list_subscribers(&db, &company).await?;
-            cio_api::rack_line::refresh_db_rack_line_subscribers(&db, &company).await?;
+            if std::env::var("MAILERLITE_ENABLED")
+                .map(|v| v == "true")
+                .unwrap_or(false)
+            {
+                let Context { db, .. } = context;
+
+                crate::mailing_lists::sync_pending_mailing_list_subscribers(&db).await?;
+                crate::mailing_lists::sync_pending_wait_list_subscribers(&db).await?;
+            }
         }
         crate::core::SubCommand::SyncRecordedMeetings(_) => {
             let Context { db, company, .. } = context;

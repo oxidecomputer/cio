@@ -14,7 +14,7 @@ use docusign::DocuSign;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseHeaders, HttpResponseOk, HttpServerStarter, OpenApiDefinition, PaginationOrder, PaginationParams, Path,
-    Query, RequestContext, ResultsPage, TypedBody, UntypedBody, WhichPage,
+    Query, RequestContext, ResultsPage, TypedBody, WhichPage,
 };
 use dropshot_verify_request::{
     bearer::{Bearer, BearerToken},
@@ -37,7 +37,7 @@ use slack_chat_api::{BotCommand, Slack};
 use zoom_api::Client as Zoom;
 
 use crate::{
-    auth::{AirtableToken, HiringToken, InternalToken, MailChimpToken, RFDToken, ShippoToken},
+    auth::{AirtableToken, HiringToken, InternalToken, RFDToken, ShippoToken},
     context::Context,
     github_types::GitHubWebhook,
     handlers_hiring::{ApplicantInfo, ApplicantUploadToken},
@@ -128,8 +128,6 @@ fn create_api() -> ApiDescription<Context> {
     api.register(listen_checkr_background_update_webhooks).unwrap();
     api.register(listen_docusign_envelope_update_webhooks).unwrap();
     api.register(listen_github_webhooks).unwrap();
-    api.register(listen_mailchimp_mailing_list_webhooks).unwrap();
-    api.register(listen_mailchimp_rack_line_webhooks).unwrap();
     api.register(listen_products_sold_count_requests).unwrap();
     api.register(listen_shippo_tracking_update_webhooks).unwrap();
     api.register(listen_easypost_tracking_update_webhooks).unwrap();
@@ -137,8 +135,6 @@ fn create_api() -> ApiDescription<Context> {
     api.register(listen_slack_interactive_webhooks).unwrap();
     api.register(listen_shipbob_webhooks).unwrap();
     api.register(listen_store_order_create).unwrap();
-    api.register(ping_mailchimp_mailing_list_webhooks).unwrap();
-    api.register(ping_mailchimp_rack_line_webhooks).unwrap();
     api.register(listen_rfd_index).unwrap();
     api.register(listen_rfd_view).unwrap();
     api.register(trigger_rfd_update_by_number).unwrap();
@@ -1918,82 +1914,6 @@ async fn listen_analytics_page_view_webhooks(
 
     if let Err(e) = txn
         .run(|| crate::handlers::handle_analytics_page_view(rqctx, body))
-        .await
-    {
-        // Send the error to sentry.
-        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-        return Err(handle_anyhow_err_as_http_err(e));
-    }
-
-    txn.finish(http::StatusCode::ACCEPTED);
-
-    Ok(HttpResponseAccepted("ok".to_string()))
-}
-
-/** Ping endpoint for MailChimp mailing list webhooks. */
-#[endpoint {
-    method = GET,
-    path = "/mailchimp/mailing_list",
-}]
-async fn ping_mailchimp_mailing_list_webhooks(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<String>, HttpError> {
-    Ok(HttpResponseOk("ok".to_string()))
-}
-
-/** Listen for MailChimp mailing list webhooks. */
-#[endpoint {
-    method = POST,
-    path = "/mailchimp/mailing_list",
-}]
-async fn listen_mailchimp_mailing_list_webhooks(
-    rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryToken<MailChimpToken>,
-    body_param: UntypedBody,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let body = body_param.as_str().unwrap().to_string();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
-
-    if let Err(e) = txn
-        .run(|| crate::handlers::handle_mailchimp_mailing_list(rqctx, body))
-        .await
-    {
-        // Send the error to sentry.
-        txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
-        return Err(handle_anyhow_err_as_http_err(e));
-    }
-
-    txn.finish(http::StatusCode::ACCEPTED);
-
-    Ok(HttpResponseAccepted("ok".to_string()))
-}
-
-/** Ping endpoint for MailChimp rack line webhooks. */
-#[endpoint {
-    method = GET,
-    path = "/mailchimp/rack_line",
-}]
-async fn ping_mailchimp_rack_line_webhooks(
-    _rqctx: Arc<RequestContext<Context>>,
-) -> Result<HttpResponseOk<String>, HttpError> {
-    Ok(HttpResponseOk("ok".to_string()))
-}
-
-/** Listen for MailChimp rack line webhooks. */
-#[endpoint {
-    method = POST,
-    path = "/mailchimp/rack_line",
-}]
-async fn listen_mailchimp_rack_line_webhooks(
-    rqctx: Arc<RequestContext<Context>>,
-    _auth: QueryToken<MailChimpToken>,
-    body_param: UntypedBody,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let body = body_param.as_str().unwrap().to_string();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
-
-    if let Err(e) = txn
-        .run(|| crate::handlers::handle_mailchimp_rack_line(rqctx, body))
         .await
     {
         // Send the error to sentry.

@@ -91,6 +91,8 @@ COPY cio-api-types ../cio-api-types
 
 COPY macros ../macros
 
+COPY mailerlite ../mailerlite
+
 COPY mailchimp-minimal-api ../mailchimp-minimal-api
 
 COPY partial-struct ../partial-struct
