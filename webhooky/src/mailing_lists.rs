@@ -29,7 +29,13 @@ pub async fn sync_pending_mailing_list_subscribers(db: &Database) -> Result<()> 
             );
         }
 
-        client.mark_mailing_list_subscriber(&subscriber.email).await?;
+        if let Err(err) = client.mark_mailing_list_subscriber(&subscriber.email).await {
+            log::warn!(
+                "Failed to mark mailerlite subscriber {} as processed due to {:?}",
+                subscriber.id,
+                err
+            );
+        }
     }
 
     Ok(())
@@ -55,7 +61,13 @@ pub async fn sync_pending_wait_list_subscribers(db: &Database) -> Result<()> {
             );
         }
 
-        client.mark_wait_list_subscriber(&subscriber.email).await?;
+        if let Err(err) = client.mark_wait_list_subscriber(&subscriber.email).await {
+            log::warn!(
+                "Failed to mark mailerlite subscriber {} as processed due to {:?}",
+                subscriber.id,
+                err
+            );
+        }
     }
 
     Ok(())
