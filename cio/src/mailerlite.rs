@@ -236,7 +236,7 @@ impl Mailerlite<chrono_tz::Tz> {
                             .map(|body| {
                                 BatchRequestEntryBuilder::default()
                                     .method("POST".to_string())
-                                    .path("/subscribers".to_string())
+                                    .path("api/subscribers".to_string())
                                     .body(body)
                                     .build()
                             })
