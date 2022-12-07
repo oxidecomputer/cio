@@ -129,8 +129,6 @@ impl Mailerlite<chrono_tz::Tz> {
             )
             .await?;
 
-        println!("get resp {:#?}", response);
-
         match response {
             MailerliteResponse::AuthenticationError { .. } => Err(anyhow!("Failed to authenticate with Mailerlite")),
             MailerliteResponse::EndpointResponse(GetSubscriberResponse::Success { data: subscriber }) => {
