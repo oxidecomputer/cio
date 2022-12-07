@@ -108,20 +108,27 @@ impl MailerliteEndpoint for GetSubscriberRequest {
 pub struct WriteSubscriberRequest {
     email: String,
     #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     fields: Option<SubscriberFields>,
     #[builder(default)]
     groups: Vec<String>,
     #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     status: Option<SubscriberStatus>,
     #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     subscribed_at: Option<DateTime<Utc>>,
     #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     ip_address: Option<Ipv4Addr>,
     #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     opted_in_at: Option<DateTime<Utc>>,
     #[builder(default)]
-    optin_up: Option<Ipv4Addr>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    optin_ip: Option<Ipv4Addr>,
     #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     unsubscribed_at: Option<DateTime<Utc>>,
 }
 
@@ -140,7 +147,7 @@ pub struct WriteSubscriberRequestWithFormattedDateTimes {
     #[serde(skip_serializing_if = "Option::is_none")]
     opted_in_at: Option<FormattedDateTime>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    optin_up: Option<Ipv4Addr>,
+    optin_ip: Option<Ipv4Addr>,
     #[serde(skip_serializing_if = "Option::is_none")]
     unsubscribed_at: Option<FormattedDateTime>,
 }
@@ -159,7 +166,7 @@ impl WriteSubscriberRequestWithFormattedDateTimes {
             opted_in_at: req
                 .opted_in_at
                 .map(|dt| dt.with_timezone(time_zone).naive_local().into()),
-            optin_up: req.optin_up,
+            optin_ip: req.optin_ip,
             unsubscribed_at: req
                 .unsubscribed_at
                 .map(|dt| dt.with_timezone(time_zone).naive_local().into()),
@@ -353,7 +360,7 @@ where
     where
         Tz: TimeZone + Send + Sync,
     {
-        client.post(format!("{}/batch", base_url))
+        client.post(format!("{}/batch", base_url)).json(&self)
     }
 
     async fn handle_response<Tz>(
@@ -493,7 +500,7 @@ mod tests {
             ip_address: None,
             // 2022-10-25T14:35:34Z
             opted_in_at: Some(Utc.timestamp(1666708534, 0)),
-            optin_up: Some(std::net::Ipv4Addr::new(127, 0, 0, 1)),
+            optin_ip: Some(std::net::Ipv4Addr::new(127, 0, 0, 1)),
             unsubscribed_at: None,
         };
 
@@ -501,7 +508,7 @@ mod tests {
         let request = builder.build().unwrap();
 
         let expected_url = reqwest::Url::parse("https://localhost:1234/api/subscribers").unwrap();
-        let expected_body = r#"{"email":"test-email@test-domain.com","fields":{"Foo":"Value"},"groups":[],"status":"junk","opted_in_at":"2022-10-25 10:35:34","optin_up":"127.0.0.1"}"#;
+        let expected_body = r#"{"email":"test-email@test-domain.com","fields":{"Foo":"Value"},"groups":[],"status":"junk","opted_in_at":"2022-10-25 10:35:34","optin_ip":"127.0.0.1"}"#;
 
         assert_eq!(&reqwest::Method::POST, request.method());
         assert_eq!(&expected_url, request.url());
