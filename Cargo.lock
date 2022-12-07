@@ -6749,6 +6749,7 @@ dependencies = [
  "lazy_static",
  "log 0.4.17",
  "mailchimp-minimal-api",
+ "mailerlite",
  "mime 0.2.6",
  "mime_guess 1.8.8",
  "mime_guess 2.0.4",
