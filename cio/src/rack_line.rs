@@ -233,6 +233,17 @@ impl From<mailerlite::Subscriber> for NewRackLineSubscriber {
             }
         }
 
+        if let Some(subscriber_location) = subscriber.get_field("subscribe_location") {
+            match subscriber_location {
+                SubscriberFieldValue::String(subscriber_location) => new_sub.tags.push(subscriber_location.clone()),
+                SubscriberFieldValue::Null => {}
+                _ => log::warn!(
+                    "Non-string field type found for subscribe_location field for subscriber {}",
+                    subscriber.id
+                ),
+            }
+        }
+
         new_sub.email = subscriber.email;
 
         if let Some(subscribed_at) = subscriber.subscribed_at {

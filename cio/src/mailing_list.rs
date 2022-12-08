@@ -252,6 +252,7 @@ impl From<mailerlite::Subscriber> for NewMailingListSubscriber {
         if let Some(company) = subscriber.get_field("company") {
             match company {
                 SubscriberFieldValue::String(company) => new_sub.company = company.clone(),
+                SubscriberFieldValue::Null => {}
                 _ => log::warn!(
                     "Non-string field type found for company field for subscriber {}",
                     subscriber.id
@@ -259,17 +260,19 @@ impl From<mailerlite::Subscriber> for NewMailingListSubscriber {
             }
         }
 
-        if let Some(company) = subscriber.get_field("company") {
-            match company {
-                SubscriberFieldValue::String(company) => new_sub.company = company.clone(),
+        if let Some(subscriber_location) = subscriber.get_field("subscribe_location") {
+            match subscriber_location {
+                SubscriberFieldValue::String(subscriber_location) => new_sub.tags.push(subscriber_location.clone()),
+                SubscriberFieldValue::Null => {}
                 _ => log::warn!(
-                    "Non-string field type found for company field for subscriber {}",
+                    "Non-string field type found for subscribe_location field for subscriber {}",
                     subscriber.id
                 ),
             }
         }
 
         new_sub.email = subscriber.email;
+        new_sub.source = subscriber.source;
 
         if let Some(subscribed_at) = subscriber.subscribed_at {
             new_sub.date_added = subscribed_at;
