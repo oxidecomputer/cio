@@ -1,6 +1,9 @@
 use anyhow::Result;
 use cio_api::{
-    db::Database, mailerlite::Mailerlite, mailing_list::MailingListSubscriber, rack_line::RackLineSubscriber,
+    db::Database,
+    mailerlite::Mailerlite,
+    mailing_list::{MailingListSubscriber, NewMailingListSubscriber},
+    rack_line::{NewRackLineSubscriber, RackLineSubscriber},
 };
 use mailerlite::endpoints::BatchResponse;
 
@@ -22,8 +25,15 @@ pub async fn sync_pending_mailing_list_subscribers(db: &Database) -> Result<()> 
                     "Mailerlite subscriber {} needs to be added to mailing list",
                     subscriber.id
                 );
-                // let new_subscriber: NewMailingListSubscriber = subscriber.clone().into();
-                // let _ = new_subscriber.upsert(db).await?;
+                let new_subscriber: NewMailingListSubscriber = subscriber.clone().into();
+                let _ = new_subscriber.upsert(db).await.map_err(|err| {
+                    log::error!(
+                        "Failed to write mailing list subscriber {} due to {:?}",
+                        subscriber.id,
+                        err
+                    );
+                    err
+                })?;
             } else {
                 log::info!(
                     "Mailerlite subscriber {} already exists in mailing list database",
@@ -67,8 +77,15 @@ pub async fn sync_pending_wait_list_subscribers(db: &Database) -> Result<()> {
 
             if existing.is_none() {
                 log::info!("Mailerlite subscriber {} needs to be added to wait list", subscriber.id);
-                // let new_subscriber: NewRackLineSubscriber = subscriber.clone().into();
-                // let _ = new_subscriber.upsert(db).await?;
+                let new_subscriber: NewRackLineSubscriber = subscriber.clone().into();
+                let _ = new_subscriber.upsert(db).await.map_err(|err| {
+                    log::error!(
+                        "Failed to write wait list subscriber {} due to {:?}",
+                        subscriber.id,
+                        err
+                    );
+                    err
+                })?;
             } else {
                 log::info!(
                     "Mailerlite subscriber {} already exists in wait list database",
