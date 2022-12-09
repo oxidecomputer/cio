@@ -14,6 +14,7 @@ members = [
 	"mailchimp-minimal-api",
 	"mailerlite",
 	"partial-struct",
+	"parse-rfd",
 	"printy",
 	"quickbooks",
 	"ramp-minimal-api",

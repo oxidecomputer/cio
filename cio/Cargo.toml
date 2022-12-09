@@ -67,6 +67,7 @@ mailerlite = { path = "../mailerlite" }
 # mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
+meilisearch-sdk = "0.20.1"
 names = "^0.14.0"
 nom_pem = "4"
 octorust = { version = "^0.1.35", features = ["httpcache"] }
@@ -74,10 +75,12 @@ octorust = { version = "^0.1.35", features = ["httpcache"] }
 okta = "^0.2.2"
 #okta = { path = "../../third-party-api-clients/okta/" }
 openssl = "0.10"
+parse-rfd = { path = "../parse-rfd" }
 partial-struct = { path = "../partial-struct" }
 phonenumber = "0.3"
 pretty_env_logger = "0.4"
 printpdf = { version = "^0.5.2", features = ["embedded_images"] }
+quick-js = "0.4.1"
 quickbooks = "^0.1.12"
 #quickbooks = { path = "../quickbooks" }
 # ramp-api = "^0.2.2"
