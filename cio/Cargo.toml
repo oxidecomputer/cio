@@ -57,6 +57,7 @@ gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
 handlebars = "4.2.2"
 hex = "0.4.3"
+hmac = "0.12.1"
 http = "0.2.6"
 image = "^0.23.14"
 Inflector = "^0.11.4"
@@ -67,6 +68,7 @@ mailerlite = { path = "../mailerlite" }
 # mailchimp-api = "^0.1.15"
 #mailchimp-api = { path = "../mailchimp" }
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
+md-5 = "0.10.5"
 meilisearch-sdk = "0.20.1"
 names = "^0.14.0"
 nom_pem = "4"
