@@ -245,7 +245,7 @@ impl<'a> RFDContent<'a> {
                 // We must have asciidoc content.
                 // We want to find the line under the first "=" line (which is the title), authors
                 // is under that.
-                let re = Regex::new(r"(?m:^=.*$)[\n\r](?m)(.*$)").unwrap();
+                let re = Regex::new(r"(?m:^[#=].*$)[\n\r](?m)(.*$)").unwrap();
                 match re.find(content) {
                     Some(v) => {
                         let val = v.as_str().trim().to_string();
@@ -700,6 +700,24 @@ dsfsdf
 sdf"#;
         let authors = RFDContent::new_asciidoc(content).get_authors();
         let expected = r#"Jess <jess@thing.com>"#.to_string();
+        assert_eq!(expected, authors);
+    }
+
+    #[test]
+    fn test_get_asciidoc_attribute_authors_with_markdown_sections() {
+let content = r#"
+:authors: Author One <one@company.com>, Author Two <two@company.com>
+
+# Asciidoc with Markdown Section Indicators
+{authors}
+
+[bibliography]
+## External References
+* https://company.com[link to company] - An external reference
+"#;
+
+        let authors = RFDContent::new_asciidoc(content).get_authors();
+        let expected = r#"Author One <one@company.com>, Author Two <two@company.com>"#.to_string();
         assert_eq!(expected, authors);
     }
 
