@@ -705,7 +705,7 @@ sdf"#;
 
     #[test]
     fn test_get_asciidoc_attribute_authors_with_markdown_sections() {
-let content = r#"
+        let content = r#"
 :authors: Author One <one@company.com>, Author Two <two@company.com>
 
 # Asciidoc with Markdown Section Indicators
