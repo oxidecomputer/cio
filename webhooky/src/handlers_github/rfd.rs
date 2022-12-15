@@ -327,22 +327,24 @@ pub struct UpdatePDFs;
 impl UpdatePDFs {
     async fn upload(api_context: &Context, update: &GitHubRFDUpdate, rfd: &mut RFD) -> Result<()> {
         // Generate the PDFs for the RFD
-        let pdf = rfd
-            .content()?
-            .to_pdf(&rfd.title, &update.number, &update.branch)
-            .await
-            .map_err(|err| {
+        let pdf = match rfd.content()?.to_pdf(&rfd.title, &update.number, &update.branch).await {
+            Ok(pdf) => pdf,
+            Err(err) => {
                 match &err {
                     RFDOutputError::FormatNotSupported(_) => {
                         log::info!("RFD {} is not in a format that supports PDF output", rfd.number);
+
+                        // If an RFD does not support PDF output than we do not want to report an
+                        // error. We return early instead
+                        return Ok(());
                     }
                     RFDOutputError::Generic(inner) => {
                         log::error!("Failed trying to generate PDF for RFD {}: {:?}", rfd.number, inner);
+                        return Err(err.into());
                     }
                 }
-
-                err
-            })?;
+            }
+        };
 
         // Upload the generate PDF
         let upload = pdf.upload(&api_context.db, &api_context.company).await?;
