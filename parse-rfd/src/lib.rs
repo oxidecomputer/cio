@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::{
     error::Error,
     fmt,
-    fs::{File, remove_file, remove_dir, create_dir_all},
+    fs::{create_dir_all, remove_dir, remove_file, File},
     io::Write,
     path::PathBuf,
     process::{Command, Stdio},
@@ -188,7 +188,9 @@ This options contains further information
 
 === The Third Option
 
-Third in the list"#).unwrap();
+Third in the list"#,
+        )
+        .unwrap();
 
         let expected = ParsedDoc {
             title: "On Parsing Documents".to_string(),
@@ -209,34 +211,25 @@ Third in the list"#).unwrap();
                     section_id: "_the_fist_option".to_string(),
                     name: "The Fist Option".to_string(),
                     content: "First in the list".to_string(),
-                    parents: vec![
-                        "Possibilities".to_string(),
-                    ],
+                    parents: vec!["Possibilities".to_string()],
                 },
                 Section {
                     section_id: "_the_second_option".to_string(),
                     name: "The Second Option".to_string(),
                     content: "Second in the list".to_string(),
-                    parents: vec![
-                        "Possibilities".to_string(),
-                    ],
+                    parents: vec!["Possibilities".to_string()],
                 },
                 Section {
                     section_id: "_further_nested_details".to_string(),
                     name: "Further Nested Details".to_string(),
                     content: "This options contains further information".to_string(),
-                    parents: vec![
-                        "The Second Option".to_string(),
-                        "Possibilities".to_string(),
-                    ],
+                    parents: vec!["The Second Option".to_string(), "Possibilities".to_string()],
                 },
                 Section {
                     section_id: "_the_third_option".to_string(),
                     name: "The Third Option".to_string(),
                     content: "Third in the list".to_string(),
-                    parents: vec![
-                        "Possibilities".to_string(),
-                    ],
+                    parents: vec!["Possibilities".to_string()],
                 },
             ],
         };
