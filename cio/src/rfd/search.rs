@@ -6,11 +6,11 @@ use meilisearch_sdk::{
     search::{SearchResults, Selectors},
     Client,
 };
-use parse_rfd::{parse, Section};
+use parse_rfd::{parse, Section, ParsedDoc};
 use serde::{Deserialize, Serialize};
 use std::{cmp::min, collections::HashMap};
 
-use super::{RFDNumber, RFD};
+use super::RFDNumber;
 
 pub struct RFDSearchIndex {}
 
@@ -91,7 +91,7 @@ impl IndexDocument {
 
 impl RFDSearchIndex {
     /// Trigger updating the search index for the RFD.
-    pub async fn index_rfd(rfd_number: &RFDNumber, rfd: &RFD) -> Result<()> {
+    pub async fn index_rfd(rfd_number: &RFDNumber, content: &str) -> Result<()> {
         let client = Client::new(std::env::var("MEILI_URL")?, std::env::var("MEILI_KEY")?);
 
         let index = client.index("rfd");
@@ -100,7 +100,7 @@ impl RFDSearchIndex {
 
         log::info!("Deleted documents for RFD {}: {:?}", rfd_number.0, delete);
 
-        let documents = Self::parse_document(&rfd.content, rfd_number, &rfd.title)?;
+        let documents = Self::parse_document(rfd_number, &content)?;
 
         let add = index.add_documents(&documents, Some("objectID")).await?;
 
@@ -125,10 +125,11 @@ impl RFDSearchIndex {
             .collect::<Vec<_>>())
     }
 
-    fn parse_document(content: &str, rfd_number: &RFDNumber, title: &str) -> Result<Vec<IndexDocument>> {
-        Ok(parse(content)?
+    fn parse_document(rfd_number: &RFDNumber, content: &str) -> Result<Vec<IndexDocument>> {
+        let ParsedDoc { title, sections } = parse(content)?;
+        Ok(sections
             .into_iter()
-            .map(|section| IndexDocument::new(section, rfd_number, title))
+            .map(|section| IndexDocument::new(section, rfd_number, &title))
             .collect::<Vec<_>>())
     }
 }
@@ -140,7 +141,8 @@ mod tests {
     #[test]
     fn creates_indexable_documents() {
         let documents = RFDSearchIndex::parse_document(
-            r#":showtitle:
+&123.into(),
+r#":showtitle:
 :toc: left
 :numbered:
 :icons: font
@@ -176,10 +178,7 @@ This options contains further information
 
 === The Third Option
 
-Third in the list"#,
-            &123.into(),
-            "On Parsing Documents",
-        )
+Third in the list"#)
         .unwrap();
 
         let expected: serde_json::Value = serde_json::from_str(r#"[{"objectID":"d4cb86c0f047968689bfb31b3b0e8777","anchor":"_background","url":"https://rfd.shared.oxide.computer/rfd/0123#_background","name":"Background","level":1,"content":"A paragraph about background topics","rfd_number":123,"hierarchy_lvl0":"On Parsing Documents","hierarchy_lvl1":"Background","hierarchy_radio_lvl1":"Background"},{"objectID":"78f5e7630699137ab79f8ebc28f1f969","anchor":"_possibilities","url":"https://rfd.shared.oxide.computer/rfd/0123#_possibilities","name":"Possibilities","level":1,"content":"Nested sections describing possible options","rfd_number":123,"hierarchy_lvl0":"On Parsing Documents","hierarchy_lvl1":"Possibilities","hierarchy_radio_lvl1":"Possibilities"},{"objectID":"a3ae62d83c3e4d75d4c472d1704ad007","anchor":"_the_fist_option","url":"https://rfd.shared.oxide.computer/rfd/0123#_the_fist_option","name":"The Fist Option","level":2,"content":"First in the list","rfd_number":123,"hierarchy_lvl0":"On Parsing Documents","hierarchy_lvl1":"The Fist Option","hierarchy_lvl2":"Possibilities","hierarchy_radio_lvl2":"Possibilities"},{"objectID":"2cc8b5223efebcc9688249fcbbc513a3","anchor":"_the_second_option","url":"https://rfd.shared.oxide.computer/rfd/0123#_the_second_option","name":"The Second Option","level":2,"content":"Second in the list","rfd_number":123,"hierarchy_lvl0":"On Parsing Documents","hierarchy_lvl1":"The Second Option","hierarchy_lvl2":"Possibilities","hierarchy_radio_lvl2":"Possibilities"},{"objectID":"1c37370ab346614df6e78a5003eb11b1","anchor":"_further_nested_details","url":"https://rfd.shared.oxide.computer/rfd/0123#_further_nested_details","name":"Further Nested Details","level":3,"content":"This options contains further information","rfd_number":123,"hierarchy_lvl0":"On Parsing Documents","hierarchy_lvl1":"Further Nested Details","hierarchy_lvl2":"The Second Option","hierarchy_lvl3":"Possibilities","hierarchy_radio_lvl3":"Possibilities"},{"objectID":"476fe6d1ff7a522859fc71bbc146fd60","anchor":"_the_third_option","url":"https://rfd.shared.oxide.computer/rfd/0123#_the_third_option","name":"The Third Option","level":2,"content":"Third in the list","rfd_number":123,"hierarchy_lvl0":"On Parsing Documents","hierarchy_lvl1":"The Third Option","hierarchy_lvl2":"Possibilities","hierarchy_radio_lvl2":"Possibilities"}]"#).unwrap();

@@ -61450,7 +61450,18 @@ const parse = (content) => {
     .map((section) => formatSection(section, content))
     .reduce((acc, prev) => [...acc, ...prev], []);
 
-  return sections;
+  return {
+    title: doc
+      .getTitle()
+      .replace("RFD", "")
+      .replace("# ", "")
+      .replace("= ", "")
+      .trim()
+      .split(' ')
+      .slice(1)
+      .join(' '),
+    sections
+  };
 };
 
 const formatSection = (section, content) => {
@@ -61463,7 +61474,7 @@ const formatSection = (section, content) => {
   let currSection = section.getParent();
 
   while (level-- && currSection) {
-    parentSections.push((currSection).getName());
+    parentSections.push(currSection.getName());
     currSection = currSection.getParent();
   }
 
