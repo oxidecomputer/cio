@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 	libssl1.1 \
 	libusb-1.0-0-dev \
 	lmodern \
-  p7zip \
+    p7zip \
 	pandoc \
 	poppler-utils \
 	ruby \
@@ -96,8 +96,6 @@ COPY mailerlite ../mailerlite
 COPY mailchimp-minimal-api ../mailchimp-minimal-api
 
 COPY partial-struct ../partial-struct
-
-COPY parse-rfd ../parse-rfd
 
 COPY ramp-minimal-api ../ramp-minimal-api
 

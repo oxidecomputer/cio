@@ -59,9 +59,3 @@ impl From<RFDNumber> for i32 {
         num.0
     }
 }
-
-impl From<&RFDNumber> for i32 {
-    fn from(num: &RFDNumber) -> Self {
-        num.0
-    }
-}
