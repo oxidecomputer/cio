@@ -2519,19 +2519,11 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // Remove any groups that should no longer be in the database.
     // This is found by the remaining groups that are in the map since we removed
     // the existing repos from the map above.
-    for (name, group) in group_map {
-        info!("deleting group `{}` from the database, gsuite, github, okta, etc", name);
-
-        // Delete the group from the database and Airtable.
-        group.delete(db).await?;
-
-        gsuite.delete_group(company, &group).await?;
-
-        github.delete_group(company, &group).await?;
-
-        if let Some(ref okta) = okta_auth {
-            okta.delete_group(company, &group).await?;
-        }
+    for (name, _group) in group_map {
+        warn!(
+            "Group `{}` exists in database, but a configuration could not be found",
+            name
+        );
     }
 
     info!("updated configs groups in the database");
