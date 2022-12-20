@@ -310,6 +310,9 @@ pub struct UserConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub working_on: Vec<String>,
 
+    #[serde(default)]
+    pub gusto_pull_permission: bool,
+
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
@@ -674,32 +677,37 @@ impl UserConfig {
             return;
         }
 
-        // Update the user's start date.
+        // A user must have explicitly opted in to having their data pull from Gusto. By default
+        // we will not pull personal data. The only fields that we will pull without permission are
+        // the employee's hire date and the employee's gusto_id
+        if !self.gusto_pull_permission {
+            // Update the user's birthday.
+            if let Some(birthday) = gusto_user.date_of_birth {
+                self.birthday = birthday;
+            }
+
+            // Update the user's home address.
+            // Gusto now becomes the source of truth for people's addresses.
+            if let Some(home_address) = &gusto_user.home_address {
+                self.home_address_street_1 = home_address.street_1.to_string();
+                self.home_address_street_2 = home_address.street_2.to_string();
+                self.home_address_city = home_address.city.to_string();
+                self.home_address_state = home_address.state.to_string();
+                self.home_address_zipcode = home_address.zip.to_string();
+                self.home_address_country = home_address.country.to_string();
+            }
+
+            if self.home_address_country == "US"
+                || self.home_address_country == "USA"
+                || self.home_address_country.is_empty()
+            {
+                self.home_address_country = "United States".to_string();
+            }
+        }
+
+        // We always fetch the employee's start date from Gusto
         if let Some(start_date) = gusto_user.jobs[0].hire_date {
             self.start_date = start_date;
-        }
-
-        // Update the user's birthday.
-        if let Some(birthday) = gusto_user.date_of_birth {
-            self.birthday = birthday;
-        }
-
-        // Update the user's home address.
-        // Gusto now becomes the source of truth for people's addresses.
-        if let Some(home_address) = &gusto_user.home_address {
-            self.home_address_street_1 = home_address.street_1.to_string();
-            self.home_address_street_2 = home_address.street_2.to_string();
-            self.home_address_city = home_address.city.to_string();
-            self.home_address_state = home_address.state.to_string();
-            self.home_address_zipcode = home_address.zip.to_string();
-            self.home_address_country = home_address.country.to_string();
-        }
-
-        if self.home_address_country == "US"
-            || self.home_address_country == "USA"
-            || self.home_address_country.is_empty()
-        {
-            self.home_address_country = "United States".to_string();
         }
     }
 

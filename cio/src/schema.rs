@@ -931,6 +931,7 @@ table! {
         zoom_id -> Varchar,
         geocode_cache -> Varchar,
         working_on -> Array<Text>,
+        gusto_pull_permission -> Bool,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }
