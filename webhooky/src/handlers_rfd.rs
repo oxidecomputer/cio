@@ -47,6 +47,7 @@ pub async fn handle_rfd_index(
             rfds::dsl::commit_date,
             rfds::dsl::milestones,
             rfds::dsl::relevant_components,
+            rfds::dsl::pdf_link_google_drive,
         ))
         .load_async::<RFDIndexEntry>(ctx.db.pool())
         .await?;
