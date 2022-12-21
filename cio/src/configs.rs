@@ -2949,6 +2949,7 @@ pub mod tests {
             zoom_id: String::default(),
             geocode_cache: String::default(),
             working_on: vec![],
+            gusto_pull_permission: false,
             cio_company_id: 1,
             airtable_record_id: String::default(),
         }
