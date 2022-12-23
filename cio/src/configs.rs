@@ -467,7 +467,8 @@ impl UserConfig {
         } else if let Some(gusto_user) = gusto_users.get(&self.recovery_email) {
             self.update_from_gusto(gusto_user);
         } else {
-            // Grab their date of birth, start date, and address from Airtable.
+            // For a new hire we may have an airtable entry, but not a Gusto record. Grab their
+            // date of birth, start date, and address from Airtable.
             if let Some(e) = &existing {
                 // Redundant lookup
                 if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
@@ -481,6 +482,10 @@ impl UserConfig {
                     self.gusto_id = airtable_record.fields.gusto_id;
                 }
 
+                // If we found a Gusto id in Airtable then update the user record based on that id.
+                // TODO: This logic (combined with the email lookup above is very likely incorrect.
+                // It is possible (though unlikely) that the two of these diverge and result in
+                // returning different accounts)
                 if !e.gusto_id.is_empty() {
                     if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
                         self.update_from_gusto(gusto_user);
