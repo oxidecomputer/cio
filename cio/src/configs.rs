@@ -17,7 +17,6 @@ use diesel::{
     FromSqlRow,
 };
 use google_calendar::types::{Event, EventAttendee, EventDateTime};
-use google_geocode::Geocode;
 use gsuite_api::types::{
     Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup, User as GSuiteUser,
 };
@@ -220,8 +219,9 @@ pub struct UserConfig {
     pub denied_services: Vec<ExternalServices>,
 
     /// The following fields do not exist in the config files but are populated
-    /// by the Gusto API before the record gets saved in the database.
-    /// Home address (automatically populated by Gusto)
+    /// by the Gusto API before the record gets saved in the database if we have
+    /// permission from the user. Otherwise this information must be updated
+    /// manually
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_street_1: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -309,6 +309,9 @@ pub struct UserConfig {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub working_on: Vec<String>,
+
+    #[serde(default)]
+    pub gusto_pull_permission: bool,
 
     /// The CIO company ID.
     #[serde(default)]
@@ -444,6 +447,19 @@ impl UserConfig {
             }
         }
 
+        // If we have an existing user, sync down Airtable fields that we allow modifications on
+        if let Some(e) = &existing {
+            if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
+                self.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
+                self.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
+                self.home_address_city = airtable_record.fields.home_address_city.to_string();
+                self.home_address_state = airtable_record.fields.home_address_state.to_string();
+                self.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
+                self.home_address_country = airtable_record.fields.home_address_country.to_string();
+                self.birthday = airtable_record.fields.birthday;
+            }
+        }
+
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
         if let Some(gusto_user) = gusto_users.get(&self.email) {
@@ -451,25 +467,25 @@ impl UserConfig {
         } else if let Some(gusto_user) = gusto_users.get(&self.recovery_email) {
             self.update_from_gusto(gusto_user);
         } else {
-            // Grab their date of birth, start date, and address from Airtable.
-            if let Some(e) = existing.clone() {
+            // For a new hire we may have an airtable entry, but not a Gusto record. Grab their
+            // date of birth, start date, and address from Airtable.
+            if let Some(e) = &existing {
+                // Redundant lookup
                 if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
-                    self.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
-                    self.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
-                    self.home_address_city = airtable_record.fields.home_address_city.to_string();
-                    self.home_address_state = airtable_record.fields.home_address_state.to_string();
-                    self.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
-                    self.home_address_country = airtable_record.fields.home_address_country.to_string();
-                    self.birthday = airtable_record.fields.birthday;
                     // Keep the start date in airtable if we already have one.
                     if self.start_date == crate::utils::default_date()
                         && airtable_record.fields.start_date != crate::utils::default_date()
                     {
                         self.start_date = airtable_record.fields.start_date;
                     }
+
                     self.gusto_id = airtable_record.fields.gusto_id;
                 }
 
+                // If we found a Gusto id in Airtable then update the user record based on that id.
+                // TODO: This logic (combined with the email lookup above is very likely incorrect.
+                // It is possible (though unlikely) that the two of these diverge and result in
+                // returning different accounts)
                 if !e.gusto_id.is_empty() {
                     if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
                         self.update_from_gusto(gusto_user);
@@ -674,32 +690,37 @@ impl UserConfig {
             return;
         }
 
-        // Update the user's start date.
+        // A user must have explicitly opted in to having their data pull from Gusto. By default
+        // we will not pull personal data. The only fields that we will pull without permission are
+        // the employee's hire date and the employee's gusto_id
+        if !self.gusto_pull_permission {
+            // Update the user's birthday.
+            if let Some(birthday) = gusto_user.date_of_birth {
+                self.birthday = birthday;
+            }
+
+            // Update the user's home address.
+            // Gusto now becomes the source of truth for people's addresses.
+            if let Some(home_address) = &gusto_user.home_address {
+                self.home_address_street_1 = home_address.street_1.to_string();
+                self.home_address_street_2 = home_address.street_2.to_string();
+                self.home_address_city = home_address.city.to_string();
+                self.home_address_state = home_address.state.to_string();
+                self.home_address_zipcode = home_address.zip.to_string();
+                self.home_address_country = home_address.country.to_string();
+            }
+
+            if self.home_address_country == "US"
+                || self.home_address_country == "USA"
+                || self.home_address_country.is_empty()
+            {
+                self.home_address_country = "United States".to_string();
+            }
+        }
+
+        // We always fetch the employee's start date from Gusto
         if let Some(start_date) = gusto_user.jobs[0].hire_date {
             self.start_date = start_date;
-        }
-
-        // Update the user's birthday.
-        if let Some(birthday) = gusto_user.date_of_birth {
-            self.birthday = birthday;
-        }
-
-        // Update the user's home address.
-        // Gusto now becomes the source of truth for people's addresses.
-        if let Some(home_address) = &gusto_user.home_address {
-            self.home_address_street_1 = home_address.street_1.to_string();
-            self.home_address_street_2 = home_address.street_2.to_string();
-            self.home_address_city = home_address.city.to_string();
-            self.home_address_state = home_address.state.to_string();
-            self.home_address_zipcode = home_address.zip.to_string();
-            self.home_address_country = home_address.country.to_string();
-        }
-
-        if self.home_address_country == "US"
-            || self.home_address_country == "USA"
-            || self.home_address_country.is_empty()
-        {
-            self.home_address_country = "United States".to_string();
         }
     }
 
@@ -740,17 +761,6 @@ impl UserConfig {
         if self.home_address_country.is_empty() || self.home_address_country == "United States" {
             self.home_address_country = "United States".to_string();
             self.home_address_country_code = "US".to_string();
-        }
-
-        if !self.home_address_formatted.is_empty() {
-            // Create the geocode client.
-            let geocode = Geocode::new_from_env();
-            // Get the latitude and longitude.
-            if let Ok(result) = geocode.get(&self.home_address_formatted).await {
-                let location = result.geometry.location;
-                self.home_address_latitude = location.lat as f32;
-                self.home_address_longitude = location.lng as f32;
-            }
         }
 
         Ok(())
@@ -2941,6 +2951,7 @@ pub mod tests {
             zoom_id: String::default(),
             geocode_cache: String::default(),
             working_on: vec![],
+            gusto_pull_permission: false,
             cio_company_id: 1,
             airtable_record_id: String::default(),
         }
@@ -3092,7 +3103,7 @@ manager = 'orb'
     }
 
     #[test]
-    fn test_deserializes_user_config_without_denies() {
+    fn test_deserializes_user_config_with_missing_settings() {
         let user: UserConfig = toml::from_str(
             r#"
 first_name = 'Test'
@@ -3122,5 +3133,6 @@ manager = 'orb'
         assert_eq!(user.first_name, "Test");
         assert_eq!(user.last_name, "User");
         assert_eq!(user.denied_services, vec![]);
+        assert_eq!(user.gusto_pull_permission, false);
     }
 }
