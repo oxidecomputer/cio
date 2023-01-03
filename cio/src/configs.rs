@@ -694,7 +694,7 @@ impl UserConfig {
         // A user must have explicitly opted in to having their data pull from Gusto. By default
         // we will not pull personal data. The only fields that we will pull without permission are
         // the employee's hire date and the employee's gusto_id
-        if !self.gusto_pull_permission {
+        if self.gusto_pull_permission {
             // Update the user's birthday.
             if let Some(birthday) = gusto_user.date_of_birth {
                 self.birthday = birthday;
