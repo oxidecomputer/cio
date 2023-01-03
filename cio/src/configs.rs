@@ -458,6 +458,13 @@ impl UserConfig {
                 self.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
                 self.home_address_country = airtable_record.fields.home_address_country.to_string();
                 self.birthday = airtable_record.fields.birthday;
+
+                log::info!(
+                    "Fetched address data from existing Airtable record for user {} during sync",
+                    e.id
+                );
+            } else {
+                log::info!("Failed to find existing Airtable record for user {} during sync", e.id);
             }
         }
 
@@ -709,6 +716,8 @@ impl UserConfig {
                 self.home_address_state = home_address.state.to_string();
                 self.home_address_zipcode = home_address.zip.to_string();
                 self.home_address_country = home_address.country.to_string();
+
+                log::info!("Fetched address data from Gusto for user {} during sync", gusto_user.id);
             }
 
             if self.home_address_country == "US"
