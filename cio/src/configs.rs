@@ -39,6 +39,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
+    features::Features,
     gsuite::{update_gsuite_building, update_gsuite_calendar_resource},
     providers::{ProviderReadOps, ProviderWriteOps},
     schema::{applicants, buildings, groups, links, resources, users},
@@ -2094,156 +2095,163 @@ pub async fn sync_users(
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, user) in user_map {
-        info!("deleting user `{}` from the database and other services", username);
+        if !Features::is_enabled("REMOTE_USER_DELETES") {
+            info!(
+                "User {} meets criteria for removal, but removals are currently disabled",
+                user.id
+            );
+        } else {
+            info!("deleting user `{}` from the database and other services", user.id);
 
-        let mut has_failures = false;
+            let mut has_failures = false;
 
-        if !user.google_anniversary_event_id.is_empty() {
-            // First delete the recurring event for their anniversary.
-            let cal_delete = gcal
-                .events()
-                .delete(
-                    &anniversary_cal_id,
-                    &user.google_anniversary_event_id,
-                    true, // send_notifications
-                    google_calendar::types::SendUpdates::All,
-                )
-                .await;
+            if !user.google_anniversary_event_id.is_empty() {
+                // First delete the recurring event for their anniversary.
+                let cal_delete = gcal
+                    .events()
+                    .delete(
+                        &anniversary_cal_id,
+                        &user.google_anniversary_event_id,
+                        true, // send_notifications
+                        google_calendar::types::SendUpdates::All,
+                    )
+                    .await;
 
-            match cal_delete {
-                Ok(_) => {
-                    info!(
-                        "deleted user {} event {} from google",
-                        username, user.google_anniversary_event_id
-                    );
-                }
-                Err(err) => {
-                    let msg = format!("{}", err);
-
-                    // An anniversary calender event may not exist if the user was partially
-                    // provisioned or deprovisioned. In the case of deprovisioning, Google will
-                    // return a 410 Gone error if the calendar event has already been removed.
-                    // This should not be considered a failure.
-
-                    // Errors from the Google Calendar client are stringy and do not return
-                    // structured data. As a result this check is extremely brittle. We can not
-                    // use its failure to authorize anything destructive.
-                    if !msg.starts_with("code: 410 Gone") {
-                        warn!(
-                            "Failed to delete anniversary calendar {} / {}. err: {}",
-                            username, user.google_anniversary_event_id, msg
-                        );
-
-                        has_failures = true;
-                    } else {
+                match cal_delete {
+                    Ok(_) => {
                         info!(
-                            "Ignoring error for anniversary calendar {} / {} delete",
+                            "deleted user {} event {} from google",
                             username, user.google_anniversary_event_id
                         );
                     }
+                    Err(err) => {
+                        let msg = format!("{}", err);
+
+                        // An anniversary calender event may not exist if the user was partially
+                        // provisioned or deprovisioned. In the case of deprovisioning, Google will
+                        // return a 410 Gone error if the calendar event has already been removed.
+                        // This should not be considered a failure.
+
+                        // Errors from the Google Calendar client are stringy and do not return
+                        // structured data. As a result this check is extremely brittle. We can not
+                        // use its failure to authorize anything destructive.
+                        if !msg.starts_with("code: 410 Gone") {
+                            warn!(
+                                "Failed to delete anniversary calendar {} / {}. err: {}",
+                                username, user.google_anniversary_event_id, msg
+                            );
+
+                            has_failures = true;
+                        } else {
+                            info!(
+                                "Ignoring error for anniversary calendar {} / {} delete",
+                                username, user.google_anniversary_event_id
+                            );
+                        }
+                    }
                 }
             }
-        }
 
-        // Supend the user from okta.
-        if let Some(ref okta) = okta_auth {
-            match okta.delete_user(db, company, &user).await {
-                Ok(_) => {
-                    info!("Deleted user {} from okta", username);
-                }
-                Err(err) => {
-                    warn!("Failed to delete user {} from okta. err: {:?}", username, err);
-
-                    has_failures = true;
-                }
-            }
-        }
-
-        if company.okta_domain.is_empty() {
-            // Delete the user from GSuite and other apps.
-            // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-            // Suspend the user from GSuite so we can transfer their data.
-            match gsuite.delete_user(db, company, &user).await {
-                Ok(_) => {
-                    info!("Deactivated user {} in GSuite", username);
-                }
-                Err(err) => {
-                    warn!("Failed to deactivate user {} in GSuite. err: {:?}", username, err);
-
-                    has_failures = true;
-                }
-            }
-        }
-
-        // Remove the user from the github org.
-        match github.delete_user(db, company, &user).await {
-            Ok(_) => {
-                info!("Deleted user {} from GitHub", username);
-            }
-            Err(err) => {
-                warn!("Failed to delete user {} from GitHub. err: {:?}", username, err);
-            }
-        }
-
-        // TODO: Deactivate the user from Ramp.
-        // We only want to lock the cards from more purchases. Removing GSuite/Okta
-        // will disallow them from logging in. And we want their purchase history so
-        // we don't want to delete them.
-
-        // TODO: Delete the user from Slack.
-        // Removing SSO (GSuite/Okta) will disallow them from logging in.
-
-        // Delete the user from Zoom.
-        if let Ok(ref zoom) = zoom_auth {
-            match zoom.delete_user(db, company, &user).await {
-                Ok(_) => {
-                    info!("Deleted user {} from Zoom", username);
-                }
-                Err(err) => {
-                    warn!("Failed to delete user {} from Zoom. err: {:?}", username, err);
-
-                    has_failures = true;
-                }
-            }
-        }
-
-        // Delete the user from Airtable.
-        // Okta should take care of this if we are using Okta.
-        // But let's do it anyway.
-        match airtable_auth.delete_user(db, company, &user).await {
-            Ok(_) => {
-                info!("Deleted user {} from Airtable", username);
-            }
-            Err(err) => {
-                warn!("Failed to delete user {} from Airtable. err: {:?}", username, err);
-            }
-        }
-
-        // User deletes are currently disabled. We no longer want to allow the behavior of removing
-        // user records from our system. Instead they should be only marked as deleted so that we
-        // can restore them in the future if needed.
-        let enable_user_deletes = false;
-
-        // Only delete the user from the database and Airtable if all previous deletes
-        // have actually succeeded and user deletes are enabled.
-        if !has_failures {
-            if enable_user_deletes {
-                match user.delete(db).await {
+            // Supend the user from okta.
+            if let Some(ref okta) = okta_auth {
+                match okta.delete_user(db, company, &user).await {
                     Ok(_) => {
-                        info!("Successfully deleted user {} from database", username);
+                        info!("Deleted user {} from okta", username);
                     }
                     Err(err) => {
-                        warn!("Failed to delete user {} from database. err: {:?}", username, err);
+                        warn!("Failed to delete user {} from okta. err: {:?}", username, err);
+
+                        has_failures = true;
                     }
                 }
-            } else {
-                info!(
-                    "Would delete user {} from database, but user deletes have been disabled",
-                    username
-                );
             }
-        } else {
-            info!("Skipping final user deletion due to previous delete steps failing");
+
+            if company.okta_domain.is_empty() {
+                // Delete the user from GSuite and other apps.
+                // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
+                // Suspend the user from GSuite so we can transfer their data.
+                match gsuite.delete_user(db, company, &user).await {
+                    Ok(_) => {
+                        info!("Deactivated user {} in GSuite", username);
+                    }
+                    Err(err) => {
+                        warn!("Failed to deactivate user {} in GSuite. err: {:?}", username, err);
+
+                        has_failures = true;
+                    }
+                }
+            }
+
+            // Remove the user from the github org.
+            match github.delete_user(db, company, &user).await {
+                Ok(_) => {
+                    info!("Deleted user {} from GitHub", username);
+                }
+                Err(err) => {
+                    warn!("Failed to delete user {} from GitHub. err: {:?}", username, err);
+                }
+            }
+
+            // TODO: Deactivate the user from Ramp.
+            // We only want to lock the cards from more purchases. Removing GSuite/Okta
+            // will disallow them from logging in. And we want their purchase history so
+            // we don't want to delete them.
+
+            // TODO: Delete the user from Slack.
+            // Removing SSO (GSuite/Okta) will disallow them from logging in.
+
+            // Delete the user from Zoom.
+            if let Ok(ref zoom) = zoom_auth {
+                match zoom.delete_user(db, company, &user).await {
+                    Ok(_) => {
+                        info!("Deleted user {} from Zoom", username);
+                    }
+                    Err(err) => {
+                        warn!("Failed to delete user {} from Zoom. err: {:?}", username, err);
+
+                        has_failures = true;
+                    }
+                }
+            }
+
+            // Delete the user from Airtable.
+            // Okta should take care of this if we are using Okta.
+            // But let's do it anyway.
+            match airtable_auth.delete_user(db, company, &user).await {
+                Ok(_) => {
+                    info!("Deleted user {} from Airtable", username);
+                }
+                Err(err) => {
+                    warn!("Failed to delete user {} from Airtable. err: {:?}", username, err);
+                }
+            }
+
+            // User deletes are currently disabled. We no longer want to allow the behavior of removing
+            // user records from our system. Instead they should be only marked as deleted so that we
+            // can restore them in the future if needed.
+            let enable_user_deletes = false;
+
+            // Only delete the user from the database and Airtable if all previous deletes
+            // have actually succeeded and user deletes are enabled.
+            if !has_failures {
+                if enable_user_deletes {
+                    match user.delete(db).await {
+                        Ok(_) => {
+                            info!("Successfully deleted user {} from database", username);
+                        }
+                        Err(err) => {
+                            warn!("Failed to delete user {} from database. err: {:?}", username, err);
+                        }
+                    }
+                } else {
+                    info!(
+                        "Would delete user {} from database, but user deletes have been disabled",
+                        username
+                    );
+                }
+            } else {
+                info!("Skipping final user deletion due to previous delete steps failing");
+            }
         }
     }
 
