@@ -95,6 +95,8 @@ COPY mailerlite ../mailerlite
 
 COPY mailchimp-minimal-api ../mailchimp-minimal-api
 
+COPY meilisearch-minimal-api ../meilisearch-minimal-api
+
 COPY partial-struct ../partial-struct
 
 COPY parse-rfd ../parse-rfd
