@@ -83,8 +83,6 @@ pub struct NewRFD {
     #[partial(RFDEntry(skip))]
     pub pdf_link_github: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    #[partial(RFDIndexEntry(skip))]
-    #[partial(RFDEntry(skip))]
     pub pdf_link_google_drive: String,
     /// The CIO company ID.
     #[serde(default)]

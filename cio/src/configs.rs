@@ -17,7 +17,6 @@ use diesel::{
     FromSqlRow,
 };
 use google_calendar::types::{Event, EventAttendee, EventDateTime};
-use google_geocode::Geocode;
 use gsuite_api::types::{
     Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup, User as GSuiteUser,
 };
@@ -40,6 +39,7 @@ use crate::{
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
+    features::Features,
     gsuite::{update_gsuite_building, update_gsuite_calendar_resource},
     providers::{ProviderReadOps, ProviderWriteOps},
     schema::{applicants, buildings, groups, links, resources, users},
@@ -220,8 +220,9 @@ pub struct UserConfig {
     pub denied_services: Vec<ExternalServices>,
 
     /// The following fields do not exist in the config files but are populated
-    /// by the Gusto API before the record gets saved in the database.
-    /// Home address (automatically populated by Gusto)
+    /// by the Gusto API before the record gets saved in the database if we have
+    /// permission from the user. Otherwise this information must be updated
+    /// manually
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub home_address_street_1: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -309,6 +310,9 @@ pub struct UserConfig {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub working_on: Vec<String>,
+
+    #[serde(default)]
+    pub gusto_pull_permission: bool,
 
     /// The CIO company ID.
     #[serde(default)]
@@ -444,6 +448,26 @@ impl UserConfig {
             }
         }
 
+        // If we have an existing user, sync down Airtable fields that we allow modifications on
+        if let Some(e) = &existing {
+            if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
+                self.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
+                self.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
+                self.home_address_city = airtable_record.fields.home_address_city.to_string();
+                self.home_address_state = airtable_record.fields.home_address_state.to_string();
+                self.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
+                self.home_address_country = airtable_record.fields.home_address_country.to_string();
+                self.birthday = airtable_record.fields.birthday;
+
+                log::info!(
+                    "Fetched address data from existing Airtable record for user {} during sync",
+                    e.id
+                );
+            } else {
+                log::info!("Failed to find existing Airtable record for user {} during sync", e.id);
+            }
+        }
+
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
         if let Some(gusto_user) = gusto_users.get(&self.email) {
@@ -451,25 +475,25 @@ impl UserConfig {
         } else if let Some(gusto_user) = gusto_users.get(&self.recovery_email) {
             self.update_from_gusto(gusto_user);
         } else {
-            // Grab their date of birth, start date, and address from Airtable.
-            if let Some(e) = existing.clone() {
+            // For a new hire we may have an airtable entry, but not a Gusto record. Grab their
+            // date of birth, start date, and address from Airtable.
+            if let Some(e) = &existing {
+                // Redundant lookup
                 if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
-                    self.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
-                    self.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
-                    self.home_address_city = airtable_record.fields.home_address_city.to_string();
-                    self.home_address_state = airtable_record.fields.home_address_state.to_string();
-                    self.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
-                    self.home_address_country = airtable_record.fields.home_address_country.to_string();
-                    self.birthday = airtable_record.fields.birthday;
                     // Keep the start date in airtable if we already have one.
                     if self.start_date == crate::utils::default_date()
                         && airtable_record.fields.start_date != crate::utils::default_date()
                     {
                         self.start_date = airtable_record.fields.start_date;
                     }
+
                     self.gusto_id = airtable_record.fields.gusto_id;
                 }
 
+                // If we found a Gusto id in Airtable then update the user record based on that id.
+                // TODO: This logic (combined with the email lookup above is very likely incorrect.
+                // It is possible (though unlikely) that the two of these diverge and result in
+                // returning different accounts)
                 if !e.gusto_id.is_empty() {
                     if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
                         self.update_from_gusto(gusto_user);
@@ -674,32 +698,39 @@ impl UserConfig {
             return;
         }
 
-        // Update the user's start date.
+        // A user must have explicitly opted in to having their data pull from Gusto. By default
+        // we will not pull personal data. The only fields that we will pull without permission are
+        // the employee's hire date and the employee's gusto_id
+        if self.gusto_pull_permission {
+            // Update the user's birthday.
+            if let Some(birthday) = gusto_user.date_of_birth {
+                self.birthday = birthday;
+            }
+
+            // Update the user's home address.
+            // Gusto now becomes the source of truth for people's addresses.
+            if let Some(home_address) = &gusto_user.home_address {
+                self.home_address_street_1 = home_address.street_1.to_string();
+                self.home_address_street_2 = home_address.street_2.to_string();
+                self.home_address_city = home_address.city.to_string();
+                self.home_address_state = home_address.state.to_string();
+                self.home_address_zipcode = home_address.zip.to_string();
+                self.home_address_country = home_address.country.to_string();
+
+                log::info!("Fetched address data from Gusto for user {} during sync", gusto_user.id);
+            }
+
+            if self.home_address_country == "US"
+                || self.home_address_country == "USA"
+                || self.home_address_country.is_empty()
+            {
+                self.home_address_country = "United States".to_string();
+            }
+        }
+
+        // We always fetch the employee's start date from Gusto
         if let Some(start_date) = gusto_user.jobs[0].hire_date {
             self.start_date = start_date;
-        }
-
-        // Update the user's birthday.
-        if let Some(birthday) = gusto_user.date_of_birth {
-            self.birthday = birthday;
-        }
-
-        // Update the user's home address.
-        // Gusto now becomes the source of truth for people's addresses.
-        if let Some(home_address) = &gusto_user.home_address {
-            self.home_address_street_1 = home_address.street_1.to_string();
-            self.home_address_street_2 = home_address.street_2.to_string();
-            self.home_address_city = home_address.city.to_string();
-            self.home_address_state = home_address.state.to_string();
-            self.home_address_zipcode = home_address.zip.to_string();
-            self.home_address_country = home_address.country.to_string();
-        }
-
-        if self.home_address_country == "US"
-            || self.home_address_country == "USA"
-            || self.home_address_country.is_empty()
-        {
-            self.home_address_country = "United States".to_string();
         }
     }
 
@@ -740,17 +771,6 @@ impl UserConfig {
         if self.home_address_country.is_empty() || self.home_address_country == "United States" {
             self.home_address_country = "United States".to_string();
             self.home_address_country_code = "US".to_string();
-        }
-
-        if !self.home_address_formatted.is_empty() {
-            // Create the geocode client.
-            let geocode = Geocode::new_from_env();
-            // Get the latitude and longitude.
-            if let Ok(result) = geocode.get(&self.home_address_formatted).await {
-                let location = result.geometry.location;
-                self.home_address_latitude = location.lat as f32;
-                self.home_address_longitude = location.lng as f32;
-            }
         }
 
         Ok(())
@@ -2084,156 +2104,163 @@ pub async fn sync_users(
     // This is found by the remaining users that are in the map since we removed
     // the existing repos from the map above.
     for (username, user) in user_map {
-        info!("deleting user `{}` from the database and other services", username);
+        if !Features::is_enabled("REMOTE_USER_DELETES") {
+            info!(
+                "User {} meets criteria for removal, but removals are currently disabled",
+                user.id
+            );
+        } else {
+            info!("deleting user `{}` from the database and other services", user.id);
 
-        let mut has_failures = false;
+            let mut has_failures = false;
 
-        if !user.google_anniversary_event_id.is_empty() {
-            // First delete the recurring event for their anniversary.
-            let cal_delete = gcal
-                .events()
-                .delete(
-                    &anniversary_cal_id,
-                    &user.google_anniversary_event_id,
-                    true, // send_notifications
-                    google_calendar::types::SendUpdates::All,
-                )
-                .await;
+            if !user.google_anniversary_event_id.is_empty() {
+                // First delete the recurring event for their anniversary.
+                let cal_delete = gcal
+                    .events()
+                    .delete(
+                        &anniversary_cal_id,
+                        &user.google_anniversary_event_id,
+                        true, // send_notifications
+                        google_calendar::types::SendUpdates::All,
+                    )
+                    .await;
 
-            match cal_delete {
-                Ok(_) => {
-                    info!(
-                        "deleted user {} event {} from google",
-                        username, user.google_anniversary_event_id
-                    );
-                }
-                Err(err) => {
-                    let msg = format!("{}", err);
-
-                    // An anniversary calender event may not exist if the user was partially
-                    // provisioned or deprovisioned. In the case of deprovisioning, Google will
-                    // return a 410 Gone error if the calendar event has already been removed.
-                    // This should not be considered a failure.
-
-                    // Errors from the Google Calendar client are stringy and do not return
-                    // structured data. As a result this check is extremely brittle. We can not
-                    // use its failure to authorize anything destructive.
-                    if !msg.starts_with("code: 410 Gone") {
-                        warn!(
-                            "Failed to delete anniversary calendar {} / {}. err: {}",
-                            username, user.google_anniversary_event_id, msg
-                        );
-
-                        has_failures = true;
-                    } else {
+                match cal_delete {
+                    Ok(_) => {
                         info!(
-                            "Ignoring error for anniversary calendar {} / {} delete",
+                            "deleted user {} event {} from google",
                             username, user.google_anniversary_event_id
                         );
                     }
+                    Err(err) => {
+                        let msg = format!("{}", err);
+
+                        // An anniversary calender event may not exist if the user was partially
+                        // provisioned or deprovisioned. In the case of deprovisioning, Google will
+                        // return a 410 Gone error if the calendar event has already been removed.
+                        // This should not be considered a failure.
+
+                        // Errors from the Google Calendar client are stringy and do not return
+                        // structured data. As a result this check is extremely brittle. We can not
+                        // use its failure to authorize anything destructive.
+                        if !msg.starts_with("code: 410 Gone") {
+                            warn!(
+                                "Failed to delete anniversary calendar {} / {}. err: {}",
+                                username, user.google_anniversary_event_id, msg
+                            );
+
+                            has_failures = true;
+                        } else {
+                            info!(
+                                "Ignoring error for anniversary calendar {} / {} delete",
+                                username, user.google_anniversary_event_id
+                            );
+                        }
+                    }
                 }
             }
-        }
 
-        // Supend the user from okta.
-        if let Some(ref okta) = okta_auth {
-            match okta.delete_user(db, company, &user).await {
-                Ok(_) => {
-                    info!("Deleted user {} from okta", username);
-                }
-                Err(err) => {
-                    warn!("Failed to delete user {} from okta. err: {:?}", username, err);
-
-                    has_failures = true;
-                }
-            }
-        }
-
-        if company.okta_domain.is_empty() {
-            // Delete the user from GSuite and other apps.
-            // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
-            // Suspend the user from GSuite so we can transfer their data.
-            match gsuite.delete_user(db, company, &user).await {
-                Ok(_) => {
-                    info!("Deactivated user {} in GSuite", username);
-                }
-                Err(err) => {
-                    warn!("Failed to deactivate user {} in GSuite. err: {:?}", username, err);
-
-                    has_failures = true;
-                }
-            }
-        }
-
-        // Remove the user from the github org.
-        match github.delete_user(db, company, &user).await {
-            Ok(_) => {
-                info!("Deleted user {} from GitHub", username);
-            }
-            Err(err) => {
-                warn!("Failed to delete user {} from GitHub. err: {:?}", username, err);
-            }
-        }
-
-        // TODO: Deactivate the user from Ramp.
-        // We only want to lock the cards from more purchases. Removing GSuite/Okta
-        // will disallow them from logging in. And we want their purchase history so
-        // we don't want to delete them.
-
-        // TODO: Delete the user from Slack.
-        // Removing SSO (GSuite/Okta) will disallow them from logging in.
-
-        // Delete the user from Zoom.
-        if let Ok(ref zoom) = zoom_auth {
-            match zoom.delete_user(db, company, &user).await {
-                Ok(_) => {
-                    info!("Deleted user {} from Zoom", username);
-                }
-                Err(err) => {
-                    warn!("Failed to delete user {} from Zoom. err: {:?}", username, err);
-
-                    has_failures = true;
-                }
-            }
-        }
-
-        // Delete the user from Airtable.
-        // Okta should take care of this if we are using Okta.
-        // But let's do it anyway.
-        match airtable_auth.delete_user(db, company, &user).await {
-            Ok(_) => {
-                info!("Deleted user {} from Airtable", username);
-            }
-            Err(err) => {
-                warn!("Failed to delete user {} from Airtable. err: {:?}", username, err);
-            }
-        }
-
-        // User deletes are currently disabled. We no longer want to allow the behavior of removing
-        // user records from our system. Instead they should be only marked as deleted so that we
-        // can restore them in the future if needed.
-        let enable_user_deletes = false;
-
-        // Only delete the user from the database and Airtable if all previous deletes
-        // have actually succeeded and user deletes are enabled.
-        if !has_failures {
-            if enable_user_deletes {
-                match user.delete(db).await {
+            // Supend the user from okta.
+            if let Some(ref okta) = okta_auth {
+                match okta.delete_user(db, company, &user).await {
                     Ok(_) => {
-                        info!("Successfully deleted user {} from database", username);
+                        info!("Deleted user {} from okta", username);
                     }
                     Err(err) => {
-                        warn!("Failed to delete user {} from database. err: {:?}", username, err);
+                        warn!("Failed to delete user {} from okta. err: {:?}", username, err);
+
+                        has_failures = true;
                     }
                 }
-            } else {
-                info!(
-                    "Would delete user {} from database, but user deletes have been disabled",
-                    username
-                );
             }
-        } else {
-            info!("Skipping final user deletion due to previous delete steps failing");
+
+            if company.okta_domain.is_empty() {
+                // Delete the user from GSuite and other apps.
+                // ONLY DO THIS IF THE COMPANY DOES NOT USE OKTA.
+                // Suspend the user from GSuite so we can transfer their data.
+                match gsuite.delete_user(db, company, &user).await {
+                    Ok(_) => {
+                        info!("Deactivated user {} in GSuite", username);
+                    }
+                    Err(err) => {
+                        warn!("Failed to deactivate user {} in GSuite. err: {:?}", username, err);
+
+                        has_failures = true;
+                    }
+                }
+            }
+
+            // Remove the user from the github org.
+            match github.delete_user(db, company, &user).await {
+                Ok(_) => {
+                    info!("Deleted user {} from GitHub", username);
+                }
+                Err(err) => {
+                    warn!("Failed to delete user {} from GitHub. err: {:?}", username, err);
+                }
+            }
+
+            // TODO: Deactivate the user from Ramp.
+            // We only want to lock the cards from more purchases. Removing GSuite/Okta
+            // will disallow them from logging in. And we want their purchase history so
+            // we don't want to delete them.
+
+            // TODO: Delete the user from Slack.
+            // Removing SSO (GSuite/Okta) will disallow them from logging in.
+
+            // Delete the user from Zoom.
+            if let Ok(ref zoom) = zoom_auth {
+                match zoom.delete_user(db, company, &user).await {
+                    Ok(_) => {
+                        info!("Deleted user {} from Zoom", username);
+                    }
+                    Err(err) => {
+                        warn!("Failed to delete user {} from Zoom. err: {:?}", username, err);
+
+                        has_failures = true;
+                    }
+                }
+            }
+
+            // Delete the user from Airtable.
+            // Okta should take care of this if we are using Okta.
+            // But let's do it anyway.
+            match airtable_auth.delete_user(db, company, &user).await {
+                Ok(_) => {
+                    info!("Deleted user {} from Airtable", username);
+                }
+                Err(err) => {
+                    warn!("Failed to delete user {} from Airtable. err: {:?}", username, err);
+                }
+            }
+
+            // User deletes are currently disabled. We no longer want to allow the behavior of removing
+            // user records from our system. Instead they should be only marked as deleted so that we
+            // can restore them in the future if needed.
+            let enable_user_deletes = false;
+
+            // Only delete the user from the database and Airtable if all previous deletes
+            // have actually succeeded and user deletes are enabled.
+            if !has_failures {
+                if enable_user_deletes {
+                    match user.delete(db).await {
+                        Ok(_) => {
+                            info!("Successfully deleted user {} from database", username);
+                        }
+                        Err(err) => {
+                            warn!("Failed to delete user {} from database. err: {:?}", username, err);
+                        }
+                    }
+                } else {
+                    info!(
+                        "Would delete user {} from database, but user deletes have been disabled",
+                        username
+                    );
+                }
+            } else {
+                info!("Skipping final user deletion due to previous delete steps failing");
+            }
         }
     }
 
@@ -2519,19 +2546,11 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // Remove any groups that should no longer be in the database.
     // This is found by the remaining groups that are in the map since we removed
     // the existing repos from the map above.
-    for (name, group) in group_map {
-        info!("deleting group `{}` from the database, gsuite, github, okta, etc", name);
-
-        // Delete the group from the database and Airtable.
-        group.delete(db).await?;
-
-        gsuite.delete_group(company, &group).await?;
-
-        github.delete_group(company, &group).await?;
-
-        if let Some(ref okta) = okta_auth {
-            okta.delete_group(company, &group).await?;
-        }
+    for (name, _group) in group_map {
+        warn!(
+            "Group `{}` exists in database, but a configuration could not be found",
+            name
+        );
     }
 
     info!("updated configs groups in the database");
@@ -2949,6 +2968,7 @@ pub mod tests {
             zoom_id: String::default(),
             geocode_cache: String::default(),
             working_on: vec![],
+            gusto_pull_permission: false,
             cio_company_id: 1,
             airtable_record_id: String::default(),
         }
@@ -3100,7 +3120,7 @@ manager = 'orb'
     }
 
     #[test]
-    fn test_deserializes_user_config_without_denies() {
+    fn test_deserializes_user_config_with_missing_settings() {
         let user: UserConfig = toml::from_str(
             r#"
 first_name = 'Test'
@@ -3130,5 +3150,6 @@ manager = 'orb'
         assert_eq!(user.first_name, "Test");
         assert_eq!(user.last_name, "User");
         assert_eq!(user.denied_services, vec![]);
+        assert_eq!(user.gusto_pull_permission, false);
     }
 }
