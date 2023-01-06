@@ -1,11 +1,6 @@
 use anyhow::Result;
 use hmac::{Hmac, Mac};
 use md5::Md5;
-use meilisearch_sdk::{
-    indexes::Index,
-    search::{SearchResults, Selectors},
-    Client,
-};
 use parse_rfd::{parse, ParsedDoc, Section};
 use serde::{Deserialize, Serialize};
 use std::{cmp::min, collections::HashMap};
@@ -92,37 +87,18 @@ impl IndexDocument {
 impl RFDSearchIndex {
     /// Trigger updating the search index for the RFD.
     pub async fn index_rfd(rfd_number: &RFDNumber, content: &str) -> Result<()> {
-        let client = Client::new(std::env::var("MEILI_URL")?, std::env::var("MEILI_KEY")?);
-
-        let index = client.index("rfd");
-        let ids = Self::find_rfd_ids(&index, rfd_number).await?;
-        let delete = index.delete_documents(&ids).await?;
-
-        log::info!("Deleted documents for RFD {}: {:?}", rfd_number.0, delete);
-
-        let documents = Self::parse_document(rfd_number, content)?;
-
-        let add = index.add_documents(&documents, Some("objectID")).await?;
-
-        log::info!("Added documents for RFD {}: {:?}", rfd_number.0, add);
+        // TODO: Delete documents that match the RFD number
+        let _documents_to_delete = RFDSearchIndex::find_rfd_ids(rfd_number).await?;
+        let _parsed = RFDSearchIndex::parse_document(rfd_number, content)?;
+        // TODO: Index the documents returned from parse_document
 
         Ok(())
     }
 
-    async fn find_rfd_ids(index: &Index, rfd_number: &RFDNumber) -> Result<Vec<String>> {
-        let results: SearchResults<RfdId> = index
-            .search()
-            .with_filter(&format!("rfd_number = {}", rfd_number.0))
-            .with_attributes_to_retrieve(Selectors::Some(&["objectID"]))
-            .with_limit(500)
-            .execute()
-            .await?;
+    async fn find_rfd_ids(_rfd_number: &RFDNumber) -> Result<Vec<String>> {
+        // TODO: Find all of the RFD documents that match the given RFD number
 
-        Ok(results
-            .hits
-            .into_iter()
-            .map(|hit| hit.result.object_id)
-            .collect::<Vec<_>>())
+        Ok(vec![])
     }
 
     fn parse_document(rfd_number: &RFDNumber, content: &str) -> Result<Vec<IndexDocument>> {

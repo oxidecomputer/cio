@@ -69,7 +69,6 @@ mailerlite = { path = "../mailerlite" }
 #mailchimp-api = { path = "../mailchimp" }
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
 md-5 = "0.10.5"
-meilisearch-sdk = "0.20.1"
 names = "^0.14.0"
 nom_pem = "4"
 octorust = { version = "^0.1.35", features = ["httpcache"] }
