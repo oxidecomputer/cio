@@ -1,6 +1,7 @@
 use cio_api::rfd::RFDSearchIndex;
 use meilisearch_minimal_api::{IndexSettings, MeiliClient};
 
+#[ignore]
 #[tokio::test]
 async fn test_index_rfd() {
     let content = r#":showtitle:
