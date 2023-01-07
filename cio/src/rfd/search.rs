@@ -1,6 +1,7 @@
 use anyhow::Result;
 use hmac::{Hmac, Mac};
 use md5::Md5;
+use meilisearch_minimal_api::{IndexClient, MeiliClient, SearchQuery};
 use parse_rfd::{parse, ParsedDoc, Section};
 use serde::{Deserialize, Serialize};
 use std::{cmp::min, collections::HashMap};
@@ -85,23 +86,37 @@ impl IndexDocument {
 }
 
 impl RFDSearchIndex {
+    pub fn default_client() -> Result<MeiliClient> {
+        Ok(MeiliClient::new(
+            std::env::var("MEILI_URL")?,
+            std::env::var("MEILI_KEY")?,
+        ))
+    }
+
     /// Trigger updating the search index for the RFD.
-    pub async fn index_rfd(rfd_number: &RFDNumber, content: &str) -> Result<()> {
-        // TODO: Delete documents that match the RFD number
-        let _documents_to_delete = RFDSearchIndex::find_rfd_ids(rfd_number).await?;
-        let _parsed = RFDSearchIndex::parse_document(rfd_number, content)?;
-        // TODO: Index the documents returned from parse_document
+    pub async fn index_rfd(client: &MeiliClient, rfd_number: &RFDNumber, content: &str) -> Result<()> {
+        let index = client.index("rfd".to_string());
+        let ids_to_delete = Self::find_rfd_ids(&index, rfd_number).await?;
+
+        log::info!("Deleting documents for RFD {}: {:?}", rfd_number.0, ids_to_delete);
+        index.delete(&ids_to_delete).await?;
+
+        let parsed = Self::parse_document(rfd_number, content)?;
+        index.index(&parsed, "objectID").await?;
 
         Ok(())
     }
 
-    async fn find_rfd_ids(_rfd_number: &RFDNumber) -> Result<Vec<String>> {
-        // TODO: Find all of the RFD documents that match the given RFD number
+    pub async fn find_rfd_ids(index: &IndexClient, rfd_number: &RFDNumber) -> Result<Vec<String>> {
+        let mut query = SearchQuery::default();
+        query.filter = Some(vec![format!("rfd_number = {}", rfd_number.0)]);
 
-        Ok(vec![])
+        let results = index.search::<RfdId>(query).await?;
+
+        Ok(results.hits.into_iter().map(|hit| hit.object_id).collect::<Vec<_>>())
     }
 
-    fn parse_document(rfd_number: &RFDNumber, content: &str) -> Result<Vec<IndexDocument>> {
+    pub fn parse_document(rfd_number: &RFDNumber, content: &str) -> Result<Vec<IndexDocument>> {
         let ParsedDoc { title, sections } = parse(content)?;
         Ok(sections
             .into_iter()
