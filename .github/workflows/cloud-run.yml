@@ -12,6 +12,7 @@ on:
       - 'macros/**'
       - 'diesel-sentry/**'
       - 'dropshot-verify-request/**'
+      - 'meilisearch-minimal-api/**'
       - 'parse-rfd/**'
       - 'ramp-minimal-api/**'
       - 'zoho-client/**'

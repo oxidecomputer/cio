@@ -13,6 +13,7 @@ members = [
 	"macros",
 	"mailchimp-minimal-api",
 	"mailerlite",
+	"meilisearch-minimal-api",
 	"partial-struct",
 	"parse-rfd",
 	"printy",

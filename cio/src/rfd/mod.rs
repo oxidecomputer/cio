@@ -14,7 +14,7 @@ pub use content::{RFDContent, RFDOutputError, RFDOutputFormat};
 pub use github::{GitHubRFDBranch, GitHubRFDReadme, GitHubRFDReadmeLocation, GitHubRFDRepo, GitHubRFDUpdate};
 pub use model::{NewRFD, RFDEntry, RFDIndexEntry, RFDs, RemoteRFD, RFD};
 pub use pdf::{PDFStorage, RFDPdf};
-pub use search::RFDSearchIndex;
+pub use search::{IndexDocument, RFDSearchIndex};
 
 #[derive(Debug, Copy, Clone, Deserialize, Serialize)]
 pub struct RFDNumber(i32);
