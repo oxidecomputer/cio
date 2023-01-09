@@ -43,8 +43,11 @@ RUN gem install rouge
 RUN gem install asciidoctor-pdf -v 2.3.2
 RUN gem install asciidoctor-mermaid -v 0.4.1
 
+# Create the cache directory that pupeteer expected to exist
+RUN mkdir -p /home/webhooky/.cache/puppeteer
+
 RUN cd /usr/local/lib && \
-	npm install @mermaid-js/mermaid-cli && \
+	PUPPETEER_CACHE_DIR=/home/webhooky/.cache/puppeteer npm install @mermaid-js/mermaid-cli && \
 	ln -s ../lib/node_modules/.bin/mmdc /usr/local/bin/mmdc
 
 USER webhooky
@@ -94,6 +97,8 @@ COPY macros ../macros
 COPY mailerlite ../mailerlite
 
 COPY mailchimp-minimal-api ../mailchimp-minimal-api
+
+COPY meilisearch-minimal-api ../meilisearch-minimal-api
 
 COPY partial-struct ../partial-struct
 

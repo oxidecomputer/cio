@@ -824,6 +824,7 @@ dependencies = [
  "mailchimp-minimal-api",
  "mailerlite",
  "md-5",
+ "meilisearch-minimal-api",
  "names",
  "nom_pem",
  "octorust",
@@ -3176,6 +3177,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6365506850d44bff6e2fbcb5176cf63650e48bd45ef2fe2665ae1570e0f4b9ca"
 dependencies = [
  "digest 0.10.6",
+]
+
+[[package]]
+name = "meilisearch-minimal-api"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "env_logger 0.9.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid 1.1.2",
 ]
 
 [[package]]

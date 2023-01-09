@@ -174,7 +174,7 @@ A paragraph about background topics
 
 Nested sections describing possible options
 
-=== The Fist Option
+=== The First Option
 
 First in the list
 
@@ -208,8 +208,8 @@ Third in the list"#,
                     parents: vec![],
                 },
                 Section {
-                    section_id: "_the_fist_option".to_string(),
-                    name: "The Fist Option".to_string(),
+                    section_id: "_the_first_option".to_string(),
+                    name: "The First Option".to_string(),
                     content: "First in the list".to_string(),
                     parents: vec!["Possibilities".to_string()],
                 },
