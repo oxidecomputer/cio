@@ -11,12 +11,14 @@ pub struct MeiliClient {
 #[derive(Debug)]
 pub enum MeiliError {
     Client(reqwest::Error),
+    FailedToParseResponse(serde_json::Error),
 }
 
 impl std::fmt::Display for MeiliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             MeiliError::Client(inner) => write!(f, "Client error: {}", inner),
+            MeiliError::FailedToParseResponse(inner) => write!(f, "Failed to parse response: {}", inner),
         }
     }
 }
@@ -25,6 +27,7 @@ impl std::error::Error for MeiliError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             MeiliError::Client(inner) => Some(inner),
+            MeiliError::FailedToParseResponse(inner) => Some(inner),
         }
     }
 }
@@ -32,6 +35,12 @@ impl std::error::Error for MeiliError {
 impl From<reqwest::Error> for MeiliError {
     fn from(value: reqwest::Error) -> MeiliError {
         MeiliError::Client(value)
+    }
+}
+
+impl From<serde_json::Error> for MeiliError {
+    fn from(value: serde_json::Error) -> MeiliError {
+        MeiliError::FailedToParseResponse(value)
     }
 }
 
@@ -55,9 +64,9 @@ pub struct IndexClient {
     id: String,
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct SearchQuery {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "q", skip_serializing_if = "Option::is_none")]
     pub query: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filter: Option<Vec<String>>,
@@ -95,15 +104,16 @@ impl IndexClient {
         if response.status() == StatusCode::NOT_FOUND {
             Ok(SearchResponse { hits: vec![] })
         } else {
-            Ok(response.json::<SearchResponse<T>>().await?)
+            let content = response.text().await?;
+            Ok(serde_json::from_str::<SearchResponse<T>>(&content)?)
         }
     }
 
-    pub async fn index<T>(&self, documents: &[T], primary_key: &str) -> Result<TaskResponse, MeiliError>
+    pub async fn index_documents<T>(&self, documents: &[T], primary_key: &str) -> Result<TaskResponse, MeiliError>
     where
         T: Serialize,
     {
-        Ok(self
+        let response = self
             .inner
             .client
             .post(format!(
@@ -113,12 +123,13 @@ impl IndexClient {
             .bearer_auth(&self.inner.key)
             .json(documents)
             .send()
-            .await?
-            .json::<TaskResponse>()
-            .await?)
+            .await?;
+
+        let content = response.text().await?;
+        Ok(serde_json::from_str::<TaskResponse>(&content)?)
     }
 
-    pub async fn delete<T>(&self, ids: &[T]) -> Result<TaskResponse, MeiliError>
+    pub async fn delete_documents<T>(&self, ids: &[T]) -> Result<TaskResponse, MeiliError>
     where
         T: Serialize,
     {
@@ -132,6 +143,19 @@ impl IndexClient {
             .await?
             .json::<TaskResponse>()
             .await?)
+    }
+
+    pub async fn delete(&self) -> Result<TaskResponse, MeiliError> {
+        let response = self
+            .inner
+            .client
+            .delete(format!("{}/indexes/{}", self.inner.url, self.id))
+            .bearer_auth(&self.inner.key)
+            .send()
+            .await?;
+
+        let content = response.text().await?;
+        Ok(serde_json::from_str::<TaskResponse>(&content)?)
     }
 }
 

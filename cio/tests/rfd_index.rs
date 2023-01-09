@@ -1,10 +1,33 @@
-use cio_api::rfd::RFDSearchIndex;
-use meilisearch_minimal_api::{IndexSettings, MeiliClient};
+use cio_api::rfd::{IndexDocument, RFDSearchIndex};
+use meilisearch_minimal_api::{IndexClient, IndexSettings, MeiliClient, SearchQuery};
+use uuid::Uuid;
 
-#[ignore]
+pub struct TestDB {
+    pub client: MeiliClient,
+    pub index_name: String,
+}
+
+impl TestDB {
+    pub fn new(test_name: &str) -> Option<Self> {
+        if let (Ok(db), Ok(key)) = (std::env::var("TEST_MEILI_DB"), std::env::var("TEST_MEILI_KEY")) {
+            let client = MeiliClient::new(db, key);
+            let index_name = test_name.to_string() + &Uuid::new_v4().to_string();
+
+            Some(Self { client, index_name })
+        } else {
+            None
+        }
+    }
+
+    pub fn index_client(&self) -> IndexClient {
+        self.client.index(self.index_name.clone())
+    }
+}
+
 #[tokio::test]
 async fn test_index_rfd() {
-    let content = r#":showtitle:
+    if let Some(db) = TestDB::new("test_index_rfd") {
+        let content = r#":showtitle:
 :toc: left
 :numbered:
 :icons: font
@@ -26,7 +49,7 @@ A paragraph about background topics
 
 Nested sections describing possible options
 
-=== The Fist Option
+=== The First Option
 
 First in the list
 
@@ -42,12 +65,39 @@ This options contains further information
 
 Third in the list"#;
 
-    let client = MeiliClient::new("http://localhost:7700".to_string(), "dev".to_string());
-    let index = client.index("rfd".to_string());
+        let index = db.index_client();
 
-    let mut settings = IndexSettings::default();
-    settings.filterable_attributes = Some(vec!["rfd_number".to_string()]);
-    let _ = index.settings(settings).await.unwrap();
+        let mut settings = IndexSettings::default();
+        settings.filterable_attributes = Some(vec!["rfd_number".to_string()]);
+        let _ = index.settings(settings).await.unwrap();
 
-    RFDSearchIndex::index_rfd(&client, &123.into(), content).await.unwrap();
+        RFDSearchIndex::index_rfd(&db.client, db.index_name.to_string(), &123.into(), content)
+            .await
+            .unwrap();
+
+        // Wait for indexing to complete
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        let mut search = SearchQuery::default();
+        search.filter = Some(vec!["rfd_number = 123".to_string()]);
+
+        let results = index.search::<IndexDocument>(search).await;
+
+        assert!(results.is_ok());
+        assert_eq!(results.as_ref().unwrap().hits.len(), 6);
+
+        let section_names = results
+            .unwrap()
+            .hits
+            .into_iter()
+            .map(|hit| hit.name)
+            .collect::<Vec<_>>();
+
+        assert!(section_names.contains(&"Background".to_string()));
+        assert!(section_names.contains(&"Possibilities".to_string()));
+        assert!(section_names.contains(&"The First Option".to_string()));
+        assert!(section_names.contains(&"The Second Option".to_string()));
+        assert!(section_names.contains(&"Further Nested Details".to_string()));
+        assert!(section_names.contains(&"The Third Option".to_string()));
+    }
 }

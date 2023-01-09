@@ -314,7 +314,7 @@ impl RFDUpdateAction for UpdateSearch {
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
         let client = RFDSearchIndex::default_client().map_err(RFDUpdateActionErr::Continue)?;
-        RFDSearchIndex::index_rfd(&client, &rfd.number.into(), &rfd.content)
+        RFDSearchIndex::index_rfd(&client, "rfd".to_string(), &rfd.number.into(), &rfd.content)
             .await
             .map_err(RFDUpdateActionErr::Continue)?;
         info!("Updated search index with RFD {}", update.number);
