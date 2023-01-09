@@ -103,4 +103,3 @@ jobs:
       with:
         environment: production
         version: ${{ steps.extract_sha.outputs.hash }}
-
