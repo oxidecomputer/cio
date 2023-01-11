@@ -1424,6 +1424,12 @@ impl Applicant {
     pub async fn send_email_follow_up_if_necessary(&mut self, db: &Database, config: ApplyConfig) -> Result<()> {
         // Send an email follow up if we should.
         if self.sent_email_follow_up {
+            log::info!(
+                "Applicant {} in {} has already been sent a follow up. Skipping.",
+                self.id,
+                self.raw_status
+            );
+
             // We have already followed up with the candidate.
             // Let's return early.
             return Ok(());
@@ -1441,6 +1447,12 @@ impl Applicant {
             // Only when it's not in "NeedsToBeTriaged", or we are about to defer or decline.
             // Mark the column as true not false.
 
+            log::info!(
+                "Applicant {} in {:?} is in a state that assumes a manual followup has been sent. Marking record as sent. Skipping.",
+                self.id,
+                status
+            );
+
             self.sent_email_follow_up = true;
             // Update the database.
             self.update(db).await?;
@@ -1453,6 +1465,12 @@ impl Applicant {
             // We want to return early, we only care about people who were deferred or declined.
             // So sent the folks in the triage home.
             // Above we sent home everyone else.
+            log::info!(
+                "Applicant {} in {:?} is not in a state where an email needs to be sent. Skipping.",
+                self.id,
+                status
+            );
+
             return Ok(());
         }
 
@@ -1466,6 +1484,12 @@ impl Applicant {
         };
 
         if let Some(letter) = config.create_rejection_letter(letter_key, self) {
+            log::info!(
+                "Applicant {} in {:?} needs a rejection letter to be created. Creating.",
+                self.id,
+                status
+            );
+
             // Initialize the SendGrid client.
             let sendgrid_client = SendGrid::new_from_env();
 
@@ -1481,6 +1505,12 @@ impl Applicant {
                     &letter.from,
                 )
                 .await?;
+
+            log::info!(
+                "Applicant {} in {:?} has been sent a rejection letter.",
+                self.id,
+                status
+            );
 
             // Mark the time we sent the email.
             self.rejection_sent_date_time = Some(Utc::now());
