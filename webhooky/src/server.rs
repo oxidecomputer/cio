@@ -239,7 +239,7 @@ pub async fn server(
             .every(23.hours())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-api-tokens")});
         scheduler
-            .every(8.hours())
+            .every(6.hours())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-applications")});
         scheduler
             .every(2.hours())
