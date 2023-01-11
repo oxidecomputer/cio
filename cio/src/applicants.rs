@@ -2380,7 +2380,7 @@ The applicants Airtable \
 pub async fn refresh_new_applicants_and_reviews(
     db: &Database,
     company: &Company,
-    _app_config: &AppConfig,
+    app_config: &AppConfig,
 ) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
@@ -2390,7 +2390,7 @@ pub async fn refresh_new_applicants_and_reviews(
     let github = company.authenticate_github()?;
 
     // Get all the hiring issues on the configs repository.
-    let _configs_issues = github
+    let configs_issues = github
         .issues()
         .list_all_for_repo(
             &company.github_org,
@@ -2451,25 +2451,25 @@ pub async fn refresh_new_applicants_and_reviews(
                 log::info!("Sync applicants {:?}", ids);
 
                 // Disable sync while verifying logic
-                // let tasks: Vec<_> = applicant_chunk
-                //     .into_iter()
-                //     .map(|mut applicant| {
-                //         tokio::spawn(
-                //             enclose! { (db, company, github, configs_issues, app_config) async move {
-                //                 applicant.refresh(&db, &company, &github, &configs_issues, app_config).await
-                //             }},
-                //         )
-                //     })
-                //     .collect();
+                let tasks: Vec<_> = applicant_chunk
+                    .into_iter()
+                    .map(|mut applicant| {
+                        tokio::spawn(
+                            enclose! { (db, company, github, configs_issues, app_config) async move {
+                                applicant.refresh(&db, &company, &github, &configs_issues, app_config).await
+                            }},
+                        )
+                    })
+                    .collect();
 
-                // let mut results: Vec<Result<()>> = Default::default();
-                // for task in tasks {
-                //     results.push(task.await?);
-                // }
+                let mut results: Vec<Result<()>> = Default::default();
+                for task in tasks {
+                    results.push(task.await?);
+                }
 
-                // for result in results {
-                //     result?;
-                // }
+                for result in results {
+                    result?;
+                }
             }
         }
     }

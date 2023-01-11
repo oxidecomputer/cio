@@ -337,7 +337,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                     vec![existing_record.clone()],
                 ).await?;
 
-                log::info!("[airtable] id={} updated", self.id);
+                log::info!("[airtable] id={} table={} updated", self.id, #new_struct_name::airtable_table());
 
                 if records.is_empty() {
                     return Ok(existing_record.clone());
