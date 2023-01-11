@@ -2380,7 +2380,7 @@ The applicants Airtable \
 pub async fn refresh_new_applicants_and_reviews(
     db: &Database,
     company: &Company,
-    app_config: &AppConfig,
+    _app_config: &AppConfig,
 ) -> Result<()> {
     if company.airtable_base_id_hiring.is_empty() {
         // Return early.
@@ -2390,7 +2390,7 @@ pub async fn refresh_new_applicants_and_reviews(
     let github = company.authenticate_github()?;
 
     // Get all the hiring issues on the configs repository.
-    let configs_issues = github
+    let _configs_issues = github
         .issues()
         .list_all_for_repo(
             &company.github_org,
@@ -2417,43 +2417,61 @@ pub async fn refresh_new_applicants_and_reviews(
 
     // We want all the applicants without a sheet id, since this is the list of applicants we care
     // about. Everything else came from Google Sheets and therefore uses the old system.
-    let applicants = applicants::dsl::applicants
+    let applicants_id_range: (Option<i32>, Option<i32>) = applicants::dsl::applicants
         .filter(applicants::dsl::sheet_id.eq("".to_string()))
-        .order_by(applicants::dsl::id.asc())
-        .load_async::<Applicant>(db.pool())
+        .select((diesel::dsl::min(applicants::id), diesel::dsl::max(applicants::id)))
+        .first_async(db.pool())
         .await?;
 
-    // Iterate over the applicants and update them.
-    // We should do these concurrently, but limit it to maybe 3 at a time.
-    let mut i = 0;
-    let take = 3;
-    let mut skip = 0;
-    while i < applicants.clone().len() {
-        let tasks: Vec<_> = applicants
-            .clone()
-            .into_iter()
-            .skip(skip)
-            .take(take)
-            .map(|mut applicant| {
-                tokio::spawn(
-                    enclose! { (db, company, github, configs_issues, app_config) async move {
-                        applicant.refresh(&db, &company, &github, &configs_issues, app_config).await
-                    }},
-                )
-            })
-            .collect();
+    if let (Some(min), Some(max)) = applicants_id_range {
+        log::info!("Preparing to process applicants {} through {}", min, max);
 
-        let mut results: Vec<Result<()>> = Default::default();
-        for task in tasks {
-            results.push(task.await?);
+        let applicant_ids = (min..=max).into_iter().collect::<Vec<i32>>();
+        let applicant_id_chunks = applicant_ids.chunks(100);
+
+        for chunk in applicant_id_chunks {
+            log::info!("Fetching applicants {:?} through {:?}", chunk.first(), chunk.last());
+
+            let applicants = applicants::dsl::applicants
+                .filter(applicants::dsl::sheet_id.eq("".to_string()))
+                .filter(applicants::dsl::id.eq_any(chunk.to_vec()))
+                .order_by(applicants::dsl::id.asc())
+                .load_async::<Applicant>(db.pool())
+                .await?;
+
+            let fetched_applicant_ids = applicants.iter().map(|a| a.id).collect::<Vec<_>>();
+            log::info!("Preparing to sync applicants {:?}", fetched_applicant_ids);
+
+            // Iterate over the applicants and update them.
+            // We should do these concurrently, but limit it to maybe 3 at a time.
+            let applicant_chunks = applicants.chunks(3).map(|c| c.to_vec()).collect::<Vec<_>>();
+
+            for applicant_chunk in applicant_chunks {
+                let ids = applicant_chunk.iter().map(|a| a.id).collect::<Vec<_>>();
+                log::info!("Sync applicants {:?}", ids);
+
+                // Disable sync while verifying logic
+                // let tasks: Vec<_> = applicant_chunk
+                //     .into_iter()
+                //     .map(|mut applicant| {
+                //         tokio::spawn(
+                //             enclose! { (db, company, github, configs_issues, app_config) async move {
+                //                 applicant.refresh(&db, &company, &github, &configs_issues, app_config).await
+                //             }},
+                //         )
+                //     })
+                //     .collect();
+
+                // let mut results: Vec<Result<()>> = Default::default();
+                // for task in tasks {
+                //     results.push(task.await?);
+                // }
+
+                // for result in results {
+                //     result?;
+                // }
+            }
         }
-
-        for result in results {
-            result?;
-        }
-
-        i += take;
-        skip += take;
     }
 
     // Update Airtable.
