@@ -169,7 +169,7 @@ fn create_api() -> ApiDescription<Context> {
 
 fn create_open_api(api: &ApiDescription<Context>) -> OpenApiDefinition<Context> {
     // Create the API schema.
-    let mut api_definition = api.openapi(&"Webhooks API", &clap::crate_version!());
+    let mut api_definition = api.openapi("Webhooks API", clap::crate_version!());
     api_definition
         .description("Internal webhooks server for listening to several third party webhooks")
         .contact_url("https://oxide.computer")
@@ -310,7 +310,7 @@ pub async fn server(
     // "The main process inside the container will receive SIGTERM, and after a grace period,
     // SIGKILL."
     // Regsitering SIGKILL here will panic at runtime, so let's avoid that.
-    let mut signals = Signals::new(&[SIGINT, SIGTERM])?;
+    let mut signals = Signals::new([SIGINT, SIGTERM])?;
 
     tokio::spawn(enclose! { (api_context) async move {
         for sig in signals.forever() {
@@ -355,7 +355,7 @@ pub fn create_do_job_fn(ctx: Context, job: &str) -> Pin<Box<dyn std::future::Fut
 pub async fn do_job(ctx: Context, job: String) {
     let mut txn = start_sentry_cron_transaction(&job);
     let errored = txn
-        .run(async || {
+        .run(|| async {
             info!("triggering cron job `{}`", job);
             match crate::handlers_cron::handle_reexec_cmd(&ctx, &job, true).await {
                 Ok(_) => false,

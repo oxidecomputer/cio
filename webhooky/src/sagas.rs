@@ -153,7 +153,7 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     // We use spawn_blocking here since the BufReader etc from duct will otherwise,
     // block the main thread.
     let result = tokio::task::spawn_blocking(
-        enclose! { (db, cmd_name, saga_id) async move || { reexec(&db, &cmd_name, &saga_id).await } },
+        enclose! { (db, cmd_name, saga_id) move || async move { reexec(&db, &cmd_name, &saga_id).await } },
     )
     .await
     .map_err(|err| steno::ActionError::action_failed(format!("ERROR:\n\n{:?}", err)))?

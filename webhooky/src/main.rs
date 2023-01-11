@@ -1,5 +1,4 @@
 #![recursion_limit = "256"]
-#![feature(async_closure)]
 mod auth;
 mod context;
 #[macro_use]
@@ -126,7 +125,7 @@ async fn tokio_main() -> Result<()> {
     if opts.debug {
         log_level = log::Level::Debug;
     }
-    let _log_guard = slog_stdlog::init_with_level(log_level)?;
+    slog_stdlog::init_with_level(log_level)?;
 
     let api = APIConfig::new()?;
 
