@@ -17,6 +17,7 @@ mod handlers_hiring;
 mod handlers_rfd;
 mod handlers_slack;
 // mod handlers_sendgrid;
+mod health;
 mod http;
 mod mailing_lists;
 mod repos;
