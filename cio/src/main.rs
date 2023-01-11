@@ -65,7 +65,7 @@ async fn main() -> Result<(), String> {
     api.register(api_get_users).unwrap();
 
     // Print the OpenAPI Spec to stdout.
-    let mut api_definition = &mut api.openapi(&"CIO API", &"0.0.1");
+    let mut api_definition = &mut api.openapi("CIO API", "0.0.1");
     api_definition = api_definition
         .description("Internal API server for information about the company, employess, etc")
         .contact_url("https://oxide.computer")

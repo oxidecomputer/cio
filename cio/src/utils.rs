@@ -305,7 +305,7 @@ pub fn get_value(map: &HashMap<String, Vec<String>>, key: &str) -> String {
 
 pub fn decode_base64(c: &str) -> Vec<u8> {
     let v = c.replace('\n', "");
-    let decoded = base64::decode(&v).unwrap();
+    let decoded = base64::decode(v).unwrap();
     decoded.trim().to_vec()
 }
 

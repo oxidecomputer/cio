@@ -1130,7 +1130,7 @@ manager = ''
             username,
             default_groups,
             self.email,
-            self.phone.replace('-', "").replace(' ', ""),
+            self.phone.replace(['-', ' '], ""),
             self.github.replace('@', ""),
             aws_role,
         )
@@ -1223,7 +1223,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
         output.push(format!("{}.txt", id));
 
         match tokio::task::spawn_blocking(enclose! { (output, path) move || {Command::new("pandoc")
-        .args(&["-o", output.clone().to_str().unwrap(), path.to_str().unwrap()])
+        .args(["-o", output.clone().to_str().unwrap(), path.to_str().unwrap()])
         .output()}})
         .await?
         {
@@ -1252,7 +1252,7 @@ async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
 
     // Extract the text from the PDF
     let cmd_output = tokio::task::spawn_blocking(enclose! { (output, path) move || {Command::new("pdftotext")
-    .args(&["-enc", "UTF-8", path.to_str().unwrap(), output.to_str().unwrap()])
+    .args(["-enc", "UTF-8", path.to_str().unwrap(), output.to_str().unwrap()])
     .output()}})
     .await??;
 
@@ -1876,13 +1876,7 @@ The applicants Airtable \
     /// Cleanup the applicants phone.
     fn cleanup_phone(&mut self) {
         // Cleanup and parse the phone number and country code.
-        let mut phone = self
-            .phone
-            .replace(' ', "")
-            .replace('-', "")
-            .replace('+', "")
-            .replace('(', "")
-            .replace(')', "");
+        let mut phone = self.phone.replace([' ', '-', '+', '(', ')'], "");
 
         let location = self.location.to_string();
         let mut country = phonenumber::country::US;

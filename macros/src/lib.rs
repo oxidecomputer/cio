@@ -1,3 +1,4 @@
+#![deny(clippy::all)]
 use std::collections::BTreeMap;
 
 extern crate proc_macro;
@@ -78,7 +79,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         for field in og_struct.fields.iter() {
             fields.push(field);
             let ident = field.ident.clone();
-            struct_inners = quote!(#struct_inners#ident: item.#ident.clone(),);
+            struct_inners = quote!(#struct_inners #ident: item.#ident.clone(),);
         }
         let og_struct_name = og_struct.ident;
 
@@ -206,8 +207,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
 
             /// Get a record from the database.
-            pub async fn get_from_db(db: &crate::db::Database#args) -> Option<Self> {
-                match #db_schema::dsl::#db_schema#filter.first_async::<#new_struct_name>(db.pool()).await {
+            pub async fn get_from_db(db: &crate::db::Database #args) -> Option<Self> {
+                match #db_schema::dsl::#db_schema #filter.first_async::<#new_struct_name>(db.pool()).await {
                     Ok(r) => {
                         return Some(r);
                     }

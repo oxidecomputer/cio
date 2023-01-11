@@ -279,7 +279,7 @@ impl RFD {
         format!(
             "RFD {} {}.pdf",
             self.number_string,
-            self.title.replace('/', "-").replace('\'', "").replace(':', "").trim()
+            self.title.replace('/', "-").replace(['\'', ':'], "").trim()
         )
     }
 

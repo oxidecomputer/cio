@@ -28,9 +28,9 @@ where
     {
         match body_content_type {
             ApiEndpointBodyContentType::Json => serde_json::from_slice(bytes)
-                .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {}", e))),
+                .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {e}"))),
             ApiEndpointBodyContentType::UrlEncoded => serde_urlencoded::from_bytes(bytes)
-                .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {}", e))),
+                .map_err(|e| HttpError::for_bad_request(None, format!("Failed to parse body: {e}"))),
             _ => Err(HttpError::for_bad_request(None, "Unsupported content type".to_string())),
         }
     }

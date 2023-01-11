@@ -55,11 +55,11 @@ impl From<FailedToDeleteParser> for ParserError {
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ParserError::Create(err) => write!(f, "Failed to create parser {:?}", err),
-            ParserError::Delete(err) => write!(f, "Failed to delete parser {:?}", err),
-            ParserError::Execute(err) => write!(f, "Failed to run parser {:?}", err),
-            ParserError::InvalidResponse(err) => write!(f, "Parser return unusable data {:?}", err),
-            ParserError::UnexpectedResponse(err) => write!(f, "Parser return data that could not be parsed {:?}", err),
+            ParserError::Create(err) => write!(f, "Failed to create parser {err:?}"),
+            ParserError::Delete(err) => write!(f, "Failed to delete parser {err:?}"),
+            ParserError::Execute(err) => write!(f, "Failed to run parser {err:?}"),
+            ParserError::InvalidResponse(err) => write!(f, "Parser return unusable data {err:?}"),
+            ParserError::UnexpectedResponse(err) => write!(f, "Parser return data that could not be parsed {err:?}"),
         }
     }
 }

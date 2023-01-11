@@ -59,7 +59,7 @@ impl Shippo {
 
                 client: Arc::new(c),
             },
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 
@@ -279,7 +279,7 @@ impl Shippo {
     /// FROM: https://goshippo.com/docs/reference#shipments-retrieve
     pub async fn get_shipment(&self, id: &str) -> Result<Shipment, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("shipments/{}", id), (), None);
+        let request = self.request(Method::GET, &format!("shipments/{id}"), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -299,7 +299,7 @@ impl Shippo {
     /// FORMAT: https://goshippo.com/docs/reference#rates-retrieve
     pub async fn get_rate(&self, id: &str) -> Result<Rate, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("rates/{}", id), (), None);
+        let request = self.request(Method::GET, &format!("rates/{id}"), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -379,7 +379,7 @@ impl Shippo {
     /// FROM: https://goshippo.com/docs/reference#transactions-retrieve
     pub async fn get_shipping_label(&self, id: &str) -> Result<Transaction, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("transactions/{}", id), (), None);
+        let request = self.request(Method::GET, &format!("transactions/{id}"), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -400,7 +400,7 @@ impl Shippo {
                 return Err(APIError {
                     status_code: *status,
                     // TODO: somehow get the body
-                    body: format!("{}", e),
+                    body: format!("{e}"),
                 });
             }
         }
@@ -465,12 +465,7 @@ impl Shippo {
     /// FROM: https://goshippo.com/docs/reference#tracks-retrieve
     pub async fn get_tracking_status(&self, carrier: &str, tracking_number: &str) -> Result<TrackingStatus, APIError> {
         // Build the request
-        let request = self.request(
-            Method::GET,
-            &format!("tracks/{}/{}", carrier, tracking_number),
-            (),
-            None,
-        );
+        let request = self.request(Method::GET, &format!("tracks/{carrier}/{tracking_number}"), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {

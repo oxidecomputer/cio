@@ -94,7 +94,7 @@ impl Slack {
 
                 s
             }
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 
@@ -129,7 +129,7 @@ impl Slack {
         let base = Url::parse(ENDPOINT)?;
         let url = base.join(path)?;
 
-        let bt = format!("Bearer {}", token);
+        let bt = format!("Bearer {token}");
         let bearer = header::HeaderValue::from_str(&bt)?;
 
         // Set the default headers.

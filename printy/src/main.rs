@@ -84,7 +84,7 @@ async fn main() -> Result<(), String> {
     };
     let log = config_logging
         .to_logger("printy-server")
-        .map_err(|error| format!("failed to create logger: {}", error))
+        .map_err(|error| format!("failed to create logger: {error}"))
         .unwrap();
 
     // Describe the API.
@@ -100,7 +100,7 @@ async fn main() -> Result<(), String> {
     api.register(listen_print_rollo_requests).unwrap();
     api.register(listen_print_zebra_requests).unwrap();
 
-    let mut api_definition = &mut api.openapi(&"Print API", &"0.0.1");
+    let mut api_definition = &mut api.openapi("Print API", "0.0.1");
     api_definition = api_definition
         .description("Internal API server for printing shipping labels on a Rollo printer")
         .contact_url("https://oxide.computer")
@@ -120,7 +120,7 @@ async fn main() -> Result<(), String> {
      * Set up the server.
      */
     let server = HttpServerStarter::new(&config_dropshot, api, api_context, &log)
-        .map_err(|error| format!("failed to start server: {}", error))
+        .map_err(|error| format!("failed to start server: {error}"))
         .unwrap()
         .start();
     server.await
@@ -258,7 +258,7 @@ async fn listen_print_receipt_requests(
 // Return the printer we are looking for.
 fn get_printer(name: &str) -> String {
     let output = Command::new("lpstat")
-        .args(&["-a"])
+        .args(["-a"])
         .output()
         .expect("failed to execute process");
     if !output.status.success() {
@@ -314,15 +314,15 @@ fn print_file(printer: &str, file: &str, media: &str, copies: i32) {
     info!("sending file `{}` to printer `{}`", file, printer);
     let output = if !media.is_empty() {
         Command::new("lp")
-            .args(&[
+            .args([
                 "-d",
                 printer,
                 "-n",
-                &format!("{}", copies),
+                &format!("{copies}"),
                 "-o",
                 "fit-to-page",
                 "-o",
-                &format!("media={}\"", media),
+                &format!("media={media}\""),
                 "-o",
                 "page-left=0",
                 "-o",
@@ -337,7 +337,7 @@ fn print_file(printer: &str, file: &str, media: &str, copies: i32) {
             .expect("failed to execute process")
     } else {
         Command::new("lp")
-            .args(&["-d", printer, "-n", &format!("{}", copies), file])
+            .args(["-d", printer, "-n", &format!("{copies}"), file])
             .output()
             .expect("failed to execute process")
     };

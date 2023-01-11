@@ -315,7 +315,7 @@ impl<'a> RFDAsciidoc<'a> {
         let filename = format!(
             "RFD {} {}.pdf",
             number.as_number_string(),
-            title.replace('/', "-").replace('\'', "").replace(':', "").trim()
+            title.replace(['/'], "-").replace(['\'', ':'], "").trim()
         );
 
         Ok(RFDPdf {
@@ -391,7 +391,7 @@ impl<'a> RFDAsciidoc<'a> {
                 storage_path_string,
                 image
                     .path
-                    .replace(&dir.trim_start_matches('/'), "")
+                    .replace(dir.trim_start_matches('/'), "")
                     .trim_start_matches('/')
             );
 
@@ -446,13 +446,13 @@ impl RFDOutputFormat {
                 let mut command = Command::new("asciidoctor");
                 command
                     .current_dir(working_dir)
-                    .args(&["-o", "-", "--no-header-footer", file_path.to_str().unwrap()]);
+                    .args(["-o", "-", "--no-header-footer", file_path.to_str().unwrap()]);
 
                 command
             }
             Self::Pdf => {
                 let mut command = Command::new("asciidoctor-pdf");
-                command.current_dir(working_dir).args(&[
+                command.current_dir(working_dir).args([
                     "-o",
                     "-",
                     "-r",

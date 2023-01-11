@@ -225,13 +225,12 @@ impl GitHubRFDBranch {
     /// Get a list of images that are store in this branch
     pub async fn get_images(&self, rfd_number: &RFDNumber) -> Result<Vec<octorust::types::ContentFile>> {
         let dir = rfd_number.repo_directory();
-        Self::get_images_internal(self.clone(), dir, *rfd_number).await
+        Self::get_images_internal(self.clone(), dir).await
     }
 
     fn get_images_internal(
         branch: Self,
         dir: String,
-        rfd_number: RFDNumber,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<octorust::types::ContentFile>>> + Send + 'static>> {
         Box::pin(async move {
             let mut files: Vec<octorust::types::ContentFile> = Default::default();
@@ -249,7 +248,7 @@ impl GitHubRFDBranch {
                 );
 
                 if file.type_ == "dir" {
-                    let images = Self::get_images_internal(branch.clone(), file.path, rfd_number).await?;
+                    let images = Self::get_images_internal(branch.clone(), file.path).await?;
 
                     for image in images {
                         files.push(image)

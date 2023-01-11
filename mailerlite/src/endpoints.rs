@@ -76,7 +76,7 @@ impl MailerliteEndpoint for GetSubscriberRequest {
     where
         Tz: TimeZone + Send + Sync,
     {
-        client.get(format!("{}/subscribers/{}", base_url, self.subscriber_identifier))
+        client.get(format!("{base_url}/subscribers/{}", self.subscriber_identifier))
     }
 
     async fn handle_response<Tz>(
@@ -201,7 +201,7 @@ impl MailerliteEndpoint for WriteSubscriberRequest {
     {
         let formatted_req = WriteSubscriberRequestWithFormattedDateTimes::new(self.clone(), &ctx.time_zone);
 
-        client.post(format!("{}/subscribers", base_url)).json(&formatted_req)
+        client.post(format!("{base_url}/subscribers")).json(&formatted_req)
     }
 
     async fn handle_response<Tz>(
@@ -360,7 +360,7 @@ where
     where
         Tz: TimeZone + Send + Sync,
     {
-        client.post(format!("{}/batch", base_url)).json(&self)
+        client.post(format!("{base_url}/batch")).json(&self)
     }
 
     async fn handle_response<Tz>(

@@ -503,7 +503,7 @@ The Oxide Team
             // Convert it to a PDF with pandoc.
             let cmd_output =
                 tokio::task::spawn_blocking(enclose! { (cover_page_str, cover_path) move || {Command::new("pandoc")
-                    .args(&["-o", &cover_page_str, cover_path.to_str().unwrap()])
+                    .args(["-o", &cover_page_str, cover_path.to_str().unwrap()])
                     .output()
                 }})
                 .await??;
@@ -545,7 +545,7 @@ The Oxide Team
                 // Convert it to a PDF with pandoc.
                 let cmd_output = tokio::task::spawn_blocking(
                     enclose! { (header_page_str, html_path) move || {Command::new("pandoc")
-                    .args(&["-o", &header_page_str, html_path.to_str().unwrap()])
+                    .args(["-o", &header_page_str, html_path.to_str().unwrap()])
                     .output()}},
                 )
                 .await??;
@@ -681,7 +681,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
 
                 if let Some(p) = output.parent() {
                     if !p.exists() {
-                        fs::create_dir_all(&p)?;
+                        fs::create_dir_all(p)?;
                     }
                 }
                 let mut outfile = fs::File::create(&output)?;
@@ -716,7 +716,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
     // Convert it to a PDF with pandoc.
     tokio::task::spawn_blocking(enclose! { (output, path) move || {
     Command::new("pandoc")
-        .args(&["-o", output.to_str().unwrap(), path.to_str().unwrap()])
+        .args(["-o", output.to_str().unwrap(), path.to_str().unwrap()])
         .output()}})
     .await??;
 
@@ -752,8 +752,8 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Result<Vec<u8>> {
 
         documents_pages.extend(
             doc.get_pages()
-                .into_iter()
-                .map(|(_, object_id)| {
+                .into_values()
+                .map(|object_id| {
                     if !first {
                         let bookmark = Bookmark::new(format!("Page_{}", pagenum), [0.0, 0.0, 1.0], 0, object_id);
                         document.add_bookmark(bookmark, None);
@@ -855,10 +855,7 @@ pub fn combine_pdfs(pdfs: Vec<String>) -> Result<Vec<u8>> {
         // Set new "Kids" list (collected from documents pages) for "Pages"
         dictionary.set(
             "Kids",
-            documents_pages
-                .into_iter()
-                .map(|(object_id, _)| Object::Reference(object_id))
-                .collect::<Vec<_>>(),
+            documents_pages.into_keys().map(Object::Reference).collect::<Vec<_>>(),
         );
 
         document.objects.insert(pages_object.0, Object::Dictionary(dictionary));

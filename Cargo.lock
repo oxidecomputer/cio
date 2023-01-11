@@ -178,7 +178,7 @@ dependencies = [
 [[package]]
 name = "async-bb8-diesel"
 version = "0.1.0"
-source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git?rev=b2102ce03616938421eb1a9eabe04f10f79e2c44#b2102ce03616938421eb1a9eabe04f10f79e2c44"
+source = "git+https://github.com/oxidecomputer/async-bb8-diesel#5282c624c8db63dd22fe9d78b7ed850c676ba649"
 dependencies = [
  "async-trait",
  "bb8",
@@ -471,14 +471,14 @@ dependencies = [
 
 [[package]]
 name = "bb8"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e9f4fa9768efd269499d8fba693260cfc670891cf6de3adc935588447a77cc8"
+checksum = "1627eccf3aa91405435ba240be23513eeca466b5dc33866422672264de061582"
 dependencies = [
  "async-trait",
  "futures-channel",
  "futures-util",
- "parking_lot 0.11.2",
+ "parking_lot",
  "tokio",
 ]
 
@@ -1414,14 +1414,15 @@ dependencies = [
 
 [[package]]
 name = "diesel"
-version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=6d681420#6d68142028474ec5735aceab8ab3a3c82cbe8e4b"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68c186a7418a2aac330bb76cde82f16c36b03a66fb91db32d20214311f9f6545"
 dependencies = [
  "bitflags",
  "byteorder",
  "chrono",
  "diesel_derives",
- "itoa 0.4.8",
+ "itoa 1.0.2",
  "pq-sys",
  "r2d2",
  "serde_json",
@@ -1440,8 +1441,9 @@ dependencies = [
 
 [[package]]
 name = "diesel_derives"
-version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=6d681420#6d68142028474ec5735aceab8ab3a3c82cbe8e4b"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "143b758c91dbc3fe1fdcb0dba5bd13276c6a66422f2ef5795b58488248a310aa"
 dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.41",
@@ -3709,37 +3711,12 @@ checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
 
 [[package]]
 name = "parking_lot"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d17b78036a60663b797adeaee46f5c9dfebb86948d1255007a1d6be0271ff99"
-dependencies = [
- "instant",
- "lock_api",
- "parking_lot_core 0.8.5",
-]
-
-[[package]]
-name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
 dependencies = [
  "lock_api",
- "parking_lot_core 0.9.3",
-]
-
-[[package]]
-name = "parking_lot_core"
-version = "0.8.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d76e8e1493bcac0d2766c42737f34458f1c8c50c0d23bcb24ea953affb273216"
-dependencies = [
- "cfg-if",
- "instant",
- "libc",
- "redox_syscall",
- "smallvec",
- "winapi",
+ "parking_lot_core",
 ]
 
 [[package]]
@@ -4326,7 +4303,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51de85fb3fb6524929c8a2eb85e6b6d363de4e8c48f9e2c2eac4944abc181c93"
 dependencies = [
  "log 0.4.17",
- "parking_lot 0.12.1",
+ "parking_lot",
  "scheduled-thread-pool",
 ]
 
@@ -4897,7 +4874,7 @@ version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "977a7519bff143a44f842fd07e80ad1329295bd71686457f18e496736f4bf9bf"
 dependencies = [
- "parking_lot 0.12.1",
+ "parking_lot",
 ]
 
 [[package]]
@@ -5864,7 +5841,7 @@ checksum = "213494b7a2b503146286049378ce02b482200519accc31872ee8be91fa820a08"
 dependencies = [
  "new_debug_unreachable",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot",
  "phf_shared 0.10.0",
  "precomputed-hash",
 ]
@@ -6188,7 +6165,7 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
- "parking_lot 0.12.1",
+ "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",

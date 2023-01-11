@@ -2,7 +2,7 @@
 name = "cio-api-types"
 description = "Types for cio API"
 version = "0.2.0"
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/cio-api"

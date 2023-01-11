@@ -3,7 +3,7 @@ name = "cio-api"
 description = "Helper functions and types for doing the activities of a CIO"
 version = "0.2.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/oxidecomputer/cio"
 documentation = "https://docs.rs/cio-api"
@@ -17,11 +17,12 @@ acme-lib = "^0.8.0"
 airtable-api = "^0.1.36"
 #airtable-api = { path = "../airtable" }
 anyhow = "1"
-async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
+# async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
+async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel" }
 async-trait = "^0.1.53"
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
 base64 = "^0.13"
-bb8 = "^0.7.1"
+bb8 = "^0.8.0"
 byte-unit = "4"
 checkr = "^0.0.10"
 #checkr = { path = "../checkr" }
@@ -35,7 +36,8 @@ cloudflare = { git = "https://github.com/augustuswm/cloudflare-rs" }
 csv = "1.1"
 comrak = "0.12"
 # Tracking pending 2.0 version.
-diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
+# diesel = { git = "https://github.com/diesel-rs/diesel", rev = "6d681420",  features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
+diesel = { version = "2.0.0", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
 diesel-sentry = { path = "../diesel-sentry" }
 diffy = "^0.2.0"
 docusign = "^0.1.0"

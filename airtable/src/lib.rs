@@ -95,7 +95,7 @@ impl Airtable {
                     client,
                 }
             }
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(err) => panic!("creating client failed: {err:?}"),
         }
     }
 
@@ -217,7 +217,7 @@ impl Airtable {
     /// Get record from a table.
     pub async fn get_record<T: DeserializeOwned>(&self, table: &str, record_id: &str) -> Result<Record<T>> {
         // Build the request.
-        let request = self.request(Method::GET, format!("{}/{}", table, record_id), (), None)?;
+        let request = self.request(Method::GET, format!("{table}/{record_id}"), (), None)?;
 
         let resp = self.client.execute(request).await?;
         match resp.status() {
@@ -497,7 +497,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::POST,
-            format!("v0/meta/workspaces/{}/collaborators", workspace_id),
+            format!("v0/meta/workspaces/{workspace_id}/collaborators"),
             NewCollaborator {
                 collaborators: vec![Collaborator {
                     user: User {
@@ -538,7 +538,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("v0/meta/workspaces/{}?", workspace_id),
+            format!("v0/meta/workspaces/{workspace_id}?"),
             (),
             includes.map(|includes| {
                 includes

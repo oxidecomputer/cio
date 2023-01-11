@@ -368,7 +368,7 @@ impl RampClient {
 
     fn request(&self, method: Method, path: &str) -> RequestBuilder {
         self.client
-            .request(method, format!("https://api.ramp.com/developer/v1/{}", path))
+            .request(method, format!("https://api.ramp.com/developer/v1/{path}"))
     }
 
     pub fn departments(&self) -> DepartmentClient {
@@ -409,7 +409,7 @@ pub struct ReceiptClient<'a> {
 
 impl<'a> ReceiptClient<'a> {
     pub async fn get(&self, receipt_id: &str) -> Result<Receipt, Error> {
-        let req = self.client.request(Method::GET, &format!("receipts/{}", receipt_id));
+        let req = self.client.request(Method::GET, &format!("receipts/{receipt_id}"));
         Ok(self.client.execute(req).await?.json().await?)
     }
 }
@@ -463,7 +463,7 @@ impl<'a> TransactionClient<'a> {
     pub async fn get(&self, transaction_id: &str) -> Result<Transaction, Error> {
         let req = self
             .client
-            .request(Method::GET, &format!("transactions/{}", transaction_id));
+            .request(Method::GET, &format!("transactions/{transaction_id}"));
         Ok(self.client.execute(req).await?.json().await?)
     }
 
@@ -479,7 +479,7 @@ pub struct UserClient<'a> {
 
 impl<'a> UserClient<'a> {
     pub async fn get(&self, user_id: &str) -> Result<User, Error> {
-        let req = self.client.request(Method::GET, &format!("users/{}", user_id));
+        let req = self.client.request(Method::GET, &format!("users/{user_id}"));
         Ok(self.client.execute(req).await?.json().await?)
     }
 
@@ -496,7 +496,7 @@ impl<'a> UserClient<'a> {
     pub async fn update(&self, user_id: &str, payload: &UpdateUser) -> Result<(), Error> {
         let req = self
             .client
-            .request(Method::PATCH, &format!("users/{}", user_id))
+            .request(Method::PATCH, &format!("users/{user_id}"))
             .json(payload);
         Ok(self.client.execute(req).await?.json().await?)
     }
@@ -545,14 +545,13 @@ impl
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Client(inner) => write!(f, "Client error: {}", inner),
+            Error::Client(inner) => write!(f, "Client error: {inner}"),
             Error::ExpirationOutOfBounds => write!(f, "Access token contains an invalid expiration duration"),
             Error::RequestFailed { status, .. } => write!(
                 f,
-                "Request failed to return a successful response. Instead a {} was returned",
-                status
+                "Request failed to return a successful response. Instead a {status} was returned"
             ),
-            Error::Token(inner) => write!(f, "Failure to retrieve access token: {}", inner),
+            Error::Token(inner) => write!(f, "Failure to retrieve access token: {inner}"),
         }
     }
 }
