@@ -181,7 +181,7 @@ version = "0.1.0"
 source = "git+https://github.com/oxidecomputer/async-bb8-diesel.git?rev=b2102ce03616938421eb1a9eabe04f10f79e2c44#b2102ce03616938421eb1a9eabe04f10f79e2c44"
 dependencies = [
  "async-trait",
- "bb8",
+ "bb8 0.7.1",
  "diesel",
  "thiserror",
  "tokio",
@@ -479,6 +479,19 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "parking_lot 0.11.2",
+ "tokio",
+]
+
+[[package]]
+name = "bb8"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1627eccf3aa91405435ba240be23513eeca466b5dc33866422672264de061582"
+dependencies = [
+ "async-trait",
+ "futures-channel",
+ "futures-util",
+ "parking_lot 0.12.1",
  "tokio",
 ]
 
@@ -788,7 +801,7 @@ dependencies = [
  "async-trait",
  "barcoders",
  "base64 0.13.0",
- "bb8",
+ "bb8 0.8.0",
  "byte-unit",
  "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono",

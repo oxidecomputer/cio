@@ -21,7 +21,7 @@ async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.gi
 async-trait = "^0.1.53"
 barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
 base64 = "^0.13"
-bb8 = "^0.7.1"
+bb8 = "^0.8.0"
 byte-unit = "4"
 checkr = "^0.0.10"
 #checkr = { path = "../checkr" }
