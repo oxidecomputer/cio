@@ -1,17 +1,12 @@
-use std::{
-    env,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::sync::Arc;
 
-use anyhow::{bail, Result};
-use chrono::Utc;
+use anyhow::Result;
 use cio_api::{
     db::Database,
     functions::{FnOutput, Function},
 };
 use serde::{Deserialize, Serialize};
-use std::io::BufRead;
+use slog_scope_futures::FutureExt as _;
 
 use crate::health::SelfMemory;
 
@@ -50,7 +45,6 @@ pub async fn do_saga(
     id: &uuid::Uuid,
     template: steno::SagaTemplate<Saga>,
     cmd_name: &str,
-    background: bool,
 ) -> Result<()> {
     let context = Arc::new(Context { db: db.clone() });
     let params = Params {
@@ -63,73 +57,16 @@ pub async fn do_saga(
     let saga_id = steno::SagaId(*id);
 
     // Create the saga.
-    let saga_future = sec
-        .saga_create(saga_id, Arc::new(context), saga_template, cmd_name.to_string(), params)
+    sec.saga_create(saga_id, Arc::new(context), saga_template, cmd_name.to_string(), params)
         .await?;
 
     // Set it running.
     sec.saga_start(saga_id).await?;
 
-    if !background {
-        //
-        // Wait for the saga to finish running.  This could take a while, depending
-        // on what the saga does!  This traverses the DAG of actions, executing each
-        // one.  If one fails, then it's all unwound: any actions that previously
-        // completed will be undone.
-        //
-        // Note that the SEC will run all this regardless of whether you wait for it
-        // here.  This is just a handle for you to know when the saga has finished.
-        let result = saga_future.await;
-        on_saga_complete(db, &saga_id, &result, cmd_name).await?;
-    }
-
     Ok(())
 }
 
-pub async fn on_saga_complete(
-    db: &Database,
-    saga_id: &steno::SagaId,
-    result: &steno::SagaResult,
-    cmd_name: &str,
-) -> Result<()> {
-    log::info!("Unused code path check: on_saga_complete");
-
-    // Get the function.
-    let mut f = Function::get_from_db(db, saga_id.to_string()).await.unwrap();
-
-    // Print the results.
-    match result.kind.clone() {
-        Ok(s) => {
-            // Save the success output to the logs.
-            // For each function.
-            let log = s.lookup_output::<FnOutput>(cmd_name)?;
-
-            f.logs = log.0.trim().to_string();
-            f.conclusion = octorust::types::Conclusion::Success.to_string();
-            f.completed_at = Some(Utc::now());
-        }
-        Err(e) => {
-            // Save the error to the logs.
-            f.logs = format!("{}\n\n{:?}", f.logs, e).trim().to_string();
-            f.conclusion = octorust::types::Conclusion::Failure.to_string();
-            f.completed_at = Some(Utc::now());
-
-            bail!("action failed: {:#?}", e);
-        }
-    }
-
-    f.update(db).await?;
-
-    Ok(())
-}
-
-pub async fn run_cmd(
-    db: &Database,
-    sec: &steno::SecClient,
-    id: &uuid::Uuid,
-    cmd_name: &str,
-    background: bool,
-) -> Result<()> {
+pub async fn run_cmd(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, cmd_name: &str) -> Result<()> {
     let mut builder = steno::SagaTemplateBuilder::new();
     builder.append(
         // name of this action's output (can be used in subsequent actions)
@@ -144,7 +81,7 @@ pub async fn run_cmd(
         ),
     );
 
-    do_saga(db, sec, id, builder.build(), cmd_name, background).await
+    do_saga(db, sec, id, builder.build(), cmd_name).await
 }
 
 async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<FnOutput, steno::ActionError> {
@@ -152,91 +89,44 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     let cmd_name = &action_context.saga_params().cmd_name;
     let saga_id = &action_context.saga_params().saga_id;
 
-    // We use spawn_blocking here since the BufReader etc from duct will otherwise,
-    // block the main thread.
-    let result = tokio::task::spawn_blocking(enclose! { (db, cmd_name, saga_id) async move || {
-        if let Ok(mem) = SelfMemory::new() {
-            log::info!("Memory before running {}({}): {:?}", cmd_name, saga_id, mem);
-        }
+    if let Ok(mem) = SelfMemory::new() {
+        log::info!("Memory before running {}({}): {:?}", cmd_name, saga_id, mem);
+    }
 
-        let result = reexec(&db, &cmd_name, &saga_id).await;
+    let sub_cmd = crate::core::SubCommand::SyncZoho(crate::core::SyncZoho {});
+    let logger = slog_scope::logger();
+    let cmd_logger = logger
+        .new(slog::o!("cmd" => cmd_name.to_string(), "saga_id" => saga_id.to_string()))
+        .clone();
+    let context = crate::context::Context::new(1).await.map_err(AsActionError)?;
 
-        if let Ok(mem) = SelfMemory::new() {
-            log::info!("Memory after running {}({}): {:?}", cmd_name, saga_id, mem);
-        }
+    let result = crate::job::run_job_cmd(sub_cmd, context).with_logger(cmd_logger).await;
 
-        result
-    } })
-    .await
-    .map_err(|err| steno::ActionError::action_failed(format!("ERROR:\n\n{:?}", err)))?
-    .await;
+    if let Ok(mem) = SelfMemory::new() {
+        log::info!("Memory after running {}({}): {:?}", cmd_name, saga_id, mem);
+    }
 
-    // Print the error and return an ActionError.
     match result {
-        Ok(s) => Ok(FnOutput(s)),
+        Ok(_) => {
+            Function::add_logs_with_conclusion(db, saga_id, "", &octorust::types::Conclusion::Success)
+                .await
+                .map_err(AsActionError)?;
+            Ok(FnOutput(String::new()))
+        }
         Err(err) => {
-            // Return an action error but include the logs.
-            // Format the anyhow error with a stack trace.
-            Err(steno::ActionError::action_failed(format!("ERROR:\n\n{:?}", err)))
+            let output = format!("{:?}", err);
+            Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Failure)
+                .await
+                .map_err(AsActionError)?;
+            Err(AsActionError(err).into())
         }
     }
 }
 
-// We re-exec our current binary so we can get the best log output.
-// The only downside is we are creating more connections to the database.
-async fn reexec(db: &Database, cmd: &str, saga_id: &uuid::Uuid) -> Result<String> {
-    let exe = env::current_exe()?;
+struct AsActionError(anyhow::Error);
 
-    let child = duct::cmd!(exe, cmd);
-    let reader = child.stderr_to_stdout().reader()?;
-    let child_pids = reader.pids();
-
-    let mut output = String::new();
-
-    let out = std::io::BufReader::new(reader);
-
-    let mut start = Instant::now();
-
-    //let mut lines = out.lines();
-
-    for line in out.lines() {
-        match line {
-            Ok(l) => {
-                /*loop {
-                match lines.next_line().await {
-                    Ok(tl) => {
-                        if tl.is_none() {
-                            // Break the loop there are no more lines.
-                            break;
-                        }
-
-                        let l = tl.unwrap();*/
-                output.push_str(&l);
-                output.push('\n');
-
-                slog::info!(crate::core::LOGGER, "{}", l;"cmd" => cmd.to_string(), "saga_id" => saga_id.to_string(), "pids" => ?child_pids);
-
-                // Only save the logs when we have time, just do it async and don't
-                // wait on it, else we will be waiting forever.
-                // Update our start time after saving.
-                if start.elapsed() > Duration::from_secs(15) {
-                    // Save the logs.
-                    Function::add_logs(db, saga_id, &output).await?;
-
-                    // Reset our start time to now.
-                    start = Instant::now();
-                }
-            }
-            Err(e) => {
-                // Save the logs.
-                Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Failure).await?;
-
-                bail!(e);
-            }
-        }
+impl From<AsActionError> for steno::ActionError {
+    fn from(err: AsActionError) -> Self {
+        steno::ActionError::action_failed(format!("ERROR:\n\n{:?}", err.0))
     }
-
-    // We do this here because sometimes the saga fails to update.
-    Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Success).await?;
-    Ok(output)
 }

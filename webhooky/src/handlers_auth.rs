@@ -17,14 +17,13 @@ use quickbooks::QuickBooks;
 use slack_chat_api::Slack;
 use zoom_api::Client as Zoom;
 
-use crate::{context::Context, server::AuthCallback};
+use crate::{context::ServerContext, server::AuthCallback};
 
 pub async fn handle_auth_google_callback(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let event = query_args.into_inner();
-
     let api_context = rqctx.context();
 
     // Initialize the Google client.
@@ -79,7 +78,7 @@ pub async fn handle_auth_google_callback(
         ));
     }
 
-    let company = Company::get_from_domain(&api_context.db, &metadata.hd).await?;
+    let company = Company::get_from_domain(&api_context.app.db, &metadata.hd).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -104,13 +103,13 @@ pub async fn handle_auth_google_callback(
     token.expand();
 
     // Update it in the database.
-    token.upsert(&api_context.db).await?;
+    token.upsert(&api_context.app.db).await?;
 
     Ok(())
 }
 
 pub async fn handle_auth_gusto_callback(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -139,7 +138,7 @@ pub async fn handle_auth_gusto_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain).await?;
+    let company = Company::get_from_domain(&api_context.app.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -163,13 +162,13 @@ pub async fn handle_auth_gusto_callback(
     };
     token.expand();
     // Update it in the database.
-    token.upsert(&api_context.db).await?;
+    token.upsert(&api_context.app.db).await?;
 
     Ok(())
 }
 
 pub async fn handle_auth_zoom_callback(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -200,7 +199,7 @@ pub async fn handle_auth_zoom_callback(
         }
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain).await?;
+    let company = Company::get_from_domain(&api_context.app.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -224,13 +223,13 @@ pub async fn handle_auth_zoom_callback(
     };
     token.expand();
     // Update it in the database.
-    token.upsert(&api_context.db).await?;
+    token.upsert(&api_context.app.db).await?;
 
     Ok(())
 }
 
 pub async fn handle_auth_slack_callback(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -257,7 +256,7 @@ pub async fn handle_auth_slack_callback(
     log::info!("current user: {:?}", current_user);
     log::info!("domain: {}", domain);
 
-    let company = Company::get_from_domain(&api_context.db, &domain).await?;
+    let company = Company::get_from_domain(&api_context.app.db, &domain).await?;
 
     let mut webhook = "".to_string();
     if let Some(wh) = t.incoming_webhook {
@@ -295,18 +294,18 @@ pub async fn handle_auth_slack_callback(
                 .and(api_tokens::dsl::auth_company_id.eq(company.id))
                 .and(api_tokens::dsl::token_type.eq(token.token_type.to_string())),
         )
-        .first_async::<APIToken>(api_context.db.pool())
+        .first_async::<APIToken>(api_context.app.db.pool())
         .await
     {
         diesel::update(api_tokens::dsl::api_tokens)
             .filter(api_tokens::dsl::id.eq(existing.id))
             .set(token)
-            .get_result_async::<APIToken>(api_context.db.pool())
+            .get_result_async::<APIToken>(api_context.app.db.pool())
             .await?
     } else {
-        token.create_in_db(&api_context.db).await?
+        token.create_in_db(&api_context.app.db).await?
     };
-    new_token.upsert_in_airtable(&api_context.db).await?;
+    new_token.upsert_in_airtable(&api_context.app.db).await?;
 
     // Save the user token to the database.
     if let Some(authed_user) = t.authed_user {
@@ -340,25 +339,25 @@ pub async fn handle_auth_slack_callback(
                     .and(api_tokens::dsl::auth_company_id.eq(company.id))
                     .and(api_tokens::dsl::token_type.eq(user_token.token_type.to_string())),
             )
-            .first_async::<APIToken>(api_context.db.pool())
+            .first_async::<APIToken>(api_context.app.db.pool())
             .await
         {
             diesel::update(api_tokens::dsl::api_tokens)
                 .filter(api_tokens::dsl::id.eq(existing.id))
                 .set(user_token)
-                .get_result_async::<APIToken>(api_context.db.pool())
+                .get_result_async::<APIToken>(api_context.app.db.pool())
                 .await?
         } else {
-            user_token.create_in_db(&api_context.db).await?
+            user_token.create_in_db(&api_context.app.db).await?
         };
-        new_user_token.upsert_in_airtable(&api_context.db).await?;
+        new_user_token.upsert_in_airtable(&api_context.app.db).await?;
     }
 
     Ok(())
 }
 
 pub async fn handle_auth_quickbooks_callback(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -383,7 +382,7 @@ pub async fn handle_auth_quickbooks_callback(
         domain = vec.get(1).unwrap().to_string();
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain).await?;
+    let company = Company::get_from_domain(&api_context.app.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -408,13 +407,13 @@ pub async fn handle_auth_quickbooks_callback(
     token.expand();
 
     // Update it in the database.
-    token.upsert(&api_context.db).await?;
+    token.upsert(&api_context.app.db).await?;
 
     Ok(())
 }
 
 pub async fn handle_auth_docusign_callback(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -456,7 +455,7 @@ pub async fn handle_auth_docusign_callback(
         ));
     }
 
-    let company = Company::get_from_domain(&api_context.db, &domain).await?;
+    let company = Company::get_from_domain(&api_context.app.db, &domain).await?;
 
     // Save the token to the database.
     let mut token = NewAPIToken {
@@ -481,7 +480,7 @@ pub async fn handle_auth_docusign_callback(
     token.expand();
 
     // Update it in the database.
-    token.upsert(&api_context.db).await?;
+    token.upsert(&api_context.app.db).await?;
 
     Ok(())
 }

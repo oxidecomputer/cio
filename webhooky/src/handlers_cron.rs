@@ -6,10 +6,10 @@ use cio_api::{functions::Function, schema::functions};
 use diesel::{ExpressionMethods, QueryDsl};
 use log::info;
 
-use crate::context::Context;
+use crate::context::ServerContext;
 
-pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str, background: bool) -> Result<uuid::Uuid> {
-    let db = &api_context.db;
+pub async fn handle_reexec_cmd(server_context: &ServerContext, cmd_name: &str) -> Result<uuid::Uuid> {
+    let db = &server_context.app.db;
 
     // Check if we already have an in-progress run for this job.
     if let Ok(f) = functions::dsl::functions
@@ -41,7 +41,7 @@ pub async fn handle_reexec_cmd(api_context: &Context, cmd_name: &str, background
     let id = uuid::Uuid::new_v4();
 
     // Run the saga.
-    crate::sagas::run_cmd(db, &api_context.sec, &id, cmd_name, background).await?;
+    crate::sagas::run_cmd(db, &server_context.sec, &id, cmd_name).await?;
 
     Ok(id)
 }

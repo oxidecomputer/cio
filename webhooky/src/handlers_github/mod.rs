@@ -12,14 +12,20 @@ use cio_api::{
     rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos},
 };
-use dropshot::{Extractor, RequestContext, ServerContext};
+use dropshot::{Extractor, RequestContext, ServerContext as DropshotServerContext};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{error, info, warn};
 use sha2::Sha256;
 use std::{str::FromStr, sync::Arc};
 
-use crate::{context::Context, event_types::EventType, github_types::GitHubWebhook, http::Headers, repos::Repo};
+use crate::{
+    context::{Context, ServerContext},
+    event_types::EventType,
+    github_types::GitHubWebhook,
+    http::Headers,
+    repos::Repo,
+};
 
 pub mod rfd;
 
@@ -32,14 +38,14 @@ pub struct GitHubWebhookVerification;
 impl HmacSignatureVerifier for GitHubWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+    async fn key<Context: DropshotServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         Ok(std::env::var("GH_WH_KEY").map(|key| key.into_bytes()).map_err(|err| {
             warn!("Failed to find webhook key for verifying GitHub webhooks");
             err
         })?)
     }
 
-    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+    async fn signature<Context: DropshotServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
         let headers = Headers::from_request(rqctx.clone()).await?;
         let signature = headers
             .0
@@ -60,7 +66,7 @@ impl HmacSignatureVerifier for GitHubWebhookVerification {
 }
 
 /// Handle a request to the /github endpoint.
-pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWebhook) -> Result<()> {
+pub async fn handle_github(rqctx: Arc<RequestContext<ServerContext>>, event: GitHubWebhook) -> Result<()> {
     let api_context = rqctx.context();
 
     // Parse the `X-GitHub-Event` header. Ensure the request lock is dropped once the
@@ -125,7 +131,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
             }
         }
         EventType::Repository => {
-            let company = Company::get_from_github_org(&api_context.db, &event.repository.owner.login).await?;
+            let company = Company::get_from_github_org(&api_context.app.db, &event.repository.owner.login).await?;
             let github = company.authenticate_github()?;
 
             sentry::configure_scope(|scope| {
@@ -133,7 +139,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                 scope.set_tag("github.event.type", &event_type_string);
             });
 
-            let result = handle_repository_event(&github, api_context, event.clone(), &company).await;
+            let result = handle_repository_event(&github, &api_context.app, event.clone(), &company).await;
 
             match result {
                 Ok(message) => log::info!(
@@ -161,7 +167,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
         let repo = &event.repository;
         let repo_name = Repo::from_str(&repo.name).unwrap();
 
-        let company = Company::get_from_github_org(&api_context.db, &repo.owner.login).await?;
+        let company = Company::get_from_github_org(&api_context.app.db, &repo.owner.login).await?;
         let github = Arc::new(company.authenticate_github()?);
 
         match repo_name {
@@ -172,7 +178,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                         scope.set_tag("github.event.type", &event_type_string);
                     });
 
-                    match handle_rfd_push(github.clone(), api_context, event.clone()).await {
+                    match handle_rfd_push(github.clone(), &api_context.app, event.clone()).await {
                         Ok(_) => ( /* Silence */ ),
                         Err(e) => {
                             event
@@ -189,7 +195,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                     // Let's create the check run.
                     let check_run_id = event.create_check_run(&github).await?;
 
-                    match handle_rfd_pull_request(api_context, event.clone(), &company).await {
+                    match handle_rfd_pull_request(&api_context.app, event.clone(), &company).await {
                         Ok((conclusion, message)) => {
                             event
                                 .update_check_run(&github, check_run_id, &message, conclusion)
@@ -218,7 +224,7 @@ pub async fn handle_github(rqctx: Arc<RequestContext<Context>>, event: GitHubWeb
                         scope.set_tag("github.event.type", &event_type_string);
                     });
 
-                    match handle_configs_push(&github, api_context, event.clone(), &company).await {
+                    match handle_configs_push(&github, &api_context.app, event.clone(), &company).await {
                         Ok(message) => {
                             info!("{}", message);
                             event.create_comment(&github, &message).await?;

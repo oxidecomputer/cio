@@ -19,6 +19,8 @@ pub mod handlers_slack;
 // mod handlers_sendgrid;
 mod health;
 mod http;
+mod job;
+mod mailing_lists;
 mod repos;
 mod sagas;
 pub mod server;
