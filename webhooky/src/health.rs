@@ -60,19 +60,11 @@ pub fn scheduler_health_check() {
             .filter_map(|res| {
                 res.ok().and_then(|proc| {
                     let comm = proc.stat().map(|stat| stat.comm);
-                    let name = proc.status().map(|status| status.name);
 
-                    let is_webhooky = comm
-                        .map(|c| c.contains("webhooky"))
-                        .or_else(|_| name.map(|n| n.contains("webhooky")))
-                        .unwrap_or(false);
+                    let is_webhooky = comm.map(|c| c.contains("webhooky")).unwrap_or(false);
 
                     if is_webhooky {
-                        Some((
-                            proc.pid,
-                            proc.stat().map(|stat| stat.comm),
-                            proc.status().map(|status| status.name),
-                        ))
+                        Some((proc.pid, proc.stat().map(|stat| stat.comm)))
                     } else {
                         None
                     }
