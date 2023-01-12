@@ -27,8 +27,6 @@ mod server;
 mod slack_commands;
 // mod tracking_numbers;
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate cio_api;
@@ -105,11 +103,6 @@ async fn tokio_main() -> Result<()> {
     });
 
     let logger = if opts.json {
-        // TODO: the problem is the global logger, LOGGER, is not being changed to use json so
-        // the output from the reexec functions will not be json formatted. This should be
-        // fixed.
-        // Build a JSON slog logger.
-        // This way cloud run can read the logs as JSON.
         let drain = slog_json::Json::new(std::io::stdout())
             .add_default_keys()
             .build()

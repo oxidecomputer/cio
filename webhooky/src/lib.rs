@@ -27,8 +27,6 @@ pub mod server;
 mod slack_commands;
 // mod tracking_numbers;
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate cio_api;

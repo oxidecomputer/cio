@@ -1,15 +1,4 @@
 use clap::Parser;
-use slog::Drain;
-
-lazy_static! {
-    // We need a slog::Logger for steno and when we export out the logs from re-exec-ed processes.
-    pub static ref LOGGER: slog::Logger = {
-        let decorator = slog_term::TermDecorator::new().build();
-        let drain = slog_term::FullFormat::new(decorator).build().fuse();
-        let drain = slog_async::Async::new(drain).build().fuse();
-        slog::Logger::root(drain, slog::slog_o!())
-    };
-}
 
 /// This doc string acts as a help message when the user runs '--help'
 /// as do all doc strings on fields.
