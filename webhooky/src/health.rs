@@ -64,7 +64,7 @@ pub fn scheduler_health_check() {
 
                     let is_webhooky = comm
                         .map(|c| c.contains("webhooky"))
-                        .or(name.map(|n| n.contains("webhooky")))
+                        .or_else(|_| name.map(|n| n.contains("webhooky")))
                         .unwrap_or(false);
 
                     if is_webhooky {
