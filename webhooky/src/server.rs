@@ -355,7 +355,7 @@ pub async fn do_job(ctx: ServerContext, job: String) {
     let errored = txn
         .run(async || {
             info!("triggering cron job `{}`", job);
-            match crate::handlers_cron::handle_reexec_cmd(&ctx, &job).await {
+            match crate::handlers_cron::run_subcmd_job(&ctx, &job).await {
                 Ok(_) => false,
                 // Send the error to sentry.
                 Err(e) => {
@@ -2097,7 +2097,7 @@ async fn trigger_sync_repos_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-repos"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-repos"))
         .await
     {
         Ok(r) => {
@@ -2125,7 +2125,7 @@ async fn trigger_sync_rfds_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-rfds"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-rfds"))
         .await
     {
         Ok(r) => {
@@ -2153,7 +2153,7 @@ async fn trigger_sync_travel_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-travel"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-travel"))
         .await
     {
         Ok(r) => {
@@ -2181,7 +2181,7 @@ async fn trigger_sync_zoho_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-zoho"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-zoho"))
         .await
     {
         Ok(r) => {
@@ -2209,7 +2209,7 @@ async fn trigger_sync_functions_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-functions"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-functions"))
         .await
     {
         Ok(r) => {
@@ -2237,7 +2237,7 @@ async fn trigger_sync_finance_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-finance"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-finance"))
         .await
     {
         Ok(r) => {
@@ -2265,7 +2265,7 @@ async fn trigger_sync_shipments_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shipments"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-shipments"))
         .await
     {
         Ok(r) => {
@@ -2293,7 +2293,7 @@ async fn trigger_sync_shorturls_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-shorturls"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-shorturls"))
         .await
     {
         Ok(r) => {
@@ -2321,7 +2321,7 @@ async fn trigger_sync_configs_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-configs"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-configs"))
         .await
     {
         Ok(r) => {
@@ -2349,7 +2349,7 @@ async fn trigger_sync_recorded_meetings_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-recorded-meetings"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-recorded-meetings"))
         .await
     {
         Ok(r) => {
@@ -2377,7 +2377,7 @@ async fn trigger_sync_asset_inventory_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-asset-inventory"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-asset-inventory"))
         .await
     {
         Ok(r) => {
@@ -2405,7 +2405,7 @@ async fn trigger_sync_swag_inventory_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-swag-inventory"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-swag-inventory"))
         .await
     {
         Ok(r) => {
@@ -2433,7 +2433,7 @@ async fn trigger_sync_interviews_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-interviews"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-interviews"))
         .await
     {
         Ok(r) => {
@@ -2461,7 +2461,7 @@ async fn trigger_sync_applications_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-applications"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-applications"))
         .await
     {
         Ok(r) => {
@@ -2489,7 +2489,7 @@ async fn trigger_sync_analytics_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-analytics"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-analytics"))
         .await
     {
         Ok(r) => {
@@ -2517,7 +2517,7 @@ async fn trigger_sync_companies_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-companies"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-companies"))
         .await
     {
         Ok(r) => {
@@ -2545,7 +2545,7 @@ async fn trigger_sync_other_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-other"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-other"))
         .await
     {
         Ok(r) => {
@@ -2573,7 +2573,7 @@ async fn trigger_sync_huddles_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-huddles"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-huddles"))
         .await
     {
         Ok(r) => {
@@ -2601,7 +2601,7 @@ async fn trigger_sync_mailing_lists_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-mailing-lists"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-mailing-lists"))
         .await
     {
         Ok(r) => {
@@ -2629,7 +2629,7 @@ async fn trigger_sync_journal_clubs_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-journal-clubs"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-journal-clubs"))
         .await
     {
         Ok(r) => {
@@ -2657,7 +2657,7 @@ async fn trigger_sync_api_tokens_create(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     match txn
-        .run(|| crate::handlers_cron::handle_reexec_cmd(rqctx.context(), "sync-api-tokens"))
+        .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-api-tokens"))
         .await
     {
         Ok(r) => {

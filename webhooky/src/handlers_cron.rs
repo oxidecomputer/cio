@@ -8,7 +8,7 @@ use log::info;
 
 use crate::context::ServerContext;
 
-pub async fn handle_reexec_cmd(server_context: &ServerContext, cmd_name: &str) -> Result<uuid::Uuid> {
+pub async fn run_subcmd_job(server_context: &ServerContext, cmd_name: &str) -> Result<uuid::Uuid> {
     let db = &server_context.app.db;
 
     // Check if we already have an in-progress run for this job.
