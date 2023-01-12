@@ -51,6 +51,7 @@ mime_guess_2 = { package = "mime_guess", version = "2" }
 octorust = { version = "^0.1.35", features = ["httpcache"] }
 #octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
 pretty_env_logger = "0.4"
+procfs = "0.14.2"
 quickbooks = "^0.1.12"
 rand = "^0.8.5"
 regex = "^1.5.5"

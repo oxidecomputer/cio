@@ -45,6 +45,7 @@ use slog::Drain;
 use std::fs::File;
 
 use crate::context::Context;
+use crate::health::SelfMemory;
 use crate::server::APIConfig;
 
 fn main() -> Result<()> {
@@ -57,6 +58,10 @@ fn main() -> Result<()> {
 
 async fn tokio_main() -> Result<()> {
     let opts: crate::core::Opts = crate::core::Opts::parse();
+
+    if let Ok(mem) = SelfMemory::new() {
+        log::info!("Memory at start of command exec {:?}: {:?}", opts.subcmd, mem);
+    }
 
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
@@ -146,7 +151,11 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
         scope.set_tag("command", &std::env::args().collect::<Vec<String>>().join(" "));
     });
 
-    match opts.subcmd {
+    if let Ok(mem) = SelfMemory::new() {
+        log::info!("Memory at start of command run {:?}: {:?}", opts.subcmd, mem);
+    }
+
+    match opts.subcmd.clone() {
         crate::core::SubCommand::Server(s) => {
             sentry::configure_scope(|scope| {
                 scope.set_tag("do-cron", s.do_cron.to_string());
@@ -313,6 +322,10 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
             let Context { db, company, .. } = context;
             cio_api::zoho::refresh_leads(&db, &company).await?;
         }
+    }
+
+    if let Ok(mem) = SelfMemory::new() {
+        log::info!("Memory at end of command run {:?}: {:?}", opts.subcmd, mem);
     }
 
     Ok(())
