@@ -54,6 +54,37 @@ pub fn scheduler_health_check() {
         log::info!("Instance memory {:?}", mem);
     }
 
+    if let Ok(processes) = procfs::process::all_processes() {
+        let running = processes
+            .into_iter()
+            .filter_map(|res| {
+                res.ok().and_then(|proc| {
+                    let comm = proc.stat().map(|stat| stat.comm);
+                    let name = proc.status().map(|status| status.name);
+
+                    let is_webhooky = comm
+                        .map(|c| c.contains("webhooky"))
+                        .or(name.map(|n| n.contains("webhooky")))
+                        .unwrap_or(false);
+
+                    if is_webhooky {
+                        Some((
+                            proc.pid,
+                            proc.stat().map(|stat| stat.comm),
+                            proc.status().map(|status| status.name),
+                        ))
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+
+        log::info!("Processes {:?}", running);
+    } else {
+        log::info!("Failed to list processes");
+    }
+
     let cache_size = fs_extra::dir::get_size("/tmp/.cache/github");
     log::info!("GitHub cache size {:?}", cache_size);
 }
