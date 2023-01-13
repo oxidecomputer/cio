@@ -600,15 +600,15 @@ pub async fn sync_all_repo_settings(db: &Database, company: &Company, app_config
 
     // Iterate over the repos and set a number of default settings.
     for r in repos {
-        if !app_config.github.ignored_repos.contains(&r.github_id) {
+        if app_config.github.ignored_repos.contains(&r.github_id) {
+            log::info!("Repo {} is listed as an ignored repo. Skipping settings sync", r.name);
+        } else {
             match r.sync_settings(&github, company).await {
                 Ok(_) => (),
                 Err(e) => {
                     log::warn!("could not sync settings for repo {}: {}", r.full_name, e);
                 }
             }
-        } else {
-            log::info!("Repo {} is listed as an ignored repo. Skipping settings sync", r.name);
         }
     }
 
