@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::io;
+use std::sync::Arc;
 use std::sync::Mutex;
 
 use anyhow::Result;
@@ -8,8 +8,8 @@ use cio_api::{
     functions::{FnOutput, Function},
 };
 use serde::{Deserialize, Serialize};
-use slog_scope_futures::FutureExt as _;
 use slog::Drain;
+use slog_scope_futures::FutureExt as _;
 
 use crate::health::SelfMemory;
 
@@ -20,7 +20,9 @@ struct SagaLogOutput {
 
 impl SagaLogOutput {
     pub fn new() -> Self {
-        Self { output: Arc::new(Mutex::new(Vec::new())) }
+        Self {
+            output: Arc::new(Mutex::new(Vec::new())),
+        }
     }
 
     pub fn handle(&self) -> Arc<Mutex<Vec<u8>>> {
@@ -41,13 +43,22 @@ impl io::Write for SagaLogOutput {
     }
 }
 
-fn create_saga_logger<W>(out: W, cmd_name: String, saga_id: String) -> slog::Logger where W: io::Write + Send + Sync + 'static {
+fn create_saga_logger<W>(out: W, cmd_name: String, saga_id: String) -> slog::Logger
+where
+    W: io::Write + Send + Sync + 'static,
+{
     let drain = slog_async::Async::new(
         slog::Duplicate::new(
             slog_json::Json::new(out).add_default_keys().build().fuse(),
-            slog_json::Json::new(std::io::stdout()).add_default_keys().build().fuse(),
-        ).fuse()
-    ).build().fuse();
+            slog_json::Json::new(std::io::stdout())
+                .add_default_keys()
+                .build()
+                .fuse(),
+        )
+        .fuse(),
+    )
+    .build()
+    .fuse();
 
     let drain = sentry::integrations::slog::SentryDrain::new(drain);
     slog::Logger::root(drain, slog::slog_o!("cmd" => cmd_name, "saga_id" => saga_id))
@@ -132,45 +143,51 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     let cmd_name = &action_context.saga_params().cmd_name;
     let saga_id = &action_context.saga_params().saga_id;
 
-    if let Ok(mem) = SelfMemory::new() {
-        log::info!("Memory before running {}({}): {:?}", cmd_name, saga_id, mem);
-    }
-
-    let sub_cmd = crate::core::SubCommand::SyncZoho(crate::core::SyncZoho {});
-
-    let saga_log_output = SagaLogOutput::new();
-    let output_handle = saga_log_output.handle();
-    let logger = create_saga_logger(saga_log_output, cmd_name.to_string(), saga_id.to_string());
-
-    let context = crate::context::Context::new(1).await.map_err(AsActionError)?;
-    let result = crate::job::run_job_cmd(sub_cmd, context).with_logger(logger).await;
-
-    if let Ok(mem) = SelfMemory::new() {
-        log::info!("Memory after running {}({}): {:?}", cmd_name, saga_id, mem);
-    }
-
-    match result {
-        Ok(_) => {
-            let output = {
-                if let Ok(guard) = output_handle.lock() {
-                    std::str::from_utf8(&guard).ok().map(|s| s.to_string())
-                } else {
-                    None
-                }.unwrap_or_else(String::new)
-            };
-
-            Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Success)
-                .await
-                .map_err(AsActionError)?;
-            Ok(FnOutput(output))
+    if let Some(sub_cmd) = crate::core::into_job_command(cmd_name) {
+        if let Ok(mem) = SelfMemory::new() {
+            log::info!("Memory before running {}({}): {:?}", cmd_name, saga_id, mem);
         }
-        Err(err) => {
-            let output = format!("{:?}", err);
-            Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Failure)
-                .await
-                .map_err(AsActionError)?;
-            Err(AsActionError(err).into())
+
+        let saga_log_output = SagaLogOutput::new();
+        let output_handle = saga_log_output.handle();
+        let logger = create_saga_logger(saga_log_output, cmd_name.to_string(), saga_id.to_string());
+
+        let context = crate::context::Context::new(1).await.map_err(AsActionError)?;
+        let result = crate::job::run_job_cmd(sub_cmd, context).with_logger(logger).await;
+
+        if let Ok(mem) = SelfMemory::new() {
+            log::info!("Memory after running {}({}): {:?}", cmd_name, saga_id, mem);
         }
+
+        match result {
+            Ok(_) => {
+                let output = {
+                    if let Ok(guard) = output_handle.lock() {
+                        std::str::from_utf8(&guard).ok().map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                    .unwrap_or_default()
+                };
+
+                Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Success)
+                    .await
+                    .map_err(AsActionError)?;
+                Ok(FnOutput(output))
+            }
+            Err(err) => {
+                let output = format!("{:?}", err);
+                Function::add_logs_with_conclusion(db, saga_id, &output, &octorust::types::Conclusion::Failure)
+                    .await
+                    .map_err(AsActionError)?;
+                Err(AsActionError(err).into())
+            }
+        }
+    } else {
+        Err(steno::ActionError::action_failed(format!(
+            "ERROR:\n\n Failed to determine job to run for {}",
+            cmd_name
+        )))
     }
 }
 
@@ -184,8 +201,8 @@ impl From<AsActionError> for steno::ActionError {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
     use super::*;
+    use std::io::Write;
 
     #[test]
     fn test_write_saga_output() {
@@ -216,9 +233,12 @@ mod tests {
             saga_id: String,
         }
 
-        let lines = records.split('\n').into_iter().filter(|s| s.len() != 0).map(|s| {
-            serde_json::from_str::<Line>(s).unwrap()
-        }).collect::<Vec<_>>();
+        let lines = records
+            .split('\n')
+            .into_iter()
+            .filter(|s| s.len() != 0)
+            .map(|s| serde_json::from_str::<Line>(s).unwrap())
+            .collect::<Vec<_>>();
 
         assert_eq!(2, lines.len());
 
