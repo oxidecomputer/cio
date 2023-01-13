@@ -11,9 +11,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app_config::AppConfig,
-    airtable::AIRTABLE_GITHUB_REPOS_TABLE, companies::Company, core::UpdateAirtableRecord, db::Database,
-    github_prs::FromSimpleUser, schema::github_repos,
+    airtable::AIRTABLE_GITHUB_REPOS_TABLE, app_config::AppConfig, companies::Company, core::UpdateAirtableRecord,
+    db::Database, github_prs::FromSimpleUser, schema::github_repos,
 };
 
 /// The data type for a GitHub user.

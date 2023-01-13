@@ -262,7 +262,12 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
             cio_api::recorded_meetings::refresh_google_recorded_meetings(&db, &company).await?;
         }
         crate::core::SubCommand::SyncRepos(_) => {
-            let Context { db, company, app_config, .. } = context;
+            let Context {
+                db,
+                company,
+                app_config,
+                ..
+            } = context;
             let app_config = app_config.read().unwrap().clone();
 
             let sync_result = cio_api::repos::sync_all_repo_settings(&db, &company, &app_config).await;

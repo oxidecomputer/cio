@@ -154,7 +154,7 @@ pub struct FinanceConfig {
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct GitHubConfig {
     #[serde(default)]
-    pub ignored_repos: Vec<String>
+    pub ignored_repos: Vec<String>,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
@@ -169,7 +169,7 @@ pub struct AppConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::{ApplyConfig, DocuSignConfig, OnboardingConfig, GitHubConfig};
+    use super::{ApplyConfig, DocuSignConfig, GitHubConfig, OnboardingConfig};
     use crate::{applicants::tests::mock_applicant, companies::tests::mock_company, configs::tests::mock_user};
 
     fn mock_docusign_toml(label: &str) -> String {
@@ -358,18 +358,15 @@ github org: super_computer_org
 
     #[test]
     fn test_github_config() {
-        let config: GitHubConfig = toml::from_str(r#"
+        let config: GitHubConfig = toml::from_str(
+            r#"
 ignored_repos = [
     "12345",
     "67890"
 ]
-"#).unwrap();
-        assert_eq!(
-            vec![
-                "12345".to_string(),
-                "67890".to_string(),
-            ],
-            config.ignored_repos
-        );
+"#,
+        )
+        .unwrap();
+        assert_eq!(vec!["12345".to_string(), "67890".to_string(),], config.ignored_repos);
     }
 }
