@@ -580,9 +580,15 @@ pub async fn handle_repository_event(
 
     a("[SUCCESS]: generated short urls");
 
+    let app_config = api_context.app_config.read().unwrap().clone();
+
     // Sync the settings for this repo.
-    new_repo.sync_settings(github, company).await?;
-    a("[SUCCESS]: synced settings");
+    if app_config.github.ignored_repos.contains(&new_repo.github_id) {
+        a(&format!("[SUCCESS]: skipping setting sync for {}", new_repo.name));
+    } else {
+        new_repo.sync_settings(github, company).await?;
+        a("[SUCCESS]: synced settings");
+    }
 
     Ok(message)
 }
