@@ -2667,7 +2667,7 @@ pub async fn sync_certificates(
         certificate_map.insert(u.domain.to_string(), u);
     }
 
-    let cert_reader = GitHubBackend::new(github.clone(), company.github_org.clone(), company.configs_repo());
+    let cert_reader = GitHubBackend::new(github.clone(), company.github_org.clone(), company.certs_repo());
     let cert_storage = company.cert_storage().await?;
 
     // Sync certificates.

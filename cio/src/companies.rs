@@ -1075,17 +1075,17 @@ impl Company {
         );
 
         Ok(vec![
-            Box::new(GitHubBackend::new(github, self.github_org.clone(), self.configs_repo())),
-            Box::new(GcsBackend::new(gcs_storage, self.configs_gcs())),
+            Box::new(GitHubBackend::new(github, self.github_org.clone(), self.certs_repo())),
+            Box::new(GcsBackend::new(gcs_storage, self.certs_gcs())),
         ])
     }
 
-    pub fn configs_gcs(&self) -> String {
+    pub fn certs_gcs(&self) -> String {
         std::env::var("CERTS_GCS").unwrap()
     }
 
-    pub fn configs_repo(&self) -> String {
-        std::env::var("CONFIGS_REPO").unwrap()
+    pub fn certs_repo(&self) -> String {
+        std::env::var("CERTS_REPO").unwrap()
     }
 
     pub fn rfd_static_storage(&self) -> String {
