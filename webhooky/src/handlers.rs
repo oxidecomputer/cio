@@ -628,7 +628,10 @@ pub async fn handle_airtable_certificates_renew(
     let storage = company.cert_storage().await?;
 
     // Renew the cert.
-    cert.renew(&api_context.db, &company, &storage).await?;
+    cert.renew(&api_context.db, &company, &storage).await.map_err(|err| {
+        log::error!("Failed to complete requested renewal for {}", cert.domain);
+        err
+    })?;
 
     Ok(())
 }

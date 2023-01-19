@@ -2689,12 +2689,9 @@ pub async fn sync_certificates(
             );
         } else {
             // Renew
-            certificate.renew(db, company, &cert_storage).await?;
-        }
-
-        if certificate.certificate.is_empty() {
-            // Continue early.
-            continue;
+            if let Err(err) = certificate.renew(db, company, &cert_storage).await {
+                log::error!("Failed to renew certificate for {} due to {:?}", certificate.domain, err);
+            }
         }
 
         // Update the database and Airtable.
@@ -2708,7 +2705,7 @@ pub async fn sync_certificates(
     // This is found by the remaining certificates that are in the map since we removed
     // the existing repos from the map above.
     for (_, cert) in certificate_map {
-        cert.delete(db).await?;
+        info!("Certificate for {} needs to be deleted", cert.domain);
     }
     info!("updated configs certificates in the database");
 

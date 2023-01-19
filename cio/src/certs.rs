@@ -15,7 +15,6 @@ use google_storage1::{
     hyper::Uri,
     hyper::client::connect::Connection,
 };
-use log::info;
 use macros::db;
 use mime::Mime;
 use octorust::types::FullRepository;
@@ -104,8 +103,12 @@ impl NewCertificate {
         // that it's there.
         let acc = dir.account(&company.gsuite_subject)?;
 
+        log::info!("Authenticated with cert provider");
+
         // Order a new TLS certificate for a domain.
         let mut ord_new = acc.new_order(&self.domain, &[])?;
+
+        log::info!("Created new cert order for {}", self.domain);
 
         // If the ownership of the domain(s) have already been
         // authorized in a previous order, you might be able to
@@ -113,6 +116,7 @@ impl NewCertificate {
         let ord_csr = loop {
             // are we done?
             if let Some(ord_csr) = ord_new.confirm_validations() {
+                log::info!("Cert order validated for {}", self.domain);
                 break ord_csr;
             }
 
@@ -123,6 +127,8 @@ impl NewCertificate {
             // Get the proff we need for the TXT record:
             // _acme-challenge.<domain-to-be-proven>.  TXT  <proof>
             let challenge = auths[0].dns_challenge();
+
+            log::info!("Retrieved acme challenge for {}", self.domain);
 
             // Create a TXT record for _acme-challenge.{domain} with the value of
             // the proof.
@@ -141,10 +147,13 @@ impl NewCertificate {
                 )
                 .await?;
 
+            log::info!("Created _acme-challenge record for {}. Sleeping before starting validation", self.domain);
+
             // TODO: make this less awful than a sleep.
-            info!("validating the proof...");
             let dur = time::Duration::from_secs(10);
             tokio::time::sleep(dur).await;
+
+            log::info!("Waiting for validation for {} to complete", self.domain);
 
             // After the TXT record is accessible, the calls
             // this to tell the ACME API to start checking the
@@ -156,6 +165,8 @@ impl NewCertificate {
             // the API with 5000 milliseconds wait between.
             challenge.validate(5000)?;
 
+            log::info!("Validation for {} returned result. Updating state", self.domain);
+
             // Update the state against the ACME API.
             ord_new.refresh()?;
         };
@@ -164,6 +175,8 @@ impl NewCertificate {
         // the certificate. These are provided for convenience, you
         // can provide your own keypair instead if you want.
         let pkey_pri = create_p384_key();
+
+        log::info!("Submitting completed request and awaiting certificate for {}", self.domain);
 
         // Submit the CSR. This causes the ACME provider to enter a
         // state of "processing" that must be polled until the
@@ -174,6 +187,9 @@ impl NewCertificate {
         // Now download the certificate. Also stores the cert in
         // the persistence.
         let cert = ord_cert.download_and_save_cert()?;
+
+        log::info!("Retrieved certificate for {}", self.domain);
+
         self.load_cert(cert.certificate().as_bytes())?;
 
         // Set default values. Certificates and keys are stored externally
@@ -190,6 +206,8 @@ impl NewCertificate {
 
         let dur = expiration_date - Utc::now();
         self.valid_days_left = dur.num_days() as i32;
+
+        log::info!("Loaded cert metadata for {}", self.domain);
 
         Ok(())
     }
@@ -225,11 +243,15 @@ impl NewCertificate {
     pub async fn renew<'a>(&'a mut self, db: &'a Database, company: &'a Company, storage: &'a [Box<dyn SslCertificateStorage>]) -> Result<()> {
         let renewed_certificate = self.create_cert(company).await?;
 
+        log::info!("Renewed certificate for {}", self.domain);
+
         // Write the certificate and key to the requested locations
         for store in storage.into_iter() {
             store.write_cert(&self.domain, renewed_certificate.certificate().as_bytes()).await?;
-            store.write_key(&self.domain, renewed_certificate.certificate().as_bytes()).await?;
+            store.write_key(&self.domain, renewed_certificate.private_key().as_bytes()).await?;
         }
+
+        log::info!("Stored certificate and key for {}", self.domain);
 
         // Update the database and Airtable.
         self.upsert(db).await?;
