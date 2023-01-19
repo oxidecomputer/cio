@@ -251,10 +251,11 @@ where
 pub async fn refresh_shorturls(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let provider = company.authenticate_dns_providers().await?;
+    let nginx_repo = company.nginx_repo();
 
-    generate_shorturls_for_repos(db, &github, company, &provider, "configs").await?;
-    generate_shorturls_for_rfds(db, &github, company, &provider, "configs").await?;
-    generate_shorturls_for_configs_links(db, &github, company, &provider, "configs").await?;
+    generate_shorturls_for_repos(db, &github, company, &provider, &nginx_repo).await?;
+    generate_shorturls_for_rfds(db, &github, company, &provider, &nginx_repo).await?;
+    generate_shorturls_for_configs_links(db, &github, company, &provider, &nginx_repo).await?;
 
     Ok(())
 }
