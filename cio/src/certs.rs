@@ -1,27 +1,24 @@
 #![allow(clippy::from_over_into)]
-use std::{
-    collections::BTreeMap,
-    env,
-    path::{Path, PathBuf},
-    str::from_utf8,
-    time,
-};
+use std::{env, time};
 
-use acme_lib::{create_p384_key, persist::FilePersist, Directory, DirectoryUrl};
+use acme_lib::{create_p384_key, persist::FilePersist, Certificate as AcmeCertificate, Directory, DirectoryUrl};
 use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
-use chrono_humanize::HumanTime;
-use log::info;
+use google_storage1::{
+    api::{Object, Storage},
+    hyper,
+    hyper::client::connect::Connection,
+    hyper::Uri,
+};
 use macros::db;
+use mime::Mime;
+use octorust::types::FullRepository;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use slack_chat_api::{
-    FormattedMessage, MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageType,
-};
-use tokio::fs;
+use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::{
     airtable::AIRTABLE_CERTIFICATES_TABLE,
@@ -82,95 +79,10 @@ pub struct NewCertificate {
     pub cio_company_id: i32,
 }
 
-/// Convert the certificate into a Slack message.
-impl From<NewCertificate> for FormattedMessage {
-    fn from(item: NewCertificate) -> Self {
-        let dur = item.expiration_date - Utc::now().date().naive_utc();
-        let human_date = HumanTime::from(dur);
-
-        let mut text = format!("`{}` certificate renewed", item.domain);
-        if !item.repos.is_empty() {
-            text += &format!(
-                "\nupdated `{}`, `{}` secrets in the following repos: `{}`",
-                item.certificate_github_actions_secret_name,
-                item.private_key_github_actions_secret_name,
-                item.repos.join("`, `")
-            );
-        }
-
-        FormattedMessage {
-            channel: Default::default(),
-            blocks: Default::default(),
-            attachments: vec![MessageAttachment {
-                color: crate::colors::Colors::Green.to_string(),
-                author_icon: Default::default(),
-                author_link: Default::default(),
-                author_name: Default::default(),
-                fallback: Default::default(),
-                fields: Default::default(),
-                footer: Default::default(),
-                footer_icon: Default::default(),
-                image_url: Default::default(),
-                pretext: Default::default(),
-                text: Default::default(),
-                thumb_url: Default::default(),
-                title: Default::default(),
-                title_link: Default::default(),
-                ts: Default::default(),
-                blocks: vec![
-                    MessageBlock {
-                        block_type: MessageBlockType::Section,
-                        text: Some(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text,
-                        }),
-                        elements: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                    MessageBlock {
-                        block_type: MessageBlockType::Context,
-                        elements: vec![slack_chat_api::BlockOption::MessageBlockText(MessageBlockText {
-                            text_type: MessageType::Markdown,
-                            text: format!("SSL cert | _expires {}_", human_date),
-                        })],
-                        text: Default::default(),
-                        accessory: Default::default(),
-                        block_id: Default::default(),
-                        fields: Default::default(),
-                    },
-                ],
-            }],
-        }
-    }
-}
-
-impl From<Certificate> for FormattedMessage {
-    fn from(item: Certificate) -> Self {
-        let new: NewCertificate = item.into();
-        new.into()
-    }
-}
-
 impl NewCertificate {
-    // Send a slack notification to the channels in the object.
-    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
-        let mut msg: FormattedMessage = self.clone().into();
-
-        for channel in &self.notify_slack_channels {
-            // Set the channel.
-            msg.channel = channel.to_string();
-            // Post the message.
-            company.post_to_slack_channel(db, &msg).await?;
-        }
-
-        Ok(())
-    }
-
     /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
     /// The DNS Challenge TXT record is added to Cloudflare automatically.
-    pub async fn create_cert(&mut self, company: &Company) -> Result<()> {
+    pub async fn create_cert(&mut self, company: &Company) -> Result<AcmeCertificate> {
         let api_client = company.authenticate_dns_providers().await?;
 
         // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
@@ -185,8 +97,12 @@ impl NewCertificate {
         // that it's there.
         let acc = dir.account(&company.gsuite_subject)?;
 
+        log::info!("Authenticated with cert provider");
+
         // Order a new TLS certificate for a domain.
         let mut ord_new = acc.new_order(&self.domain, &[])?;
+
+        log::info!("Created new cert order for {}", self.domain);
 
         // If the ownership of the domain(s) have already been
         // authorized in a previous order, you might be able to
@@ -194,6 +110,7 @@ impl NewCertificate {
         let ord_csr = loop {
             // are we done?
             if let Some(ord_csr) = ord_new.confirm_validations() {
+                log::info!("Cert order validated for {}", self.domain);
                 break ord_csr;
             }
 
@@ -204,6 +121,8 @@ impl NewCertificate {
             // Get the proff we need for the TXT record:
             // _acme-challenge.<domain-to-be-proven>.  TXT  <proof>
             let challenge = auths[0].dns_challenge();
+
+            log::info!("Retrieved acme challenge for {}", self.domain);
 
             // Create a TXT record for _acme-challenge.{domain} with the value of
             // the proof.
@@ -222,10 +141,16 @@ impl NewCertificate {
                 )
                 .await?;
 
+            log::info!(
+                "Created _acme-challenge record for {}. Sleeping before starting validation",
+                self.domain
+            );
+
             // TODO: make this less awful than a sleep.
-            info!("validating the proof...");
             let dur = time::Duration::from_secs(10);
             tokio::time::sleep(dur).await;
+
+            log::info!("Waiting for validation for {} to complete", self.domain);
 
             // After the TXT record is accessible, the calls
             // this to tell the ACME API to start checking the
@@ -237,6 +162,8 @@ impl NewCertificate {
             // the API with 5000 milliseconds wait between.
             challenge.validate(5000)?;
 
+            log::info!("Validation for {} returned result. Updating state", self.domain);
+
             // Update the state against the ACME API.
             ord_new.refresh()?;
         };
@@ -245,6 +172,11 @@ impl NewCertificate {
         // the certificate. These are provided for convenience, you
         // can provide your own keypair instead if you want.
         let pkey_pri = create_p384_key();
+
+        log::info!(
+            "Submitting completed request and awaiting certificate for {}",
+            self.domain
+        );
 
         // Submit the CSR. This causes the ACME provider to enter a
         // state of "processing" that must be polled until the
@@ -256,219 +188,48 @@ impl NewCertificate {
         // the persistence.
         let cert = ord_cert.download_and_save_cert()?;
 
-        self.private_key = cert.private_key().to_string();
-        self.certificate = cert.certificate().to_string();
-        self.valid_days_left = cert.valid_days_left() as i32;
-        self.expiration_date = crate::utils::default_date();
+        log::info!("Retrieved certificate for {}", self.domain);
+
+        self.load_cert(cert.certificate().as_bytes())?;
+
+        // Set default values. Certificates and keys are stored externally
+        self.private_key = String::new();
+        self.certificate = String::new();
         self.cio_company_id = company.id;
 
-        Ok(())
+        Ok(cert)
     }
 
-    /// For a certificate struct, populate the certificate fields for the domain.
-    /// This will create the cert from Let's Encrypt and update Cloudflare TXT records for the
-    /// verification.
-    pub async fn populate(&mut self, company: &Company) -> Result<()> {
-        self.create_cert(company).await?;
+    pub fn load_cert(&mut self, certificate: &[u8]) -> Result<()> {
+        let expiration_date = Self::expiration_date(certificate)?;
+        self.expiration_date = expiration_date.date().naive_utc();
 
-        let exp_date = self.expiration_date();
-        self.expiration_date = exp_date.date().naive_utc();
-        self.valid_days_left = self.valid_days_left();
+        let dur = expiration_date - Utc::now();
+        self.valid_days_left = dur.num_days() as i32;
 
-        Ok(())
-    }
-
-    /// For a certificate struct, populate the certificate and private_key fields from
-    /// GitHub, then fill in the rest.
-    pub async fn populate_from_github(&mut self, github: &octorust::Client, company: &Company) -> Result<()> {
-        let owner = &company.github_org;
-        let repo = "configs";
-
-        if let Ok((cert, _)) = get_file_content_from_repo(
-            github,
-            owner,
-            repo,
-            "", // if empty it uses the default branch
-            &self.get_github_path("fullchain.pem"),
-        )
-        .await
-        {
-            if !cert.is_empty() {
-                self.certificate = from_utf8(&cert)?.to_string();
-            }
-        }
-
-        if let Ok((p, _)) = get_file_content_from_repo(
-            github,
-            owner,
-            repo,
-            "", // if empty it uses the default branch
-            &self.get_github_path("privkey.pem"),
-        )
-        .await
-        {
-            if !p.is_empty() {
-                self.private_key = from_utf8(&p)?.to_string();
-            }
-        }
-
-        let exp_date = self.expiration_date();
-        self.expiration_date = exp_date.date().naive_utc();
-        self.valid_days_left = self.valid_days_left();
+        log::info!("Loaded cert metadata for {}", self.domain);
 
         Ok(())
     }
 
-    /// For a certificate struct, populate the certificate and private_key fields from
-    /// disk, then fill in the rest.
-    pub async fn populate_from_disk(&mut self, dir: &str) {
-        let path = self.get_path(dir);
-
-        self.certificate = fs::read_to_string(path.join("fullchain.pem")).await.unwrap_or_default();
-        self.private_key = fs::read_to_string(path.join("privkey.pem")).await.unwrap_or_default();
-
-        if !self.certificate.is_empty() {
-            let exp_date = self.expiration_date();
-            self.expiration_date = exp_date.date().naive_utc();
-            self.valid_days_left = self.valid_days_left();
-        }
-    }
-
-    fn get_path(&self, dir: &str) -> PathBuf {
-        Path::new(dir).join(self.domain.replace("*.", "wildcard."))
-    }
-
-    fn get_github_path(&self, file: &str) -> String {
-        format!("/nginx/ssl/{}/{}", self.domain.replace("*.", "wildcard."), file)
-    }
-
-    /// Saves the fullchain certificate and privkey to /{dir}/{domain}/{privkey.pem,fullchain.pem}
-    pub async fn save_to_directory(&self, dir: &str) -> Result<()> {
-        if self.certificate.is_empty() {
-            // Return early.
-            return Ok(());
-        }
-
-        let path = self.get_path(dir);
-
-        // Create the directory if it does not exist.
-        fs::create_dir_all(path.clone()).await?;
-
-        // Write the files.
-        fs::write(path.join("fullchain.pem"), self.certificate.as_bytes()).await?;
-        fs::write(path.join("privkey.pem"), self.private_key.as_bytes()).await?;
-
-        Ok(())
-    }
-
-    /// Saves the fullchain certificate and privkey to the configs github repo.
-    pub async fn save_to_github_repo(&self, github: &octorust::Client, company: &Company) -> Result<()> {
-        if self.certificate.is_empty() {
-            // Return early.
-            return Ok(());
-        }
-
-        let owner = &company.github_org;
-        let repo = "configs";
-        let r = github.repos().get(owner, repo).await?;
-
-        // Write the files.
-        create_or_update_file_in_github_repo(
-            github,
-            owner,
-            repo,
-            &r.default_branch,
-            &self.get_github_path("fullchain.pem"),
-            self.certificate.as_bytes().to_vec(),
-        )
-        .await?;
-        create_or_update_file_in_github_repo(
-            github,
-            owner,
-            repo,
-            &r.default_branch,
-            &self.get_github_path("privkey.pem"),
-            self.private_key.as_bytes().to_vec(),
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    /// For the repos given, update the GitHub actions secrets with the new cert and key.
-    pub async fn update_github_action_secrets(&self, github: &octorust::Client, company: &Company) -> Result<()> {
-        if self.repos.is_empty()
-            || self.certificate_github_actions_secret_name.is_empty()
-            || self.private_key_github_actions_secret_name.is_empty()
-        {
-            // If we have no repos to update return early.
-            return Ok(());
-        }
-
-        let mut plain_text: BTreeMap<String, String> = Default::default();
-        plain_text.insert(
-            self.certificate_github_actions_secret_name.to_string(),
-            self.certificate.to_string(),
-        );
-        plain_text.insert(
-            self.private_key_github_actions_secret_name.to_string(),
-            self.private_key.to_string(),
-        );
-
-        for repo in &self.repos {
-            // First let's encrypt the secrets for the repo.
-            // This uses the repo's public key.
-            let (key_id, secrets) = crate::utils::encrypt_github_secrets(github, company, repo, &plain_text).await?;
-
-            // Update each secret.
-            for (name, secret) in secrets {
-                github
-                    .actions()
-                    .create_or_update_repo_secret(
-                        &company.github_org,
-                        repo,
-                        &name,
-                        &octorust::types::ActionsCreateUpdateRepoSecretRequest {
-                            encrypted_value: secret.to_string(),
-                            key_id: key_id.to_string(),
-                        },
-                    )
-                    .await?;
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Inspect the certificate to count the number of (whole) valid days left.
-    ///
-    /// It's up to the ACME API provider to decide how long an issued certificate is valid.
-    /// Let's Encrypt sets the validity to 90 days. This function reports 89 days for newly
-    /// issued cert, since it counts _whole_ days.
-    ///
-    /// It is possible to get negative days for an expired certificate.
-    pub fn valid_days_left(&self) -> i32 {
-        let expires = self.expiration_date();
-        let dur = expires - Utc::now();
-
-        dur.num_days() as i32
+    pub async fn load_from_reader<T>(&mut self, reader: &T) -> Result<()>
+    where
+        T: CertificateStorage,
+    {
+        self.load_cert(&reader.read_cert(&self.domain).await?)
     }
 
     /// Inspect the certificate to get the expiration_date.
-    pub fn expiration_date(&self) -> DateTime<Utc> {
-        if self.certificate.is_empty() {
-            return Utc::now();
-        }
-
+    pub fn expiration_date(certificate: &[u8]) -> Result<DateTime<Utc>> {
         // load as x509
-        let x509 = X509::from_pem(self.certificate.as_bytes()).expect("from_pem");
+        let x509 = X509::from_pem(certificate)?;
 
         // convert asn1 time to Tm
         let not_after = format!("{}", x509.not_after());
+
         // Display trait produces this format, which is kinda dumb.
         // Apr 19 08:48:46 2019 GMT
-        Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z")
-            .expect("strptime")
+        Ok(Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z")?)
     }
 }
 
@@ -480,28 +241,209 @@ impl UpdateAirtableRecord<Certificate> for Certificate {
     }
 }
 
-impl Certificate {
-    pub async fn send_slack_notification(&self, db: &Database, company: &Company) -> Result<()> {
-        let n: NewCertificate = self.into();
-        n.send_slack_notification(db, company).await
-    }
+impl NewCertificate {
+    pub async fn renew<'a>(
+        &'a mut self,
+        db: &'a Database,
+        company: &'a Company,
+        storage: &'a [Box<dyn SslCertificateStorage>],
+    ) -> Result<()> {
+        let renewed_certificate = self.create_cert(company).await?;
 
-    pub async fn renew(&self, db: &Database, github: &octorust::Client, company: &Company) -> Result<()> {
-        let mut cert: NewCertificate = self.into();
+        log::info!("Renewed certificate for {}", self.domain);
 
-        cert.populate(company).await?;
+        // Write the certificate and key to the requested locations
+        for store in storage {
+            store
+                .write_cert(&self.domain, renewed_certificate.certificate().as_bytes())
+                .await?;
+            store
+                .write_key(&self.domain, renewed_certificate.private_key().as_bytes())
+                .await?;
+        }
 
-        // Save the certificate to disk.
-        cert.save_to_github_repo(github, company).await?;
-
-        // Update the Github Action secrets, with the new certificates if there are some.
-        cert.update_github_action_secrets(github, company).await?;
+        log::info!("Stored certificate and key for {}", self.domain);
 
         // Update the database and Airtable.
-        cert.upsert(db).await?;
+        self.upsert(db).await?;
 
-        // Send the notification we renewed the cert.
-        cert.send_slack_notification(db, company).await?;
+        Ok(())
+    }
+}
+
+impl Certificate {
+    pub async fn renew<'a>(
+        &'a mut self,
+        db: &'a Database,
+        company: &'a Company,
+        storage: &'a [Box<dyn SslCertificateStorage>],
+    ) -> Result<()> {
+        let mut cert: NewCertificate = self.clone().into();
+        cert.renew(db, company, storage).await
+    }
+}
+
+pub trait SslCertificateStorage: CertificateStorage + KeyStorage + Send + Sync + 'static {}
+impl<T> SslCertificateStorage for T where T: CertificateStorage + KeyStorage + Send + Sync + 'static {}
+
+#[async_trait]
+pub trait CertificateStorage {
+    async fn read_cert(&self, domain: &str) -> Result<Vec<u8>>;
+    async fn write_cert(&self, domain: &str, data: &[u8]) -> Result<()>;
+}
+
+#[async_trait]
+pub trait KeyStorage {
+    async fn write_key(&self, domain: &str, data: &[u8]) -> Result<()>;
+}
+
+pub struct GitHubBackend {
+    client: octorust::Client,
+    owner: String,
+    repo: String,
+}
+
+impl GitHubBackend {
+    pub fn new(client: octorust::Client, owner: String, repo: String) -> Self {
+        Self { client, owner, repo }
+    }
+
+    async fn repo(&self) -> Result<FullRepository> {
+        self.client.repos().get(&self.owner, &self.repo).await
+    }
+
+    fn path(&self, domain: &str, file: &str) -> String {
+        format!("/nginx/ssl/{}/{}", domain.replace("*.", "wildcard."), file)
+    }
+}
+
+#[async_trait]
+impl CertificateStorage for GitHubBackend {
+    async fn read_cert(&self, domain: &str) -> Result<Vec<u8>> {
+        let (cert, _) = get_file_content_from_repo(
+            &self.client,
+            &self.owner,
+            &self.repo,
+            "", // if empty it uses the default branch
+            &self.path(domain, "fullchain.pem"),
+        )
+        .await?;
+
+        Ok(cert)
+    }
+
+    async fn write_cert(&self, domain: &str, data: &[u8]) -> Result<()> {
+        let repo = self.repo().await?;
+        create_or_update_file_in_github_repo(
+            &self.client,
+            &self.owner,
+            &self.repo,
+            &repo.default_branch,
+            &self.path(domain, "fullchain.pem"),
+            data.to_vec(),
+        )
+        .await?;
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl KeyStorage for GitHubBackend {
+    async fn write_key(&self, domain: &str, data: &[u8]) -> Result<()> {
+        let repo = self.repo().await?;
+
+        create_or_update_file_in_github_repo(
+            &self.client,
+            &self.owner,
+            &self.repo,
+            &repo.default_branch,
+            &self.path(domain, "privkey.pem"),
+            data.to_vec(),
+        )
+        .await?;
+
+        Ok(())
+    }
+}
+
+pub struct GcsBackend<S> {
+    client: Storage<S>,
+    bucket: String,
+    mime: Mime,
+}
+
+impl<S> GcsBackend<S>
+where
+    S: Send + Sync + Clone + google_storage1::hyper::service::Service<Uri> + 'static,
+    S::Response: Connection + AsyncRead + AsyncWrite + Send + Unpin + 'static,
+    S::Future: Send + Unpin + 'static,
+    S::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+{
+    pub fn new(client: Storage<S>, bucket: String) -> Self {
+        Self {
+            client,
+            bucket,
+            mime: "application/x-pem-file".parse().unwrap(),
+        }
+    }
+
+    fn path(&self, domain: &str, file_type: &str, file: &str) -> String {
+        format!("ssl/{}/{}/{}", domain.replace("*.", "wildcard."), file_type, file)
+    }
+}
+
+#[async_trait]
+impl<S> CertificateStorage for GcsBackend<S>
+where
+    S: Send + Sync + Clone + google_storage1::hyper::service::Service<Uri> + 'static,
+    S::Response: Connection + AsyncRead + AsyncWrite + Send + Unpin + 'static,
+    S::Future: Send + Unpin + 'static,
+    S::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+{
+    async fn read_cert(&self, domain: &str) -> Result<Vec<u8>> {
+        let path = self.path(domain, "certificate", "fullchain.pem");
+        let (response, _) = self.client.objects().get(&self.bucket, &path).doit().await?;
+        let data = hyper::body::to_bytes(response.into_body()).await?;
+
+        Ok(data.to_vec())
+    }
+
+    async fn write_cert(&self, domain: &str, data: &[u8]) -> Result<()> {
+        let path = self.path(domain, "certificate", "fullchain.pem");
+        let cursor = std::io::Cursor::new(data);
+
+        let request = Object::default();
+        self.client
+            .objects()
+            .insert(request, &self.bucket)
+            .name(&path)
+            .upload(cursor, self.mime.clone())
+            .await?;
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl<S> KeyStorage for GcsBackend<S>
+where
+    S: Send + Sync + Clone + google_storage1::hyper::service::Service<Uri> + 'static,
+    S::Response: Connection + AsyncRead + AsyncWrite + Send + Unpin + 'static,
+    S::Future: Send + Unpin + 'static,
+    S::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+{
+    async fn write_key(&self, domain: &str, data: &[u8]) -> Result<()> {
+        let path = self.path(domain, "key", "privkey.pem");
+        let cursor = std::io::Cursor::new(data);
+
+        let request = Object::default();
+        self.client
+            .objects()
+            .insert(request, &self.bucket)
+            .name(&path)
+            .upload(cursor, self.mime.clone())
+            .await?;
 
         Ok(())
     }
