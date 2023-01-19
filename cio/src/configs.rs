@@ -35,7 +35,7 @@ use crate::{
     },
     app_config::{AppConfig, OnboardingConfig},
     applicants::Applicant,
-    certs::{Certificate, Certificates, NewCertificate},
+    certs::{Certificate, Certificates, GitHubBackend, NewCertificate},
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
@@ -2666,13 +2666,15 @@ pub async fn sync_certificates(
     for u in db_certificates {
         certificate_map.insert(u.domain.to_string(), u);
     }
+
+    let cert_reader = GitHubBackend::new(github.clone(), company.github_org.clone(), company.certs_repo());
+    let cert_storage = company.cert_storage().await?;
+
     // Sync certificates.
     for (_, mut certificate) in certificates {
         certificate.cio_company_id = company.id;
 
-        certificate.populate_from_github(github, company).await?;
-
-        let mut send_notification = false;
+        certificate.load_from_reader(&cert_reader).await?;
 
         // If the cert is going to expire in less than 12 days, renew it.
         // Otherwise, return early.
@@ -2682,31 +2684,18 @@ pub async fn sync_certificates(
                 certificate.domain, certificate.valid_days_left
             );
         } else {
-            // Populate the certificate.
-            certificate.populate(company).await?;
-
-            // Save the certificate to disk.
-            certificate.save_to_github_repo(github, company).await?;
-
-            // Update the Github Action secrets, with the new certificates if there are some.
-            certificate.update_github_action_secrets(github, company).await?;
-
-            send_notification = true;
-        }
-
-        if certificate.certificate.is_empty() {
-            // Continue early.
-            continue;
+            // Renew
+            if let Err(err) = certificate.renew(db, company, &cert_storage).await {
+                log::error!(
+                    "Failed to renew certificate for {} due to {:?}",
+                    certificate.domain,
+                    err
+                );
+            }
         }
 
         // Update the database and Airtable.
         certificate.upsert(db).await?;
-
-        // Send the notification, do this after updating the database, just in case there was
-        // an error.
-        if send_notification {
-            certificate.send_slack_notification(db, company).await?;
-        }
 
         // Remove the certificate from the BTreeMap.
         certificate_map.remove(&certificate.domain);
@@ -2716,7 +2705,7 @@ pub async fn sync_certificates(
     // This is found by the remaining certificates that are in the map since we removed
     // the existing repos from the map above.
     for (_, cert) in certificate_map {
-        cert.delete(db).await?;
+        info!("Certificate for {} needs to be deleted", cert.domain);
     }
     info!("updated configs certificates in the database");
 
