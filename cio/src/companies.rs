@@ -15,11 +15,11 @@ use google_dns1::Dns;
 use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
 use google_storage1::{
-    Storage,
     hyper,
     hyper::client::HttpConnector,
     hyper_rustls,
     hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
+    Storage,
 };
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
@@ -47,7 +47,7 @@ use zoom_api::Client as Zoom;
 use crate::{
     airtable::{AIRTABLE_COMPANIES_TABLE, AIRTABLE_GRID_VIEW},
     api_tokens::{APIToken, NewAPIToken},
-    certs::{GitHubBackend, GcsBackend, SslCertificateStorage},
+    certs::{GcsBackend, GitHubBackend, SslCertificateStorage},
     cloud_dns::CloudDnsClient,
     cloudflare::CloudFlareClient,
     configs::{Building, Buildings},
@@ -1060,9 +1060,7 @@ impl Company {
     pub async fn cert_storage(&self) -> Result<Vec<Box<dyn SslCertificateStorage>>> {
         let github = self.authenticate_github()?;
 
-        let gcp_auth = self
-            .authenticate_gcp()
-            .await?;
+        let gcp_auth = self.authenticate_gcp().await?;
 
         let gcs_storage = Storage::new(
             hyper::Client::builder().build(
@@ -1077,15 +1075,8 @@ impl Company {
         );
 
         Ok(vec![
-            Box::new(GitHubBackend::new(
-                github,
-                self.github_org.clone(),
-                self.configs_repo(),
-            )),
-            Box::new(GcsBackend::new(
-                gcs_storage,
-                self.configs_gcs(),
-            )),
+            Box::new(GitHubBackend::new(github, self.github_org.clone(), self.configs_repo())),
+            Box::new(GcsBackend::new(gcs_storage, self.configs_gcs())),
         ])
     }
 

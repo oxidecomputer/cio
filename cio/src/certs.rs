@@ -1,10 +1,7 @@
 #![allow(clippy::from_over_into)]
-use std::{
-    env,
-    time,
-};
+use std::{env, time};
 
-use acme_lib::{create_p384_key, persist::FilePersist, Directory, DirectoryUrl, Certificate as AcmeCertificate};
+use acme_lib::{create_p384_key, persist::FilePersist, Certificate as AcmeCertificate, Directory, DirectoryUrl};
 use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
@@ -12,8 +9,8 @@ use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use google_storage1::{
     api::{Object, Storage},
     hyper,
-    hyper::Uri,
     hyper::client::connect::Connection,
+    hyper::Uri,
 };
 use macros::db;
 use mime::Mime;
@@ -21,7 +18,7 @@ use octorust::types::FullRepository;
 use openssl::x509::X509;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tokio::{io::{AsyncRead, AsyncWrite}};
+use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::{
     airtable::AIRTABLE_CERTIFICATES_TABLE,
@@ -85,10 +82,7 @@ pub struct NewCertificate {
 impl NewCertificate {
     /// Creates a Let's Encrypt SSL certificate for a domain by using a DNS challenge.
     /// The DNS Challenge TXT record is added to Cloudflare automatically.
-    pub async fn create_cert(
-        &mut self,
-        company: &Company,
-    ) -> Result<AcmeCertificate> {
+    pub async fn create_cert(&mut self, company: &Company) -> Result<AcmeCertificate> {
         let api_client = company.authenticate_dns_providers().await?;
 
         // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
@@ -147,7 +141,10 @@ impl NewCertificate {
                 )
                 .await?;
 
-            log::info!("Created _acme-challenge record for {}. Sleeping before starting validation", self.domain);
+            log::info!(
+                "Created _acme-challenge record for {}. Sleeping before starting validation",
+                self.domain
+            );
 
             // TODO: make this less awful than a sleep.
             let dur = time::Duration::from_secs(10);
@@ -176,7 +173,10 @@ impl NewCertificate {
         // can provide your own keypair instead if you want.
         let pkey_pri = create_p384_key();
 
-        log::info!("Submitting completed request and awaiting certificate for {}", self.domain);
+        log::info!(
+            "Submitting completed request and awaiting certificate for {}",
+            self.domain
+        );
 
         // Submit the CSR. This causes the ACME provider to enter a
         // state of "processing" that must be polled until the
@@ -212,13 +212,15 @@ impl NewCertificate {
         Ok(())
     }
 
-    pub async fn load_from_reader<T>(&mut self, reader: &T) -> Result<()> where T: CertificateStorage {
+    pub async fn load_from_reader<T>(&mut self, reader: &T) -> Result<()>
+    where
+        T: CertificateStorage,
+    {
         self.load_cert(&reader.read_cert(&self.domain).await?)
     }
 
     /// Inspect the certificate to get the expiration_date.
     pub fn expiration_date(certificate: &[u8]) -> Result<DateTime<Utc>> {
-
         // load as x509
         let x509 = X509::from_pem(certificate)?;
 
@@ -240,15 +242,24 @@ impl UpdateAirtableRecord<Certificate> for Certificate {
 }
 
 impl NewCertificate {
-    pub async fn renew<'a>(&'a mut self, db: &'a Database, company: &'a Company, storage: &'a [Box<dyn SslCertificateStorage>]) -> Result<()> {
+    pub async fn renew<'a>(
+        &'a mut self,
+        db: &'a Database,
+        company: &'a Company,
+        storage: &'a [Box<dyn SslCertificateStorage>],
+    ) -> Result<()> {
         let renewed_certificate = self.create_cert(company).await?;
 
         log::info!("Renewed certificate for {}", self.domain);
 
         // Write the certificate and key to the requested locations
-        for store in storage.into_iter() {
-            store.write_cert(&self.domain, renewed_certificate.certificate().as_bytes()).await?;
-            store.write_key(&self.domain, renewed_certificate.private_key().as_bytes()).await?;
+        for store in storage {
+            store
+                .write_cert(&self.domain, renewed_certificate.certificate().as_bytes())
+                .await?;
+            store
+                .write_key(&self.domain, renewed_certificate.private_key().as_bytes())
+                .await?;
         }
 
         log::info!("Stored certificate and key for {}", self.domain);
@@ -261,7 +272,12 @@ impl NewCertificate {
 }
 
 impl Certificate {
-    pub async fn renew<'a>(&'a mut self, db: &'a Database, company: &'a Company, storage: &'a [Box<dyn SslCertificateStorage>]) -> Result<()> {
+    pub async fn renew<'a>(
+        &'a mut self,
+        db: &'a Database,
+        company: &'a Company,
+        storage: &'a [Box<dyn SslCertificateStorage>],
+    ) -> Result<()> {
         let mut cert: NewCertificate = self.clone().into();
         cert.renew(db, company, storage).await
     }
@@ -289,15 +305,11 @@ pub struct GitHubBackend {
 
 impl GitHubBackend {
     pub fn new(client: octorust::Client, owner: String, repo: String) -> Self {
-        Self {
-            client,
-            owner,
-            repo,
-        }
+        Self { client, owner, repo }
     }
 
     async fn repo(&self) -> Result<FullRepository> {
-        Ok(self.client.repos().get(&self.owner, &self.repo).await?)
+        self.client.repos().get(&self.owner, &self.repo).await
     }
 
     fn path(&self, domain: &str, file: &str) -> String {
@@ -361,11 +373,13 @@ pub struct GcsBackend<S> {
     mime: Mime,
 }
 
-impl<S> GcsBackend<S> where
-S: Send + Sync + Clone + google_storage1::hyper::service::Service<Uri> + 'static,
-S::Response: Connection + AsyncRead + AsyncWrite + Send + Unpin + 'static,
-S::Future: Send + Unpin + 'static,
-S::Error: Into<Box<dyn std::error::Error + Send + Sync>>, {
+impl<S> GcsBackend<S>
+where
+    S: Send + Sync + Clone + google_storage1::hyper::service::Service<Uri> + 'static,
+    S::Response: Connection + AsyncRead + AsyncWrite + Send + Unpin + 'static,
+    S::Future: Send + Unpin + 'static,
+    S::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+{
     pub fn new(client: Storage<S>, bucket: String) -> Self {
         Self {
             client,

@@ -35,7 +35,7 @@ use crate::{
     },
     app_config::{AppConfig, OnboardingConfig},
     applicants::Applicant,
-    certs::{Certificate, Certificates, NewCertificate, GitHubBackend},
+    certs::{Certificate, Certificates, GitHubBackend, NewCertificate},
     companies::Company,
     core::UpdateAirtableRecord,
     db::Database,
@@ -2667,11 +2667,7 @@ pub async fn sync_certificates(
         certificate_map.insert(u.domain.to_string(), u);
     }
 
-    let cert_reader = GitHubBackend::new(
-        github.clone(),
-        company.github_org.clone(),
-        company.configs_repo(),
-    );
+    let cert_reader = GitHubBackend::new(github.clone(), company.github_org.clone(), company.configs_repo());
     let cert_storage = company.cert_storage().await?;
 
     // Sync certificates.
@@ -2690,7 +2686,11 @@ pub async fn sync_certificates(
         } else {
             // Renew
             if let Err(err) = certificate.renew(db, company, &cert_storage).await {
-                log::error!("Failed to renew certificate for {} due to {:?}", certificate.domain, err);
+                log::error!(
+                    "Failed to renew certificate for {} due to {:?}",
+                    certificate.domain,
+                    err
+                );
             }
         }
 
