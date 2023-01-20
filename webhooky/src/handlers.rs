@@ -31,7 +31,7 @@ use slack_chat_api::{
 };
 
 use crate::{
-    context::Context,
+    context::ServerContext,
     handlers_github::RFDUpdater,
     server::{
         AirtableRowEvent, ApplicationFileUploadData, CounterResponse, GitHubRateLimit, RFDPathParams,
@@ -40,11 +40,11 @@ use crate::{
     slack_commands::SlackCommand,
 };
 
-pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> Result<CounterResponse> {
+pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<ServerContext>>) -> Result<CounterResponse> {
     let api_context = rqctx.context();
 
     // TODO: find a better way to do this.
-    if let Some(company) = Company::get_from_db(&api_context.db, "Oxide".to_string()).await {
+    if let Some(company) = Company::get_from_db(&api_context.app.db, "Oxide".to_string()).await {
         // TODO: change this one day to be the number of racks sold.
         // For now, use it as number of applications that need to be triaged.
         // Get the applicants that need to be triaged.
@@ -54,7 +54,7 @@ pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> 
                     .eq(company.id)
                     .and(applicants::dsl::status.eq(cio_api::applicant_status::Status::NeedsToBeTriaged.to_string())),
             )
-            .load_async::<Applicant>(api_context.db.pool())
+            .load_async::<Applicant>(api_context.app.db.pool())
             .await?;
 
         Ok(CounterResponse {
@@ -66,14 +66,14 @@ pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<Context>>) -> 
 }
 
 pub async fn handle_rfd_update_by_number(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     path_params: Path<RFDPathParams>,
 ) -> Result<()> {
     let num = path_params.into_inner().num;
     info!("triggering an update for RFD number `{}`", num);
 
     let api_context = rqctx.context();
-    let db = &api_context.db;
+    let db = &api_context.app.db;
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
@@ -85,15 +85,15 @@ pub async fn handle_rfd_update_by_number(
 
     let update = rfd.create_sync(&oxide).await?;
     let updater = RFDUpdater::default();
-    updater.handle(api_context, &[update]).await?;
+    updater.handle(&api_context.app, &[update]).await?;
 
     Ok(())
 }
 
-pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Result<GitHubRateLimit> {
+pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<ServerContext>>) -> Result<GitHubRateLimit> {
     let api_context = rqctx.context();
 
-    let db = &api_context.db;
+    let db = &api_context.app.db;
 
     // Get the company id for Oxide.
     // TODO: split this out per company.
@@ -114,11 +114,11 @@ pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<Context>>) -> Re
 }
 
 pub async fn handle_slack_commands(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     bot_command: BotCommand,
 ) -> Result<serde_json::Value> {
     let api_context = rqctx.context();
-    let db = &api_context.db;
+    let db = &api_context.app.db;
 
     // Get the company from the Slack team id.
     let company = Company::get_from_slack_team_id(db, &bot_command.team_id).await?;
@@ -436,7 +436,7 @@ pub async fn handle_slack_commands(
 }
 
 pub async fn handle_slack_interactive(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     body_param: String,
 ) -> Result<InteractiveResponse> {
     // Decode the URL encoded struct.
@@ -452,7 +452,7 @@ pub async fn handle_slack_interactive(
     };
 
     let ctx = rqctx.context();
-    let db = &ctx.db;
+    let db = &ctx.app.db;
 
     let mut interactive_response: InteractiveResponse = Default::default();
 
@@ -583,7 +583,7 @@ pub async fn handle_slack_interactive(
         // Trigger the action if it's a function.
         if action.action_id == "function" {
             // Run the command in the background so we don't have to wait for it.
-            if let Err(e) = crate::handlers_cron::handle_reexec_cmd(ctx, &action.value, true).await {
+            if let Err(e) = crate::handlers_cron::run_subcmd_job(ctx, &action.value).await {
                 sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", e));
             }
         }
@@ -593,7 +593,7 @@ pub async fn handle_slack_interactive(
 }
 
 pub async fn handle_airtable_employees_print_home_address_label(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -603,16 +603,16 @@ pub async fn handle_airtable_employees_print_home_address_label(
     }
 
     // Get the row from airtable.
-    let user = User::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let user = User::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     // Create a new shipment for the employee and print the label.
-    user.create_shipment_to_home_address(&api_context.db).await?;
+    user.create_shipment_to_home_address(&api_context.app.db).await?;
 
     Ok(())
 }
 
 pub async fn handle_airtable_certificates_renew(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -622,22 +622,24 @@ pub async fn handle_airtable_certificates_renew(
     }
 
     // Get the row from airtable.
-    let mut cert = Certificate::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let mut cert = Certificate::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
-    let company = cert.company(&api_context.db).await?;
+    let company = cert.company(&api_context.app.db).await?;
     let storage = company.cert_storage().await?;
 
     // Renew the cert.
-    cert.renew(&api_context.db, &company, &storage).await.map_err(|err| {
-        log::error!("Failed to complete requested renewal for {}", cert.domain);
-        err
-    })?;
+    cert.renew(&api_context.app.db, &company, &storage)
+        .await
+        .map_err(|err| {
+            log::error!("Failed to complete requested renewal for {}", cert.domain);
+            err
+        })?;
 
     Ok(())
 }
 
 pub async fn handle_airtable_assets_items_print_barcode_label(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -647,17 +649,17 @@ pub async fn handle_airtable_assets_items_print_barcode_label(
     }
 
     // Get the row from airtable.
-    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let asset_item = AssetItem::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     // Print the barcode label(s).
-    asset_item.print_label(&api_context.db).await?;
+    asset_item.print_label(&api_context.app.db).await?;
     info!("asset item {} printed label", asset_item.name);
 
     Ok(())
 }
 
 pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -668,17 +670,17 @@ pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
 
     // Get the row from airtable.
     let swag_inventory_item =
-        SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+        SwagInventoryItem::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     // Print the barcode label(s).
-    swag_inventory_item.print_label(&api_context.db).await?;
+    swag_inventory_item.print_label(&api_context.app.db).await?;
     info!("swag inventory item {} printed label", swag_inventory_item.name);
 
     Ok(())
 }
 
 pub async fn handle_airtable_applicants_request_background_check(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -688,10 +690,11 @@ pub async fn handle_airtable_applicants_request_background_check(
     }
 
     // Get the row from airtable.
-    let mut applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let mut applicant =
+        Applicant::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
     if applicant.criminal_background_check_status.is_empty() {
         // Request the background check, since we previously have not requested one.
-        applicant.send_background_check_invitation(&api_context.db).await?;
+        applicant.send_background_check_invitation(&api_context.app.db).await?;
         info!("sent background check invitation to applicant: {}", applicant.email);
     }
 
@@ -699,7 +702,7 @@ pub async fn handle_airtable_applicants_request_background_check(
 }
 
 pub async fn handle_airtable_applicants_update(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -709,14 +712,14 @@ pub async fn handle_airtable_applicants_update(
     }
 
     // Get the row from airtable.
-    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     if applicant.status.is_empty() {
         bail!("got an empty applicant status for row: {}", applicant.email);
     }
 
     // Grab our old applicant from the database.
-    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id).await?;
+    let mut db_applicant = Applicant::get_by_id(&api_context.app.db, applicant.id).await?;
 
     // Grab the status and the status raw.
     let status = cio_api::applicant_status::Status::from_str(&applicant.status).unwrap();
@@ -737,41 +740,45 @@ pub async fn handle_airtable_applicants_update(
     // let do the docusign stuff.
     if status_changed && status == cio_api::applicant_status::Status::GivingOffer {
         // Update the row in our database, first just in case..
-        db_applicant.update(&api_context.db).await?;
+        db_applicant.update(&api_context.app.db).await?;
 
         // Create our docusign client.
-        let company = db_applicant.company(&api_context.db).await?;
-        let dsa = company.authenticate_docusign(&api_context.db).await;
+        let company = db_applicant.company(&api_context.app.db).await?;
+        let dsa = company.authenticate_docusign(&api_context.app.db).await;
         if let Ok(ds) = dsa {
             let offer_letter = api_context
+                .app
                 .app_config
                 .read()
                 .unwrap()
                 .envelopes
                 .create_offer_letter(&db_applicant);
             db_applicant
-                .do_docusign_offer(&api_context.db, &ds, offer_letter)
+                .do_docusign_offer(&api_context.app.db, &ds, offer_letter)
                 .await?;
 
             let piia_letter = api_context
+                .app
                 .app_config
                 .read()
                 .unwrap()
                 .envelopes
                 .create_piia_letter(&db_applicant);
-            db_applicant.do_docusign_piia(&api_context.db, &ds, piia_letter).await?;
+            db_applicant
+                .do_docusign_piia(&api_context.app.db, &ds, piia_letter)
+                .await?;
         }
     }
 
     // Update the row in our database.
-    db_applicant.update(&api_context.db).await?;
+    db_applicant.update(&api_context.app.db).await?;
 
     info!("applicant {} updated successfully", applicant.email);
     Ok(())
 }
 
 pub async fn listen_airtable_applicants_recreate_piia_webhooks(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -781,20 +788,21 @@ pub async fn listen_airtable_applicants_recreate_piia_webhooks(
     }
 
     // Get the row from airtable.
-    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let applicant = Applicant::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     if applicant.status.is_empty() {
         bail!("got an empty applicant status for row: {}", applicant.email);
     }
 
     // Grab our old applicant from the database.
-    let mut db_applicant = Applicant::get_by_id(&api_context.db, applicant.id).await?;
+    let mut db_applicant = Applicant::get_by_id(&api_context.app.db, applicant.id).await?;
 
     // Create our docusign client.
-    let company = db_applicant.company(&api_context.db).await?;
-    let ds = company.authenticate_docusign(&api_context.db).await?;
+    let company = db_applicant.company(&api_context.app.db).await?;
+    let ds = company.authenticate_docusign(&api_context.app.db).await?;
 
     let piia_letter = api_context
+        .app
         .app_config
         .read()
         .unwrap()
@@ -802,7 +810,7 @@ pub async fn listen_airtable_applicants_recreate_piia_webhooks(
         .create_piia_letter(&db_applicant);
 
     db_applicant
-        .send_new_piia_for_accepted_applicant(&api_context.db, &ds, piia_letter)
+        .send_new_piia_for_accepted_applicant(&api_context.app.db, &ds, piia_letter)
         .await?;
 
     info!("sent applicant {} new PIIA documents successfully", applicant.id);
@@ -810,7 +818,7 @@ pub async fn listen_airtable_applicants_recreate_piia_webhooks(
 }
 
 pub async fn handle_airtable_shipments_outbound_create(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -820,7 +828,8 @@ pub async fn handle_airtable_shipments_outbound_create(
     }
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let shipment =
+        OutboundShipment::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     // If it is a row we created from our internal store do nothing.
     if shipment.notes.contains("Oxide store")
@@ -836,18 +845,18 @@ pub async fn handle_airtable_shipments_outbound_create(
     }
 
     // Update the row in our database.
-    let mut new_shipment = shipment.update(&api_context.db).await?;
+    let mut new_shipment = shipment.update(&api_context.app.db).await?;
     // Create the shipment in shippo.
-    new_shipment.create_or_get_shippo_shipment(&api_context.db).await?;
+    new_shipment.create_or_get_shippo_shipment(&api_context.app.db).await?;
     // Update airtable again.
-    new_shipment.update(&api_context.db).await?;
+    new_shipment.update(&api_context.app.db).await?;
 
     info!("shipment {} created successfully", shipment.email);
     Ok(())
 }
 
 pub async fn handle_airtable_shipments_outbound_reprint_label(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -858,23 +867,23 @@ pub async fn handle_airtable_shipments_outbound_reprint_label(
 
     // Get the row from airtable.
     let mut shipment =
-        OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+        OutboundShipment::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     // Reprint the label.
-    shipment.print_label(&api_context.db).await?;
+    shipment.print_label(&api_context.app.db).await?;
     info!("shipment {} reprinted label", shipment.email);
 
     // Update the field.
     shipment.status = "Label printed".to_string();
 
     // Update Airtable.
-    shipment.update(&api_context.db).await?;
+    shipment.update(&api_context.app.db).await?;
 
     Ok(())
 }
 
 pub async fn handle_airtable_shipments_outbound_reprint_receipt(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -884,20 +893,21 @@ pub async fn handle_airtable_shipments_outbound_reprint_receipt(
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let shipment =
+        OutboundShipment::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     // Reprint the receipt.
-    shipment.print_receipt(&api_context.db).await?;
+    shipment.print_receipt(&api_context.app.db).await?;
     info!("shipment {} reprinted receipt", shipment.email);
 
     // Update Airtable.
-    shipment.update(&api_context.db).await?;
+    shipment.update(&api_context.app.db).await?;
 
     Ok(())
 }
 
 pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -907,17 +917,18 @@ pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_
     let api_context = rqctx.context();
 
     // Get the row from airtable.
-    let shipment = OutboundShipment::get_from_airtable(&event.record_id, &api_context.db, event.cio_company_id).await?;
+    let shipment =
+        OutboundShipment::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     // Resend the email to the recipient.
-    shipment.send_email_to_recipient(&api_context.db).await?;
+    shipment.send_email_to_recipient(&api_context.app.db).await?;
     info!("resent the shipment email to the recipient {}", shipment.email);
 
     Ok(())
 }
 
 pub async fn handle_airtable_shipments_outbound_schedule_pickup(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -926,14 +937,14 @@ pub async fn handle_airtable_shipments_outbound_schedule_pickup(
 
     // Schedule the pickup.
     let api_context = rqctx.context();
-    let company = Company::get_by_id(&api_context.db, event.cio_company_id).await?;
-    OutboundShipments::create_pickup(&api_context.db, &company).await?;
+    let company = Company::get_by_id(&api_context.app.db, event.cio_company_id).await?;
+    OutboundShipments::create_pickup(&api_context.app.db, &company).await?;
 
     Ok(())
 }
 
 pub async fn handle_applicant_review(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: cio_api::applicant_reviews::NewApplicantReview,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -943,26 +954,26 @@ pub async fn handle_applicant_review(
     }
 
     // Add them to the database.
-    let mut review = event.upsert(&api_context.db).await?;
+    let mut review = event.upsert(&api_context.app.db).await?;
 
     info!("applicant review created successfully: {:?}", event);
 
     // Add the person to the scorers field of the applicant.
-    review.expand(&api_context.db).await?;
-    let review = review.update(&api_context.db).await?;
+    review.expand(&api_context.app.db).await?;
+    let review = review.update(&api_context.app.db).await?;
 
     // Get the applicant for the review.
     let mut applicant = Applicant::get_from_airtable(
         // Get the record id for the applicant.
         review.applicant.get(0).unwrap(),
-        &api_context.db,
+        &api_context.app.db,
         event.cio_company_id,
     )
     .await?;
 
     // Update the scorers for the applicant.
     // This will also update the database after.
-    applicant.update_reviews_scoring(&api_context.db).await?;
+    applicant.update_reviews_scoring(&api_context.app.db).await?;
 
     println!(
         "applicant {} with review by {} updated successfully",
@@ -973,7 +984,7 @@ pub async fn handle_applicant_review(
 }
 
 pub async fn handle_test_application_submit(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: Arc<RequestContext<ServerContext>>,
     event: cio_api::application_form::ApplicationForm,
 ) -> Result<()> {
     event.test_form_submission().await?;
@@ -987,13 +998,13 @@ pub async fn handle_test_application_submit(
 }
 
 pub async fn handle_application_submit(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: cio_api::application_form::ApplicationForm,
 ) -> Result<()> {
     let api_context = rqctx.context();
 
-    let app_config = api_context.app_config.read().unwrap().clone();
-    event.do_form(&api_context.db, app_config).await?;
+    let app_config = api_context.app.app_config.read().unwrap().clone();
+    event.do_form(&api_context.app.db, app_config).await?;
 
     info!("application for {} {} created successfully", event.email, event.role);
 
@@ -1001,7 +1012,7 @@ pub async fn handle_application_submit(
 }
 
 pub async fn handle_test_application_files_upload(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: Arc<RequestContext<ServerContext>>,
     data: ApplicationFileUploadData,
 ) -> Result<HashMap<String, String>> {
     // We will return a key value of the name of file and the link in google drive.
@@ -1070,7 +1081,7 @@ pub async fn handle_test_application_files_upload(
 }
 
 pub async fn handle_application_files_upload(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     data: ApplicationFileUploadData,
 ) -> Result<HashMap<String, String>> {
     // We will return a key value of the name of file and the link in google drive.
@@ -1090,7 +1101,7 @@ pub async fn handle_application_files_upload(
 
     // TODO: Add the files to google drive.
     let api_context = rqctx.context();
-    let db = &api_context.db;
+    let db = &api_context.app.db;
 
     let company = Company::get_by_id(db, data.cio_company_id).await?;
 
@@ -1174,7 +1185,7 @@ fn get_extension_from_filename(filename: &str) -> Option<&str> {
 }
 
 pub async fn handle_airtable_shipments_inbound_create(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -1182,7 +1193,7 @@ pub async fn handle_airtable_shipments_inbound_create(
     }
 
     let api_context = rqctx.context();
-    let db = &api_context.db;
+    let db = &api_context.app.db;
 
     // Get the row from airtable.
     let record = InboundShipment::get_from_airtable(&event.record_id, db, event.cio_company_id).await?;
@@ -1207,17 +1218,17 @@ pub async fn handle_airtable_shipments_inbound_create(
     Ok(())
 }
 
-pub async fn handle_store_order_create(rqctx: Arc<RequestContext<Context>>, event: Order) -> Result<()> {
+pub async fn handle_store_order_create(rqctx: Arc<RequestContext<ServerContext>>, event: Order) -> Result<()> {
     let api_context = rqctx.context();
 
-    event.do_order(&api_context.db).await?;
+    event.do_order(&api_context.app.db).await?;
 
     info!("order for {} created successfully", event.email);
     Ok(())
 }
 
 pub async fn handle_easypost_tracking_update(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: Arc<RequestContext<ServerContext>>,
     event: crate::server::EasyPostTrackingUpdateEvent,
 ) -> Result<()> {
     //let api_context = rqctx.context();
@@ -1228,7 +1239,7 @@ pub async fn handle_easypost_tracking_update(
 }
 
 pub async fn handle_shippo_tracking_update(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: serde_json::Value,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -1246,21 +1257,29 @@ pub async fn handle_shippo_tracking_update(
     }
 
     // Update the inbound shipment, if it exists.
-    if let Some(mut shipment) =
-        InboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()).await
+    if let Some(mut shipment) = InboundShipment::get_from_db(
+        &api_context.app.db,
+        ts.carrier.to_string(),
+        ts.tracking_number.to_string(),
+    )
+    .await
     {
-        shipment.expand(&api_context.db).await?;
+        shipment.expand(&api_context.app.db).await?;
     }
 
     // Update the outbound shipment if it exists.
-    if let Some(mut shipment) =
-        OutboundShipment::get_from_db(&api_context.db, ts.carrier.to_string(), ts.tracking_number.to_string()).await
+    if let Some(mut shipment) = OutboundShipment::get_from_db(
+        &api_context.app.db,
+        ts.carrier.to_string(),
+        ts.tracking_number.to_string(),
+    )
+    .await
     {
         // Update the shipment in shippo.
         // TODO: we likely don't need the extra request here, but it makes the code more DRY.
         // Clean this up eventually.
-        shipment.create_or_get_shippo_shipment(&api_context.db).await?;
-        shipment.update(&api_context.db).await?;
+        shipment.create_or_get_shippo_shipment(&api_context.app.db).await?;
+        shipment.update(&api_context.app.db).await?;
     }
 
     info!("shipment {} tracking status updated successfully", ts.tracking_number);
@@ -1268,7 +1287,7 @@ pub async fn handle_shippo_tracking_update(
 }
 
 pub async fn handle_checkr_background_update(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: checkr::WebhookEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -1285,7 +1304,7 @@ pub async fn handle_checkr_background_update(
     }
 
     // TODO: change this to the real company name.
-    let oxide = Company::get_from_db(&api_context.db, "Oxide".to_string())
+    let oxide = Company::get_from_db(&api_context.app.db, "Oxide".to_string())
         .await
         .unwrap();
 
@@ -1305,12 +1324,12 @@ pub async fn handle_checkr_background_update(
                 .or(applicants::dsl::name.eq(format!("{} {}", candidate.first_name, candidate.last_name))),
         )
         .filter(applicants::dsl::status.eq(cio_api::applicant_status::Status::Onboarding.to_string()))
-        .first_async::<Applicant>(api_context.db.pool())
+        .first_async::<Applicant>(api_context.app.db.pool())
         .await;
     if result.is_ok() {
         let mut applicant = result?;
         // Keep the fields from Airtable we need just in case they changed.
-        applicant.keep_fields_from_airtable(&api_context.db).await;
+        applicant.keep_fields_from_airtable(&api_context.app.db).await;
 
         // Set the status for the report.
         if event.data.object.package.contains("premium_criminal") {
@@ -1321,18 +1340,18 @@ pub async fn handle_checkr_background_update(
         }
 
         // Update the applicant.
-        applicant.update(&api_context.db).await?;
+        applicant.update(&api_context.app.db).await?;
     }
 
     Ok(())
 }
 
 pub async fn handle_docusign_envelope_update(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: Arc<RequestContext<ServerContext>>,
     event: docusign::Envelope,
 ) -> Result<()> {
     let api_context = rqctx.context();
-    let db = &api_context.db;
+    let db = &api_context.app.db;
 
     // We need to get the applicant for the envelope.
     // Check their offer first.
@@ -1396,9 +1415,12 @@ pub async fn handle_docusign_envelope_update(
     Ok(())
 }
 
-pub async fn handle_analytics_page_view(rqctx: Arc<RequestContext<Context>>, mut event: NewPageView) -> Result<()> {
+pub async fn handle_analytics_page_view(
+    rqctx: Arc<RequestContext<ServerContext>>,
+    mut event: NewPageView,
+) -> Result<()> {
     let api_context = rqctx.context();
-    let db = &api_context.db;
+    let db = &api_context.app.db;
 
     // Expand the page_view.
     event.set_page_link();
@@ -1411,7 +1433,7 @@ pub async fn handle_analytics_page_view(rqctx: Arc<RequestContext<Context>>, mut
     Ok(())
 }
 
-pub async fn handle_shipbob(rqctx: Arc<RequestContext<Context>>, event: serde_json::Value) -> Result<()> {
+pub async fn handle_shipbob(rqctx: Arc<RequestContext<ServerContext>>, event: serde_json::Value) -> Result<()> {
     // We need to get the webhook type from the header.
     let headers = rqctx.request.lock().await.headers().clone();
 

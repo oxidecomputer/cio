@@ -5731,6 +5731,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "slog-scope-futures"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0ad55b694ada4dc7097672e5a32fc16c35b183f9fa2531d17c7f07d25918eca"
+dependencies = [
+ "slog",
+ "slog-scope",
+]
+
+[[package]]
 name = "slog-stdlog"
 version = "4.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6864,6 +6874,7 @@ dependencies = [
  "slog-async",
  "slog-json",
  "slog-scope",
+ "slog-scope-futures",
  "slog-stdlog",
  "slog-term",
  "stacker",

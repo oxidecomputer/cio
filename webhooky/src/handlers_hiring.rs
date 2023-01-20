@@ -3,10 +3,8 @@ use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::{DateTime, Utc};
 use cio_api::{applicants::Applicant, schema::applicants};
 use diesel::{ExpressionMethods, QueryDsl};
-use dropshot::RequestContext;
 use schemars::JsonSchema;
 use serde::Serialize;
-use std::sync::Arc;
 
 use crate::context::Context;
 
@@ -23,9 +21,7 @@ pub struct ApplicantInfo {
     application: Option<ApplicationView>,
 }
 
-pub async fn handle_applicant_info(rqctx: Arc<RequestContext<Context>>, email: String) -> Result<ApplicantInfo> {
-    let ctx = rqctx.context();
-
+pub async fn handle_applicant_info(ctx: &Context, email: String) -> Result<ApplicantInfo> {
     // Applicants is unfortunately not unique on the email column. We need to return the newest
     // record to work around a few cases where ignoring the Google sheet id resulted in multiple
     // records being created
@@ -51,12 +47,7 @@ pub struct ApplicantUploadToken {
     token: String,
 }
 
-pub async fn handle_applicant_upload_token(
-    rqctx: Arc<RequestContext<Context>>,
-    email: String,
-) -> Result<ApplicantUploadToken> {
-    let ctx = rqctx.context();
-
+pub async fn handle_applicant_upload_token(ctx: &Context, email: String) -> Result<ApplicantUploadToken> {
     let token = ctx.upload_token_store.get(&email).await?;
 
     Ok(ApplicantUploadToken {

@@ -61,7 +61,6 @@ async fn main() -> Result<(), String> {
     api.register(api_get_links).unwrap();
     api.register(api_get_mailing_list_subscribers).unwrap();
     api.register(api_get_rfds).unwrap();
-    api.register(api_get_schema).unwrap();
     api.register(api_get_users).unwrap();
 
     // Print the OpenAPI Spec to stdout.
@@ -73,13 +72,12 @@ async fn main() -> Result<(), String> {
     let api_file = "openapi-cio.json";
     println!("Writing OpenAPI spec to {}...", api_file);
     let mut buffer = File::create(api_file).unwrap();
-    let schema = api_definition.json().unwrap().to_string();
     api_definition.write(&mut buffer).unwrap();
 
     /*
      * The functions that implement our API endpoints will share this context.
      */
-    let api_context = Context::new(schema).await;
+    let api_context = Context::new().await;
 
     /*
      * Set up the server.
@@ -95,16 +93,14 @@ async fn main() -> Result<(), String> {
  */
 struct Context {
     db: Database,
-    schema: String,
 }
 
 impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new(schema: String) -> Context {
+    pub async fn new() -> Context {
         Context {
-            schema,
             db: Database::new().await,
         }
     }
@@ -113,19 +109,6 @@ impl Context {
 /*
  * HTTP API interface
  */
-
-/**
- * Return the OpenAPI schema in JSON format.
- */
-#[endpoint {
-    method = GET,
-    path = "/",
-}]
-async fn api_get_schema(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
-    let api_context = rqctx.context();
-
-    Ok(HttpResponseOk(api_context.schema.to_string()))
-}
 
 /**
  * Fetch all auth users.

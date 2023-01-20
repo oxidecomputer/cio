@@ -5,9 +5,7 @@ use cio_api::{
     schema::rfds,
 };
 use diesel::{ExpressionMethods, QueryDsl};
-use dropshot::RequestContext;
 use log::{info, warn};
-use std::sync::Arc;
 
 use crate::{
     context::Context,
@@ -21,13 +19,7 @@ use crate::{
     },
 };
 
-pub async fn handle_rfd_index(
-    rqctx: Arc<RequestContext<Context>>,
-    offset: i32,
-    limit: u32,
-) -> Result<Vec<RFDIndexEntry>> {
-    let ctx = rqctx.context();
-
+pub async fn handle_rfd_index(ctx: &Context, offset: i32, limit: u32) -> Result<Vec<RFDIndexEntry>> {
     let rfds = rfds::dsl::rfds
         .order_by(rfds::dsl::number)
         .offset(offset as i64)
@@ -55,9 +47,7 @@ pub async fn handle_rfd_index(
     Ok(rfds)
 }
 
-pub async fn handle_rfd_view(rqctx: Arc<RequestContext<Context>>, num: i32) -> Result<Option<RFDEntry>> {
-    let ctx = rqctx.context();
-
+pub async fn handle_rfd_view(ctx: &Context, num: i32) -> Result<Option<RFDEntry>> {
     let mut rfd = rfds::dsl::rfds
         .filter(rfds::dsl::number.eq(num))
         .load_async::<RFD>(ctx.db.pool())
