@@ -574,7 +574,7 @@ pub async fn handle_repository_event(
         github,
         company,
         &company.authenticate_dns_providers().await?,
-        "configs",
+        &company.nginx_repo(),
     )
     .await?;
 

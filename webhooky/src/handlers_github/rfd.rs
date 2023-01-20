@@ -484,7 +484,7 @@ impl GenerateShortUrls {
             github,
             &api_context.company,
             &api_context.company.authenticate_dns_providers().await?,
-            "configs",
+            &api_context.company.nginx_repo(),
         )
         .await?;
 
