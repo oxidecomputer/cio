@@ -239,7 +239,7 @@ pub async fn server(
             .every(23.hours())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-api-tokens")});
         scheduler
-            .every(6.hours())
+            .every(7.hours())
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-applications")});
         scheduler
             .every(2.hours())
@@ -297,7 +297,7 @@ pub async fn server(
             .run(enclose! { (api_context) move || create_do_job_fn(api_context.clone(), "sync-zoho")});
         scheduler
             .every(5.minutes())
-            .run(|| async { log::info!("Scheduler heartbeat") });
+            .run(|| async { crate::health::scheduler_health_check() });
 
         // Run the RFD changelog.
         scheduler

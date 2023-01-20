@@ -16,6 +16,7 @@ mod handlers_hiring;
 mod handlers_rfd;
 mod handlers_slack;
 // mod handlers_sendgrid;
+mod health;
 mod http;
 mod mailing_lists;
 mod repos;
@@ -43,6 +44,7 @@ use slog::Drain;
 use std::fs::File;
 
 use crate::context::Context;
+use crate::health::SelfMemory;
 use crate::server::APIConfig;
 
 fn main() -> Result<()> {
@@ -55,6 +57,10 @@ fn main() -> Result<()> {
 
 async fn tokio_main() -> Result<()> {
     let opts: crate::core::Opts = crate::core::Opts::parse();
+
+    if let Ok(mem) = SelfMemory::new() {
+        log::info!("Memory at start of command exec {:?}: {:?}", opts.subcmd, mem);
+    }
 
     // Initialize sentry.
     let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
@@ -144,7 +150,11 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
         scope.set_tag("command", &std::env::args().collect::<Vec<String>>().join(" "));
     });
 
-    match opts.subcmd {
+    if let Ok(mem) = SelfMemory::new() {
+        log::info!("Memory at start of command run {:?}: {:?}", opts.subcmd, mem);
+    }
+
+    match opts.subcmd.clone() {
         crate::core::SubCommand::Server(s) => {
             sentry::configure_scope(|scope| {
                 scope.set_tag("do-cron", s.do_cron.to_string());
@@ -251,8 +261,15 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
             cio_api::recorded_meetings::refresh_google_recorded_meetings(&db, &company).await?;
         }
         crate::core::SubCommand::SyncRepos(_) => {
-            let Context { db, company, .. } = context;
-            let sync_result = cio_api::repos::sync_all_repo_settings(&db, &company).await;
+            let Context {
+                db,
+                company,
+                app_config,
+                ..
+            } = context;
+            let app_config = app_config.read().unwrap().clone();
+
+            let sync_result = cio_api::repos::sync_all_repo_settings(&db, &company, &app_config).await;
             let refresh_result = cio_api::repos::refresh_db_github_repos(&db, &company).await;
 
             if let Err(ref e) = sync_result {
@@ -311,6 +328,10 @@ async fn run_cmd(opts: crate::core::Opts, api: APIConfig, context: Context) -> R
             let Context { db, company, .. } = context;
             cio_api::zoho::refresh_leads(&db, &company).await?;
         }
+    }
+
+    if let Ok(mem) = SelfMemory::new() {
+        log::info!("Memory at end of command run {:?}: {:?}", opts.subcmd, mem);
     }
 
     Ok(())

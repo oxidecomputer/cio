@@ -13,6 +13,8 @@ use cio_api::{
 use serde::{Deserialize, Serialize};
 use std::io::BufRead;
 
+use crate::health::SelfMemory;
+
 /// Define our saga for syncing repos.
 #[derive(Debug)]
 pub struct Saga;
@@ -152,9 +154,19 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
 
     // We use spawn_blocking here since the BufReader etc from duct will otherwise,
     // block the main thread.
-    let result = tokio::task::spawn_blocking(
-        enclose! { (db, cmd_name, saga_id) move || async move { reexec(&db, &cmd_name, &saga_id).await } },
-    )
+    let result = tokio::task::spawn_blocking(enclose! { (db, cmd_name, saga_id) move || async move {
+        if let Ok(mem) = SelfMemory::new() {
+            log::info!("Memory before running {}({}): {:?}", cmd_name, saga_id, mem);
+        }
+
+        let result = reexec(&db, &cmd_name, &saga_id).await;
+
+        if let Ok(mem) = SelfMemory::new() {
+            log::info!("Memory after running {}({}): {:?}", cmd_name, saga_id, mem);
+        }
+
+        result
+    } })
     .await
     .map_err(|err| steno::ActionError::action_failed(format!("ERROR:\n\n{:?}", err)))?
     .await;
