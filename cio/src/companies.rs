@@ -1088,6 +1088,10 @@ impl Company {
         std::env::var("CERTS_REPO").unwrap()
     }
 
+    pub fn nginx_repo(&self) -> String {
+        std::env::var("NGINX_REPO").unwrap()
+    }
+
     pub fn rfd_static_storage(&self) -> String {
         std::env::var("RFD_STATIC_BUCKET").unwrap()
     }
