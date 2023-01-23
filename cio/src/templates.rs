@@ -42,7 +42,7 @@ struct GitHubTeamMembers {
 pub async fn generate_nginx_files_for_shorturls(
     github: &octorust::Client,
     owner: &str,
-    repo: &str,
+    repos: &[String],
     shorturls: Vec<ShortUrl>,
 ) -> Result<()> {
     if shorturls.is_empty() {
@@ -65,15 +65,17 @@ pub async fn generate_nginx_files_for_shorturls(
     // Add the vim formating string.
     nginx_rendered += "# vi: ft=nginx";
 
-    create_or_update_file_in_github_repo(
-        github,
-        owner,
-        repo,
-        "", // leaving the branch blank gives us the default branch
-        &nginx_file,
-        nginx_rendered.as_bytes().to_vec(),
-    )
-    .await?;
+    for repo in repos {
+        create_or_update_file_in_github_repo(
+            github,
+            owner,
+            repo,
+            "", // leaving the branch blank gives us the default branch
+            &nginx_file,
+            nginx_rendered.as_bytes().to_vec(),
+        )
+        .await?;
+    }
 
     // Generate the paths nginx file.
     let nginx_paths_file = format!("/nginx/conf.d/generated.{}.paths.{}.conf", subdomain, domain);
@@ -84,15 +86,17 @@ pub async fn generate_nginx_files_for_shorturls(
     // Add the vim formating string.
     nginx_paths_rendered += "# vi: ft=nginx";
 
-    create_or_update_file_in_github_repo(
-        github,
-        owner,
-        repo,
-        "", // leaving the branch blank gives us the default branch
-        &nginx_paths_file,
-        nginx_paths_rendered.as_bytes().to_vec(),
-    )
-    .await?;
+    for repo in repos {
+        create_or_update_file_in_github_repo(
+            github,
+            owner,
+            repo,
+            "", // leaving the branch blank gives us the default branch
+            &nginx_paths_file,
+            nginx_paths_rendered.as_bytes().to_vec(),
+        )
+        .await?;
+    }
 
     Ok(())
 }
