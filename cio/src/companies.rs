@@ -15,8 +15,11 @@ use google_dns1::Dns;
 use google_drive::Client as GoogleDrive;
 use google_groups_settings::Client as GoogleGroupsSettings;
 use google_storage1::{
+    hyper,
     hyper::client::HttpConnector,
+    hyper_rustls,
     hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
+    Storage,
 };
 use gsuite_api::Client as GoogleAdmin;
 use gusto_api::Client as Gusto;
@@ -44,6 +47,7 @@ use zoom_api::Client as Zoom;
 use crate::{
     airtable::{AIRTABLE_COMPANIES_TABLE, AIRTABLE_GRID_VIEW},
     api_tokens::{APIToken, NewAPIToken},
+    certs::{GcsBackend, GitHubBackend, SslCertificateStorage},
     cloud_dns::CloudDnsClient,
     cloudflare::CloudFlareClient,
     configs::{Building, Buildings},
@@ -1051,6 +1055,52 @@ impl Company {
             self.authenticate_cloudflare()?,
             self.authenticate_cloud_dns().await?,
         ))
+    }
+
+    pub async fn cert_storage(&self) -> Result<Vec<Box<dyn SslCertificateStorage>>> {
+        let gcp_auth = self.authenticate_gcp().await?;
+
+        let gcs_storage = Storage::new(
+            hyper::Client::builder().build(
+                hyper_rustls::HttpsConnectorBuilder::new()
+                    .with_native_roots()
+                    .https_or_http()
+                    .enable_http1()
+                    .enable_http2()
+                    .build(),
+            ),
+            gcp_auth,
+        );
+
+        Ok(vec![
+            Box::new(GitHubBackend::new(
+                self.authenticate_github()?,
+                self.github_org.clone(),
+                self.certs_repo(),
+            )),
+            Box::new(GcsBackend::new(gcs_storage, self.certs_gcs())),
+            Box::new(GitHubBackend::new(
+                self.authenticate_github()?,
+                self.github_org.clone(),
+                self.shorturl_repo(),
+            )),
+        ])
+    }
+
+    pub fn certs_gcs(&self) -> String {
+        std::env::var("CERTS_GCS").unwrap()
+    }
+
+    pub fn certs_repo(&self) -> String {
+        std::env::var("CERTS_REPO").unwrap()
+    }
+
+    pub fn nginx_repo(&self) -> String {
+        std::env::var("NGINX_REPO").unwrap()
+    }
+
+    pub fn shorturl_repo(&self) -> String {
+        std::env::var("SHORTURL_REPO").unwrap()
     }
 
     pub fn rfd_static_storage(&self) -> String {

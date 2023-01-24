@@ -152,16 +152,24 @@ pub struct FinanceConfig {
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
+pub struct GitHubConfig {
+    #[serde(default)]
+    pub ignored_repos: Vec<String>,
+}
+
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct AppConfig {
     pub envelopes: DocuSignConfig,
     pub onboarding: OnboardingConfig,
     pub apply: ApplyConfig,
     pub finance: FinanceConfig,
+    #[serde(default)]
+    pub github: GitHubConfig,
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{ApplyConfig, DocuSignConfig, OnboardingConfig};
+    use super::{ApplyConfig, DocuSignConfig, GitHubConfig, OnboardingConfig};
     use crate::{applicants::tests::mock_applicant, companies::tests::mock_company, configs::tests::mock_user};
 
     fn mock_docusign_toml(label: &str) -> String {
@@ -340,5 +348,25 @@ github org: super_computer_org
             vec!["first@testemaildomain.com", "random-test@testemaildomain.com"],
             letter.cc
         );
+    }
+
+    #[test]
+    fn test_missing_github_config() {
+        let config: GitHubConfig = toml::from_str("").unwrap();
+        assert!(config.ignored_repos.is_empty());
+    }
+
+    #[test]
+    fn test_github_config() {
+        let config: GitHubConfig = toml::from_str(
+            r#"
+ignored_repos = [
+    "12345",
+    "67890"
+]
+"#,
+        )
+        .unwrap();
+        assert_eq!(vec!["12345".to_string(), "67890".to_string(),], config.ignored_repos);
     }
 }

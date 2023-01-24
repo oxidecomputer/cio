@@ -622,14 +622,18 @@ pub async fn handle_airtable_certificates_renew(
     }
 
     // Get the row from airtable.
-    let cert = Certificate::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
+    let mut cert = Certificate::get_from_airtable(&event.record_id, &api_context.app.db, event.cio_company_id).await?;
 
     let company = cert.company(&api_context.app.db).await?;
-
-    let github = company.authenticate_github()?;
+    let storage = company.cert_storage().await?;
 
     // Renew the cert.
-    cert.renew(&api_context.app.db, &github, &company).await?;
+    cert.renew(&api_context.app.db, &company, &storage)
+        .await
+        .map_err(|err| {
+            log::error!("Failed to complete requested renewal for {}", cert.domain);
+            err
+        })?;
 
     Ok(())
 }

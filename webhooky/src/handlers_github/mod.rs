@@ -417,9 +417,6 @@ pub async fn handle_configs_push(
     event: GitHubWebhook,
     company: &Company,
 ) -> Result<String> {
-    // Get the repo.
-    let repo = event.repository.name.to_string();
-
     if event.commits.is_empty() {
         // Return early that there are no commits.
         // IDK how we got here.
@@ -483,13 +480,15 @@ pub async fn handle_configs_push(
         sync_links(&api_context.db, configs.links, configs.huddles, company).await?;
         a("[SUCCESS]: links");
 
+        let out_repos = vec![company.nginx_repo(), company.shorturl_repo()];
+
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(
             &api_context.db,
             github,
             company,
             &company.authenticate_dns_providers().await?,
-            &repo,
+            &out_repos,
         )
         .await?;
         a("[SUCCESS]: links shorturls");
@@ -572,6 +571,8 @@ pub async fn handle_repository_event(
         new_repo.full_name
     ));
 
+    let out_repos = vec![company.nginx_repo(), company.shorturl_repo()];
+
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
     // Update the short urls for all the repos.
@@ -580,15 +581,21 @@ pub async fn handle_repository_event(
         github,
         company,
         &company.authenticate_dns_providers().await?,
-        "configs",
+        &out_repos,
     )
     .await?;
 
     a("[SUCCESS]: generated short urls");
 
+    let app_config = api_context.app_config.read().unwrap().clone();
+
     // Sync the settings for this repo.
-    new_repo.sync_settings(github, company).await?;
-    a("[SUCCESS]: synced settings");
+    if app_config.github.ignored_repos.contains(&new_repo.github_id) {
+        a(&format!("[SUCCESS]: skipping setting sync for {}", new_repo.name));
+    } else {
+        new_repo.sync_settings(github, company).await?;
+        a("[SUCCESS]: synced settings");
+    }
 
     Ok(message)
 }

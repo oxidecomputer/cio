@@ -96,8 +96,15 @@ pub async fn run_job_cmd(cmd: crate::core::SubCommand, context: Context) -> Resu
             cio_api::recorded_meetings::refresh_google_recorded_meetings(&db, &company).await?;
         }
         crate::core::SubCommand::SyncRepos(_) => {
-            let Context { db, company, .. } = context;
-            let sync_result = cio_api::repos::sync_all_repo_settings(&db, &company).await;
+            let Context {
+                db,
+                company,
+                app_config,
+                ..
+            } = context;
+
+            let app_config = app_config.read().unwrap().clone();
+            let sync_result = cio_api::repos::sync_all_repo_settings(&db, &company, &app_config).await;
             let refresh_result = cio_api::repos::refresh_db_github_repos(&db, &company).await;
 
             if let Err(ref e) = sync_result {

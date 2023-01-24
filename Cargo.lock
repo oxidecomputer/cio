@@ -825,6 +825,7 @@ dependencies = [
  "mailerlite",
  "md-5",
  "meilisearch-minimal-api",
+ "mime 0.2.6",
  "names",
  "nom_pem",
  "octorust",
