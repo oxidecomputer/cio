@@ -74,6 +74,7 @@ slog = "2"
 slog-async = "2"
 slog-json = "^2.6.1"
 slog-scope = "4"
+slog-scope-futures = "0.1.1"
 slog-stdlog = "4"
 slog-term = "2"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }

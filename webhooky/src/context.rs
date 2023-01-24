@@ -9,12 +9,27 @@ use cio_api::{
 use std::sync::{Arc, RwLock};
 
 #[derive(Clone, Debug)]
+pub struct ServerContext {
+    pub sec: Arc<steno::SecClient>,
+    pub app: Context,
+}
+
+impl ServerContext {
+    pub async fn new(company_id: i32, logger: slog::Logger) -> Result<ServerContext> {
+        let context = Context::new(company_id).await?;
+
+        Ok(Self {
+            sec: Arc::new(steno::sec(logger, Arc::new(context.db.clone()))),
+            app: context,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Context {
     pub app_config: Arc<RwLock<AppConfig>>,
     pub db: Database,
     pub company: Company,
-    pub sec: Arc<steno::SecClient>,
-    pub schema: serde_json::Value,
     pub upload_token_store: UploadTokenStore,
 }
 
@@ -22,9 +37,8 @@ impl Context {
     /**
      * Return a new Context.
      */
-    pub async fn new(company_id: i32, schema: serde_json::Value, logger: slog::Logger) -> Result<Context> {
+    pub async fn new(company_id: i32) -> Result<Context> {
         let db = Database::new().await;
-        let sec = steno::sec(logger, Arc::new(db.clone()));
 
         let company = Companys::get_from_db(&db, company_id)
             .await?
@@ -39,8 +53,6 @@ impl Context {
             app_config: Arc::new(RwLock::new(configs.app_config)),
             db: db.clone(),
             company,
-            sec: Arc::new(sec),
-            schema,
             upload_token_store: UploadTokenStore::new(db, chrono::Duration::minutes(10)),
         })
     }
