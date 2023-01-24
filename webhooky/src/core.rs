@@ -1,15 +1,4 @@
 use clap::Parser;
-use slog::Drain;
-
-lazy_static! {
-    // We need a slog::Logger for steno and when we export out the logs from re-exec-ed processes.
-    pub static ref LOGGER: slog::Logger = {
-        let decorator = slog_term::TermDecorator::new().build();
-        let drain = slog_term::FullFormat::new(decorator).build().fuse();
-        let drain = slog_async::Async::new(drain).build().fuse();
-        slog::Logger::root(drain, slog::slog_o!())
-    };
-}
 
 /// This doc string acts as a help message when the user runs '--help'
 /// as do all doc strings on fields.
@@ -166,3 +155,31 @@ pub struct SyncTravel {}
 /// A subcommand for running the background job of syncing Zoho leads.
 #[derive(Parser, Debug, Clone)]
 pub struct SyncZoho {}
+
+pub fn into_job_command(cmd: &str) -> Option<SubCommand> {
+    match cmd {
+        "send-rfd-changelog" => Some(SubCommand::SendRFDChangelog(SendRFDChangelog {})),
+        "sync-analytics" => Some(SubCommand::SyncAnalytics(SyncAnalytics {})),
+        "sync-api-tokens" => Some(SubCommand::SyncAPITokens(SyncAPITokens {})),
+        "sync-applications" => Some(SubCommand::SyncApplications(SyncApplications {})),
+        "sync-asset-inventory" => Some(SubCommand::SyncAssetInventory(SyncAssetInventory {})),
+        "sync-companies" => Some(SubCommand::SyncCompanies(SyncCompanies {})),
+        "sync-configs" => Some(SubCommand::SyncConfigs(SyncConfigs {})),
+        "sync-finance" => Some(SubCommand::SyncFinance(SyncFinance {})),
+        "sync-functions" => Some(SubCommand::SyncFunctions(SyncFunctions {})),
+        "sync-huddles" => Some(SubCommand::SyncHuddles(SyncHuddles {})),
+        "sync-interviews" => Some(SubCommand::SyncInterviews(SyncInterviews {})),
+        "sync-journal-clubs" => Some(SubCommand::SyncJournalClubs(SyncJournalClubs {})),
+        "sync-mailing-lists" => Some(SubCommand::SyncMailingLists(SyncMailingLists {})),
+        "sync-other" => Some(SubCommand::SyncOther(SyncOther {})),
+        "sync-recorded-meetings" => Some(SubCommand::SyncRecordedMeetings(SyncRecordedMeetings {})),
+        "sync-repos" => Some(SubCommand::SyncRepos(SyncRepos {})),
+        "sync-rfds" => Some(SubCommand::SyncRFDs(SyncRFDs {})),
+        "sync-shipments" => Some(SubCommand::SyncShipments(SyncShipments {})),
+        "sync-shorturls" => Some(SubCommand::SyncShorturls(SyncShorturls {})),
+        "sync-swag-inventory" => Some(SubCommand::SyncSwagInventory(SyncSwagInventory {})),
+        "sync-travel" => Some(SubCommand::SyncTravel(SyncTravel {})),
+        "sync-zoho" => Some(SubCommand::SyncZoho(SyncZoho {})),
+        _ => None,
+    }
+}

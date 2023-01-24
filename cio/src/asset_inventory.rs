@@ -300,15 +300,16 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()>
     let parent_id = drive_client.files().create_folder(&drive_id, "", "assets").await?;
 
     // Get all the records from Airtable.
-    let mut generator = names::Generator::default();
     let results: Vec<airtable_api::Record<AssetItem>> = company
         .authenticate_airtable(&company.airtable_base_id_assets)
         .list_records(&AssetItem::airtable_table(), "Grid view", vec![])
         .await?;
+
     for item_record in results {
         let mut item: NewAssetItem = item_record.fields.into();
         if item.name.is_empty() {
-            item.name = generator.next().unwrap();
+            // A new generator is created for each use as the Generator is not Send
+            item.name = names::Generator::default().next().unwrap();
         }
 
         // Iterating through and processing all of the asset items can take over an hour. This
