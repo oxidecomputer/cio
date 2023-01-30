@@ -28,8 +28,9 @@ pub async fn send_rfd_changelog(db: &Database, company: &Company) -> Result<()> 
     // Iterate over the RFDs.
     for rfd in rfds {
         let changes = rfd.get_weekly_changelog(&github, seven_days_ago, company).await?;
+        let url = format!("https://rfd.shared.oxide.computer/rfd/{}", rfd.number_string);
         if !changes.is_empty() {
-            changelog += &format!("\n{} {}\n{}", rfd.name, rfd.short_link, changes);
+            changelog += &format!("\n{} {}\n{}", rfd.name, url, changes);
         }
     }
 
