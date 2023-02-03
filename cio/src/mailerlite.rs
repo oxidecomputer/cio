@@ -67,15 +67,12 @@ impl Mailerlite<chrono_tz::Tz> {
     async fn get_pending_list_page(
         &self,
         segment_id: &str,
-        start: Option<u64>,
+        cursor: Option<String>,
     ) -> Result<ListSegmentSubscribersResponse<Subscriber>> {
-        let mut req = ListSegmentSubscribersRequestBuilder::default()
+        let req = ListSegmentSubscribersRequestBuilder::default()
             .segment_id(segment_id.to_string())
-            .limit(1000);
-
-        if let Some(start) = start {
-            req = req.after(start);
-        }
+            .limit(1000)
+            .cursor(cursor);
 
         let response = self.client.run(req.build()?).await?;
 
@@ -94,27 +91,18 @@ impl Mailerlite<chrono_tz::Tz> {
     async fn get_pending_list(&self, segment_id: &str) -> Result<Vec<Subscriber>> {
         let mut subscribers: Vec<Subscriber> = vec![];
 
-        // We are going to loop below until we hit our expected total. This is an unfortunate side
-        // effect to the API not have a good way of reporting when you have hit the end of a
-        // paginated response. Instead the API returns a generic "Server Error" response. We
-        // snapshot the total on the first iteration as more users may be added to our list as we
-        // are looping. This does not address the case of users being removed though. If users are
-        // removed while a loop is progressing, then this block is likely to hit the error case.
-        let mut total: Option<u64> = None;
-        let mut last: Option<u64> = None;
+        let mut cursor = None;
 
         loop {
-            let response = self.get_pending_list_page(segment_id, last).await?;
+            let response = self.get_pending_list_page(segment_id, cursor.take()).await?;
 
             match response {
-                ListSegmentSubscribersResponse::Success { mut data, meta } => {
+                ListSegmentSubscribersResponse::Success { mut data, meta, .. } => {
                     subscribers.append(&mut data);
 
-                    total = total.or(Some(meta.total));
-                    last = meta.last;
-
-                    if subscribers.len() >= total.unwrap_or(0) as usize {
-                        break;
+                    match meta.next_cursor {
+                        Some(next) => cursor = Some(next),
+                        None => break,
                     }
                 }
                 ListSegmentSubscribersResponse::Error { message } => {
