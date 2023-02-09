@@ -264,7 +264,7 @@ pub async fn server(
             .every(12.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-journal-clubs")});
         scheduler
-            .every(20.hours())
+            .every(9.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-mailing-lists")});
         scheduler
             .every(18.hours())
