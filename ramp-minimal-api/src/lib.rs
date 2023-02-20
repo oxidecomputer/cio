@@ -243,8 +243,7 @@ pub struct UpdateUser {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct UpdateUserResponse {
-}
+pub struct UpdateUserResponse {}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ResponseList<T> {
