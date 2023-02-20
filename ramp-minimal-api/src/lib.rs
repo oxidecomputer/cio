@@ -243,6 +243,10 @@ pub struct UpdateUser {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UpdateUserResponse {
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ResponseList<T> {
     pub data: Vec<T>,
     pub page: ResponsePagination,
@@ -493,7 +497,7 @@ impl<'a> UserClient<'a> {
         Ok(self.client.execute(req).await?.json().await?)
     }
 
-    pub async fn update(&self, user_id: &str, payload: &UpdateUser) -> Result<(), Error> {
+    pub async fn update(&self, user_id: &str, payload: &UpdateUser) -> Result<UpdateUserResponse, Error> {
         let req = self
             .client
             .request(Method::PATCH, &format!("users/{}", user_id))
