@@ -1073,11 +1073,6 @@ impl Company {
         );
 
         Ok(vec![
-            Box::new(GitHubBackend::new(
-                self.authenticate_github()?,
-                self.github_org.clone(),
-                self.certs_repo(),
-            )),
             Box::new(GcsBackend::new(gcs_storage, self.certs_gcs())),
             Box::new(GitHubBackend::new(
                 self.authenticate_github()?,
