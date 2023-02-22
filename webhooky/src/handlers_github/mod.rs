@@ -480,7 +480,7 @@ pub async fn handle_configs_push(
         sync_links(&api_context.db, configs.links, configs.huddles, company).await?;
         a("[SUCCESS]: links");
 
-        let out_repos = vec![company.nginx_repo(), company.shorturl_repo()];
+        let out_repos = vec![company.shorturl_repo()];
 
         // We need to update the short URLs for the links.
         generate_shorturls_for_configs_links(
@@ -571,7 +571,7 @@ pub async fn handle_repository_event(
         new_repo.full_name
     ));
 
-    let out_repos = vec![company.nginx_repo(), company.shorturl_repo()];
+    let out_repos = vec![company.shorturl_repo()];
 
     // TODO: since we know only one repo changed we don't need to refresh them all,
     // make this a bit better.
