@@ -478,7 +478,7 @@ pub struct GenerateShortUrls;
 
 impl GenerateShortUrls {
     pub async fn generate(api_context: &Context, github: &octorust::Client) -> Result<()> {
-        let out_repos = vec![api_context.company.nginx_repo(), api_context.company.shorturl_repo()];
+        let out_repos = vec![api_context.company.shorturl_repo()];
 
         // Create all the shorturls for the RFD if we need to, this would be on added files, only.
         generate_shorturls_for_rfds(

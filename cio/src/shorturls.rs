@@ -251,7 +251,7 @@ where
 pub async fn refresh_shorturls(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let provider = company.authenticate_dns_providers().await?;
-    let out_repos = vec![company.nginx_repo(), company.shorturl_repo()];
+    let out_repos = vec![company.shorturl_repo()];
 
     generate_shorturls_for_repos(db, &github, company, &provider, &out_repos[..]).await?;
     generate_shorturls_for_rfds(db, &github, company, &provider, &out_repos[..]).await?;
