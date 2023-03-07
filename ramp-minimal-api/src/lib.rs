@@ -159,7 +159,7 @@ pub struct User {
     pub id: String,
     pub business_id: String,
     pub department_id: String,
-    pub location_id: String,
+    pub location_id: Option<String>,
     pub manager_id: Option<String>,
     pub email: String,
     pub first_name: String,
