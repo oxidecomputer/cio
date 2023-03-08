@@ -207,7 +207,12 @@ impl NewCertificate {
         let dur = expiration_date - Utc::now();
         self.valid_days_left = dur.num_days() as i32;
 
-        log::info!("Loaded cert metadata for {}", self.domain);
+        log::info!(
+            "Loaded cert metadata for {} ({} / {})",
+            self.domain,
+            self.expiration_date,
+            self.valid_days_left
+        );
 
         Ok(())
     }
