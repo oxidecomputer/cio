@@ -2686,7 +2686,7 @@ pub async fn sync_certificates(
         } else {
             // Renew
             if Features::is_enabled("RENEW_CERTS") {
-                log::info!("Renewing certificate for {}" certificate.domain);
+                log::info!("Renewing certificate for {}", certificate.domain);
 
                 if let Err(err) = certificate.renew(db, company, &cert_storage).await {
                     log::error!(
