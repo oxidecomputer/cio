@@ -325,7 +325,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // We do this after we update the record so that any fields that are links to other
                 // tables match as well and this can return true even if we have linked records.
                 if mut_self == existing_record.fields {
-                    log::info!("[airtable] id={} in given object equals Airtable record, skipping update", self.id);
+                    log::info!("[airtable] id={} table={} in given object equals Airtable record, skipping update", self.id, #new_struct_name::airtable_table());
                     return Ok(existing_record.clone());
                 }
 
