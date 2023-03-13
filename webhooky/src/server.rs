@@ -291,9 +291,6 @@ pub async fn server(
             .every(5.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-travel")});
         scheduler
-            .every(15.minutes())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-zoho")});
-        scheduler
             .every(5.minutes())
             .run(|| async { crate::health::scheduler_health_check() });
 
