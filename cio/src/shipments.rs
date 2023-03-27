@@ -1370,52 +1370,58 @@ The Shipping Bot",
             self.oxide_tracking_link = self.oxide_tracking_link();
 
             // Register a tracking webhook for this shipment.
-            let status = shippo_client
+            match shippo_client
                 .register_tracking_webhook(&self.carrier, &self.tracking_number)
-                .await?;
+                .await
+            {
+                Ok(status) => {
+                    let tracking_status = status.tracking_status.unwrap_or_default();
+                    if self.messages.is_empty() {
+                        self.messages = tracking_status.status_details;
+                    }
 
-            let tracking_status = status.tracking_status.unwrap_or_default();
-            if self.messages.is_empty() {
-                self.messages = tracking_status.status_details;
-            }
+                    // Iterate over the tracking history and set the shipped_time.
+                    // Get the first date it was maked as in transit and use that as the shipped
+                    // time.
+                    for h in status.tracking_history {
+                        if h.status == *"TRANSIT" {
+                            if let Some(shipped_time) = h.status_date {
+                                let current_shipped_time = if let Some(s) = self.shipped_time { s } else { Utc::now() };
 
-            // Iterate over the tracking history and set the shipped_time.
-            // Get the first date it was maked as in transit and use that as the shipped
-            // time.
-            for h in status.tracking_history {
-                if h.status == *"TRANSIT" {
-                    if let Some(shipped_time) = h.status_date {
-                        let current_shipped_time = if let Some(s) = self.shipped_time { s } else { Utc::now() };
-
-                        if shipped_time < current_shipped_time {
-                            self.shipped_time = Some(shipped_time);
+                                if shipped_time < current_shipped_time {
+                                    self.shipped_time = Some(shipped_time);
+                                }
+                            }
                         }
                     }
-                }
-            }
 
-            // Get the status of the shipment.
-            if tracking_status.status == *"TRANSIT" || tracking_status.status == "IN_TRANSIT" {
-                if self.status != crate::shipment_status::Status::Shipped.to_string() {
-                    // Send an email to the recipient with their tracking link.
-                    // Wait until it is in transit to do this.
-                    self.send_email_to_recipient(db).await?;
-                    // We make sure it only does this one time.
-                    // Set the shipped date as this first date.
-                    self.shipped_time = tracking_status.status_date;
-                }
+                    // Get the status of the shipment.
+                    if tracking_status.status == *"TRANSIT" || tracking_status.status == "IN_TRANSIT" {
+                        if self.status != crate::shipment_status::Status::Shipped.to_string() {
+                            // Send an email to the recipient with their tracking link.
+                            // Wait until it is in transit to do this.
+                            self.send_email_to_recipient(db).await?;
+                            // We make sure it only does this one time.
+                            // Set the shipped date as this first date.
+                            self.shipped_time = tracking_status.status_date;
+                        }
 
-                self.set_status(crate::shipment_status::Status::Shipped).await?;
-            }
-            if tracking_status.status == *"DELIVERED" {
-                self.delivered_time = tracking_status.status_date;
-                self.set_status(crate::shipment_status::Status::Delivered).await?;
-            }
-            if tracking_status.status == *"RETURNED" {
-                self.set_status(crate::shipment_status::Status::Returned).await?;
-            }
-            if tracking_status.status == *"FAILURE" {
-                self.set_status(crate::shipment_status::Status::Failure).await?;
+                        self.set_status(crate::shipment_status::Status::Shipped).await?;
+                    }
+                    if tracking_status.status == *"DELIVERED" {
+                        self.delivered_time = tracking_status.status_date;
+                        self.set_status(crate::shipment_status::Status::Delivered).await?;
+                    }
+                    if tracking_status.status == *"RETURNED" {
+                        self.set_status(crate::shipment_status::Status::Returned).await?;
+                    }
+                    if tracking_status.status == *"FAILURE" {
+                        self.set_status(crate::shipment_status::Status::Failure).await?;
+                    }
+                }
+                Err(err) => {
+                    warn!("Failed to register tracking webhook for shipment {:?}", err);
+                }
             }
 
             // Return early.
