@@ -264,7 +264,7 @@ pub async fn server(
             .every(12.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-journal-clubs")});
         scheduler
-            .every(20.hours())
+            .every(9.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-mailing-lists")});
         scheduler
             .every(18.hours())
@@ -290,9 +290,6 @@ pub async fn server(
         scheduler
             .every(5.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-travel")});
-        scheduler
-            .every(15.minutes())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-zoho")});
         scheduler
             .every(5.minutes())
             .run(|| async { crate::health::scheduler_health_check() });

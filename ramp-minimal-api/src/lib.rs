@@ -159,7 +159,7 @@ pub struct User {
     pub id: String,
     pub business_id: String,
     pub department_id: String,
-    pub location_id: String,
+    pub location_id: Option<String>,
     pub manager_id: Option<String>,
     pub email: String,
     pub first_name: String,
@@ -241,6 +241,9 @@ pub struct UpdateUser {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<WriteableRole>,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UpdateUserResponse {}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ResponseList<T> {
@@ -493,7 +496,7 @@ impl<'a> UserClient<'a> {
         Ok(self.client.execute(req).await?.json().await?)
     }
 
-    pub async fn update(&self, user_id: &str, payload: &UpdateUser) -> Result<(), Error> {
+    pub async fn update(&self, user_id: &str, payload: &UpdateUser) -> Result<UpdateUserResponse, Error> {
         let req = self
             .client
             .request(Method::PATCH, &format!("users/{user_id}"))

@@ -2685,12 +2685,18 @@ pub async fn sync_certificates(
             );
         } else {
             // Renew
-            if let Err(err) = certificate.renew(db, company, &cert_storage).await {
-                log::error!(
-                    "Failed to renew certificate for {} due to {:?}",
-                    certificate.domain,
-                    err
-                );
+            if Features::is_enabled("RENEW_CERTS") {
+                log::info!("Renewing certificate for {}", certificate.domain);
+
+                if let Err(err) = certificate.renew(db, company, &cert_storage).await {
+                    log::error!(
+                        "Failed to renew certificate for {} due to {:?}",
+                        certificate.domain,
+                        err
+                    );
+                }
+            } else {
+                log::info!("Cert renewal is disabled. Skipping renewal for {}", certificate.domain);
             }
         }
 

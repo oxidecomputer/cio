@@ -1058,8 +1058,6 @@ impl Company {
     }
 
     pub async fn cert_storage(&self) -> Result<Vec<Box<dyn SslCertificateStorage>>> {
-        let github = self.authenticate_github()?;
-
         let gcp_auth = self.authenticate_gcp().await?;
 
         let gcs_storage = Storage::new(
@@ -1075,8 +1073,12 @@ impl Company {
         );
 
         Ok(vec![
-            Box::new(GitHubBackend::new(github, self.github_org.clone(), self.certs_repo())),
             Box::new(GcsBackend::new(gcs_storage, self.certs_gcs())),
+            Box::new(GitHubBackend::new(
+                self.authenticate_github()?,
+                self.github_org.clone(),
+                self.shorturl_repo(),
+            )),
         ])
     }
 
@@ -1086,6 +1088,14 @@ impl Company {
 
     pub fn certs_repo(&self) -> String {
         std::env::var("CERTS_REPO").unwrap()
+    }
+
+    pub fn nginx_repo(&self) -> String {
+        std::env::var("NGINX_REPO").unwrap()
+    }
+
+    pub fn shorturl_repo(&self) -> String {
+        std::env::var("SHORTURL_REPO").unwrap()
     }
 
     pub fn rfd_static_storage(&self) -> String {

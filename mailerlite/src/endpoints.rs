@@ -2,7 +2,10 @@ use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use derive_builder::Builder;
 use reqwest::{Client, RequestBuilder, Response, StatusCode};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{
+    de::{DeserializeOwned, Error},
+    Deserialize, Deserializer, Serialize,
+};
 use std::{collections::HashMap, net::Ipv4Addr};
 
 use crate::{
@@ -232,8 +235,8 @@ pub struct ListSegmentSubscribersRequest {
     filter_status: Option<SubscriberStatus>,
     #[builder(setter(strip_option), default)]
     limit: Option<u64>,
-    #[builder(setter(strip_option), default)]
-    after: Option<u64>,
+    #[builder(default)]
+    cursor: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -241,6 +244,7 @@ pub struct ListSegmentSubscribersRequest {
 pub enum ListSegmentSubscribersResponse<T> {
     Success {
         data: Vec<T>,
+        links: ListSegmentSubscribersResponseLinks,
         meta: ListSegmentSubscribersResponseMeta,
     },
     Error {
@@ -249,10 +253,39 @@ pub enum ListSegmentSubscribersResponse<T> {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ListSegmentSubscribersResponseLinks {
+    pub first: Option<String>,
+    pub last: Option<String>,
+    pub prev: Option<String>,
+    pub next: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ListSegmentSubscribersResponseMeta {
-    pub total: u64,
-    pub count: u64,
-    pub last: Option<u64>,
+    pub path: String,
+    #[serde(deserialize_with = "as_number")]
+    pub per_page: u64,
+    pub next_cursor: Option<String>,
+    pub prev_cursor: Option<String>,
+}
+
+pub fn as_number<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+    D::Error: serde::de::Error,
+{
+    #[derive(Debug, Deserialize)]
+    #[serde(untagged)]
+    enum StringOrNumber {
+        String(String),
+        Number(u64),
+    }
+
+    let inner = StringOrNumber::deserialize(deserializer);
+    match inner? {
+        StringOrNumber::String(s) => Ok(s.parse::<u64>().map_err(|_| D::Error::custom("Non-number string"))?),
+        StringOrNumber::Number(n) => Ok(n),
+    }
 }
 
 #[async_trait]
@@ -272,7 +305,7 @@ impl MailerliteEndpoint for ListSegmentSubscribersRequest {
             .get(format!("{}/segments/{}/subscribers", base_url, self.segment_id))
             .optional_query("filter[status]", self.filter_status.as_ref())
             .optional_query("limit", self.limit.as_ref())
-            .optional_query("after", self.after.as_ref())
+            .optional_query("cursor", self.cursor.as_ref())
     }
 
     async fn handle_response<Tz>(
@@ -287,23 +320,33 @@ impl MailerliteEndpoint for ListSegmentSubscribersRequest {
         if response.status() == StatusCode::NOT_FOUND {
             Ok(ListSegmentSubscribersResponse::Success {
                 data: vec![],
-                meta: ListSegmentSubscribersResponseMeta {
-                    total: 0,
-                    count: 0,
+                links: ListSegmentSubscribersResponseLinks {
+                    first: None,
+                    next: None,
+                    prev: None,
                     last: None,
+                },
+                meta: ListSegmentSubscribersResponseMeta {
+                    path: "".to_string(),
+                    per_page: 0,
+                    next_cursor: None,
+                    prev_cursor: None,
                 },
             })
         } else {
             let response: ListSegmentSubscribersResponse<ApiSubscriber> = response.json().await?;
 
             match response {
-                ListSegmentSubscribersResponse::Success { data, meta } => Ok(ListSegmentSubscribersResponse::Success {
-                    data: data
-                        .into_iter()
-                        .map(|s| s.into_subscriber(&ctx.time_zone))
-                        .collect::<Result<Vec<Subscriber>, FailedToTranslateDateError>>()?,
-                    meta,
-                }),
+                ListSegmentSubscribersResponse::Success { data, links, meta } => {
+                    Ok(ListSegmentSubscribersResponse::Success {
+                        data: data
+                            .into_iter()
+                            .map(|s| s.into_subscriber(&ctx.time_zone))
+                            .collect::<Result<Vec<Subscriber>, FailedToTranslateDateError>>()?,
+                        links,
+                        meta,
+                    })
+                }
                 ListSegmentSubscribersResponse::Error { message } => {
                     Ok(ListSegmentSubscribersResponse::Error { message })
                 }
@@ -524,14 +567,14 @@ mod tests {
             segment_id: "test_segment".to_string(),
             filter_status: Some(SubscriberStatus::Junk),
             limit: Some(5),
-            after: Some(2),
+            cursor: Some("start_from_here".to_string()),
         };
 
         let builder = req.to_request_builder("https://localhost:1234/api", &Client::new(), &ctx());
         let request = builder.build().unwrap();
 
         let expected = reqwest::Url::parse(
-            "https://localhost:1234/api/segments/test_segment/subscribers?filter%5Bstatus%5D=junk&limit=5&after=2",
+            "https://localhost:1234/api/segments/test_segment/subscribers?filter%5Bstatus%5D=junk&limit=5&cursor=start_from_here",
         )
         .unwrap();
 

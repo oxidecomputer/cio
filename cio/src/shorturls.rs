@@ -17,7 +17,7 @@ pub async fn generate_shorturls_for_repos<C>(
     github: &octorust::Client,
     company: &Company,
     dns: &C,
-    repo: &str,
+    out_repos: &[String],
 ) -> Result<()>
 where
     C: DNSProviderOps,
@@ -50,7 +50,7 @@ where
     log::info!("Collected {} repo links to check", links.len());
 
     // Generate the files for the links.
-    generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
+    generate_nginx_files_for_shorturls(github, owner, out_repos, links.clone()).await?;
 
     create_dns_records_for_links(dns, company, links).await?;
 
@@ -63,7 +63,7 @@ pub async fn generate_shorturls_for_rfds<C>(
     github: &octorust::Client,
     company: &Company,
     dns: &C,
-    repo: &str,
+    out_repos: &[String],
 ) -> Result<()>
 where
     C: DNSProviderOps,
@@ -107,7 +107,7 @@ where
     log::info!("Collected {} rfd links to check", links.len());
 
     // Generate the files for the links.
-    generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
+    generate_nginx_files_for_shorturls(github, owner, out_repos, links.clone()).await?;
 
     create_dns_records_for_links(dns, company, links).await?;
 
@@ -120,7 +120,7 @@ pub async fn generate_shorturls_for_configs_links<C>(
     github: &octorust::Client,
     company: &Company,
     dns: &C,
-    repo: &str,
+    out_repos: &[String],
 ) -> Result<()>
 where
     C: DNSProviderOps,
@@ -167,7 +167,7 @@ where
     log::info!("Collected {} config links to check", links.len());
 
     // Generate the files for the links.
-    generate_nginx_files_for_shorturls(github, owner, repo, links.clone()).await?;
+    generate_nginx_files_for_shorturls(github, owner, out_repos, links.clone()).await?;
 
     create_dns_records_for_links(dns, company, links).await?;
 
@@ -251,10 +251,11 @@ where
 pub async fn refresh_shorturls(db: &Database, company: &Company) -> Result<()> {
     let github = company.authenticate_github()?;
     let provider = company.authenticate_dns_providers().await?;
+    let out_repos = vec![company.shorturl_repo()];
 
-    generate_shorturls_for_repos(db, &github, company, &provider, "configs").await?;
-    generate_shorturls_for_rfds(db, &github, company, &provider, "configs").await?;
-    generate_shorturls_for_configs_links(db, &github, company, &provider, "configs").await?;
+    generate_shorturls_for_repos(db, &github, company, &provider, &out_repos[..]).await?;
+    generate_shorturls_for_rfds(db, &github, company, &provider, &out_repos[..]).await?;
+    generate_shorturls_for_configs_links(db, &github, company, &provider, &out_repos[..]).await?;
 
     Ok(())
 }

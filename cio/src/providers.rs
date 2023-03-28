@@ -107,7 +107,7 @@ impl ProviderWriteOps for ramp_minimal_api::RampClient {
                 department_id,
                 direct_manager_id: manager_ramp_id,
                 role,
-                location: Some(ramp_user.location_id),
+                location: ramp_user.location_id,
             };
 
             self.users().update(&user.ramp_id, &updated_user).await?;
