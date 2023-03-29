@@ -1556,17 +1556,12 @@ impl UpdateAirtableRecord<Building> for Building {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, JsonSchema, Serialize, Deserialize, FromSqlRow, AsExpression)]
+#[derive(Debug, Clone, PartialEq, JsonSchema, Serialize, Deserialize, FromSqlRow, AsExpression, Default)]
 #[diesel(sql_type = VarChar)]
 pub enum ResourceCategory {
+    #[default]
     ConferenceRoom,
     Other,
-}
-
-impl Default for ResourceCategory {
-    fn default() -> Self {
-        ResourceCategory::ConferenceRoom
-    }
 }
 
 impl ResourceCategory {

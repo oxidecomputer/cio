@@ -2736,7 +2736,7 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
 
     // We use the debug formatting here so we get the stack trace.
-    return HttpError::for_internal_error(format!("{:?}", err));
+    HttpError::for_internal_error(format!("{:?}", err))
 }
 
 #[derive(Debug, Clone, Default)]

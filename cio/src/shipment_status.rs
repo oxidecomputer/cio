@@ -1,5 +1,5 @@
 /// The various different statuses that an shipment can be in.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub enum Status {
     LabelCreated,
     LabelPrinted,
@@ -7,6 +7,7 @@ pub enum Status {
     Shipped,
     Delivered,
     Error,
+    #[default]
     Queued,
     WaitingForPickup,
     Returned,
@@ -18,12 +19,6 @@ pub enum Status {
     None,
     Processing,
     PartiallyFulfilled,
-}
-
-impl Default for Status {
-    fn default() -> Self {
-        Status::Queued
-    }
 }
 
 impl ToString for Status {

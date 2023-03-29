@@ -2420,7 +2420,7 @@ pub async fn refresh_new_applicants_and_reviews(
     if let (Some(min), Some(max)) = applicants_id_range {
         log::info!("Preparing to process applicants {} through {}", min, max);
 
-        let applicant_ids = (min..=max).into_iter().collect::<Vec<i32>>();
+        let applicant_ids = (min..=max).collect::<Vec<i32>>();
         let applicant_id_chunks = applicant_ids.chunks(100);
 
         for chunk in applicant_id_chunks {
