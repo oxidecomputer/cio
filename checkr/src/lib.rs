@@ -54,7 +54,7 @@ impl Checkr {
 
                 client: Arc::new(c),
             },
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 
@@ -155,7 +155,7 @@ impl Checkr {
     /// Get a candidate.
     pub async fn get_candidate(&self, id: &str) -> Result<Candidate, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("candidates/{}", id), (), None);
+        let request = self.request(Method::GET, &format!("candidates/{id}"), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {
@@ -201,7 +201,7 @@ impl Checkr {
     /// Get a report.
     pub async fn get_report(&self, id: &str) -> Result<Report, APIError> {
         // Build the request.
-        let request = self.request(Method::GET, &format!("reports/{}", id), (), None);
+        let request = self.request(Method::GET, &format!("reports/{id}"), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {

@@ -1,18 +1,13 @@
 /// Various colors used for things.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub enum Colors {
+    #[default]
     Blue,
     Green,
     Yellow,
     Red,
     Black,
     White,
-}
-
-impl Default for Colors {
-    fn default() -> Self {
-        Colors::Blue
-    }
 }
 
 impl ToString for Colors {

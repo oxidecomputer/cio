@@ -29,7 +29,7 @@ impl Database {
     pub async fn new() -> Self {
         let database_url = env::var("CIO_DATABASE_URL").expect("CIO_DATABASE_URL must be set");
 
-        let manager = ConnectionManager::<DbConnection>::new(&database_url);
+        let manager = ConnectionManager::<DbConnection>::new(database_url);
         let pool = bb8::Builder::new().build_unchecked(manager);
 
         Database { pool: DB(pool) }

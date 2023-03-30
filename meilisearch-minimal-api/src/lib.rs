@@ -17,8 +17,8 @@ pub enum MeiliError {
 impl std::fmt::Display for MeiliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MeiliError::Client(inner) => write!(f, "Client error: {}", inner),
-            MeiliError::FailedToParseResponse(inner) => write!(f, "Failed to parse response: {}", inner),
+            MeiliError::Client(inner) => write!(f, "Client error: {inner}"),
+            MeiliError::FailedToParseResponse(inner) => write!(f, "Failed to parse response: {inner}"),
         }
     }
 }
@@ -117,8 +117,8 @@ impl IndexClient {
             .inner
             .client
             .post(format!(
-                "{}/indexes/{}/documents?primaryKey={}",
-                self.inner.url, self.id, primary_key
+                "{}/indexes/{}/documents?primaryKey={primary_key}",
+                self.inner.url, self.id
             ))
             .bearer_auth(&self.inner.key)
             .json(documents)

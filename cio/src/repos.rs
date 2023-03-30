@@ -452,7 +452,7 @@ impl GithubRepo {
         // Get this repository's teams.
         let mut ts: Vec<octorust::types::Team> = Default::default();
         match github.repos().list_all_teams(&company.github_org, &self.name).await {
-            Ok(v) => (ts = v),
+            Ok(v) => ts = v,
             Err(e) => {
                 info!("Failed to get teams for repo {}. err: {:?}", self.name, e);
 

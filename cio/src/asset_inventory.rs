@@ -110,12 +110,7 @@ impl NewAssetItem {
         let mut barcode = self
             .name
             .to_uppercase()
-            .replace(' ', "")
-            .replace('/', "")
-            .replace('(', "")
-            .replace(')', "")
-            .replace('-', "")
-            .replace('\'', "")
+            .replace([' ', '/', '(', ')', '-', '\''], "")
             .trim()
             .to_string();
 

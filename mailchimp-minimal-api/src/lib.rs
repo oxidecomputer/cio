@@ -44,7 +44,7 @@ impl AuthMode {
     {
         let encoded = base64::encode(format!("username:{}", key.as_ref()).as_bytes());
         let auth_header =
-            HeaderValue::from_str(&format!("Basic {}", encoded)).map_err(|_| MailChimpError::MalformedAPIKey)?;
+            HeaderValue::from_str(&format!("Basic {encoded}")).map_err(|_| MailChimpError::MalformedAPIKey)?;
 
         let dc: MailChimpDataCenter = key.as_ref().parse()?;
         let url = format!("https://{}.api.mailchimp.com", dc.0);
@@ -93,7 +93,7 @@ impl MailChimp {
 
         // Make sure we have the leading "/".
         if !uri.starts_with('/') {
-            uri = format!("/{}", uri);
+            uri = format!("/{uri}");
         }
 
         let url = self
@@ -122,7 +122,7 @@ impl MailChimp {
             // Build the request.
             let rb = self.request(
                 Method::GET,
-                &format!(
+                format!(
                     "3.0/lists/{}/members?count={}&offset={}",
                     list_id.as_ref(),
                     per_page,
@@ -180,7 +180,7 @@ impl From<reqwest::Error> for MailChimpError {
 
 impl fmt::Display for MailChimpError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "MailChimp client error: {:?}", self)
+        write!(f, "MailChimp client error: {self:?}")
     }
 }
 

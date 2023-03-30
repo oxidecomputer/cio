@@ -16,7 +16,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let domain = &args[1];
     let ip = &args[2];
 
-    println!("Setting up Cloudflare A record from {} -> {}", ip, domain);
+    println!("Setting up Cloudflare A record from {ip} -> {domain}");
     // Create the Cloudflare client.
     let cf_creds = Credentials::UserAuthKey {
         email: env::var("CLOUDFLARE_EMAIL").unwrap(),
@@ -86,7 +86,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                 .await
                 .unwrap()
                 .result;
-            println!("Created DNS record for ipv4: {:?}", dns_record);
+            println!("Created DNS record for ipv4: {dns_record:?}");
         } else {
             let dns_record = api_client
                 .request(&dns::CreateDnsRecord {
@@ -105,7 +105,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                 .await
                 .unwrap()
                 .result;
-            println!("Created DNS record for ipv6: {:?}", dns_record);
+            println!("Created DNS record for ipv6: {dns_record:?}");
         }
     } else {
         // Create the DNS record.
@@ -128,7 +128,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                 .unwrap()
                 .result;
 
-            println!("Updated DNS record ipv4: {:?}", dns_record);
+            println!("Updated DNS record ipv4: {dns_record:?}");
         } else {
             // Update the DNS record.
             let dns_record = api_client
@@ -148,7 +148,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
                 .unwrap()
                 .result;
 
-            println!("Updated DNS record ipv6: {:?}", dns_record);
+            println!("Updated DNS record ipv6: {dns_record:?}");
         }
     }
 

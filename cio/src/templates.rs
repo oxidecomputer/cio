@@ -18,7 +18,7 @@ fn terraform_name_helper(
 
     // Check if the first character is a number.
     let first_char = param.chars().next().unwrap();
-    if first_char.is_digit(10) {
+    if first_char.is_ascii_digit() {
         out.write(&("_".to_owned() + &param.replace('.', "")))?;
     } else {
         out.write(&param.replace('.', ""))?;
