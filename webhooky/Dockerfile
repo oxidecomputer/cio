@@ -85,7 +85,7 @@ COPY webhooky/Cargo.toml ./Cargo.toml
 
 COPY Cargo.lock ./Cargo.lock
 
-COPY rust-toolchain ./rust-toolchain
+COPY rust-toolchain.toml ./rust-toolchain.toml
 
 # Move the deps we need to compile.
 COPY cio ../cio
