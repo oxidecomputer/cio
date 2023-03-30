@@ -6,7 +6,7 @@ on:
       - 'Cargo.lock'
       - .github/workflows/rustfmt.yml
       - rustfmt.toml
-      - rust-toolchain
+      - rust-toolchain.toml
   pull_request:
     paths:
       - '**.rs'
@@ -14,7 +14,7 @@ on:
       - 'Cargo.lock'
       - .github/workflows/rustfmt.yml
       - rustfmt.toml
-      - rust-toolchain
+      - rust-toolchain.toml
 name: rustfmt
 jobs:
   rustfmt:
