@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 /// The various different statuses that an applicant can be in.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub enum Status {
     /// The applicant has been hired.
     Hired,
@@ -27,6 +27,7 @@ pub enum Status {
     Declined,
 
     /// The applicant needs to be triaged.
+    #[default]
     NeedsToBeTriaged,
 
     /// The applicant has been hired as a contractor.
@@ -34,12 +35,6 @@ pub enum Status {
 
     /// The applicant has withdrawn their application
     Withdrawn,
-}
-
-impl Default for Status {
-    fn default() -> Self {
-        Status::NeedsToBeTriaged
-    }
 }
 
 impl FromStr for Status {

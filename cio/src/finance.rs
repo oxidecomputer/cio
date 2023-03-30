@@ -945,7 +945,7 @@ pub async fn refresh_bill_com_transactions(db: &Database, company: &Company, con
         let mut record: NewAccountsPayable = result?;
 
         // Get the amount from the notes.
-        let sa = record.notes.replace('$', "").replace(',', "");
+        let sa = record.notes.replace(['$', ','], "");
         record.amount = sa.parse::<f32>()?;
         record.notes = "".to_string();
 

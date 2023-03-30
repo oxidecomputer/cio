@@ -217,12 +217,7 @@ impl NewSwagInventoryItem {
             .replace("THIRD EDITION", "3ED")
             // TODO: Find another way to do this so that it doesn't break eventually.
             .replace("FOURTH EDITION", "4ED")
-            .replace(' ', "")
-            .replace('/', "")
-            .replace('(', "")
-            .replace(')', "")
-            .replace('-', "")
-            .replace('\'', "")
+            .replace([' ', '/', '(', ')', '-', '\''], "")
             .replace("UNISEX", "U")
             .replace("WOMENS", "W")
             .replace("MENS", "M")

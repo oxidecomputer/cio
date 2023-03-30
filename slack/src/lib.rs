@@ -94,7 +94,7 @@ impl Slack {
 
                 s
             }
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 
@@ -129,7 +129,7 @@ impl Slack {
         let base = Url::parse(ENDPOINT)?;
         let url = base.join(path)?;
 
-        let bt = format!("Bearer {}", token);
+        let bt = format!("Bearer {token}");
         let bearer = header::HeaderValue::from_str(&bt)?;
 
         // Set the default headers.
@@ -533,19 +533,13 @@ pub struct MessageResponse {
 /// The `response_type` parameter in the JSON payload controls this visibility,
 /// by default it is set to `ephemeral`, but you can specify a value of
 /// `in_channel` to post the response into the channel
-#[derive(Debug, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Deserialize, JsonSchema, Serialize, Default)]
 pub enum MessageResponseType {
     #[serde(rename = "ephemeral")]
+    #[default]
     Ephemeral,
     #[serde(rename = "in_channel")]
     InChannel,
-}
-
-impl Default for MessageResponseType {
-    fn default() -> Self {
-        // This is the default in Slack.
-        MessageResponseType::Ephemeral
-    }
 }
 
 /// A bot command to be run and sent back to Slack.
@@ -804,11 +798,12 @@ pub struct Message {
 }
 
 /// A message block type in Slack.
-#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize, Default)]
 pub enum MessageBlockType {
     #[serde(rename = "header")]
     Header,
     #[serde(rename = "section")]
+    #[default]
     Section,
     #[serde(rename = "context")]
     Context,
@@ -822,23 +817,12 @@ pub enum MessageBlockType {
     Message,
 }
 
-impl Default for MessageBlockType {
-    fn default() -> Self {
-        MessageBlockType::Section
-    }
-}
-
 /// A modal type in Slack.
-#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize, Default)]
 pub enum ModalType {
     #[serde(rename = "modal")]
+    #[default]
     Modal,
-}
-
-impl Default for ModalType {
-    fn default() -> Self {
-        ModalType::Modal
-    }
 }
 
 /// Block options in Slack.
@@ -923,11 +907,12 @@ pub struct ActionBlock {
 }
 
 /// Message type in Slack.
-#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize, Default)]
 pub enum MessageType {
     #[serde(rename = "plain_text")]
     PlainText,
     #[serde(rename = "mrkdwn")]
+    #[default]
     Markdown,
     #[serde(rename = "image")]
     Image,
@@ -935,25 +920,14 @@ pub enum MessageType {
     Button,
 }
 
-impl Default for MessageType {
-    fn default() -> Self {
-        MessageType::Markdown
-    }
-}
-
 /// Input type in Slack.
-#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema, Serialize, Default)]
 pub enum InputType {
     #[serde(rename = "static_select")]
     StaticSelect,
     #[serde(rename = "plain_text_input")]
+    #[default]
     PlainText,
-}
-
-impl Default for InputType {
-    fn default() -> Self {
-        InputType::PlainText
-    }
 }
 
 /// Message block accessory in Slack.

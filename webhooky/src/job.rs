@@ -102,7 +102,6 @@ pub async fn run_job_cmd(cmd: crate::core::SubCommand, context: Context) -> Resu
                 app_config,
                 ..
             } = context;
-
             let app_config = app_config.read().unwrap().clone();
             let sync_result = cio_api::repos::sync_all_repo_settings(&db, &company, &app_config).await;
             let refresh_result = cio_api::repos::refresh_db_github_repos(&db, &company).await;

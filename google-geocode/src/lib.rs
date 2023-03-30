@@ -57,7 +57,7 @@ impl Geocode {
 
                 client: Arc::new(c),
             },
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 

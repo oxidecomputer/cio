@@ -167,7 +167,7 @@ fn create_api() -> ApiDescription<ServerContext> {
 
 fn create_open_api(api: &ApiDescription<ServerContext>) -> OpenApiDefinition<ServerContext> {
     // Create the API schema.
-    let mut api_definition = api.openapi(&"Webhooks API", &clap::crate_version!());
+    let mut api_definition = api.openapi("Webhooks API", clap::crate_version!());
     api_definition
         .description("Internal webhooks server for listening to several third party webhooks")
         .contact_url("https://oxide.computer")
@@ -305,7 +305,7 @@ pub async fn server(
     // "The main process inside the container will receive SIGTERM, and after a grace period,
     // SIGKILL."
     // Regsitering SIGKILL here will panic at runtime, so let's avoid that.
-    let mut signals = Signals::new(&[SIGINT, SIGTERM])?;
+    let mut signals = Signals::new([SIGINT, SIGTERM])?;
 
     tokio::spawn(enclose! { (server_context) async move {
         for sig in signals.forever() {
@@ -350,7 +350,7 @@ pub fn create_do_job_fn(ctx: ServerContext, job: &str) -> Pin<Box<dyn std::futur
 pub async fn do_job(ctx: ServerContext, job: String) {
     let mut txn = start_sentry_cron_transaction(&job);
     let errored = txn
-        .run(async || {
+        .run(|| async {
             info!("triggering cron job `{}`", job);
             match crate::handlers_cron::run_subcmd_job(&ctx, &job).await {
                 Ok(_) => false,
@@ -2736,7 +2736,7 @@ fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
     sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
 
     // We use the debug formatting here so we get the stack trace.
-    return HttpError::for_internal_error(format!("{:?}", err));
+    HttpError::for_internal_error(format!("{:?}", err))
 }
 
 #[derive(Debug, Clone, Default)]

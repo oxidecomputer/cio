@@ -91,7 +91,7 @@ impl QuickBooks {
 
                 qb
             }
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 
@@ -212,7 +212,7 @@ impl QuickBooks {
         // Build the request.
         let request = self.request(
             Method::GET,
-            &format!("company/{}/query", company_id),
+            &format!("company/{company_id}/query"),
             (),
             Some(&[("query", "select * from CompanyInfo")]),
         );
@@ -243,8 +243,7 @@ impl QuickBooks {
                 "query",
                 &format!(
                     "select * from attachable where AttachableRef.EntityRef.Type = 'purchase' and \
-                     AttachableRef.EntityRef.value = '{}' MAXRESULTS {}",
-                    purchase_id, QUERY_PAGE_SIZE
+                     AttachableRef.EntityRef.value = '{purchase_id}' MAXRESULTS {QUERY_PAGE_SIZE}"
                 ),
             )]),
         );
@@ -275,8 +274,7 @@ impl QuickBooks {
                 "query",
                 &format!(
                     "select * from attachable where AttachableRef.EntityRef.Type = 'bill' and \
-                     AttachableRef.EntityRef.value = '{}' MAXRESULTS {}",
-                    bill_id, QUERY_PAGE_SIZE
+                     AttachableRef.EntityRef.value = '{bill_id}' MAXRESULTS {QUERY_PAGE_SIZE}"
                 ),
             )]),
         );
@@ -307,8 +305,7 @@ impl QuickBooks {
                 "query",
                 &format!(
                     "select * from attachable where AttachableRef.EntityRef.Type = 'billpayment' \
-                     and AttachableRef.EntityRef.value = '{}' MAXRESULTS {}",
-                    bill_payment_id, QUERY_PAGE_SIZE
+                     and AttachableRef.EntityRef.value = '{bill_payment_id}' MAXRESULTS {QUERY_PAGE_SIZE}"
                 ),
             )]),
         );
@@ -333,7 +330,7 @@ impl QuickBooks {
         // Build the request.
         let request = self.request(
             Method::GET,
-            &format!("company/{}/bill/{}", self.company_id, bill_id),
+            &format!("company/{}/bill/{bill_id}", self.company_id),
             (),
             None,
         );
@@ -363,8 +360,7 @@ impl QuickBooks {
             Some(&[(
                 "query",
                 &format!(
-                    "SELECT * FROM BillPayment ORDERBY Id STARTPOSITION {} MAXRESULTS {}",
-                    start_position, QUERY_PAGE_SIZE
+                    "SELECT * FROM BillPayment ORDERBY Id STARTPOSITION {start_position} MAXRESULTS {QUERY_PAGE_SIZE}"
                 ),
             )]),
         );
@@ -430,8 +426,7 @@ impl QuickBooks {
             Some(&[(
                 "query",
                 &format!(
-                    "SELECT * FROM Purchase ORDERBY Id STARTPOSITION {} MAXRESULTS {}",
-                    start_position, QUERY_PAGE_SIZE
+                    "SELECT * FROM Purchase ORDERBY Id STARTPOSITION {start_position} MAXRESULTS {QUERY_PAGE_SIZE}"
                 ),
             )]),
         );
@@ -494,7 +489,7 @@ impl QuickBooks {
             Method::GET,
             &format!("company/{}/query", self.company_id),
             (),
-            Some(&[("query", &format!("SELECT * FROM Item MAXRESULTS {}", QUERY_PAGE_SIZE))]),
+            Some(&[("query", &format!("SELECT * FROM Item MAXRESULTS {QUERY_PAGE_SIZE}"))]),
         );
 
         let resp = self.client.execute(request).await.unwrap();

@@ -2,7 +2,7 @@
 name = "cfcert"
 version = "0.1.0"
 authors = ["Jess Frazelle <jess@oxide.computer>"]
-edition = "2018"
+edition = "2021"
 
 [[bin]]
 name = "cfcert"

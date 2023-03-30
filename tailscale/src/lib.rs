@@ -73,7 +73,7 @@ impl Tailscale {
                     base_url: Url::parse(BASE_URL).unwrap(),
                 },
             },
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 
@@ -153,7 +153,7 @@ impl Tailscale {
 
     /// Delete device.
     pub async fn delete_device(&self, device_id: &str) -> Result<(), APIError> {
-        let request = self.request(Method::DELETE, &format!("device/{}", device_id), (), None);
+        let request = self.request(Method::DELETE, &format!("device/{device_id}"), (), None);
 
         let resp = self.client.execute(request).await.unwrap();
         match resp.status() {

@@ -92,7 +92,7 @@ impl DocuSign {
 
                 g
             }
-            Err(e) => panic!("creating client failed: {:?}", e),
+            Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 
@@ -131,14 +131,14 @@ impl DocuSign {
         let state = uuid::Uuid::new_v4();
 
         // docusign insists upon %20 not + in scope definition
-        return format!(
+        format!(
             "{}?response_type=code&scope={}&client_id={}&redirect_uri={}&state={}",
             endpoint,
             scope.replace(' ', "%20"),
             self.client_id,
             self.redirect_uri,
             state,
-        );
+        )
     }
 
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<&[(&str, &str)]>) -> Request
