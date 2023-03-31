@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-sha2 = "0.10.0"
+sha2 = "0.10.6"
 hmac = "0.12.0"
 digest = "0.10.0"
 async-trait = "0.1.56"
