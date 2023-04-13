@@ -1,3 +1,4 @@
+// Legacy table definitions
 pub static AIRTABLE_MAILING_LIST_SIGNUPS_TABLE: &str = "Mailing List Signups";
 pub static AIRTABLE_RACK_LINE_SIGNUPS_TABLE: &str = "Rack Line Signups";
 pub static AIRTABLE_CUSTOMER_INTERACTIONS_TABLE: &str = "Interactions";

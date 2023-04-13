@@ -40,23 +40,30 @@ use std::{env, fmt, fmt::Debug};
 
 use anyhow::{bail, Result};
 use chrono::{offset::Utc, DateTime};
-use reqwest::{header, Method, Request, StatusCode, Url};
+use reqwest::{Method, Request, StatusCode, Url};
 use schemars::JsonSchema;
 use serde::{
     de::{DeserializeOwned, MapAccess, SeqAccess, Visitor},
     Deserialize, Deserializer, Serialize,
 };
+use std::sync::Arc;
+
+pub mod error;
+mod inner;
+
+/// API clients for interacting with user and group SCIM endpoints
+pub mod scim;
+
+use self::scim::AirtableScimClient;
+use inner::{Inner, InnerClient};
 
 /// Endpoint for the Airtable API.
 const ENDPOINT: &str = "https://api.airtable.com/v0/";
 
 /// Entrypoint for interacting with the Airtable API.
+#[derive(Clone)]
 pub struct Airtable {
-    key: String,
-    base_id: String,
-    enterprise_account_id: String,
-
-    client: reqwest_middleware::ClientWithMiddleware,
+    inner: Inner,
 }
 
 /// Get the API key from the AIRTABLE_API_KEY env variable.
@@ -88,11 +95,12 @@ impl Airtable {
                     .build();
 
                 Self {
-                    key: key.to_string(),
-                    base_id: base_id.to_string(),
-                    enterprise_account_id: enterprise_account_id.to_string(),
-
-                    client,
+                    inner: Arc::new(InnerClient::new(
+                        key.to_string(),
+                        base_id.to_string(),
+                        enterprise_account_id.to_string(),
+                        client,
+                    )),
                 }
             }
             Err(err) => panic!("creating client failed: {err:?}"),
@@ -112,35 +120,26 @@ impl Airtable {
 
     /// Get the currently set API key.
     pub fn get_key(&self) -> &str {
-        &self.key
+        self.inner.key()
+    }
+
+    fn base_url(&self) -> Result<Url> {
+        let base = Url::parse(ENDPOINT)?;
+        Ok(base.join(self.inner.base_id())?.join("/")?)
+    }
+
+    fn url(&self, path: &str) -> Result<Url> {
+        let base = self.base_url()?;
+        Ok(base.join(path)?)
     }
 
     fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Result<Request>
     where
         B: Serialize,
     {
-        let base = Url::parse(ENDPOINT)?;
-        let url = base.join(&(self.base_id.to_string() + "/" + &path))?;
+        let url = self.url(&path)?;
 
-        let bt = format!("Bearer {}", self.key);
-        let bearer = header::HeaderValue::from_str(&bt)?;
-
-        // Set the default headers.
-        let mut headers = header::HeaderMap::new();
-        headers.append(header::AUTHORIZATION, bearer);
-        headers.append(
-            header::CONTENT_TYPE,
-            header::HeaderValue::from_static("application/json"),
-        );
-
-        let mut rb = self.client.request(method.clone(), url).headers(headers);
-
-        match query {
-            None => (),
-            Some(val) => {
-                rb = rb.query(&val);
-            }
-        }
+        let mut rb = self.inner.request(method.clone(), url, query)?;
 
         // Add the body, this is to ensure our GET and DELETE calls succeed.
         if method != Method::GET && method != Method::DELETE {
@@ -166,7 +165,7 @@ impl Airtable {
         // Build the request.
         let mut request = self.request(Method::GET, table.to_string(), (), Some(params))?;
 
-        let mut resp = self.client.execute(request).await?;
+        let mut resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -195,7 +194,7 @@ impl Airtable {
                 ]),
             )?;
 
-            resp = self.client.execute(request).await?;
+            resp = self.inner.execute(request).await?;
             match resp.status() {
                 StatusCode::OK => (),
                 s => {
@@ -219,7 +218,7 @@ impl Airtable {
         // Build the request.
         let request = self.request(Method::GET, format!("{table}/{record_id}"), (), None)?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -243,7 +242,7 @@ impl Airtable {
             Some(vec![("records[]", record_id.to_string())]),
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -272,7 +271,7 @@ impl Airtable {
             ),
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -330,7 +329,7 @@ impl Airtable {
             None,
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -391,7 +390,7 @@ impl Airtable {
             None,
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -413,7 +412,7 @@ impl Airtable {
     /// This is for an enterprise admin to do only.
     /// FROM: https://airtable.com/api/enterprise
     pub async fn list_users(&self) -> Result<Vec<User>> {
-        if self.enterprise_account_id.is_empty() {
+        if self.inner.enterprise_account_id().is_empty() {
             // Return an error early.
             bail!("An enterprise account id is required.");
         }
@@ -421,12 +420,15 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!(
+                "v0/meta/enterpriseAccounts/{}/users",
+                self.inner.enterprise_account_id()
+            ),
             (),
             Some(vec![("state", "provisioned".to_string())]),
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -445,7 +447,7 @@ impl Airtable {
     /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserGetInformationByEmail
     /// Permission level can be: owner | create | edit | comment | read
     pub async fn get_enterprise_user(&self, email: &str) -> Result<EnterpriseUser> {
-        if self.enterprise_account_id.is_empty() {
+        if self.inner.enterprise_account_id().is_empty() {
             // Return an error early.
             bail!("An enterprise account id is required.");
         }
@@ -453,7 +455,10 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::GET,
-            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!(
+                "v0/meta/enterpriseAccounts/{}/users",
+                self.inner.enterprise_account_id()
+            ),
             (),
             Some(vec![
                 ("email", email.to_string()),
@@ -461,7 +466,7 @@ impl Airtable {
             ]),
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
 
         match resp.status() {
             StatusCode::OK => (),
@@ -489,7 +494,7 @@ impl Airtable {
         user_id: &str,
         permission_level: &str,
     ) -> Result<()> {
-        if self.enterprise_account_id.is_empty() {
+        if self.inner.enterprise_account_id().is_empty() {
             // Return an error early.
             bail!("An enterprise account id is required.");
         }
@@ -511,7 +516,7 @@ impl Airtable {
             None,
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -530,7 +535,7 @@ impl Airtable {
         workspace_id: &str,
         includes: Option<[WorkspaceIncludes; N]>,
     ) -> Result<Workspace> {
-        if self.enterprise_account_id.is_empty() {
+        if self.inner.enterprise_account_id().is_empty() {
             // Return an error early.
             bail!("An enterprise account id is required.");
         }
@@ -555,7 +560,7 @@ impl Airtable {
             }),
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -573,7 +578,7 @@ impl Airtable {
     /// The user must be an internal user, meaning they have an email with the company domain.
     /// FROM: https://airtable.com/api/enterprise#enterpriseAccountUserDeleteUserByEmail
     pub async fn delete_internal_user_by_email(&self, email: &str) -> Result<()> {
-        if self.enterprise_account_id.is_empty() {
+        if self.inner.enterprise_account_id().is_empty() {
             // Return an error early.
             bail!("An enterprise account id is required.");
         }
@@ -581,12 +586,15 @@ impl Airtable {
         // Build the request.
         let request = self.request(
             Method::DELETE,
-            format!("v0/meta/enterpriseAccounts/{}/users", self.enterprise_account_id),
+            format!(
+                "v0/meta/enterpriseAccounts/{}/users",
+                self.inner.enterprise_account_id()
+            ),
             (),
             Some(vec![("email", email.to_string())]),
         )?;
 
-        let resp = self.client.execute(request).await?;
+        let resp = self.inner.execute(request).await?;
         match resp.status() {
             StatusCode::OK => (),
             s => {
@@ -601,6 +609,17 @@ impl Airtable {
         }
 
         Ok(())
+    }
+
+    /// Get a SCIM client for interacting with the Airtable Enterprise SCIM endpoints. This client
+    /// can be used for managing Airtable users and groups. This functionality is only available
+    /// for Airtable accounts tied to an Enterprise domain and using SSO. See the
+    /// [Airtable Enterprise SCIM documentation](https://airtable.com/api/enterprise#scim) for more
+    /// information.
+    ///
+    /// From: <https://airtable.com/api/enterprise#scim>
+    pub fn scim(&self) -> AirtableScimClient {
+        AirtableScimClient::new(self.inner.clone())
     }
 }
 
