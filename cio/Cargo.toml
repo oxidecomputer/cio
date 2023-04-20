@@ -27,7 +27,7 @@ byte-unit = "4"
 checkr = "^0.0.10"
 #checkr = { path = "../checkr" }
 chrono = { version = "0.4.22", features = ["serde"] }
-chrono-humanize = "0.2.1"
+chrono-humanize = "0.2.2"
 chrono-tz = { version = "0.7", features = ["serde"] }
 cio-api-types = { path = "../cio-api-types" }
 # Swap to branch due to breaking change in CloudFlare API
