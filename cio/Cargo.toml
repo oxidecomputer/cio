@@ -57,7 +57,7 @@ gsuite-api = "^0.4.0"
 #gsuite-api = { path = "../../third-party-api-clients/google/admin" }
 gusto-api = "^0.2.4"
 #gusto-api = { path = "../../third-party-api-clients/gusto" }
-handlebars = "4.2.2"
+handlebars = "4.3.6"
 hex = "0.4.3"
 hmac = "0.12.1"
 http = "0.2.6"
