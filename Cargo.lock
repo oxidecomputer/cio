@@ -874,7 +874,7 @@ dependencies = [
  "url 2.2.2",
  "uuid 1.1.2",
  "walkdir",
- "yup-oauth2 7.0.1",
+ "yup-oauth2 8.0.0",
  "zip",
  "zoho-api",
  "zoom-api",
@@ -7206,6 +7206,33 @@ name = "yup-oauth2"
 version = "7.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98748970d2ddf05253e6525810d989740334aa7509457864048a829902db76f3"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.13.0",
+ "futures",
+ "http",
+ "hyper",
+ "hyper-rustls 0.23.0",
+ "itertools 0.10.3",
+ "log 0.4.17",
+ "percent-encoding 2.1.0",
+ "rustls 0.20.6",
+ "rustls-pemfile 0.3.0",
+ "seahash",
+ "serde",
+ "serde_json",
+ "time 0.3.11",
+ "tokio",
+ "tower-service",
+ "url 2.2.2",
+]
+
+[[package]]
+name = "yup-oauth2"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9b7cbafca6169d93ee1da6b8e4bd9d78250a322f9aafbd468607bae3d2a0e75"
 dependencies = [
  "anyhow",
  "async-trait",
