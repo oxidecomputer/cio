@@ -899,7 +899,10 @@ impl Company {
             ])
             .await?;
 
-        let token_string = token.token().ok_or_else(|| anyhow!("Failed to retrieve token"))?.to_string();
+        let token_string = token
+            .token()
+            .ok_or_else(|| anyhow!("Failed to retrieve token"))?
+            .to_string();
         if token_string.is_empty() {
             bail!("empty token returned from authenticator");
         }
