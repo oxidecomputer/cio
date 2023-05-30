@@ -35,6 +35,7 @@ use quickbooks::QuickBooks;
 use ramp_minimal_api::RampClient as Ramp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use sf_client::{JwtAuthenticator, LoginClaims, AuthorizationServer};
 use sheets::Client as GoogleSheets;
 use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
@@ -554,6 +555,12 @@ impl Company {
         }
 
         bail!("no token");
+    }
+
+    /// Authenticate with SalesForce.
+    pub async fn authenticate_sf(&self) -> Result<JwtAuthenticator> {
+        let claims = LoginClaims::from_env(AuthorizationServer::Live)?;
+        Ok(JwtAuthenticator::from_env(claims)?)
     }
 
     /// Authenticate with DocuSign.
