@@ -116,7 +116,7 @@ pub async fn handle_auth_gusto_callback(
     let event = query_args.into_inner();
 
     // Initialize the Gusto client.
-    let mut g = Gusto::new_from_env("", "");
+    let g = Gusto::new_from_env("", "", gusto_api::RootProductionServer {});
 
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code, &event.state).await?;

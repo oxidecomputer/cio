@@ -219,7 +219,7 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
         bail!("authenticating zoom failed: {}", e);
     }
 
-    let mut zoom = zoom_auth?;
+    let zoom = zoom_auth?;
 
     // List all the recorded meetings.
     let recordings = zoom

@@ -1602,7 +1602,7 @@ async fn listen_auth_gusto_consent(
     let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
 
     // Initialize the Gusto client.
-    let g = txn.run(|| Gusto::new_from_env("", ""));
+    let g = txn.run(|| Gusto::new_from_env("", "", gusto_api::RootProductionServer {}));
 
     txn.finish(http::StatusCode::OK);
 
