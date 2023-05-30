@@ -72,7 +72,7 @@ mailerlite = { path = "../mailerlite" }
 mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
 meilisearch-minimal-api = { path = "../meilisearch-minimal-api" }
 md-5 = "0.10.5"
-mime = "0.2.6"
+mime = "0.3.0"
 names = "^0.14.0"
 nom_pem = "4"
 octorust = { version = "^0.1.35", features = ["httpcache"] }
@@ -124,13 +124,13 @@ toml = "0.5"
 url = "2"
 uuid = { version = "^1.0", features = ["serde", "v4"] }
 walkdir = "^2.3.2"
-yup-oauth2 = "^7"
+yup-oauth2 = "8.1.0"
 zip = "0.6.2"
 zoho-api = { path = "../zoho-client" }
 zoom-api = "^0.2.3"
 stacker = "0.1.14"
-google-storage1 = "4.0.1"
-google-dns1 = "4.0.1"
+google-storage1 = "5.0.2"
+google-dns1 = "5.0.2"
 #zoom-api = { path = "../../third-party-api-clients/zoom" }
 
 [dev-dependencies]
