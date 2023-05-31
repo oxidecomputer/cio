@@ -45,18 +45,18 @@ docusign = "^0.1.0"
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
-google-calendar = "^0.5.0"
-#google-calendar = { path = "../../third-party-api-clients/google/calendar" }
-google-drive = "^0.6.0"
-# google-drive = { path = "../../third-party-api-clients/google/drive" }
+# google-calendar = "^0.5.0"
+google-calendar = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+# google-drive = "^0.6.0"
+google-drive = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 google-geocode = "^0.1.2"
 #google-geocode = {path = "../google-geocode" }
-google-groups-settings = "^0.5.0"
-#google-groups-settings = { path = "../../third-party-api-clients/google/groups-settings" }
-gsuite-api = "^0.6.0"
-#gsuite-api = { path = "../../third-party-api-clients/google/admin" }
-gusto-api = "^0.4.0"
-#gusto-api = { path = "../../third-party-api-clients/gusto" }
+# google-groups-settings = "^0.5.0"
+google-groups-settings = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+# gsuite-api = "^0.6.0"
+gsuite-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+# gusto-api = "^0.4.0"
+gusto-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 handlebars = "4.3.6"
 hex = "0.4.3"
 hmac = "0.12.1"
@@ -75,10 +75,10 @@ md-5 = "0.10.5"
 mime = "0.3.0"
 names = "^0.14.0"
 nom_pem = "4"
-octorust = { version = "^0.3.2", features = ["httpcache"] }
-#octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
-okta = "^0.4.0"
-#okta = { path = "../../third-party-api-clients/okta/" }
+# octorust = { version = "^0.3.2", features = ["httpcache"] }
+octorust = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+# okta = "^0.4.0"
+okta = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 openssl = "0.10"
 parse-rfd = { path = "../parse-rfd" }
 partial-struct = { path = "../partial-struct" }
@@ -95,17 +95,17 @@ reqwest = { version = "0.11", features = ["json"] }
 reqwest-middleware = "0.2"
 reqwest-retry = "0.2.2"
 reqwest-tracing = { version = "0.4", features = ["opentelemetry_0_17"] }
-revai = { version = "^0.5.0" }
-#revai = { path = "../../third-party-api-clients/rev.ai" }
+# revai = { version = "^0.5.0" }
+revai = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 ring = "0.16.20"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
-sendgrid-api = "^0.4.1"
-#sendgrid-api = { path = "../../third-party-api-clients/sendgrid" }
+# sendgrid-api = "^0.4.1"
+sendgrid-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 sentry = { version = "^0.27.0", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sheets = "^0.6.0"
-#sheets = { path = "../../third-party-api-clients/google/sheets" }
+# sheets = "^0.6.0"
+sheets = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 shippo = "^0.1.29"
 #shippo = { path = "../shippo" }
 shipbob = "^0.3.0"
@@ -116,8 +116,8 @@ steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tailscale-api = "^0.1.2"
 tracing = "^0.1"
 #tailscale-api = { path = "../tailscale" }
-tripactions = "0.4.0"
-#tripactions = { path = "../../third-party-api-clients/tripactions" }
+# tripactions = "0.4.0"
+tripactions = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 titlecase = "1.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
@@ -127,11 +127,11 @@ walkdir = "^2.3.2"
 yup-oauth2 = "8.1.0"
 zip = "0.6.2"
 zoho-api = { path = "../zoho-client" }
-zoom-api = "^0.4.0"
 stacker = "0.1.14"
 google-storage1 = "5.0.2"
 google-dns1 = "5.0.2"
-#zoom-api = { path = "../../third-party-api-clients/zoom" }
+# zoom-api = "^0.4.0"
+zoom-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 
 [dev-dependencies]
 tracing-subscriber = "0.3.15"

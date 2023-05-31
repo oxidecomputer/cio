@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use digest::KeyInit;
 use dropshot::{
-    ApiEndpointBodyContentType, Extractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, UntypedBody,
+    ApiEndpointBodyContentType, ExclusiveExtractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, UntypedBody,
 };
 use hmac::Mac;
-use std::{borrow::Cow, marker::PhantomData, sync::Arc};
+use std::{borrow::Cow, marker::PhantomData};
 
 use crate::{
     http::{internal_error, unauthorized},
@@ -66,14 +66,14 @@ pub trait HmacSignatureVerifier {
     type Algo: Mac + KeyInit;
 
     /// Provides the key to be used in signature verification.
-    async fn key<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> anyhow::Result<Vec<u8>>;
+    async fn key<Context: ServerContext>(rqctx: &RequestContext<Context>) -> anyhow::Result<Vec<u8>>;
 
     /// Provides the signature that should be tested.
-    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> anyhow::Result<Vec<u8>>;
+    async fn signature<Context: ServerContext>(rqctx: &RequestContext<Context>) -> anyhow::Result<Vec<u8>>;
 
     /// Provides the content that should be signed. By default this provides the request body content.
     async fn content<'a, 'b, Context: ServerContext>(
-        _rqctx: &'a Arc<RequestContext<Context>>,
+        _rqctx: &'a RequestContext<Context>,
         body: &'b UntypedBody,
     ) -> anyhow::Result<Cow<'b, [u8]>> {
         Ok(Cow::Borrowed(body.as_bytes()))
@@ -84,15 +84,16 @@ pub trait HmacSignatureVerifier {
 /// An [`INTERNAL_SERVER_ERROR`](http::status::StatusCode::INTERNAL_SERVER_ERROR) will be returned if verification can not be performed due to a
 /// the verifier `T` failing to supply a key or content,
 #[async_trait]
-impl<T, BodyType> Extractor for HmacVerifiedBody<T, BodyType>
+impl<T, BodyType> ExclusiveExtractor for HmacVerifiedBody<T, BodyType>
 where
     T: HmacSignatureVerifier + Send + Sync,
     BodyType: FromBytes<HttpError>,
 {
     async fn from_request<Context: ServerContext>(
-        rqctx: Arc<RequestContext<Context>>,
+        rqctx: &RequestContext<Context>,
+        request: hyper::Request<hyper::Body>,
     ) -> Result<HmacVerifiedBody<T, BodyType>, HttpError> {
-        let audit = HmacVerifiedBodyAudit::<T, BodyType>::from_request(rqctx.clone()).await?;
+        let audit = HmacVerifiedBodyAudit::<T, BodyType>::from_request(rqctx, request).await?;
 
         log::debug!("Computed HMAC audit result {}", audit.verified);
 
@@ -111,18 +112,19 @@ where
 /// An [`INTERNAL_SERVER_ERROR`](http::status::StatusCode::INTERNAL_SERVER_ERROR) will be returned if verification can not be performed due to
 /// the verifier `T` failing to supply a key or content,
 #[async_trait]
-impl<T, BodyType> Extractor for HmacVerifiedBodyAudit<T, BodyType>
+impl<T, BodyType> ExclusiveExtractor for HmacVerifiedBodyAudit<T, BodyType>
 where
     T: HmacSignatureVerifier + Send + Sync,
     BodyType: FromBytes<HttpError>,
 {
     async fn from_request<Context: ServerContext>(
-        rqctx: Arc<RequestContext<Context>>,
+        rqctx: &RequestContext<Context>,
+        request: hyper::Request<hyper::Body>,
     ) -> Result<HmacVerifiedBodyAudit<T, BodyType>, HttpError> {
-        let body = UntypedBody::from_request(rqctx.clone()).await?;
+        let body = UntypedBody::from_request(rqctx, request).await?;
         let content = T::content(&rqctx, &body).await.map_err(|_| internal_error())?;
-        let key = T::key(rqctx.clone()).await.map_err(|_| internal_error())?;
-        let req_uri = rqctx.request.lock().await.uri().clone();
+        let key = T::key(&rqctx).await.map_err(|_| internal_error())?;
+        let req_uri = rqctx.request.uri().clone();
 
         let signature = T::signature(rqctx.clone()).await;
         let mac = <T::Algo as Mac>::new_from_slice(&key);

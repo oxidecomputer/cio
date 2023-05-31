@@ -34,11 +34,11 @@ dropshot-verify-request = { path = "../dropshot-verify-request" }
 duct = "^0.13"
 #duct = { git = "https://github.com/jessfraz/duct.rs", branch = "async" }
 fs_extra = "1.2.0"
-google-drive = "^0.6.0"
 google-storage1 = "5.0.2"
-# google-drive = { path = "../../third-party-api-clients/google/drive" }
-gusto-api = "^0.4.0"
-#gusto-api = { path = "../../third-party-api-clients/gusto" }
+# google-drive = "^0.6.0"
+google-drive = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+# gusto-api = "^0.4.0"
+gusto-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 hex = "0.4.3"
 hmac = "0.12.0"
 http = "0.2.6"
@@ -49,8 +49,8 @@ mailchimp-minimal-api = { path = "../mailchimp-minimal-api" }
 mailerlite = { path = "../mailerlite" }
 mime = "0.2"
 mime_guess = "2"
-octorust = { version = "^0.3.2", features = ["httpcache"] }
-#octorust = { path = "../../third-party-api-clients/github/", features = ["httpcache"] }
+# octorust = { version = "^0.3.2", features = ["httpcache"] }
+octorust = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 pretty_env_logger = "0.4"
 procfs = "0.14.2"
 quickbooks = "^0.1.12"
@@ -65,8 +65,8 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_qs = "0.9"
 serde_urlencoded = "^0.7.0"
-sheets = "^0.6.0"
-#sheets = { path = "../../third-party-api-clients/google/sheets" }
+# sheets = "^0.6.0"
+sheets = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 shipbob = "^0.3.0"
 shippo = "^0.1.12"
 signal-hook = "^0.3"
@@ -82,11 +82,11 @@ steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
 tokio = { version = "1", features = ["full", "time"] }
 urlencoding = "2.1.0"
 uuid = { version = "1.0", features = ["serde", "v4"] }
-zoom-api = "^0.4.0"
 sha2 = "0.10.0"
 stacker = "0.1.14"
 base64 = "0.13.0"
-#zoom-api = { path = "../../third-party-api-clients/zoom" }
+# zoom-api = "^0.4.0"
+zoom-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 
 [dev-dependencies]
 pretty_assertions = "1"

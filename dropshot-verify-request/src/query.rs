@@ -1,12 +1,12 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use dropshot::{
-    ApiEndpointBodyContentType, Extractor, ExtractorMetadata, HttpError, Query, RequestContext, ServerContext,
+    ApiEndpointBodyContentType, SharedExtractor, ExtractorMetadata, HttpError, Query, RequestContext, ServerContext, ExtensionMode
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use std::{marker::PhantomData, sync::Arc};
+use std::{marker::PhantomData};
 
 use crate::http::{internal_error, unauthorized};
 
@@ -30,12 +30,12 @@ struct Token {
 }
 
 #[async_trait]
-impl<T> Extractor for QueryToken<T>
+impl<T> SharedExtractor for QueryToken<T>
 where
     T: QueryTokenProvider + Send + Sync,
 {
     async fn from_request<Context: ServerContext>(
-        rqctx: Arc<RequestContext<Context>>,
+        rqctx: &RequestContext<Context>,
     ) -> Result<QueryToken<T>, HttpError> {
         let audit = QueryTokenAudit::<T>::from_request(rqctx).await?;
 
@@ -48,19 +48,19 @@ where
 
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
         ExtractorMetadata {
-            paginated: false,
+            extension_mode: ExtensionMode::None,
             parameters: vec![],
         }
     }
 }
 
 #[async_trait]
-impl<T> Extractor for QueryTokenAudit<T>
+impl<T> SharedExtractor for QueryTokenAudit<T>
 where
     T: QueryTokenProvider + Send + Sync,
 {
     async fn from_request<Context: ServerContext>(
-        rqctx: Arc<RequestContext<Context>>,
+        rqctx: &RequestContext<Context>,
     ) -> Result<QueryTokenAudit<T>, HttpError> {
         let req_token = Query::<Token>::from_request(rqctx.clone())
             .await
@@ -74,13 +74,13 @@ where
             log::info!(
                 "Successfully verified request via url token. req_id: {} uri: {}",
                 rqctx.request_id,
-                rqctx.request.lock().await.uri()
+                rqctx.request.uri()
             );
         } else {
             log::info!(
                 "Failed to verify request via url token. req_id: {} uri: {}",
                 rqctx.request_id,
-                rqctx.request.lock().await.uri()
+                rqctx.request.uri()
             );
         }
 
@@ -92,7 +92,7 @@ where
 
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
         ExtractorMetadata {
-            paginated: false,
+            extension_mode: ExtensionMode::None,
             parameters: vec![],
         }
     }
