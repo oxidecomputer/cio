@@ -1,12 +1,13 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use dropshot::{
-    ApiEndpointBodyContentType, SharedExtractor, ExtractorMetadata, HttpError, Query, RequestContext, ServerContext, ExtensionMode
+    ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, Query, RequestContext, ServerContext,
+    SharedExtractor,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use std::{marker::PhantomData};
+use std::marker::PhantomData;
 
 use crate::http::{internal_error, unauthorized};
 
@@ -34,9 +35,7 @@ impl<T> SharedExtractor for QueryToken<T>
 where
     T: QueryTokenProvider + Send + Sync,
 {
-    async fn from_request<Context: ServerContext>(
-        rqctx: &RequestContext<Context>,
-    ) -> Result<QueryToken<T>, HttpError> {
+    async fn from_request<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<QueryToken<T>, HttpError> {
         let audit = QueryTokenAudit::<T>::from_request(rqctx).await?;
 
         if audit.verified {

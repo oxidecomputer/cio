@@ -1,6 +1,6 @@
 use dropshot::{HttpError, RequestContext, ServerContext};
 use http::{header::HeaderValue, StatusCode};
-use std::{collections::HashSet};
+use std::collections::HashSet;
 
 #[derive(Debug, PartialEq)]
 pub enum CorsFailure {

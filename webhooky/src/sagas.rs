@@ -103,8 +103,9 @@ pub async fn run_cmd(
     db: &Database,
     sec: &steno::SecClient,
     registry: Arc<steno::ActionRegistry<Saga>>,
-    id: &uuid::Uuid, cmd_name: &str) -> Result<()> {
-
+    id: &uuid::Uuid,
+    cmd_name: &str,
+) -> Result<()> {
     let params = Params {
         cmd_name: cmd_name.to_string(),
         saga_id: *id,

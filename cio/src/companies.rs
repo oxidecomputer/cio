@@ -602,7 +602,11 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()).await {
             // Initialize the Gusto client.
-            let gusto = Gusto::new_from_env(t.access_token.to_string(), t.refresh_token.to_string(), gusto_api::RootProductionServer {});
+            let gusto = Gusto::new_from_env(
+                t.access_token.to_string(),
+                t.refresh_token.to_string(),
+                gusto_api::RootProductionServer {},
+            );
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -1114,7 +1118,8 @@ impl Company {
     // Creates a minimal type for callers that need information about the RFD repo, but
     // do not want to parse data from the full API response
     pub async fn rfd_repo(&self) -> Result<RFDRepo> {
-        Ok(self.authenticate_github()?
+        Ok(self
+            .authenticate_github()?
             .repos()
             .get(&self.github_org, self.rfd_repo_name())
             .await

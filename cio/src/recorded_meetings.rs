@@ -352,7 +352,8 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
                     &recording.id,
                     zoom_api::types::RecordingDeleteAction::Trash,
                 )
-                .await?.body;
+                .await?
+                .body;
             info!(
             "zoom deleted meeting {} recording in Zoom since they are now in Google drive at https://drive.google.com/open?id={}",
                 meeting.topic,

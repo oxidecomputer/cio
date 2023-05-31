@@ -1233,7 +1233,8 @@ xoxo,
             phone_numbers: None,
         };
 
-        Ok(zoom.users()
+        Ok(zoom
+            .users()
             .update(
                 zoom_user_id,
                 zoom_api::types::LoginType::Noop, // We don't know their login type...
@@ -1930,7 +1931,11 @@ pub async fn sync_users(
     let mut gusto_users_by_id: HashMap<String, gusto_api::types::Employee> = HashMap::new();
     let gusto_auth = company.authenticate_gusto(db).await;
     if let Ok((ref gusto, ref gusto_company_id)) = gusto_auth {
-        let gu = gusto.employees().get_all_company(gusto_company_id, false, &[]).await?.body;
+        let gu = gusto
+            .employees()
+            .get_all_company(gusto_company_id, false, &[])
+            .await?
+            .body;
         for g in gu {
             gusto_users.insert(g.email.to_string(), g.clone());
             gusto_users_by_id.insert(g.id.to_string(), g);

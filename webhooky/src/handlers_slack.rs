@@ -1,13 +1,13 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot::{SharedExtractor, RequestContext, ServerContext, UntypedBody};
+use dropshot::{RequestContext, ServerContext, SharedExtractor, UntypedBody};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{info, warn};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use std::{borrow::Cow};
+use std::borrow::Cow;
 
 use crate::http::Headers;
 

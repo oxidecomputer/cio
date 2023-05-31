@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot::{SharedExtractor, RequestContext, ServerContext};
+use dropshot::{RequestContext, ServerContext, SharedExtractor};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{info, warn};

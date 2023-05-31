@@ -249,17 +249,9 @@ impl RFDUpdateAction for CopyImagesToGCP {
             api_context, update, ..
         } = ctx;
 
-        let images = update
-            .branch
-            .get_images(&update.number)
-            .await
-            .map_err(into_continue)?;
+        let images = update.branch.get_images(&update.number).await.map_err(into_continue)?;
 
-        let gcp_auth = api_context
-            .company
-            .authenticate_gcp()
-            .await
-            .map_err(into_continue)?;
+        let gcp_auth = api_context.company.authenticate_gcp().await.map_err(into_continue)?;
 
         let hub = Storage::new(
             hyper::Client::builder().build(
@@ -463,9 +455,7 @@ impl RFDUpdateAction for UpdatePDFs {
             ..
         } = ctx;
 
-        Self::upload(api_context, update, rfd)
-            .await
-            .map_err(into_continue)?;
+        Self::upload(api_context, update, rfd).await.map_err(into_continue)?;
         Self::delete_old(api_context, github, update, old_rfd, rfd)
             .await
             .map_err(into_continue)?;
@@ -719,8 +709,7 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
                             rfd.discussion, pull_request.html_url
                         );
 
-                        rfd.update_discussion(&pull_request.html_url)
-                            .map_err(into_continue)?;
+                        rfd.update_discussion(&pull_request.html_url).map_err(into_continue)?;
 
                         info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
 

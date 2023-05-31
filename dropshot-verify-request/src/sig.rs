@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use digest::KeyInit;
 use dropshot::{
-    ApiEndpointBodyContentType, ExclusiveExtractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, UntypedBody,
+    ApiEndpointBodyContentType, ExclusiveExtractor, ExtractorMetadata, HttpError, RequestContext, ServerContext,
+    UntypedBody,
 };
 use hmac::Mac;
 use std::{borrow::Cow, marker::PhantomData};

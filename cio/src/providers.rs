@@ -330,8 +330,12 @@ impl ProviderWriteOps for octorust::Client {
 
     async fn ensure_group(&self, _db: &Database, company: &Company, group: &Group) -> Result<()> {
         // Check if the team exists.
-        match self.teams().get_by_name(&company.github_org, &group.name).await
-        .map(|response| response.body) {
+        match self
+            .teams()
+            .get_by_name(&company.github_org, &group.name)
+            .await
+            .map(|response| response.body)
+        {
             Ok(team) => {
                 let parent_team_id = if let Some(parent) = team.parent { parent.id } else { 0 };
 
@@ -528,7 +532,8 @@ impl ProviderReadOps for octorust::Client {
 
     async fn list_provider_users(&self, company: &Company) -> Result<Vec<octorust::types::SimpleUser>> {
         // List all the users in the GitHub organization.
-        Ok(self.orgs()
+        Ok(self
+            .orgs()
             .list_all_members(
                 &company.github_org,
                 octorust::types::OrgsListMembersFilter::All,
@@ -540,8 +545,11 @@ impl ProviderReadOps for octorust::Client {
 
     async fn list_provider_groups(&self, company: &Company) -> Result<Vec<octorust::types::Team>> {
         // List all the teams in the GitHub organization.
-        Ok(self.teams().list_all(&company.github_org).await
-        .map(|response| response.body)?)
+        Ok(self
+            .teams()
+            .list_all(&company.github_org)
+            .await
+            .map(|response| response.body)?)
     }
 }
 
@@ -844,7 +852,8 @@ impl ProviderReadOps for gsuite_api::Client {
     type ProviderGroup = gsuite_api::types::Group;
 
     async fn list_provider_users(&self, company: &Company) -> Result<Vec<gsuite_api::types::User>> {
-        Ok(self.users()
+        Ok(self
+            .users()
             .list_all(
                 &company.gsuite_account_id,
                 &company.gsuite_domain,
@@ -861,7 +870,8 @@ impl ProviderReadOps for gsuite_api::Client {
     }
 
     async fn list_provider_groups(&self, company: &Company) -> Result<Vec<gsuite_api::types::Group>> {
-        Ok(self.groups()
+        Ok(self
+            .groups()
             .list_all(
                 &company.gsuite_account_id,
                 &company.gsuite_domain,
@@ -947,7 +957,12 @@ impl ProviderWriteOps for okta::Client {
         };
 
         // Try to get the user.
-        let mut user_id = match self.users().get(&user.email.replace('@', "%40")).await.map(|response| response.body) {
+        let mut user_id = match self
+            .users()
+            .get(&user.email.replace('@', "%40"))
+            .await
+            .map(|response| response.body)
+        {
             Ok(mut okta_user) => {
                 // Update the Okta user.
                 okta_user.profile = Some(profile.clone());
@@ -1264,7 +1279,8 @@ impl ProviderReadOps for okta::Client {
     type ProviderGroup = okta::types::Group;
 
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<okta::types::User>> {
-        Ok(self.users()
+        Ok(self
+            .users()
             .list_all(
                 "", // query
                 "", // filter
@@ -1277,7 +1293,8 @@ impl ProviderReadOps for okta::Client {
     }
 
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<okta::types::Group>> {
-        Ok(self.groups()
+        Ok(self
+            .groups()
             .list_all(
                 "", // query
                 "", // search
@@ -1478,7 +1495,8 @@ impl ProviderReadOps for zoom_api::Client {
     type ProviderGroup = ();
 
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<zoom_api::types::UsersResponse>> {
-        Ok(self.users()
+        Ok(self
+            .users()
             .get_all(
                 zoom_api::types::UsersStatus::Active,
                 "", // role id

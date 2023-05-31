@@ -1,8 +1,11 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot::{ApiEndpointBodyContentType, SharedExtractor, ExtractorMetadata, HttpError, RequestContext, ServerContext, ExtensionMode};
+use dropshot::{
+    ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext, ServerContext,
+    SharedExtractor,
+};
 
-use std::{marker::PhantomData};
+use std::marker::PhantomData;
 
 use crate::http::{internal_error, unauthorized, Headers};
 
@@ -20,9 +23,7 @@ impl BearerToken {
 /// This extractor is not responsible for checking the value of the token.
 #[async_trait]
 impl SharedExtractor for BearerToken {
-    async fn from_request<Context: ServerContext>(
-        rqctx: &RequestContext<Context>,
-    ) -> Result<BearerToken, HttpError> {
+    async fn from_request<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<BearerToken, HttpError> {
         // We do not care why headers may fail, we only care if we can access them
         let headers = Headers::from_request(&rqctx).await.ok();
 

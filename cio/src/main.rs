@@ -1,5 +1,5 @@
 #![recursion_limit = "256"]
-use std::{fs::File};
+use std::fs::File;
 
 use async_bb8_diesel::AsyncRunQueryDsl;
 use cio_api::{
@@ -160,9 +160,7 @@ async fn api_get_buildings(rqctx: RequestContext<Context>) -> Result<HttpRespons
     path = "/conference_rooms",
 }]
 #[inline]
-async fn api_get_conference_rooms(
-    rqctx: RequestContext<Context>,
-) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
+async fn api_get_conference_rooms(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -214,9 +212,7 @@ async fn api_get_resources(rqctx: RequestContext<Context>) -> Result<HttpRespons
     method = GET,
     path = "/github/repos",
 }]
-async fn api_get_github_repos(
-    rqctx: RequestContext<Context>,
-) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
+async fn api_get_github_repos(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 

@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use dropshot::{ApiEndpointBodyContentType, ExtensionMode, SharedExtractor, ExtractorMetadata, HttpError, RequestContext, ServerContext};
+use dropshot::{
+    ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext, ServerContext,
+    SharedExtractor,
+};
 use http::header::HeaderMap;
 
 pub struct Headers(pub HeaderMap);

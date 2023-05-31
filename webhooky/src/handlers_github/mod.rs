@@ -12,7 +12,7 @@ use cio_api::{
     rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos},
 };
-use dropshot::{SharedExtractor, RequestContext, ServerContext as DropshotServerContext};
+use dropshot::{RequestContext, ServerContext as DropshotServerContext, SharedExtractor};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{error, info, warn};
@@ -563,7 +563,11 @@ pub async fn handle_repository_event(
         message.push('\n');
     };
 
-    let repo = github.repos().get(&company.github_org, &event.repository.name).await?.body;
+    let repo = github
+        .repos()
+        .get(&company.github_org, &event.repository.name)
+        .await?
+        .body;
     let nr = NewRepo::new_from_full(repo.clone(), company.id);
     let new_repo = nr.upsert(&api_context.db).await?;
     a(&format!(

@@ -1416,10 +1416,7 @@ pub async fn handle_docusign_envelope_update(
     Ok(())
 }
 
-pub async fn handle_analytics_page_view(
-    rqctx: &RequestContext<ServerContext>,
-    mut event: NewPageView,
-) -> Result<()> {
+pub async fn handle_analytics_page_view(rqctx: &RequestContext<ServerContext>, mut event: NewPageView) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.app.db;
 

@@ -190,7 +190,7 @@ pub async fn create_server(
     let config_dropshot = ConfigDropshot {
         bind_address: s.address.parse()?,
         request_body_max_bytes: 107374182400, // 100 Gigiabytes.
-        // tls: None,
+                                              // tls: None,
     };
 
     /*
@@ -473,9 +473,7 @@ async fn trigger_rfd_update_by_number(
     method = GET,
     path = "/github/ratelimit",
 }]
-async fn github_rate_limit(
-    rqctx: RequestContext<ServerContext>,
-) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
+async fn github_rate_limit(rqctx: RequestContext<ServerContext>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
     let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn.run(|| crate::handlers::handle_github_rate_limit(&rqctx)).await {
@@ -1188,11 +1186,9 @@ async fn listen_application_files_upload_requests_cors(
     let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
     let headers = resp.headers_mut();
 
-    let allowed_origins = crate::cors::get_cors_origin_header(
-        &rqctx,
-        &["https://apply.oxide.computer", "https://oxide.computer"],
-    )
-    .await?;
+    let allowed_origins =
+        crate::cors::get_cors_origin_header(&rqctx, &["https://apply.oxide.computer", "https://oxide.computer"])
+            .await?;
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
     headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
     headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
@@ -1926,7 +1922,10 @@ async fn listen_slack_commands_webhooks(
 
     let mut txn = start_sentry_http_transaction(&rqctx, Some(&command)).await;
 
-    match txn.run(|| crate::handlers::handle_slack_commands(&rqctx, command)).await {
+    match txn
+        .run(|| crate::handlers::handle_slack_commands(&rqctx, command))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
 
