@@ -1,5 +1,3 @@
-use std::{collections::HashMap, ffi::OsStr, str::FromStr, sync::Arc};
-
 use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::{TimeZone, Utc};
@@ -29,6 +27,7 @@ use slack_chat_api::{
     MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageResponse, MessageResponseType,
     MessageType, SelectInputOption, View,
 };
+use std::{collections::HashMap, ffi::OsStr, str::FromStr};
 
 use crate::{
     context::ServerContext,
@@ -102,7 +101,7 @@ pub async fn handle_github_rate_limit(rqctx: &RequestContext<ServerContext>) -> 
     let github = oxide.authenticate_github()?;
 
     let response = github.rate_limit().get().await?.body;
-    let reset_time = Utc.timestamp(response.resources.core.reset, 0);
+    let reset_time = Utc.timestamp_opt(response.resources.core.reset, 0).unwrap();
 
     let dur = reset_time - Utc::now();
 

@@ -516,7 +516,7 @@ impl Applicant {
         if (self.status == crate::applicant_status::Status::Onboarding.to_string()
             || self.status == crate::applicant_status::Status::GivingOffer.to_string())
             && self.start_date.is_some()
-            && self.start_date.unwrap() <= Utc::now().date().naive_utc()
+            && self.start_date.unwrap() <= Utc::now().date_naive()
         {
             // We shouldn't also check if we have an employee for the user, only if the employee had
             // been hired and left.

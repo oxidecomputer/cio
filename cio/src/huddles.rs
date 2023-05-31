@@ -67,7 +67,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> 
                 let date = event.start.unwrap().date_time.unwrap();
                 let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
                 // Update the date of the meeting based on the calendar event.
-                record.fields.date = pacific_time.date().naive_utc();
+                record.fields.date = pacific_time.date_naive();
 
                 // Clear out the fields that are functions since the API cannot take values for those.
                 record.fields.name = "".to_string();
@@ -324,7 +324,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<(
                 // Set the email data.
                 email_data.huddle_name = slug.to_string();
                 email_data.email = huddle.email.to_string();
-                email_data.date = pacific_time.date().format(date_format).to_string();
+                email_data.date = pacific_time.date_naive().format(date_format).to_string();
 
                 // Get the discussion topics for the meeting.
                 for id in &record.fields.proposed_discussion {
@@ -541,7 +541,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
 
             if event.recurring_event_id.is_empty() || event.recurring_event_id != event.id {
                 // Let's add the event to our HashMap.
-                let date = event.start.as_ref().unwrap().date_time.unwrap().date().naive_utc();
+                let date = event.start.as_ref().unwrap().date_time.unwrap().date_naive();
                 gcal_events.insert(date, event.clone());
 
                 continue;
@@ -571,7 +571,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
                 // Let's add the event to our HashMap.
                 if instance.start.as_ref().unwrap().date_time.is_some() {
                     // Let's add the event to our HashMap.
-                    let date = instance.start.as_ref().unwrap().date_time.unwrap().date().naive_utc();
+                    let date = instance.start.as_ref().unwrap().date_time.unwrap().date_naive();
                     gcal_events.insert(date, instance.clone());
                 }
             }
@@ -666,7 +666,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
         for (date, event) in gcal_events {
             // Create events up to one quarter in advance.
             let in_range = Utc::now().checked_add_signed(Duration::weeks(13)).unwrap();
-            if date > Utc::now().date().naive_utc() && date <= in_range.date().naive_utc() {
+            if date > Utc::now().date_naive() && date <= in_range.date_naive() {
                 // We are in the future.
                 // Create an Airtable record.
                 let meeting = Meeting {

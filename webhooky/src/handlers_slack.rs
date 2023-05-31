@@ -50,7 +50,7 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
         rqctx: &'a RequestContext<Context>,
         body: &'b UntypedBody,
     ) -> anyhow::Result<Cow<'b, [u8]>> {
-        let headers = Headers::from_request(rqctx.clone()).await?;
+        let headers = Headers::from_request(rqctx).await?;
         let timestamp = headers
             .0
             .get("X-Slack-Request-Timestamp")

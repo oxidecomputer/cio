@@ -46,7 +46,7 @@ impl HmacSignatureVerifier for GitHubWebhookVerification {
     }
 
     async fn signature<Context: DropshotServerContext>(rqctx: &RequestContext<Context>) -> Result<Vec<u8>> {
-        let headers = Headers::from_request(rqctx.clone()).await?;
+        let headers = Headers::from_request(rqctx).await?;
         let signature = headers
             .0
             .get("X-Hub-Signature-256")

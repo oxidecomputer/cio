@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::Utc;

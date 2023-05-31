@@ -202,7 +202,7 @@ impl NewCertificate {
 
     pub fn load_cert(&mut self, certificate: &[u8]) -> Result<()> {
         let expiration_date = Self::expiration_date(certificate)?;
-        self.expiration_date = expiration_date.date().naive_utc();
+        self.expiration_date = expiration_date.date_naive();
 
         let dur = expiration_date - Utc::now();
         self.valid_days_left = dur.num_days() as i32;

@@ -123,11 +123,11 @@ where
         request: hyper::Request<hyper::Body>,
     ) -> Result<HmacVerifiedBodyAudit<T, BodyType>, HttpError> {
         let body = UntypedBody::from_request(rqctx, request).await?;
-        let content = T::content(&rqctx, &body).await.map_err(|_| internal_error())?;
-        let key = T::key(&rqctx).await.map_err(|_| internal_error())?;
+        let content = T::content(rqctx, &body).await.map_err(|_| internal_error())?;
+        let key = T::key(rqctx).await.map_err(|_| internal_error())?;
         let req_uri = rqctx.request.uri().clone();
 
-        let signature = T::signature(rqctx.clone()).await;
+        let signature = T::signature(rqctx).await;
         let mac = <T::Algo as Mac>::new_from_slice(&key);
 
         let verified = match (signature, mac) {

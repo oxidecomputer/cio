@@ -1056,13 +1056,13 @@ pub async fn sync_quickbooks(db: &Database, company: &Company, config: &FinanceC
 
             // This is a brex transaction, let's try to find it in our database to update it.
             // We know we have attachments as well.
-            let time_start = NaiveTime::from_hms_milli(0, 0, 0, 0);
+            let time_start = NaiveTime::from_hms_milli_opt(0, 0, 0, 0).expect("Invalid time");
             let sdt = purchase
                 .txn_date
                 .checked_sub_signed(Duration::days(10))
                 .unwrap()
                 .and_time(time_start);
-            let time_end = NaiveTime::from_hms_milli(23, 59, 59, 59);
+            let time_end = NaiveTime::from_hms_milli_opt(23, 59, 59, 59).expect("Invalid time");
             let edt = purchase.txn_date.and_time(time_end);
             let merchant_name = clean_merchant_name(&purchase.entity_ref.name, config);
             match credit_card_transactions::dsl::credit_card_transactions

@@ -270,7 +270,7 @@ impl RFDUpdateAction for CopyImagesToGCP {
                 .path
                 .replace(&format!("rfd/{}/", update.number.as_number_string()), "");
             let object_name = format!("rfd/{}/latest/{}", update.number, sub_path);
-            let mime_type = mime_guess::guess_mime_type(&object_name);
+            let mime_type = mime_guess::from_path(&object_name).first_or_octet_stream();
             let data = decode_base64(&image.content);
 
             log::info!(

@@ -4,7 +4,7 @@ use std::convert::From;
 use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
-use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime};
+use chrono::{naive::NaiveDate, offset::Utc, DateTime, Duration, NaiveTime, TimeZone};
 use chrono_humanize::HumanTime;
 use google_geocode::Geocode;
 use log::{info, warn};
@@ -811,7 +811,7 @@ impl OutboundShipments {
         // Get the next buisness day for pickup.
         let (start_time, end_time) = get_next_business_day();
 
-        let pickup_date = start_time.date().naive_utc();
+        let pickup_date = start_time.date_naive();
 
         let new_pickup = shippo::NewPickup {
             carrier_account: carrier_account_id.to_string(),
@@ -872,10 +872,11 @@ impl OutboundShipments {
     }
 }
 
-/// Returns the next buisness day in terms of start and end.
+/// Returns the next business day in terms of start and end.
 pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
+    let tz = chrono_tz::US::Pacific;
     let now = Utc::now();
-    let pacific_time = now.with_timezone(&chrono_tz::US::Pacific);
+    let pacific_time = now.with_timezone(&tz);
 
     let mut next_day = pacific_time.checked_add_signed(Duration::days(1)).unwrap();
     let day_of_week_string = next_day.format("%A").to_string();
@@ -886,12 +887,23 @@ pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
     }
 
     // Let's create the start time, which should be around 9am.
-    let start_time = next_day.date().and_time(NaiveTime::from_hms(8, 59, 59)).unwrap();
+    let start_time = next_day
+        .date_naive()
+        .and_time(NaiveTime::from_hms_opt(8, 59, 59).expect("Invalid time"));
 
     // Let's create the end time, which should be around 5pm.
-    let end_time = next_day.date().and_time(NaiveTime::from_hms(16, 59, 59)).unwrap();
+    let end_time = next_day
+        .date_naive()
+        .and_time(NaiveTime::from_hms_opt(16, 59, 59).expect("Invalid time"));
 
-    (start_time.with_timezone(&Utc), end_time.with_timezone(&Utc))
+    (
+        tz.from_local_datetime(&start_time)
+            .unwrap()
+            .with_timezone(&Utc),
+        tz.from_local_datetime(&end_time)
+            .unwrap()
+            .with_timezone(&Utc),
+    )
 }
 
 /// Implement updating the Airtable record for an OutboundShipment.

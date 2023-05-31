@@ -25,7 +25,7 @@ impl BearerToken {
 impl SharedExtractor for BearerToken {
     async fn from_request<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<BearerToken, HttpError> {
         // We do not care why headers may fail, we only care if we can access them
-        let headers = Headers::from_request(&rqctx).await.ok();
+        let headers = Headers::from_request(rqctx).await.ok();
 
         // Similarly we only care about the presence of the Authorization header
         let header_value = headers.and_then(|headers| {
@@ -96,7 +96,7 @@ where
     T: BearerProvider + Send + Sync,
 {
     async fn from_request<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<Bearer<T>, HttpError> {
-        let audit = BearerAudit::<T>::from_request(&rqctx).await?;
+        let audit = BearerAudit::<T>::from_request(rqctx).await?;
 
         if audit.verified {
             Ok(Bearer { _provider: PhantomData })
@@ -125,7 +125,7 @@ where
         rqctx: &RequestContext<Context>,
     ) -> Result<BearerAudit<T>, HttpError> {
         let expected_token = T::token().await.map_err(|_| internal_error())?;
-        let user_token = BearerToken::from_request(&rqctx)
+        let user_token = BearerToken::from_request(rqctx)
             .await
             .map(|token| token.0)
             .unwrap_or(None);

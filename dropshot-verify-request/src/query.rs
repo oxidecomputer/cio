@@ -61,7 +61,7 @@ where
     async fn from_request<Context: ServerContext>(
         rqctx: &RequestContext<Context>,
     ) -> Result<QueryTokenAudit<T>, HttpError> {
-        let req_token = Query::<Token>::from_request(rqctx.clone())
+        let req_token = Query::<Token>::from_request(rqctx)
             .await
             .map(|token| token.into_inner().token)
             .ok();

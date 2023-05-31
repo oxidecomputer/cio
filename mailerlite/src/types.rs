@@ -245,7 +245,7 @@ mod tests {
 
         // At this point in time the Chicago timezone is five hours behind UTC, so we expect that
         // the timezone post conversion is five hours ahead
-        let expected_date = Utc.timestamp(1667229189 + (5 * 60 * 60), 0);
+        let expected_date = Utc.timestamp_opt(1667229189 + (5 * 60 * 60), 0).unwrap();
 
         assert_eq!(converted.subscribed_at, Some(expected_date));
         assert_eq!(converted.unsubscribed_at, Some(expected_date));
