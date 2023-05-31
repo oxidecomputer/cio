@@ -1615,6 +1615,7 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
                 false, // is_tracking_uploaded
             )
             .await
+            .map(|response| response.body)
         {
             Ok(orders) => {
                 // Iterate over the orders and add them as a shipment.
