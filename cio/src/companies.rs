@@ -384,7 +384,12 @@ impl Company {
         for topic in topics {
             // Check if the webhook already exists.
             let mut exists = false;
-            match shipbob.webhooks().get_all(topic.clone()).await.map(|response| response.body) {
+            match shipbob
+                .webhooks()
+                .get_all(topic.clone())
+                .await
+                .map(|response| response.body)
+            {
                 Ok(webhooks) => {
                     for webhook in webhooks {
                         // Check if we already have the webhooks.
