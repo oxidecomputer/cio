@@ -14,8 +14,8 @@ path = "src/main.rs"
 
 [dependencies]
 acme-lib = "^0.8.0"
-airtable-api = "^0.1.36"
-#airtable-api = { path = "../airtable" }
+# airtable-api = "^0.1.36"
+airtable-api = { path = "../airtable" }
 anyhow = "1"
 # async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel.git", rev = "b2102ce03616938421eb1a9eabe04f10f79e2c44" }
 async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel" }
@@ -24,15 +24,15 @@ barcoders = { version = "1.0.2", features = ["image", "ascii", "svg", "json"]}
 base64 = "^0.13"
 bb8 = "^0.8.0"
 byte-unit = "4"
-checkr = "^0.0.10"
-#checkr = { path = "../checkr" }
+# checkr = "^0.0.10"
+checkr = { path = "../checkr" }
 chrono = { version = "0.4.22", features = ["serde"] }
 chrono-humanize = "0.2.2"
 chrono-tz = { version = "0.7", features = ["serde"] }
 cio-api-types = { path = "../cio-api-types" }
 # Swap to branch due to breaking change in CloudFlare API
 # cloudflare = "^0.9.1"
-cloudflare = { git = "https://github.com/augustuswm/cloudflare-rs" }
+cloudflare = { git = "https://github.com/augustuswm/cloudflare-rs", default-features = false, features = ["rustls-tls"] }
 csv = "1.1"
 comrak = "0.17"
 # Tracking pending 2.0 version.
@@ -40,8 +40,8 @@ comrak = "0.17"
 diesel = { version = "=2.0.4", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
 diesel-sentry = { path = "../diesel-sentry" }
 diffy = "^0.2.0"
-docusign = "^0.1.0"
-#docusign = { path = "../docusign" }
+# docusign = "^0.1.0"
+docusign = { path = "../docusign" }
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
@@ -49,8 +49,8 @@ flate2 = "1"
 google-calendar = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 # google-drive = "^0.6.0"
 google-drive = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
-google-geocode = "^0.1.2"
-#google-geocode = {path = "../google-geocode" }
+# google-geocode = "^0.1.2"
+google-geocode = {path = "../google-geocode" }
 # google-groups-settings = "^0.5.0"
 google-groups-settings = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 # gsuite-api = "^0.6.0"
@@ -85,13 +85,13 @@ partial-struct = { path = "../partial-struct" }
 phonenumber = "0.3"
 pretty_env_logger = "0.4"
 printpdf = { version = "=0.5.2", features = ["embedded_images"] }
-quickbooks = "^0.1.12"
-#quickbooks = { path = "../quickbooks" }
+# quickbooks = "^0.1.12"/
+quickbooks = { path = "../quickbooks" }
 # ramp-api = "^0.2.2"
 ramp-minimal-api = { path = "../ramp-minimal-api" }
 rand = { version = "^0.8.5", features = ["alloc"] }
 regex = "1"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 reqwest-middleware = "0.2"
 reqwest-retry = "0.2.2"
 reqwest-tracing = { version = "0.4", features = ["opentelemetry_0_17"] }
@@ -101,21 +101,22 @@ ring = "0.16.20"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 # sendgrid-api = "^0.4.1"
 sendgrid-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
-sentry = { version = "^0.27.0", features = ["anyhow", "log", "backtrace", "default", "panic", "contexts", "tracing"] }
+sentry = { version = "^0.27.0", default-features = false, features = ["anyhow", "log", "backtrace", "panic", "contexts", "tracing", "rustls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 # sheets = "^0.6.0"
 sheets = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
-shippo = "^0.1.29"
-#shippo = { path = "../shippo" }
-shipbob = "^0.3.0"
-slack-chat-api = "^0.1.16"
-#slack-chat-api = { path = "../slack" }
+# shippo = "^0.1.29"
+shippo = { path = "../shippo" }
+# shipbob = "^0.3.0"
+shipbob = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+# slack-chat-api = "^0.1.16"
+slack-chat-api = { path = "../slack" }
 sodiumoxide = "^0.2.7"
 steno = { git = "https://github.com/oxidecomputer/steno", branch = "main" }
-tailscale-api = "^0.1.2"
 tracing = "^0.1"
-#tailscale-api = { path = "../tailscale" }
+# tailscale-api = "^0.1.2"
+tailscale-api = { path = "../tailscale" }
 # tripactions = "0.4.0"
 tripactions = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 titlecase = "1.0"

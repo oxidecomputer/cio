@@ -71,31 +71,14 @@ dependencies = [
 
 [[package]]
 name = "airtable-api"
-version = "0.1.36"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c2900e7e044868b63972977b381c1e8e9c8e2bc25aebd63213a3f2ccae73096"
-dependencies = [
- "anyhow",
- "chrono",
- "reqwest",
- "reqwest-middleware 0.1.6",
- "reqwest-retry 0.1.5",
- "reqwest-tracing 0.2.3",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "airtable-api"
 version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
  "reqwest",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "schemars",
  "serde",
  "serde_json",
@@ -329,17 +312,6 @@ dependencies = [
  "rustix 0.37.19",
  "signal-hook",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "async-recursion"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7d78656ba01f1b93024b7c3a0467f1608e4be67d725749fdcd7d2c7678fd7a2"
-dependencies = [
- "proc-macro2 1.0.59",
- "quote 1.0.28",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -705,19 +677,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "checkr"
-version = "0.0.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cd2adea989e8d8031711ff42a3cb741c117a41f5983745289c665f01d4ea811"
-dependencies = [
- "chrono",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -800,7 +759,7 @@ version = "0.2.0"
 dependencies = [
  "Inflector",
  "acme-lib",
- "airtable-api 0.1.36",
+ "airtable-api",
  "anyhow",
  "async-bb8-diesel",
  "async-trait",
@@ -808,7 +767,7 @@ dependencies = [
  "base64 0.13.1",
  "bb8",
  "byte-unit",
- "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "checkr",
  "chrono",
  "chrono-humanize",
  "chrono-tz 0.7.0",
@@ -819,14 +778,14 @@ dependencies = [
  "diesel",
  "diesel-sentry",
  "diffy",
- "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docusign",
  "dropshot",
  "env_logger 0.10.0",
  "flate2",
  "google-calendar",
  "google-dns1",
  "google-drive",
- "google-geocode 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "google-geocode",
  "google-groups-settings",
  "google-storage1",
  "gsuite-api",
@@ -854,14 +813,14 @@ dependencies = [
  "phonenumber",
  "pretty_env_logger",
  "printpdf",
- "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quickbooks",
  "ramp-minimal-api",
  "rand",
  "regex",
  "reqwest",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "revai",
  "ring",
  "schemars",
@@ -871,12 +830,12 @@ dependencies = [
  "serde_json",
  "sheets",
  "shipbob",
- "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
- "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo",
+ "slack-chat-api",
  "sodiumoxide",
  "stacker",
  "steno",
- "tailscale-api 0.1.5",
+ "tailscale-api",
  "titlecase",
  "tokio",
  "toml 0.5.11",
@@ -1566,21 +1525,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "docusign"
-version = "0.1.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94bda4237e1e9ac0e8731387511c8e940c6c14d55c407738b2d2d740ca07c5aa"
-dependencies = [
- "bytes",
- "chrono",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "uuid 0.8.2",
-]
-
-[[package]]
 name = "dropshot"
 version = "0.9.1-dev"
 source = "git+https://github.com/oxidecomputer/dropshot#4be76343647319bd95efd63b081670c872afd427"
@@ -2159,7 +2103,7 @@ name = "google-calendar"
 version = "0.5.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "base64 0.21.2",
  "bytes",
@@ -2172,10 +2116,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -2213,7 +2157,7 @@ name = "google-drive"
 version = "0.6.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "base64 0.21.2",
  "bytes",
@@ -2226,10 +2170,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -2252,22 +2196,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "google-geocode"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6f43279fe6572eaf474b79d6850a9abbd03d4875c9acc76e7e86fff5a56984b"
-dependencies = [
- "reqwest",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "google-groups-settings"
 version = "0.5.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "base64 0.21.2",
  "bytes",
@@ -2280,10 +2213,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -2332,7 +2265,7 @@ name = "gsuite-api"
 version = "0.6.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "base64 0.21.2",
  "bytes",
@@ -2345,10 +2278,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -2366,7 +2299,7 @@ name = "gusto-api"
 version = "0.4.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -2378,10 +2311,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -2655,19 +2588,6 @@ dependencies = [
  "rustls 0.21.1",
  "tokio",
  "tokio-rustls 0.24.0",
-]
-
-[[package]]
-name = "hyper-tls"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
-dependencies = [
- "bytes",
- "hyper",
- "native-tls",
- "tokio",
- "tokio-native-tls",
 ]
 
 [[package]]
@@ -3359,24 +3279,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "native-tls"
-version = "0.2.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07226173c32f2926027b63cce4bcd8076c3552846cbe7925f3aaffeac0a3b92e"
-dependencies = [
- "lazy_static",
- "libc",
- "log 0.4.18",
- "openssl",
- "openssl-probe",
- "openssl-sys",
- "schannel",
- "security-framework",
- "security-framework-sys",
- "tempfile",
-]
-
-[[package]]
 name = "new_debug_unreachable"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3563,7 +3465,7 @@ name = "octorust"
 version = "0.3.2"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -3576,10 +3478,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -3596,7 +3498,7 @@ name = "okta"
 version = "0.4.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -3608,10 +3510,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -3813,7 +3715,7 @@ dependencies = [
  "cfg-if",
  "instant",
  "libc",
- "redox_syscall 0.2.16",
+ "redox_syscall",
  "smallvec",
  "winapi",
 ]
@@ -3826,7 +3728,7 @@ checksum = "9069cbb9f99e3a5083476ccb29ceb1de18b9118cafa53e90c9551235de2b9521"
 dependencies = [
  "cfg-if",
  "libc",
- "redox_syscall 0.2.16",
+ "redox_syscall",
  "smallvec",
  "windows-sys 0.45.0",
 ]
@@ -4349,20 +4251,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "quickbooks"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70cca25013df9e1f891a516055fdf512d69c717a09fb814c469226fbc9e7178c"
-dependencies = [
- "chrono",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "uuid 0.8.2",
-]
-
-[[package]]
 name = "quote"
 version = "0.6.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4466,22 +4354,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "redox_syscall"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "567664f262709473930a4bf9e51bf2ebf3348f2e748ccc50dea20646858f8f29"
-dependencies = [
- "bitflags",
-]
-
-[[package]]
 name = "redox_users"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b033d837a7cf162d7993aded9304e30a83213c648b6e389db233191f891e5c2b"
 dependencies = [
  "getrandom",
- "redox_syscall 0.2.16",
+ "redox_syscall",
  "thiserror",
 ]
 
@@ -4536,13 +4415,11 @@ dependencies = [
  "http-body",
  "hyper",
  "hyper-rustls 0.24.0",
- "hyper-tls",
  "ipnet",
  "js-sys",
  "log 0.4.18",
  "mime 0.3.17",
  "mime_guess",
- "native-tls",
  "once_cell",
  "percent-encoding 2.2.0",
  "pin-project-lite",
@@ -4552,7 +4429,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
- "tokio-native-tls",
  "tokio-rustls 0.24.0",
  "tower-service",
  "url 2.3.1",
@@ -4565,42 +4441,14 @@ dependencies = [
 
 [[package]]
 name = "reqwest-conditional-middleware"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bce134f515eb4c2748bbd928086e7b0aae0d1568daf6c63b51e829aa6f2cf464"
-dependencies = [
- "async-trait",
- "reqwest",
- "reqwest-middleware 0.1.6",
- "task-local-extensions",
-]
-
-[[package]]
-name = "reqwest-conditional-middleware"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59e50a2e70970896c99d1b8f20ddc30a70b30d3ac6e619a03a8353b64a49b277"
 dependencies = [
  "async-trait",
  "reqwest",
- "reqwest-middleware 0.2.2",
+ "reqwest-middleware",
  "task-local-extensions",
-]
-
-[[package]]
-name = "reqwest-middleware"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69539cea4148dce683bec9dc95be3f0397a9bb2c248a49c8296a9d21659a8cdd"
-dependencies = [
- "anyhow",
- "async-trait",
- "futures",
- "http",
- "reqwest",
- "serde",
- "task-local-extensions",
- "thiserror",
 ]
 
 [[package]]
@@ -4620,26 +4468,6 @@ dependencies = [
 
 [[package]]
 name = "reqwest-retry"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce246a729eaa6aff5e215aee42845bf5fed9893cc6cd51aeeb712f34e04dd9f3"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "futures",
- "http",
- "hyper",
- "reqwest",
- "reqwest-middleware 0.1.6",
- "retry-policies",
- "task-local-extensions",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "reqwest-retry"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48d0fd6ef4c6d23790399fe15efc8d12cd9f3d4133958f9bd7801ee5cbaec6c4"
@@ -4653,44 +4481,12 @@ dependencies = [
  "hyper",
  "parking_lot 0.11.2",
  "reqwest",
- "reqwest-middleware 0.2.2",
+ "reqwest-middleware",
  "retry-policies",
  "task-local-extensions",
  "tokio",
  "tracing",
  "wasm-timer",
-]
-
-[[package]]
-name = "reqwest-tracing"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55c2af6c0571bef48275098bebe17863764989276c49433dab1d52328f744f1d"
-dependencies = [
- "async-trait",
- "opentelemetry",
- "reqwest",
- "reqwest-middleware 0.1.6",
- "task-local-extensions",
- "tokio",
- "tracing",
- "tracing-opentelemetry",
-]
-
-[[package]]
-name = "reqwest-tracing"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64977f9a47fa7768cc88751e29026e569730ac1667c2eaeaac04b32624849fbe"
-dependencies = [
- "async-trait",
- "opentelemetry",
- "reqwest",
- "reqwest-middleware 0.1.6",
- "task-local-extensions",
- "tokio",
- "tracing",
- "tracing-opentelemetry",
 ]
 
 [[package]]
@@ -4705,7 +4501,7 @@ dependencies = [
  "matchit",
  "opentelemetry",
  "reqwest",
- "reqwest-middleware 0.2.2",
+ "reqwest-middleware",
  "task-local-extensions",
  "tracing",
  "tracing-opentelemetry",
@@ -4727,7 +4523,7 @@ name = "revai"
 version = "0.5.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -4739,10 +4535,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -5098,7 +4894,7 @@ name = "sendgrid-api"
 version = "0.4.1"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -5110,10 +4906,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -5131,7 +4927,6 @@ version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73642819e7fa63eb264abc818a2f65ac8764afbe4870b5ee25bcecc491be0d4c"
 dependencies = [
- "httpdate",
  "reqwest",
  "sentry-anyhow",
  "sentry-backtrace",
@@ -5142,7 +4937,6 @@ dependencies = [
  "sentry-panic",
  "sentry-slog",
  "sentry-tracing",
- "tokio",
 ]
 
 [[package]]
@@ -5493,7 +5287,7 @@ name = "sheets"
 version = "0.6.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "base64 0.21.2",
  "bytes",
@@ -5506,10 +5300,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -5531,11 +5325,9 @@ checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
 [[package]]
 name = "shipbob"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5296082ce3d437e3983a224786d52eac6ba2dc7227a815358aa1b69266f3f0b4"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "anyhow",
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -5547,15 +5339,16 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.1.0",
- "reqwest-middleware 0.1.6",
- "reqwest-retry 0.1.5",
- "reqwest-tracing 0.3.1",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "thiserror",
  "tokio",
  "url 2.3.1",
  "uuid 1.3.3",
@@ -5564,19 +5357,6 @@ dependencies = [
 [[package]]
 name = "shippo"
 version = "0.1.29"
-dependencies = [
- "chrono",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "shippo"
-version = "0.1.29"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2c132b4d0a17efeb6aacd2b19eafe7e6be53348549f1bf564c77d49a31945a4"
 dependencies = [
  "chrono",
  "reqwest",
@@ -5658,22 +5438,6 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid 1.3.3",
-]
-
-[[package]]
-name = "slack-chat-api"
-version = "0.1.46"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b0fda63848f9645d90a01a22110b261b5d84f26acb555780091ad321084e5c7"
-dependencies = [
- "anyhow",
- "async-recursion 0.3.2",
- "chrono",
- "reqwest",
- "schemars",
- "serde",
- "serde_json",
- "uuid 0.8.2",
 ]
 
 [[package]]
@@ -6006,18 +5770,6 @@ dependencies = [
 
 [[package]]
 name = "tailscale-api"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1711b6f78eecf736edc60890a539f831578b43e5af8855b5a89df0cd675e0d4"
-dependencies = [
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "tailscale-api"
 version = "0.2.0"
 dependencies = [
  "chrono",
@@ -6041,19 +5793,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba323866e5d033818e3240feeb9f7db2c4296674e4d9e16b97b7bf8f490434e8"
 dependencies = [
  "pin-utils",
-]
-
-[[package]]
-name = "tempfile"
-version = "3.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9fbec84f381d5795b08656e4912bec604d162bff9291d6189a78f4c8ab87998"
-dependencies = [
- "cfg-if",
- "fastrand",
- "redox_syscall 0.3.5",
- "rustix 0.37.19",
- "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -6291,16 +6030,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-native-tls"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
-dependencies = [
- "native-tls",
- "tokio",
-]
-
-[[package]]
 name = "tokio-rustls"
 version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6472,7 +6201,7 @@ name = "tripactions"
 version = "0.4.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -6484,10 +6213,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
@@ -6678,10 +6407,6 @@ name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
-dependencies = [
- "getrandom",
- "serde",
-]
 
 [[package]]
 name = "uuid"
@@ -6860,7 +6585,7 @@ dependencies = [
  "async-bb8-diesel",
  "async-trait",
  "base64 0.13.1",
- "checkr 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "checkr",
  "chrono",
  "chrono-humanize",
  "chrono-tz 0.6.3",
@@ -6868,7 +6593,7 @@ dependencies = [
  "clap 3.2.25",
  "clokwerk",
  "diesel",
- "docusign 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docusign",
  "dropshot",
  "dropshot-verify-request",
  "duct",
@@ -6889,7 +6614,7 @@ dependencies = [
  "pretty_assertions",
  "pretty_env_logger",
  "procfs",
- "quickbooks 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quickbooks",
  "rand",
  "regex",
  "reqwest",
@@ -6902,9 +6627,9 @@ dependencies = [
  "sha2 0.10.6",
  "sheets",
  "shipbob",
- "shippo 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
+ "shippo",
  "signal-hook",
- "slack-chat-api 0.1.46 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slack-chat-api",
  "slog",
  "slog-async",
  "slog-json",
@@ -7264,7 +6989,7 @@ name = "zoom-api"
 version = "0.4.0"
 source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#4eb04d3ed7e5ba184ad2817c75c9263a483dee7c"
 dependencies = [
- "async-recursion 1.0.4",
+ "async-recursion",
  "async-trait",
  "bytes",
  "chrono",
@@ -7276,10 +7001,10 @@ dependencies = [
  "pem",
  "percent-encoding 2.2.0",
  "reqwest",
- "reqwest-conditional-middleware 0.2.1",
- "reqwest-middleware 0.2.2",
- "reqwest-retry 0.2.2",
- "reqwest-tracing 0.4.4",
+ "reqwest-conditional-middleware",
+ "reqwest-middleware",
+ "reqwest-retry",
+ "reqwest-tracing",
  "ring",
  "schemars",
  "serde",
