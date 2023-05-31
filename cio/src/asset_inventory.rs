@@ -174,7 +174,8 @@ impl NewAssetItem {
             let png_file = drive_client
                 .files()
                 .create_or_update(drive_id, parent_id, &file_name, "image/png", &png_bytes)
-                .await?;
+                .await?
+                .body;
             self.barcode_png = format!("https://drive.google.com/uc?export=download&id={}", png_file.id);
 
             // Now do the SVG.
@@ -188,7 +189,8 @@ impl NewAssetItem {
             let svg_file = drive_client
                 .files()
                 .create_or_update(drive_id, parent_id, &file_name, "image/svg+xml", svg_bytes)
-                .await?;
+                .await?
+                .body;
             self.barcode_svg = format!("https://drive.google.com/uc?export=download&id={}", svg_file.id);
 
             // Generate the barcode label.
@@ -205,7 +207,8 @@ impl NewAssetItem {
             let label_file = drive_client
                 .files()
                 .create_or_update(drive_id, parent_id, &file_name, "application/pdf", &label_bytes)
-                .await?;
+                .await?
+                .body;
             self.barcode_pdf_label = format!("https://drive.google.com/uc?export=download&id={}", label_file.id);
         }
 

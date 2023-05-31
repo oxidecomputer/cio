@@ -190,6 +190,7 @@ impl GitHubWebhook {
                 },
             )
             .await
+            .map(|response| response.body)
         {
             Ok(check) => return Ok(check.id),
             Err(e) => {

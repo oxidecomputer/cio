@@ -121,7 +121,8 @@ pub async fn refresh_trip_actions(db: &Database, company: &Company) -> Result<()
             tripactions::types::BookingStatus::Noop,
             tripactions::types::BookingType::Noop,
         )
-        .await?;
+        .await?
+        .body;
 
     for booking in bookings {
         // Create our list of passengers.

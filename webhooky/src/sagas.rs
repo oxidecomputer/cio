@@ -81,7 +81,7 @@ pub struct Context {
 
 impl steno::SagaType for Saga {
     // Type for the saga's parameters
-    type SagaParamsType = Params;
+    // type SagaParamsType = Params;
 
     // Type for the application-specific context (see above)
     type ExecContextType = Arc<Context>;

@@ -326,7 +326,9 @@ impl Company {
             // Return early.
             return None;
         }
-        Some(Okta::new(&self.okta_api_key).with_host_override(self.okta_endpoint()))
+        let mut client = Okta::new(&self.okta_api_key);
+        client.with_host_override(self.okta_endpoint());
+        Some(client)
     }
 
     fn okta_endpoint(&self) -> String {
@@ -1112,15 +1114,15 @@ impl Company {
     // Creates a minimal type for callers that need information about the RFD repo, but
     // do not want to parse data from the full API response
     pub async fn rfd_repo(&self) -> Result<RFDRepo> {
-        self.authenticate_github()?
+        Ok(self.authenticate_github()?
             .repos()
             .get(&self.github_org, self.rfd_repo_name())
             .await
-            .map(|repo| RFDRepo {
+            .map(|response| RFDRepo {
                 owner: self.github_org.clone(),
                 name: self.rfd_repo_name().to_string(),
-                default_branch: repo.default_branch,
-            })
+                default_branch: response.body.default_branch,
+            })?)
     }
 }
 

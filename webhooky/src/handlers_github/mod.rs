@@ -12,7 +12,7 @@ use cio_api::{
     rfd::{GitHubRFDBranch, GitHubRFDRepo, GitHubRFDUpdate},
     shorturls::{generate_shorturls_for_configs_links, generate_shorturls_for_repos},
 };
-use dropshot::{Extractor, RequestContext, ServerContext as DropshotServerContext};
+use dropshot::{SharedExtractor, RequestContext, ServerContext as DropshotServerContext};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{error, info, warn};
@@ -66,14 +66,14 @@ impl HmacSignatureVerifier for GitHubWebhookVerification {
 }
 
 /// Handle a request to the /github endpoint.
-pub async fn handle_github(rqctx: Arc<RequestContext<ServerContext>>, event: GitHubWebhook) -> Result<()> {
+pub async fn handle_github(rqctx: &RequestContext<ServerContext>, event: GitHubWebhook) -> Result<()> {
     let api_context = rqctx.context();
 
     // Parse the `X-GitHub-Event` header. Ensure the request lock is dropped once the
     // event_type has been extracted.
     // TODO: make this nicer when supported as a first class method in dropshot.
     let event_type_string = {
-        let req = rqctx.request.lock().await;
+        let req = &rqctx.request;
         let req_headers = req.headers();
         req_headers
             .get("X-GitHub-Event")
@@ -563,7 +563,7 @@ pub async fn handle_repository_event(
         message.push('\n');
     };
 
-    let repo = github.repos().get(&company.github_org, &event.repository.name).await?;
+    let repo = github.repos().get(&company.github_org, &event.repository.name).await?.body;
     let nr = NewRepo::new_from_full(repo.clone(), company.id);
     let new_repo = nr.upsert(&api_context.db).await?;
     a(&format!(

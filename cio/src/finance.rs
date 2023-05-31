@@ -258,7 +258,7 @@ pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Resul
 
         let users = if vendor.name == "GitHub" {
             // Update the number of GitHub users in our org.
-            let org = github.orgs().get(&company.github_org).await?;
+            let org = github.orgs().get(&company.github_org).await?.body;
             org.plan.unwrap().filled_seats as i32
         } else if vendor.name == "Okta" && okta_auth.is_some() {
             let okta = okta_auth.as_ref().unwrap();

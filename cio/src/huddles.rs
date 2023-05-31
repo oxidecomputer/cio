@@ -56,6 +56,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> 
                     "", // time_zone
                 )
                 .await
+                .map(|response| response.body)
             {
                 // If the event is cancelled, we can just carry on our merry way.
                 if event.status.to_lowercase().trim() == "cancelled" {
@@ -134,6 +135,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                             "", // time_zone
                         )
                         .await
+                        .map(|response| response.body)
                     {
                         // Modify the properties of the event so we can update it.
                         event.description = description.trim().to_string();
@@ -156,6 +158,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                                 &event,
                             )
                             .await
+                            .map(|response| response.body)
                         {
                             Ok(_) => (),
                             Err(err) => debug!(
@@ -219,6 +222,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<(
                     "", // time_zone
                 )
                 .await
+                .map(|response| response.body)
             {
                 // If the event is cancelled, we can just carry on our merry way.
                 if event.status.to_lowercase().trim() == "cancelled" {
@@ -265,7 +269,8 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<(
                                     0,  // max attendees, 0 to ignore
                                     "", // time_zone
                                 )
-                                .await?;
+                                .await?
+                                .body;
                             // We need to update the event instance, not delete it, and set the status to
                             // cancelled.
                             // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
@@ -518,7 +523,8 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
                 "",                                  // time_zone
                 "",                                  // updated_min
             )
-            .await?;
+            .await?
+            .body;
 
         // Iterate over all the events, searching for our search string.
         let mut recurring_events: Vec<String> = Vec::new();
@@ -559,7 +565,8 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
                     "",   // time_min
                     "",   // time_zone
                 )
-                .await?;
+                .await?
+                .body;
             for instance in instances {
                 // Let's add the event to our HashMap.
                 if instance.start.as_ref().unwrap().date_time.is_some() {

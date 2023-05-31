@@ -314,7 +314,7 @@ impl GitHubBackend {
     }
 
     async fn repo(&self) -> Result<FullRepository> {
-        self.client.repos().get(&self.owner, &self.repo).await
+        Ok(self.client.repos().get(&self.owner, &self.repo).await?.body)
     }
 
     fn path(&self, domain: &str, file: &str) -> String {

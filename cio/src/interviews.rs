@@ -89,7 +89,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
     let calendars = gcal
         .calendar_list()
         .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
-        .await?;
+        .await?
+        .body;
 
     // Iterate over the calendars.
     for calendar in calendars {
@@ -119,7 +120,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                 "",   // time_zone
                 "",   // updated_min
             )
-            .await?;
+            .await?
+            .body;
 
         for event in events {
             // If the event has been cancelled, clear it out of the database.
@@ -584,7 +586,8 @@ The Oxide Team
         let drive_file = drive_client
             .files()
             .create_or_update(&drive_id, &parent_id, &filename, "application/pdf", &buffer)
-            .await?;
+            .await?
+            .body;
         applicant.interview_packet = format!("https://drive.google.com/open?id={}", drive_file.id);
         applicant.update(db).await?;
 
@@ -626,7 +629,8 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
             true,  // supports_all_drives
             true,  // supports_team_drives
         )
-        .await?;
+        .await?
+        .body;
     let mime_type = drive_file.mime_type;
     let name = drive_file.name;
 
@@ -635,7 +639,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
 
     if mime_type == "application/pdf" {
         // Get the PDF contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await?;
+        let contents = drive_client.files().download_by_id(&id).await?.body;
 
         path.push(format!("{}.pdf", username));
 
@@ -645,7 +649,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
     } else if name.ends_with(".zip") {
         // This is patrick :)
         // Get the ip contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await?;
+        let contents = drive_client.files().download_by_id(&id).await?.body;
 
         path.push(format!("{}.zip", id));
 
@@ -705,7 +709,7 @@ pub async fn download_materials_as_pdf(drive_client: &GoogleDrive, url: &str, us
 
     // Anything else let's use pandoc to convert it to a pdf.
     info!("converting `{}` to a PDF", name);
-    let contents = drive_client.files().download_by_id(&id).await?;
+    let contents = drive_client.files().download_by_id(&id).await?.body;
     path.push(&name);
 
     let mut file = fs::File::create(&path)?;

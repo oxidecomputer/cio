@@ -665,7 +665,8 @@ impl UserConfig {
                     ssn: "".to_string(),
                 },
             )
-            .await?;
+            .await?
+            .body;
         // Set the gusto id.
         self.gusto_id = employee.id.to_string();
 
@@ -1232,13 +1233,14 @@ xoxo,
             phone_numbers: None,
         };
 
-        zoom.users()
+        Ok(zoom.users()
             .update(
                 zoom_user_id,
                 zoom_api::types::LoginType::Noop, // We don't know their login type...
                 &update_user,
             )
             .await
+            .map(|response| response.body)?)
     }
 }
 
@@ -1745,7 +1747,8 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
             "/configs/",
             "", // leaving the branch blank gives us the default branch
         )
-        .await?;
+        .await?
+        .body;
 
     let mut file_contents = String::new();
     for file in files {
@@ -1867,7 +1870,8 @@ pub async fn sync_github_outside_collaborators(
         let github_collaborators = github
             .repos()
             .list_all_collaborators(&company.github_org, &repo, octorust::types::Affiliation::All)
-            .await?;
+            .await?
+            .body;
 
         // Iterate over the users added to the repo, and make sure they exist in our
         // vector.
@@ -1926,7 +1930,7 @@ pub async fn sync_users(
     let mut gusto_users_by_id: HashMap<String, gusto_api::types::Employee> = HashMap::new();
     let gusto_auth = company.authenticate_gusto(db).await;
     if let Ok((ref gusto, ref gusto_company_id)) = gusto_auth {
-        let gu = gusto.employees().get_all_company(gusto_company_id, false, &[]).await?;
+        let gu = gusto.employees().get_all_company(gusto_company_id, false, &[]).await?.body;
         for g in gu {
             gusto_users.insert(g.email.to_string(), g.clone());
             gusto_users_by_id.insert(g.id.to_string(), g);
@@ -1981,6 +1985,7 @@ pub async fn sync_users(
                 zoom_api::types::UsersIncludeFields::Noop,
             )
             .await
+            .map(|response| response.body)
         {
             Ok(pending_users) => {
                 for r in pending_users {
@@ -2013,7 +2018,8 @@ pub async fn sync_users(
     let calendars = gcal
         .calendar_list()
         .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
-        .await?;
+        .await?
+        .body;
 
     let mut anniversary_cal_id = "".to_string();
 
@@ -2281,7 +2287,8 @@ pub async fn sync_buildings(
     let gsuite_buildings = gsuite
         .resources()
         .buildings_list_all(&company.gsuite_account_id)
-        .await?;
+        .await?
+        .body;
 
     // Get all the buildings.
     let db_buildings = Buildings::get_from_db(db, company.id).await?;
@@ -2411,7 +2418,8 @@ pub async fn sync_resources(
             "", // order by
             "", // query
         )
-        .await?;
+        .await?
+        .body;
 
     // Get all the resources.
     let db_resources = Resources::get_from_db(db, company.id).await?;
@@ -2771,7 +2779,8 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
     let calendars = gcal
         .calendar_list()
         .list_all(google_calendar::types::MinAccessRole::Noop, false, false)
-        .await?;
+        .await?
+        .body;
 
     let mut anniversary_cal_id = "".to_string();
 
@@ -2847,7 +2856,8 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
                     true,                                     // supports_attachments
                     &new_event,
                 )
-                .await?;
+                .await?
+                .body;
             info!("created event for user {} anniversary: {:?}", user.username, event);
 
             user.google_anniversary_event_id = event.id.to_string();
@@ -2861,7 +2871,8 @@ pub async fn refresh_anniversary_events(db: &Database, company: &Company) -> Res
                     0,  // max_attendees set to 0 to ignore
                     "", // time_zone
                 )
-                .await?;
+                .await?
+                .body;
 
             if old_event.description != new_event.description
                 || old_event.summary != new_event.summary

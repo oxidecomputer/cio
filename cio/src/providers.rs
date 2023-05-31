@@ -231,6 +231,7 @@ impl ProviderWriteOps for octorust::Client {
             .orgs()
             .get_membership_for_user(&company.github_org, &user.github)
             .await
+            .map(|response| response.body)
         {
             Ok(membership) => {
                 if membership.role.to_string() == role.to_string() {
@@ -277,7 +278,7 @@ impl ProviderWriteOps for octorust::Client {
                     "Failed to add user / update role {} @ {} on {} : {}",
                     user.id, role, company.github_org, err
                 );
-                return Err(err);
+                return Err(err.into());
             };
 
             info!(
@@ -329,7 +330,8 @@ impl ProviderWriteOps for octorust::Client {
 
     async fn ensure_group(&self, _db: &Database, company: &Company, group: &Group) -> Result<()> {
         // Check if the team exists.
-        match self.teams().get_by_name(&company.github_org, &group.name).await {
+        match self.teams().get_by_name(&company.github_org, &group.name).await
+        .map(|response| response.body) {
             Ok(team) => {
                 let parent_team_id = if let Some(parent) = team.parent { parent.id } else { 0 };
 
@@ -400,6 +402,7 @@ impl ProviderWriteOps for octorust::Client {
             .teams()
             .get_membership_for_user_in_org(&company.github_org, group, &user.github)
             .await
+            .map(|response| response.body)
         {
             Ok(membership) => {
                 if membership.role == role {
@@ -497,7 +500,7 @@ impl ProviderWriteOps for octorust::Client {
                 // If the error from GitHub is a 404 NotFound then the user does not exist in our
                 // organization. This may be an attempt to remove a partially provisioned or
                 // deprovisioned user. This is not considered a failure.
-                let err = into_octorust_error(err);
+                let err = into_octorust_error(err.into());
 
                 if err.kind == OctorustErrorKind::NotFound {
                     info!("Ignoring not found error for GitHub user {} delete", user.id);
@@ -525,18 +528,20 @@ impl ProviderReadOps for octorust::Client {
 
     async fn list_provider_users(&self, company: &Company) -> Result<Vec<octorust::types::SimpleUser>> {
         // List all the users in the GitHub organization.
-        self.orgs()
+        Ok(self.orgs()
             .list_all_members(
                 &company.github_org,
                 octorust::types::OrgsListMembersFilter::All,
                 octorust::types::OrgsListMembersRole::All,
             )
             .await
+            .map(|response| response.body)?)
     }
 
     async fn list_provider_groups(&self, company: &Company) -> Result<Vec<octorust::types::Team>> {
         // List all the teams in the GitHub organization.
-        self.teams().list_all(&company.github_org).await
+        Ok(self.teams().list_all(&company.github_org).await
+        .map(|response| response.body)?)
     }
 }
 
@@ -562,6 +567,7 @@ impl ProviderWriteOps for gsuite_api::Client {
                 gsuite_api::types::ViewType::AdminView,
             )
             .await
+            .map(|response| response.body)
         {
             Ok(u) => {
                 // Update the user with the settings from the config for the user.
@@ -600,7 +606,7 @@ impl ProviderWriteOps for gsuite_api::Client {
         // Make sure it is set to true.
         let gsuite_user = crate::gsuite::update_gsuite_user(&u, user, true, company).await;
 
-        let new_gsuite_user = self.users().insert(&gsuite_user).await?;
+        let new_gsuite_user = self.users().insert(&gsuite_user).await?.body;
 
         // Send an email to the new user.
         // Do this here in case another step fails.
@@ -621,6 +627,7 @@ impl ProviderWriteOps for gsuite_api::Client {
             .groups()
             .get(&format!("{}@{}", &group.name, &company.gsuite_domain))
             .await
+            .map(|response| response.body)
         {
             Ok(mut google_group) => {
                 google_group.description = group.description.to_string();
@@ -670,7 +677,7 @@ impl ProviderWriteOps for gsuite_api::Client {
         }
         g.aliases = aliases;
 
-        let new_group = self.groups().insert(&g).await?;
+        let new_group = self.groups().insert(&g).await?.body;
 
         crate::gsuite::update_group_aliases(self, &new_group).await?;
 
@@ -693,6 +700,7 @@ impl ProviderWriteOps for gsuite_api::Client {
             .members()
             .get(&format!("{}@{}", group, company.gsuite_domain), &user.email)
             .await
+            .map(|response| response.body)
         {
             Ok(member) => {
                 if member.role == role {
@@ -804,7 +812,8 @@ impl ProviderWriteOps for gsuite_api::Client {
                 gsuite_api::types::DirectoryUsersListProjection::Full,
                 gsuite_api::types::ViewType::AdminView,
             )
-            .await?;
+            .await?
+            .body;
 
         // Set them to be suspended.
         gsuite_user.suspended = true;
@@ -835,7 +844,7 @@ impl ProviderReadOps for gsuite_api::Client {
     type ProviderGroup = gsuite_api::types::Group;
 
     async fn list_provider_users(&self, company: &Company) -> Result<Vec<gsuite_api::types::User>> {
-        self.users()
+        Ok(self.users()
             .list_all(
                 &company.gsuite_account_id,
                 &company.gsuite_domain,
@@ -848,10 +857,11 @@ impl ProviderReadOps for gsuite_api::Client {
                 gsuite_api::types::ViewType::AdminView,
             )
             .await
+            .map(|response| response.body)?)
     }
 
     async fn list_provider_groups(&self, company: &Company) -> Result<Vec<gsuite_api::types::Group>> {
-        self.groups()
+        Ok(self.groups()
             .list_all(
                 &company.gsuite_account_id,
                 &company.gsuite_domain,
@@ -861,6 +871,7 @@ impl ProviderReadOps for gsuite_api::Client {
                 "", // user_key
             )
             .await
+            .map(|response| response.body)?)
     }
 }
 
@@ -936,7 +947,7 @@ impl ProviderWriteOps for okta::Client {
         };
 
         // Try to get the user.
-        let mut user_id = match self.users().get(&user.email.replace('@', "%40")).await {
+        let mut user_id = match self.users().get(&user.email.replace('@', "%40")).await.map(|response| response.body) {
             Ok(mut okta_user) => {
                 // Update the Okta user.
                 okta_user.profile = Some(profile.clone());
@@ -975,7 +986,8 @@ impl ProviderWriteOps for okta::Client {
                         type_: None,
                     },
                 )
-                .await?;
+                .await?
+                .body;
 
             user_id = okta_user.id;
 
@@ -1055,7 +1067,8 @@ impl ProviderWriteOps for okta::Client {
                 "",          // search
                 "",          // expand
             )
-            .await?;
+            .await?
+            .body;
 
         for mut result in results {
             let mut profile = result.profile.unwrap();
@@ -1115,12 +1128,13 @@ impl ProviderWriteOps for okta::Client {
                 "",    // search
                 "",    // expand
             )
-            .await?;
+            .await?
+            .body;
 
         for result in results {
             let profile = result.profile.unwrap();
             if profile.name == group {
-                let members = self.groups().list_all_users(&result.id).await?;
+                let members = self.groups().list_all_users(&result.id).await?.body;
                 for member in members {
                     if member.id == user.okta_id {
                         info!("user `{}` is already a member of Okta group `{}`", user.email, group);
@@ -1147,7 +1161,8 @@ impl ProviderWriteOps for okta::Client {
                 "",    // search
                 "",    // expand
             )
-            .await?;
+            .await?
+            .body;
 
         for result in results {
             let profile = result.profile.unwrap();
@@ -1178,7 +1193,8 @@ impl ProviderWriteOps for okta::Client {
                 "",    // search
                 "",    // expand
             )
-            .await?;
+            .await?
+            .body;
 
         for result in results {
             let profile = result.profile.unwrap();
@@ -1226,7 +1242,8 @@ impl ProviderWriteOps for okta::Client {
                 "",          // search
                 "",          // expand
             )
-            .await?;
+            .await?
+            .body;
 
         for result in results {
             let profile = result.profile.unwrap();
@@ -1247,7 +1264,7 @@ impl ProviderReadOps for okta::Client {
     type ProviderGroup = okta::types::Group;
 
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<okta::types::User>> {
-        self.users()
+        Ok(self.users()
             .list_all(
                 "", // query
                 "", // filter
@@ -1256,16 +1273,18 @@ impl ProviderReadOps for okta::Client {
                 "", // sort order
             )
             .await
+            .map(|response| response.body)?)
     }
 
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<okta::types::Group>> {
-        self.groups()
+        Ok(self.groups()
             .list_all(
                 "", // query
                 "", // search
                 "", // expand
             )
             .await
+            .map(|response| response.body)?)
     }
 }
 
@@ -1302,7 +1321,8 @@ impl ProviderWriteOps for zoom_api::Client {
                     zoom_api::types::LoginType::Noop, // We don't know their login type...
                     false,
                 )
-                .await?;
+                .await?
+                .body;
 
             // Check if the vanity URL is already either the username
             // or the github handle.
@@ -1406,7 +1426,7 @@ impl ProviderWriteOps for zoom_api::Client {
 
         info!("created zoom user `{}`", user.email);
 
-        Ok(zoom_user.id)
+        Ok(zoom_user.body.id)
     }
 
     async fn ensure_group(&self, _db: &Database, _company: &Company, _group: &Group) -> Result<()> {
@@ -1458,13 +1478,14 @@ impl ProviderReadOps for zoom_api::Client {
     type ProviderGroup = ();
 
     async fn list_provider_users(&self, _company: &Company) -> Result<Vec<zoom_api::types::UsersResponse>> {
-        self.users()
+        Ok(self.users()
             .get_all(
                 zoom_api::types::UsersStatus::Active,
                 "", // role id
                 zoom_api::types::UsersIncludeFields::HostKey,
             )
             .await
+            .map(|response| response.body)?)
     }
 
     async fn list_provider_groups(&self, _company: &Company) -> Result<Vec<()>> {

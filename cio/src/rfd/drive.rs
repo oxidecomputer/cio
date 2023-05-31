@@ -27,7 +27,7 @@ impl PDFStorage for GoogleDrive {
             .create_or_update(&drive_id, &parent_id, &pdf.filename, "application/pdf", &pdf.contents)
             .await?;
 
-        Ok(format!("https://drive.google.com/open?id={}", drive_file.id))
+        Ok(format!("https://drive.google.com/open?id={}", drive_file.body.id))
     }
 }
 
@@ -66,7 +66,8 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
             false,                                  // supports team drives
             "",                                     // team drive id
         )
-        .await?;
+        .await?
+        .body;
 
     // Iterate over the files and if the name does not equal our name, then nuke it.
     for df in drive_files {

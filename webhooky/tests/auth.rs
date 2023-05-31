@@ -20,7 +20,7 @@ use webhooky::{auth::InternalToken, github_types::GitHubWebhook, handlers_slack:
     path = "/hmac/github/verify",
 }]
 async fn hmac_github_verification(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBody<webhooky::handlers_github::GitHubWebhookVerification, GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     body.into_inner()?;
@@ -32,7 +32,7 @@ async fn hmac_github_verification(
     path = "/hmac/github/audit",
 }]
 async fn hmac_github_audit(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBodyAudit<webhooky::handlers_github::GitHubWebhookVerification, GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     body.into_inner()?;
@@ -44,7 +44,7 @@ async fn hmac_github_audit(
     path = "/hmac/checkr/verify",
 }]
 async fn hmac_checkr_verification(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBody<webhooky::handlers_checkr::CheckrWebhookVerification, CheckrWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     body.into_inner()?;
@@ -56,7 +56,7 @@ async fn hmac_checkr_verification(
     path = "/hmac/checkr/audit",
 }]
 async fn hmac_checkr_audit(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBodyAudit<webhooky::handlers_checkr::CheckrWebhookVerification, CheckrWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     body.into_inner()?;
@@ -68,7 +68,7 @@ async fn hmac_checkr_audit(
     path = "/hmac/docusign/verify",
 }]
 async fn hmac_docusign_verification(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBody<webhooky::handlers_docusign::DocusignWebhookVerification, Envelope>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     body.into_inner()?;
@@ -80,7 +80,7 @@ async fn hmac_docusign_verification(
     path = "/hmac/docusign/audit",
 }]
 async fn hmac_docusign_audit(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBodyAudit<webhooky::handlers_docusign::DocusignWebhookVerification, Envelope>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     body.into_inner()?;
@@ -93,7 +93,7 @@ async fn hmac_docusign_audit(
     content_type = "application/x-www-form-urlencoded"
 }]
 async fn hmac_slack_verification(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBody<webhooky::handlers_slack::SlackWebhookVerification, BotCommand>,
 ) -> Result<HttpResponseAccepted<BotCommand>, HttpError> {
     Ok(HttpResponseAccepted(body.into_inner()?))
@@ -105,7 +105,7 @@ async fn hmac_slack_verification(
     content_type = "application/x-www-form-urlencoded"
 }]
 async fn hmac_slack_audit(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBodyAudit<webhooky::handlers_slack::SlackWebhookVerification, BotCommand>,
 ) -> Result<HttpResponseAccepted<BotCommand>, HttpError> {
     Ok(HttpResponseAccepted(body.into_inner()?))
@@ -117,7 +117,7 @@ async fn hmac_slack_audit(
     content_type = "application/x-www-form-urlencoded"
 }]
 async fn hmac_slack_interactive_verification(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBody<webhooky::handlers_slack::SlackWebhookVerification, InteractiveEvent>,
 ) -> Result<HttpResponseAccepted<slack_chat_api::InteractivePayload>, HttpError> {
     let event = body.into_inner()?;
@@ -132,7 +132,7 @@ async fn hmac_slack_interactive_verification(
     content_type = "application/x-www-form-urlencoded"
 }]
 async fn hmac_slack_interactive_audit(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     body: HmacVerifiedBodyAudit<webhooky::handlers_slack::SlackWebhookVerification, InteractiveEvent>,
 ) -> Result<HttpResponseAccepted<slack_chat_api::InteractivePayload>, HttpError> {
     let event = body.into_inner()?;
@@ -146,7 +146,7 @@ async fn hmac_slack_interactive_audit(
     path = "/bearer/verify",
 }]
 async fn bearer_verification(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     _: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -157,7 +157,7 @@ async fn bearer_verification(
     path = "/bearer/audit",
 }]
 async fn bearer_audit(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     _: BearerAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -168,7 +168,7 @@ async fn bearer_audit(
     path = "/token/verify",
 }]
 async fn token_verification(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     _: QueryToken<InternalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -179,7 +179,7 @@ async fn token_verification(
     path = "/token/audit",
 }]
 async fn token_audit(
-    _rqctx: Arc<RequestContext<()>>,
+    _rqctx: RequestContext<()>,
     _: QueryTokenAudit<InternalToken>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     Ok(HttpResponseAccepted("ok".to_string()))
@@ -223,7 +223,7 @@ fn make_server() -> (u16, HttpServer<()>) {
     let config_dropshot = ConfigDropshot {
         bind_address: "127.0.0.1:0".parse().unwrap(),
         request_body_max_bytes: 107374182400, // 100 Gigiabytes.
-        tls: None,
+        // tls: None,
     };
     let config_logging = ConfigLogging::StderrTerminal {
         level: ConfigLoggingLevel::Error,

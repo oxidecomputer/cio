@@ -1,11 +1,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot::{Extractor, RequestContext, ServerContext};
+use dropshot::{SharedExtractor, RequestContext, ServerContext};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{info, warn};
 use sha2::Sha256;
-use std::sync::Arc;
 
 use crate::http::Headers;
 

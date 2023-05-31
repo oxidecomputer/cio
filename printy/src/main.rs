@@ -1,4 +1,4 @@
-use std::{env, fs::File, io::Write, process::Command, str::from_utf8, sync::Arc};
+use std::{env, fs::File, io::Write, process::Command, str::from_utf8};
 
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,

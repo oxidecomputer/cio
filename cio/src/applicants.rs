@@ -1196,7 +1196,8 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
             true,  // supports_all_drives
             true,  // supports_team_drives
         )
-        .await?;
+        .await?
+        .body;
     let mime_type = drive_file.mime_type;
     let name = drive_file.name;
 
@@ -1205,7 +1206,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
 
     let result: String = if mime_type == "application/pdf" {
         // Get the PDF contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await?;
+        let contents = drive_client.files().download_by_id(&id).await?.body;
 
         path.push(format!("{}.pdf", id));
 
@@ -1214,7 +1215,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
 
         read_pdf(&name, path.clone()).await?
     } else {
-        let contents = drive_client.files().download_by_id(&id).await?;
+        let contents = drive_client.files().download_by_id(&id).await?.body;
         path.push(&name);
 
         let mut file = fs::File::create(&path).await?;
@@ -2407,7 +2408,8 @@ pub async fn refresh_new_applicants_and_reviews(
             // since
             None,
         )
-        .await?;
+        .await?
+        .body;
 
     // We want all the applicants without a sheet id, since this is the list of applicants we care
     // about. Everything else came from Google Sheets and therefore uses the old system.
