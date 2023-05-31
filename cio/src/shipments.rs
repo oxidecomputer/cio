@@ -897,12 +897,8 @@ pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
         .and_time(NaiveTime::from_hms_opt(16, 59, 59).expect("Invalid time"));
 
     (
-        tz.from_local_datetime(&start_time)
-            .unwrap()
-            .with_timezone(&Utc),
-        tz.from_local_datetime(&end_time)
-            .unwrap()
-            .with_timezone(&Utc),
+        tz.from_local_datetime(&start_time).unwrap().with_timezone(&Utc),
+        tz.from_local_datetime(&end_time).unwrap().with_timezone(&Utc),
     )
 }
 
