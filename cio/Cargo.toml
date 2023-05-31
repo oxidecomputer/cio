@@ -76,7 +76,7 @@ mime = "0.3.0"
 names = "^0.14.0"
 nom_pem = "4"
 # octorust = { version = "^0.3.2", features = ["httpcache"] }
-octorust = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+octorust = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build", features = ["httpcache"] }
 # okta = "^0.4.0"
 okta = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
 openssl = "0.10"

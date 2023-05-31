@@ -17,7 +17,7 @@ pub struct CheckrWebhookVerification;
 impl HmacSignatureVerifier for CheckrWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+    async fn key<Context: ServerContext>(_: &RequestContext<Context>) -> Result<Vec<u8>> {
         match std::env::var("CHECKR_API_KEY") {
             Ok(key) => Ok(key.into_bytes()),
             Err(_) => {
@@ -33,7 +33,7 @@ impl HmacSignatureVerifier for CheckrWebhookVerification {
         }
     }
 
-    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+    async fn signature<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<Vec<u8>> {
         let headers = Headers::from_request(rqctx.clone()).await?;
         let signature = headers
             .0

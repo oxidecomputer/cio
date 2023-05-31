@@ -18,7 +18,7 @@ pub struct SlackWebhookVerification;
 impl HmacSignatureVerifier for SlackWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+    async fn key<Context: ServerContext>(_: &RequestContext<Context>) -> Result<Vec<u8>> {
         Ok(std::env::var("SLACK_WH_KEY")
             .map(|key| key.into_bytes())
             .map_err(|err| {
@@ -27,8 +27,8 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
             })?)
     }
 
-    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
-        let headers = Headers::from_request(rqctx.clone()).await?;
+    async fn signature<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<Vec<u8>> {
+        let headers = Headers::from_request(rqctx).await?;
         let signature = headers
             .0
             .get("X-Slack-Signature")
@@ -47,7 +47,7 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
     }
 
     async fn content<'a, 'b, Context: ServerContext>(
-        rqctx: &'a Arc<RequestContext<Context>>,
+        rqctx: &'a RequestContext<Context>,
         body: &'b UntypedBody,
     ) -> anyhow::Result<Cow<'b, [u8]>> {
         let headers = Headers::from_request(rqctx.clone()).await?;

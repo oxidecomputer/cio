@@ -117,7 +117,7 @@ impl Context {
     method = GET,
     path = "/auth/users",
 }]
-async fn api_get_auth_users(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
+async fn api_get_auth_users(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<AuthUser>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -131,7 +131,7 @@ async fn api_get_auth_users(rqctx: Arc<RequestContext<Context>>) -> Result<HttpR
     method = GET,
     path = "/applicants",
 }]
-async fn api_get_applicants(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
+async fn api_get_applicants(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<Applicant>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -145,7 +145,7 @@ async fn api_get_applicants(rqctx: Arc<RequestContext<Context>>) -> Result<HttpR
     method = GET,
     path = "/buildings",
 }]
-async fn api_get_buildings(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
+async fn api_get_buildings(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<Building>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -161,7 +161,7 @@ async fn api_get_buildings(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
 }]
 #[inline]
 async fn api_get_conference_rooms(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
 ) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -192,7 +192,7 @@ async fn api_get_conference_rooms(
     path = "/resources",
 }]
 #[inline]
-async fn api_get_resources(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
+async fn api_get_resources(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<Resource>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -215,7 +215,7 @@ async fn api_get_resources(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRe
     path = "/github/repos",
 }]
 async fn api_get_github_repos(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
 ) -> Result<HttpResponseOk<Vec<GithubRepo>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -230,7 +230,7 @@ async fn api_get_github_repos(
     method = GET,
     path = "/groups",
 }]
-async fn api_get_groups(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
+async fn api_get_groups(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<Group>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -245,7 +245,7 @@ async fn api_get_groups(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespo
     path = "/journal_club_meetings",
 }]
 async fn api_get_journal_club_meetings(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
 ) -> Result<HttpResponseOk<Vec<JournalClubMeeting>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -260,7 +260,7 @@ async fn api_get_journal_club_meetings(
     method = GET,
     path = "/links",
 }]
-async fn api_get_links(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
+async fn api_get_links(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<Link>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -275,7 +275,7 @@ async fn api_get_links(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespon
     path = "/mailing_list_subscribers",
 }]
 async fn api_get_mailing_list_subscribers(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
 ) -> Result<HttpResponseOk<Vec<MailingListSubscriber>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
@@ -292,7 +292,7 @@ async fn api_get_mailing_list_subscribers(
     method = GET,
     path = "/rfds",
 }]
-async fn api_get_rfds(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
+async fn api_get_rfds(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<RFD>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 
@@ -306,7 +306,7 @@ async fn api_get_rfds(rqctx: Arc<RequestContext<Context>>) -> Result<HttpRespons
     method = GET,
     path = "/users",
 }]
-async fn api_get_users(rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
+async fn api_get_users(rqctx: RequestContext<Context>) -> Result<HttpResponseOk<Vec<User>>, HttpError> {
     let api_context = rqctx.context();
     let db = &api_context.db;
 

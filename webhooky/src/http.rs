@@ -7,7 +7,7 @@ pub struct Headers(pub HeaderMap);
 
 #[async_trait]
 impl Extractor for Headers {
-    async fn from_request<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Headers, HttpError> {
+    async fn from_request<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<Headers, HttpError> {
         let request = rqctx.request.lock().await;
         Ok(Headers(request.headers().clone()))
     }
