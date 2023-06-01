@@ -14,7 +14,8 @@ async fn test_extract_materials_from_zip() {
         .files()
         .download_by_id(&std::env::var("ZIP_FILE_ID").unwrap())
         .await
-        .unwrap();
+        .unwrap()
+        .body;
 
     // This will fail when an invalid payload is downloaded
     let _archive = zip::ZipArchive::new(Cursor::new(&contents)).unwrap();
