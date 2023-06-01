@@ -1230,9 +1230,9 @@ dependencies = [
 
 [[package]]
 name = "curl-sys"
-version = "0.4.62+curl-8.1.0"
+version = "0.4.63+curl-8.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "274ef7ef7c1113c7611af49ce248a700afa1171045a1aaa40137030773f993b8"
+checksum = "aeb0fef7046022a1e2ad67a004978f0e3cacb9e3123dc62ce768f92197b771dc"
 dependencies = [
  "cc",
  "libc",
@@ -2101,7 +2101,7 @@ dependencies = [
 [[package]]
 name = "google-calendar"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -2155,7 +2155,7 @@ dependencies = [
 [[package]]
 name = "google-drive"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -2198,7 +2198,7 @@ dependencies = [
 [[package]]
 name = "google-groups-settings"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -2263,7 +2263,7 @@ dependencies = [
 [[package]]
 name = "gsuite-api"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -2297,7 +2297,7 @@ dependencies = [
 [[package]]
 name = "gusto-api"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -3463,7 +3463,7 @@ dependencies = [
 [[package]]
 name = "octorust"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -3496,7 +3496,7 @@ dependencies = [
 [[package]]
 name = "okta"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -4521,7 +4521,7 @@ dependencies = [
 [[package]]
 name = "revai"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -4892,7 +4892,7 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 [[package]]
 name = "sendgrid-api"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -5285,7 +5285,7 @@ dependencies = [
 [[package]]
 name = "sheets"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -5325,7 +5325,7 @@ checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
 [[package]]
 name = "shipbob"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -6199,7 +6199,7 @@ dependencies = [
 [[package]]
 name = "tripactions"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -6987,7 +6987,7 @@ dependencies = [
 [[package]]
 name = "zoom-api"
 version = "0.7.0-rc.1"
-source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#e9c257f099ea98c712e1281d7b4a125fa82218d0"
+source = "git+https://github.com/oxidecomputer/third-party-api-clients?branch=rc-build#30ba5f248b6faac3189482fa6bd5dd576f58a26e"
 dependencies = [
  "async-recursion",
  "async-trait",
