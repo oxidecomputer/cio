@@ -236,13 +236,15 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
     let drive = company.authenticate_google_drive(db).await?;
 
     // Get the shared drive.
-    let shared_drive = drive.drives().get_by_name("Automated Documents").await?;
+    let shared_drive = drive.drives().get_by_name("Automated Documents").await?.body;
 
     // Create the folder for our zoom recordings.
     let recordings_folder_id = drive
         .files()
         .create_folder(&shared_drive.id, "", "zoom_recordings")
-        .await?;
+        .await?
+        .body
+        .id;
 
     // We need the zoom token to download the URL.
     let at = zoom.refresh_access_token().await?;
@@ -262,7 +264,9 @@ pub async fn refresh_zoom_recorded_meetings(db: &Database, company: &Company) ->
                 &recordings_folder_id,
                 &meeting.start_time.unwrap().to_string(),
             )
-            .await?;
+            .await?
+            .body
+            .id;
 
         let mut transcript = String::new();
         let mut transcript_id = String::new();

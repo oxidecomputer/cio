@@ -417,10 +417,10 @@ impl UpdatePDFs {
 
                     // Figure out where our directory is.
                     // It should be in the shared drive : "Automated Documents"/"rfds"
-                    let shared_drive = drive.drives().get_by_name("Automated Documents").await?;
+                    let shared_drive = drive.drives().get_by_name("Automated Documents").await?.body;
 
                     // Get the directory by the name.
-                    let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?;
+                    let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?.body.id;
 
                     // Delete the old filename from drive.
                     drive

@@ -515,11 +515,11 @@ impl SwagInventoryItem {
 
             // Figure out where our directory is.
             // It should be in the shared drive : "Automated Documents"/"rfds"
-            let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
+            let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
             let drive_id = shared_drive.id.to_string();
 
             // Get the directory by the name.
-            let parent_id = drive_client.files().create_folder(&drive_id, "", "swag").await?;
+            let parent_id = drive_client.files().create_folder(&drive_id, "", "swag").await?.body.id;
 
             let mut sw: NewSwagInventoryItem = From::from(self.clone());
             sw.expand(&drive_client, &drive_id, &parent_id).await?
@@ -623,11 +623,11 @@ pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> R
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let parent_id = drive_client.files().create_folder(&drive_id, "", "swag").await?;
+    let parent_id = drive_client.files().create_folder(&drive_id, "", "swag").await?.body.id;
 
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<SwagInventoryItem>> = company

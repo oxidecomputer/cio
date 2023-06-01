@@ -1109,25 +1109,31 @@ pub async fn handle_application_files_upload(
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"application_content"
-    let shared_drive = drive.drives().get_by_name("Automated Documents").await?;
+    let shared_drive = drive.drives().get_by_name("Automated Documents").await?.body;
 
     // Get the directory by the name.
     let parent_id = drive
         .files()
         .create_folder(&shared_drive.id, "", "application_content")
-        .await?;
+        .await?
+        .body
+        .id;
 
     // Create the folder for our candidate with their email.
     let email_folder_id = drive
         .files()
         .create_folder(&shared_drive.id, &parent_id, &data.email)
-        .await?;
+        .await?
+        .body
+        .id;
 
     // Create the folder for our candidate with the role.
     let role_folder_id = drive
         .files()
         .create_folder(&shared_drive.id, &email_folder_id, &data.role)
-        .await?;
+        .await?
+        .body
+        .id;
 
     let mut files: HashMap<String, (String, String)> = HashMap::new();
     files.insert(

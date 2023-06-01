@@ -15,11 +15,11 @@ impl PDFStorage for GoogleDrive {
     async fn store_rfd_pdf(&self, pdf: &RFDPdf) -> Result<String> {
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = self.drives().get_by_name("Automated Documents").await?;
+        let shared_drive = self.drives().get_by_name("Automated Documents").await?.body;
         let drive_id = shared_drive.id.to_string();
 
         // Get the directory by the name.
-        let parent_id = self.files().create_folder(&drive_id, "", "rfds").await?;
+        let parent_id = self.files().create_folder(&drive_id, "", "rfds").await?.body.id;
 
         // Create or update the file in the google_drive.
         let drive_file = self
@@ -45,11 +45,11 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await?;
+    let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await?.body.id;
 
     let drive_files = drive_client
         .files()

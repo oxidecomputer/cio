@@ -2055,7 +2055,7 @@ The applicants Airtable \
         let drive_client = company.authenticate_google_drive(db).await?;
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?;
+        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?.body;
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -2075,7 +2075,9 @@ The applicants Airtable \
             let name_folder_id = drive_client
                 .files()
                 .create_folder(&shared_drive.id, "", &self.name)
-                .await?;
+                .await?
+                .body
+                .id;
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Offer Letter") {
@@ -2327,7 +2329,7 @@ The applicants Airtable \
         let drive_client = company.authenticate_google_drive(db).await?;
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?;
+        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?.body;
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -2347,7 +2349,9 @@ The applicants Airtable \
             let name_folder_id = drive_client
                 .files()
                 .create_folder(&shared_drive.id, "", &self.name)
-                .await?;
+                .await?
+                .body
+                .id;
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Employee Mediation") || document.name.contains("Employee_Mediation") {

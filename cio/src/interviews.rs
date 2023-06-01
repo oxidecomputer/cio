@@ -329,14 +329,16 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
     let drive_client = company.authenticate_google_drive(db).await?;
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
     let parent_id = drive_client
         .files()
         .create_folder(&drive_id, "", "interview_packets")
-        .await?;
+        .await?
+        .body
+        .id;
 
     // Iterate over each user we have in gsuite and download their materials
     // locally.
