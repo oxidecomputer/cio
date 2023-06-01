@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn test_converts_from_api_datetime_to_utc() {
-        let test_date = FormattedDateTime(NaiveDateTime::from_timestamp(1667229189, 0));
+        let test_date = FormattedDateTime(NaiveDateTime::from_timestamp_opt(1667229189, 0).unwrap());
 
         let sub = ApiSubscriber {
             id: "12345".to_string(),

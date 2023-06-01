@@ -516,7 +516,7 @@ mod tests {
 
         match parsed {
             GetSubscriberResponse::Success { data } => {
-                let expected_date_time = Utc.timestamp_opt(1630519430, 0);
+                let expected_date_time = Utc.timestamp_opt(1630519430, 0).unwrap();
 
                 assert_eq!(data.subscribed_at, Some(expected_date_time));
                 assert_eq!(data.created_at, expected_date_time);
