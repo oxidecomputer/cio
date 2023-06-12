@@ -46,17 +46,17 @@ dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 flate2 = "1"
 #dropshot = { git = "https://github.com/jessfraz/dropshot", branch = "rebased-working-args" }
 # google-calendar = "^0.5.0"
-google-calendar = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+google-calendar = "0.7.0-rc.1"
 # google-drive = "^0.6.0"
-google-drive = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+google-drive = "0.7.0-rc.1"
 # google-geocode = "^0.1.2"
 google-geocode = {path = "../google-geocode" }
 # google-groups-settings = "^0.5.0"
-google-groups-settings = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+google-groups-settings = "0.7.0-rc.1"
 # gsuite-api = "^0.6.0"
-gsuite-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+gsuite-api = "0.7.0-rc.1"
 # gusto-api = "^0.4.0"
-gusto-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+gusto-api = "0.7.0-rc.1"
 handlebars = "4.3.6"
 hex = "0.4.3"
 hmac = "0.12.1"
@@ -76,9 +76,9 @@ mime = "0.3.0"
 names = "^0.14.0"
 nom_pem = "4"
 # octorust = { version = "^0.3.2", features = ["httpcache"] }
-octorust = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build", features = ["httpcache"] }
+octorust = { version = "0.7.0-rc.1", features = ["httpcache"] }
 # okta = "^0.4.0"
-okta = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+okta = "0.7.0-rc.1"
 openssl = "0.10"
 parse-rfd = { path = "../parse-rfd" }
 partial-struct = { path = "../partial-struct" }
@@ -96,20 +96,20 @@ reqwest-middleware = "0.2"
 reqwest-retry = "0.2.2"
 reqwest-tracing = { version = "0.4", features = ["opentelemetry_0_17"] }
 # revai = { version = "^0.5.0" }
-revai = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+revai = "0.7.0-rc.1"
 ring = "0.16.20"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 # sendgrid-api = "^0.4.1"
-sendgrid-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+sendgrid-api = "0.7.0-rc.1"
 sentry = { version = "^0.27.0", default-features = false, features = ["anyhow", "log", "backtrace", "panic", "contexts", "tracing", "rustls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 # sheets = "^0.6.0"
-sheets = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+sheets = "0.7.0-rc.1"
 # shippo = "^0.1.29"
 shippo = { path = "../shippo" }
 # shipbob = "^0.3.0"
-shipbob = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+shipbob = "0.7.0-rc.1"
 # slack-chat-api = "^0.1.16"
 slack-chat-api = { path = "../slack" }
 sodiumoxide = "^0.2.7"
@@ -118,7 +118,7 @@ tracing = "^0.1"
 # tailscale-api = "^0.1.2"
 tailscale-api = { path = "../tailscale" }
 # tripactions = "0.4.0"
-tripactions = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+tripactions = "0.7.0-rc.1"
 titlecase = "1.0"
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
@@ -132,7 +132,7 @@ stacker = "0.1.14"
 google-storage1 = "5.0.2"
 google-dns1 = "5.0.2"
 # zoom-api = "^0.4.0"
-zoom-api = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "rc-build" }
+zoom-api = "0.7.0-rc.1"
 
 [dev-dependencies]
 tracing-subscriber = "0.3.15"
