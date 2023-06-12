@@ -1,12 +1,11 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use cio_api::{companies::Company, db::Database};
-use dropshot::{Extractor, RequestContext, ServerContext};
+use dropshot::{RequestContext, ServerContext, SharedExtractor};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::info;
 use sha2::Sha256;
-use std::sync::Arc;
 
 use crate::http::Headers;
 
@@ -17,7 +16,7 @@ pub struct CheckrWebhookVerification;
 impl HmacSignatureVerifier for CheckrWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+    async fn key<Context: ServerContext>(_: &RequestContext<Context>) -> Result<Vec<u8>> {
         match std::env::var("CHECKR_API_KEY") {
             Ok(key) => Ok(key.into_bytes()),
             Err(_) => {
@@ -33,8 +32,8 @@ impl HmacSignatureVerifier for CheckrWebhookVerification {
         }
     }
 
-    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
-        let headers = Headers::from_request(rqctx.clone()).await?;
+    async fn signature<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<Vec<u8>> {
+        let headers = Headers::from_request(rqctx).await?;
         let signature = headers
             .0
             .get("X-Checkr-Signature")

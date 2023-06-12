@@ -15,11 +15,11 @@ impl PDFStorage for GoogleDrive {
     async fn store_rfd_pdf(&self, pdf: &RFDPdf) -> Result<String> {
         // Figure out where our directory is.
         // It should be in the shared drive : "Automated Documents"/"rfds"
-        let shared_drive = self.drives().get_by_name("Automated Documents").await?;
+        let shared_drive = self.drives().get_by_name("Automated Documents").await?.body;
         let drive_id = shared_drive.id.to_string();
 
         // Get the directory by the name.
-        let parent_id = self.files().create_folder(&drive_id, "", "rfds").await?;
+        let parent_id = self.files().create_folder(&drive_id, "", "rfds").await?.body.id;
 
         // Create or update the file in the google_drive.
         let drive_file = self
@@ -27,7 +27,7 @@ impl PDFStorage for GoogleDrive {
             .create_or_update(&drive_id, &parent_id, &pdf.filename, "application/pdf", &pdf.contents)
             .await?;
 
-        Ok(format!("https://drive.google.com/open?id={}", drive_file.id))
+        Ok(format!("https://drive.google.com/open?id={}", drive_file.body.id))
     }
 }
 
@@ -45,11 +45,11 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await?;
+    let parent_id = drive_client.files().create_folder(&drive_id, "", "rfds").await?.body.id;
 
     let drive_files = drive_client
         .files()
@@ -66,7 +66,8 @@ pub async fn cleanup_rfd_pdfs(db: &Database, company: &Company) -> Result<()> {
             false,                                  // supports team drives
             "",                                     // team drive id
         )
-        .await?;
+        .await?
+        .body;
 
     // Iterate over the files and if the name does not equal our name, then nuke it.
     for df in drive_files {

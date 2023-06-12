@@ -1,5 +1,3 @@
-use std::{collections::HashMap, ffi::OsStr, str::FromStr, sync::Arc};
-
 use anyhow::{bail, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::{TimeZone, Utc};
@@ -29,6 +27,7 @@ use slack_chat_api::{
     MessageAttachment, MessageBlock, MessageBlockText, MessageBlockType, MessageResponse, MessageResponseType,
     MessageType, SelectInputOption, View,
 };
+use std::{collections::HashMap, ffi::OsStr, str::FromStr};
 
 use crate::{
     context::ServerContext,
@@ -40,7 +39,7 @@ use crate::{
     slack_commands::SlackCommand,
 };
 
-pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<ServerContext>>) -> Result<CounterResponse> {
+pub async fn handle_products_sold_count(rqctx: &RequestContext<ServerContext>) -> Result<CounterResponse> {
     let api_context = rqctx.context();
 
     // TODO: find a better way to do this.
@@ -66,7 +65,7 @@ pub async fn handle_products_sold_count(rqctx: Arc<RequestContext<ServerContext>
 }
 
 pub async fn handle_rfd_update_by_number(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     path_params: Path<RFDPathParams>,
 ) -> Result<()> {
     let num = path_params.into_inner().num;
@@ -90,7 +89,7 @@ pub async fn handle_rfd_update_by_number(
     Ok(())
 }
 
-pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<ServerContext>>) -> Result<GitHubRateLimit> {
+pub async fn handle_github_rate_limit(rqctx: &RequestContext<ServerContext>) -> Result<GitHubRateLimit> {
     let api_context = rqctx.context();
 
     let db = &api_context.app.db;
@@ -101,8 +100,8 @@ pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<ServerContext>>)
 
     let github = oxide.authenticate_github()?;
 
-    let response = github.rate_limit().get().await?;
-    let reset_time = Utc.timestamp(response.resources.core.reset, 0);
+    let response = github.rate_limit().get().await?.body;
+    let reset_time = Utc.timestamp_opt(response.resources.core.reset, 0).unwrap();
 
     let dur = reset_time - Utc::now();
 
@@ -114,7 +113,7 @@ pub async fn handle_github_rate_limit(rqctx: Arc<RequestContext<ServerContext>>)
 }
 
 pub async fn handle_slack_commands(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     bot_command: BotCommand,
 ) -> Result<serde_json::Value> {
     let api_context = rqctx.context();
@@ -436,7 +435,7 @@ pub async fn handle_slack_commands(
 }
 
 pub async fn handle_slack_interactive(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     body_param: String,
 ) -> Result<InteractiveResponse> {
     // Decode the URL encoded struct.
@@ -593,7 +592,7 @@ pub async fn handle_slack_interactive(
 }
 
 pub async fn handle_airtable_employees_print_home_address_label(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -612,7 +611,7 @@ pub async fn handle_airtable_employees_print_home_address_label(
 }
 
 pub async fn handle_airtable_certificates_renew(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -639,7 +638,7 @@ pub async fn handle_airtable_certificates_renew(
 }
 
 pub async fn handle_airtable_assets_items_print_barcode_label(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -659,7 +658,7 @@ pub async fn handle_airtable_assets_items_print_barcode_label(
 }
 
 pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -680,7 +679,7 @@ pub async fn handle_airtable_swag_inventory_items_print_barcode_labels(
 }
 
 pub async fn handle_airtable_applicants_request_background_check(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -702,7 +701,7 @@ pub async fn handle_airtable_applicants_request_background_check(
 }
 
 pub async fn handle_airtable_applicants_update(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -778,7 +777,7 @@ pub async fn handle_airtable_applicants_update(
 }
 
 pub async fn listen_airtable_applicants_recreate_piia_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -818,7 +817,7 @@ pub async fn listen_airtable_applicants_recreate_piia_webhooks(
 }
 
 pub async fn handle_airtable_shipments_outbound_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -856,7 +855,7 @@ pub async fn handle_airtable_shipments_outbound_create(
 }
 
 pub async fn handle_airtable_shipments_outbound_reprint_label(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -883,7 +882,7 @@ pub async fn handle_airtable_shipments_outbound_reprint_label(
 }
 
 pub async fn handle_airtable_shipments_outbound_reprint_receipt(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -907,7 +906,7 @@ pub async fn handle_airtable_shipments_outbound_reprint_receipt(
 }
 
 pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -928,7 +927,7 @@ pub async fn handle_airtable_shipments_outbound_resend_shipment_status_email_to_
 }
 
 pub async fn handle_airtable_shipments_outbound_schedule_pickup(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -944,7 +943,7 @@ pub async fn handle_airtable_shipments_outbound_schedule_pickup(
 }
 
 pub async fn handle_applicant_review(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: cio_api::applicant_reviews::NewApplicantReview,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -984,7 +983,7 @@ pub async fn handle_applicant_review(
 }
 
 pub async fn handle_test_application_submit(
-    _rqctx: Arc<RequestContext<ServerContext>>,
+    _rqctx: &RequestContext<ServerContext>,
     event: cio_api::application_form::ApplicationForm,
 ) -> Result<()> {
     event.test_form_submission().await?;
@@ -998,7 +997,7 @@ pub async fn handle_test_application_submit(
 }
 
 pub async fn handle_application_submit(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: cio_api::application_form::ApplicationForm,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -1012,7 +1011,7 @@ pub async fn handle_application_submit(
 }
 
 pub async fn handle_test_application_files_upload(
-    _rqctx: Arc<RequestContext<ServerContext>>,
+    _rqctx: &RequestContext<ServerContext>,
     data: ApplicationFileUploadData,
 ) -> Result<HashMap<String, String>> {
     // We will return a key value of the name of file and the link in google drive.
@@ -1055,7 +1054,7 @@ pub async fn handle_test_application_files_upload(
     for (name, (file_path, contents)) in files {
         // Get the extension from the content type.
         let ext = get_extension_from_filename(&file_path).unwrap();
-        let ct = mime_guess_2::from_ext(ext).first().unwrap();
+        let ct = mime_guess::from_ext(ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", data.user_name, name, ext);
         let raw_bytes = decode_base64(&contents);
@@ -1081,7 +1080,7 @@ pub async fn handle_test_application_files_upload(
 }
 
 pub async fn handle_application_files_upload(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     data: ApplicationFileUploadData,
 ) -> Result<HashMap<String, String>> {
     // We will return a key value of the name of file and the link in google drive.
@@ -1110,25 +1109,31 @@ pub async fn handle_application_files_upload(
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"application_content"
-    let shared_drive = drive.drives().get_by_name("Automated Documents").await?;
+    let shared_drive = drive.drives().get_by_name("Automated Documents").await?.body;
 
     // Get the directory by the name.
     let parent_id = drive
         .files()
         .create_folder(&shared_drive.id, "", "application_content")
-        .await?;
+        .await?
+        .body
+        .id;
 
     // Create the folder for our candidate with their email.
     let email_folder_id = drive
         .files()
         .create_folder(&shared_drive.id, &parent_id, &data.email)
-        .await?;
+        .await?
+        .body
+        .id;
 
     // Create the folder for our candidate with the role.
     let role_folder_id = drive
         .files()
         .create_folder(&shared_drive.id, &email_folder_id, &data.role)
-        .await?;
+        .await?
+        .body
+        .id;
 
     let mut files: HashMap<String, (String, String)> = HashMap::new();
     files.insert(
@@ -1155,7 +1160,7 @@ pub async fn handle_application_files_upload(
     for (name, (file_path, contents)) in files {
         // Get the extension from the content type.
         let ext = get_extension_from_filename(&file_path).unwrap();
-        let ct = mime_guess_2::from_ext(ext).first().unwrap();
+        let ct = mime_guess::from_ext(ext).first().unwrap();
         let content_type = ct.essence_str().to_string();
         let file_name = format!("{} - {}.{}", data.user_name, name, ext);
 
@@ -1169,7 +1174,8 @@ pub async fn handle_application_files_upload(
                 &content_type,
                 &decode_base64(&contents),
             )
-            .await?;
+            .await?
+            .body;
         // Add the file to our links.
         response.insert(
             name.to_string(),
@@ -1185,7 +1191,7 @@ fn get_extension_from_filename(filename: &str) -> Option<&str> {
 }
 
 pub async fn handle_airtable_shipments_inbound_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: AirtableRowEvent,
 ) -> Result<()> {
     if event.record_id.is_empty() {
@@ -1218,7 +1224,7 @@ pub async fn handle_airtable_shipments_inbound_create(
     Ok(())
 }
 
-pub async fn handle_store_order_create(rqctx: Arc<RequestContext<ServerContext>>, event: Order) -> Result<()> {
+pub async fn handle_store_order_create(rqctx: &RequestContext<ServerContext>, event: Order) -> Result<()> {
     let api_context = rqctx.context();
 
     event.do_order(&api_context.app.db).await?;
@@ -1228,7 +1234,7 @@ pub async fn handle_store_order_create(rqctx: Arc<RequestContext<ServerContext>>
 }
 
 pub async fn handle_easypost_tracking_update(
-    _rqctx: Arc<RequestContext<ServerContext>>,
+    _rqctx: &RequestContext<ServerContext>,
     event: crate::server::EasyPostTrackingUpdateEvent,
 ) -> Result<()> {
     //let api_context = rqctx.context();
@@ -1239,7 +1245,7 @@ pub async fn handle_easypost_tracking_update(
 }
 
 pub async fn handle_shippo_tracking_update(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: serde_json::Value,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -1287,7 +1293,7 @@ pub async fn handle_shippo_tracking_update(
 }
 
 pub async fn handle_checkr_background_update(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: checkr::WebhookEvent,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -1347,7 +1353,7 @@ pub async fn handle_checkr_background_update(
 }
 
 pub async fn handle_docusign_envelope_update(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     event: docusign::Envelope,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -1415,10 +1421,7 @@ pub async fn handle_docusign_envelope_update(
     Ok(())
 }
 
-pub async fn handle_analytics_page_view(
-    rqctx: Arc<RequestContext<ServerContext>>,
-    mut event: NewPageView,
-) -> Result<()> {
+pub async fn handle_analytics_page_view(rqctx: &RequestContext<ServerContext>, mut event: NewPageView) -> Result<()> {
     let api_context = rqctx.context();
     let db = &api_context.app.db;
 
@@ -1433,9 +1436,9 @@ pub async fn handle_analytics_page_view(
     Ok(())
 }
 
-pub async fn handle_shipbob(rqctx: Arc<RequestContext<ServerContext>>, event: serde_json::Value) -> Result<()> {
+pub async fn handle_shipbob(rqctx: &RequestContext<ServerContext>, event: serde_json::Value) -> Result<()> {
     // We need to get the webhook type from the header.
-    let headers = rqctx.request.lock().await.headers().clone();
+    let headers = rqctx.request.headers().clone();
 
     let shipbob_topic = headers.get("shipbob-topic").unwrap().to_str()?;
     let shipbob_subscription_id = headers.get("shipbob-subscription-id").unwrap().to_str()?;

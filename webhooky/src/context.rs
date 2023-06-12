@@ -8,9 +8,12 @@ use cio_api::{
 };
 use std::sync::{Arc, RwLock};
 
+use crate::sagas::{create_registry, Saga};
+
 #[derive(Clone, Debug)]
 pub struct ServerContext {
     pub sec: Arc<steno::SecClient>,
+    pub exec_registry: Arc<steno::ActionRegistry<Saga>>,
     pub app: Context,
 }
 
@@ -20,6 +23,7 @@ impl ServerContext {
 
         Ok(Self {
             sec: Arc::new(steno::sec(logger, Arc::new(context.db.clone()))),
+            exec_registry: Arc::new(create_registry()),
             app: context,
         })
     }

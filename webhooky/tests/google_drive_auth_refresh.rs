@@ -32,7 +32,7 @@ async fn test_google_drive_reauth() {
         .await
         .unwrap();
 
-    assert_eq!(std::env::var("REAUTH_TEST_FILE_NAME").unwrap(), test_file.name);
+    assert_eq!(std::env::var("REAUTH_TEST_FILE_NAME").unwrap(), test_file.body.name);
 
     // Check that the expiration has not changed (we expect that a refresh has not occurred)
     assert!(expires_at == drive.expires_at().await.unwrap());

@@ -139,7 +139,8 @@ impl NewRFD {
                 0,
                 0,
             )
-            .await?;
+            .await?
+            .body;
 
         let latest_commit = commits.get(0).ok_or_else(|| {
             anyhow!(
@@ -225,7 +226,7 @@ impl RFD {
     ) -> Result<String> {
         let owner = &company.github_org;
         let repo = "rfd";
-        let r = github.repos().get(owner, repo).await?;
+        let r = github.repos().get(owner, repo).await?.body;
         let mut changelog = String::new();
 
         let mut branch = self.number_string.to_string();
@@ -246,6 +247,7 @@ impl RFD {
                 None,
             )
             .await
+            .map(|response| response.body)
         {
             Ok(v) => v,
             Err(_) => {

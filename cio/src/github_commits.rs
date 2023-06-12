@@ -169,7 +169,8 @@ pub async fn refresh_commits() -> Result<()> {
                     None, // since
                     None, // until
                 )
-                .await?;
+                .await?
+                .body;
 
             for commit in commits {
                 println!("{:#?}", commit);

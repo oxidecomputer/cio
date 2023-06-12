@@ -249,17 +249,9 @@ impl RFDUpdateAction for CopyImagesToGCP {
             api_context, update, ..
         } = ctx;
 
-        let images = update
-            .branch
-            .get_images(&update.number)
-            .await
-            .map_err(RFDUpdateActionErr::Continue)?;
+        let images = update.branch.get_images(&update.number).await.map_err(into_continue)?;
 
-        let gcp_auth = api_context
-            .company
-            .authenticate_gcp()
-            .await
-            .map_err(RFDUpdateActionErr::Continue)?;
+        let gcp_auth = api_context.company.authenticate_gcp().await.map_err(into_continue)?;
 
         let hub = Storage::new(
             hyper::Client::builder().build(
@@ -278,7 +270,7 @@ impl RFDUpdateAction for CopyImagesToGCP {
                 .path
                 .replace(&format!("rfd/{}/", update.number.as_number_string()), "");
             let object_name = format!("rfd/{}/latest/{}", update.number, sub_path);
-            let mime_type = mime_guess::guess_mime_type(&object_name);
+            let mime_type = mime_guess::from_path(&object_name).first_or_octet_stream();
             let data = decode_base64(&image.content);
 
             log::info!(
@@ -313,10 +305,10 @@ impl RFDUpdateAction for UpdateSearch {
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
         let RFDUpdateActionContext { update, .. } = ctx;
-        let client = RFDSearchIndex::default_client().map_err(RFDUpdateActionErr::Continue)?;
+        let client = RFDSearchIndex::default_client().map_err(into_continue)?;
         RFDSearchIndex::index_rfd(&client, "rfd".to_string(), &rfd.number.into(), &rfd.content)
             .await
-            .map_err(RFDUpdateActionErr::Continue)?;
+            .map_err(into_continue)?;
         info!("Updated search index with RFD {}", update.number);
 
         Ok(RFDUpdateActionResponse::default())
@@ -425,10 +417,10 @@ impl UpdatePDFs {
 
                     // Figure out where our directory is.
                     // It should be in the shared drive : "Automated Documents"/"rfds"
-                    let shared_drive = drive.drives().get_by_name("Automated Documents").await?;
+                    let shared_drive = drive.drives().get_by_name("Automated Documents").await?.body;
 
                     // Get the directory by the name.
-                    let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?;
+                    let parent_id = drive.files().create_folder(&shared_drive.id, "", "rfds").await?.body.id;
 
                     // Delete the old filename from drive.
                     drive
@@ -463,12 +455,10 @@ impl RFDUpdateAction for UpdatePDFs {
             ..
         } = ctx;
 
-        Self::upload(api_context, update, rfd)
-            .await
-            .map_err(RFDUpdateActionErr::Continue)?;
+        Self::upload(api_context, update, rfd).await.map_err(into_continue)?;
         Self::delete_old(api_context, github, update, old_rfd, rfd)
             .await
-            .map_err(RFDUpdateActionErr::Continue)?;
+            .map_err(into_continue)?;
 
         Ok(RFDUpdateActionResponse::default())
     }
@@ -510,7 +500,7 @@ impl RFDUpdateAction for GenerateShortUrls {
         Self::generate(api_context, github)
             .await
             .map(|_| RFDUpdateActionResponse::default())
-            .map_err(RFDUpdateActionErr::Continue)
+            .map_err(into_continue)
     }
 }
 
@@ -558,7 +548,8 @@ impl RFDUpdateAction for CreatePullRequest {
                     },
                 )
                 .await
-                .map_err(RFDUpdateActionErr::Continue)?;
+                .map_err(into_continue)?
+                .body;
 
             info!(
                 "[SUCCESS]: RFD {} has moved from state {:?} -> {}, on branch {}, opened pull request {}",
@@ -611,7 +602,8 @@ impl RFDUpdateAction for UpdatePullRequest {
                             .pulls()
                             .get(&update.branch.owner, &update.branch.repo, pull_request.number)
                             .await
-                            .map_err(RFDUpdateActionErr::Continue)?;
+                            .map_err(into_continue)?
+                            .body;
 
                         github
                             .pulls()
@@ -666,7 +658,7 @@ impl RFDUpdateAction for UpdatePullRequest {
                                 &octorust::types::IssuesAddLabelsRequestOneOf::StringVector(labels),
                             )
                             .await
-                            .map_err(RFDUpdateActionErr::Continue)?;
+                            .map_err(into_continue)?;
                     }
                 }
             }
@@ -717,8 +709,7 @@ impl RFDUpdateAction for UpdateDiscussionUrl {
                             rfd.discussion, pull_request.html_url
                         );
 
-                        rfd.update_discussion(&pull_request.html_url)
-                            .map_err(RFDUpdateActionErr::Continue)?;
+                        rfd.update_discussion(&pull_request.html_url).map_err(into_continue)?;
 
                         info!("[SUCCESS]: updated RFD file in GitHub with discussion link changes");
 
@@ -825,4 +816,8 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInValidState {
 
         Ok(RFDUpdateActionResponse::default())
     }
+}
+
+fn into_continue(err: impl Into<anyhow::Error>) -> RFDUpdateActionErr {
+    RFDUpdateActionErr::Continue(err.into())
 }

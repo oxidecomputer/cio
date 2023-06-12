@@ -1,6 +1,6 @@
 use dropshot::{HttpError, RequestContext, ServerContext};
 use http::{header::HeaderValue, StatusCode};
-use std::{collections::HashSet, sync::Arc};
+use std::collections::HashSet;
 
 #[derive(Debug, PartialEq)]
 pub enum CorsFailure {
@@ -26,7 +26,7 @@ impl From<CorsError> for HttpError {
 /// [`http::header::HeaderValue`] that should be added as the `Access-Control-Allow-Origin` header is returned.
 /// If the origin header is missing, malformed, or not valid, a CORS error report is returned.
 pub async fn get_cors_origin_header<C: ServerContext>(
-    rqctx: Arc<RequestContext<C>>,
+    rqctx: &RequestContext<C>,
     allowed_origins: &[&'static str],
 ) -> Result<HeaderValue, CorsError> {
     get_cors_header(rqctx, "Origin", allowed_origins).await
@@ -39,7 +39,7 @@ pub async fn get_cors_origin_header<C: ServerContext>(
 /// headers is missing, malformed, or not valid a CORS error report is returned.
 #[allow(dead_code)]
 pub async fn get_cors_headers_header<C: ServerContext>(
-    rqctx: Arc<RequestContext<C>>,
+    rqctx: &RequestContext<C>,
     allowed_headers: &[&'static str],
 ) -> Result<HeaderValue, CorsError> {
     get_cors_header(rqctx, "Access-Control-Request-Headers", allowed_headers).await
@@ -61,11 +61,11 @@ pub fn get_cors_method_header(allowed_methods: &[http::Method]) -> HeaderValue {
 }
 
 pub async fn get_cors_header<C: ServerContext>(
-    rqctx: Arc<RequestContext<C>>,
+    rqctx: &RequestContext<C>,
     header_name: &str,
     allowed: &[&'static str],
 ) -> Result<HeaderValue, CorsError> {
-    let request = rqctx.request.lock().await;
+    let request = &rqctx.request;
     let incoming_headers = request.headers();
 
     let req_value = incoming_headers

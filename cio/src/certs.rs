@@ -202,7 +202,7 @@ impl NewCertificate {
 
     pub fn load_cert(&mut self, certificate: &[u8]) -> Result<()> {
         let expiration_date = Self::expiration_date(certificate)?;
-        self.expiration_date = expiration_date.date().naive_utc();
+        self.expiration_date = expiration_date.date_naive();
 
         let dur = expiration_date - Utc::now();
         self.valid_days_left = dur.num_days() as i32;
@@ -314,7 +314,7 @@ impl GitHubBackend {
     }
 
     async fn repo(&self) -> Result<FullRepository> {
-        self.client.repos().get(&self.owner, &self.repo).await
+        Ok(self.client.repos().get(&self.owner, &self.repo).await?.body)
     }
 
     fn path(&self, domain: &str, file: &str) -> String {

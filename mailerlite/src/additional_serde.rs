@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn test_serde_formatted_date_time() {
-        let date = NaiveDateTime::from_timestamp(1666708534, 0);
+        let date = NaiveDateTime::from_timestamp_opt(1666708534, 0).unwrap();
 
         #[derive(Debug, Deserialize, Serialize, PartialEq)]
         struct Wrapper {

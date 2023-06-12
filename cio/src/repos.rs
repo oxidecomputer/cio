@@ -395,7 +395,8 @@ impl GithubRepo {
         let branch = github
             .repos()
             .get_branch(&company.github_org, &self.name, &self.default_branch)
-            .await;
+            .await
+            .map(|response| response.body);
 
         match branch {
             Ok(default_branch) => {
@@ -451,7 +452,12 @@ impl GithubRepo {
 
         // Get this repository's teams.
         let mut ts: Vec<octorust::types::Team> = Default::default();
-        match github.repos().list_all_teams(&company.github_org, &self.name).await {
+        match github
+            .repos()
+            .list_all_teams(&company.github_org, &self.name)
+            .await
+            .map(|response| response.body)
+        {
             Ok(v) => ts = v,
             Err(e) => {
                 info!("Failed to get teams for repo {}. err: {:?}", self.name, e);
@@ -531,7 +537,8 @@ pub async fn list_all_github_repos(github: &octorust::Client, company: &Company)
             octorust::types::ReposListOrgSort::Created,
             octorust::types::Order::Desc,
         )
-        .await?;
+        .await?
+        .body;
 
     let mut repos: Vec<NewRepo> = Default::default();
     for r in github_repos {
