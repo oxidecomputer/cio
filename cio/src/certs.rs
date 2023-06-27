@@ -77,6 +77,10 @@ pub struct NewCertificate {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
+
+    // Subject alternative names to append to the certificate
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sans: Vec<String>,
 }
 
 impl NewCertificate {
@@ -100,7 +104,7 @@ impl NewCertificate {
         log::info!("Authenticated with cert provider");
 
         // Order a new TLS certificate for a domain.
-        let mut ord_new = acc.new_order(&self.domain, &[])?;
+        let mut ord_new = acc.new_order(&self.domain, &self.sans.iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
 
         log::info!("Created new cert order for {}", self.domain);
 
