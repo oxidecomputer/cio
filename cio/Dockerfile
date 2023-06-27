@@ -51,6 +51,8 @@ COPY checkr ../checkr
 
 COPY cio-api-types ../cio-api-types
 
+COPY docusign ../docusign
+
 COPY macros ../macros
 
 COPY mailchimp-minimal-api ../mailchimp-minimal-api
