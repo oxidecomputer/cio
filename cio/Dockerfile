@@ -47,6 +47,8 @@ COPY Cargo.lock ./Cargo.lock
 
 COPY rust-toolchain.toml ./rust-toolchain.toml
 
+COPY checkr ../checkr
+
 COPY cio-api-types ../cio-api-types
 
 COPY macros ../macros
