@@ -87,6 +87,8 @@ COPY Cargo.lock ./Cargo.lock
 
 COPY rust-toolchain.toml ./rust-toolchain.toml
 
+COPY airtable ../airtable
+
 COPY checkr ../checkr
 
 # Move the deps we need to compile.
@@ -96,6 +98,8 @@ COPY cio-api-types ../cio-api-types
 
 COPY docusign ../docusign
 
+COPY google-geocode ../google-geocode
+
 COPY macros ../macros
 
 COPY mailerlite ../mailerlite
@@ -104,11 +108,19 @@ COPY mailchimp-minimal-api ../mailchimp-minimal-api
 
 COPY meilisearch-minimal-api ../meilisearch-minimal-api
 
+COPY quickbooks ../quickbooks
+
 COPY partial-struct ../partial-struct
 
 COPY parse-rfd ../parse-rfd
 
 COPY ramp-minimal-api ../ramp-minimal-api
+
+COPY shippo ../shippo
+
+COPY slack ../slack
+
+COPY tailscale ../tailscale
 
 COPY diesel-sentry ../diesel-sentry
 
