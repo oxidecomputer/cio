@@ -72,7 +72,7 @@ async fn main() -> Result<(), String> {
     let config_dropshot = ConfigDropshot {
         bind_address: service_address.parse().unwrap(),
         request_body_max_bytes: 100000000,
-        // tls: None,
+        ..Default::default()
     };
 
     /*
