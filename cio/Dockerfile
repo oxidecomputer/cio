@@ -47,11 +47,15 @@ COPY Cargo.lock ./Cargo.lock
 
 COPY rust-toolchain.toml ./rust-toolchain.toml
 
+COPY airtable ../airtable
+
 COPY checkr ../checkr
 
 COPY cio-api-types ../cio-api-types
 
 COPY docusign ../docusign
+
+COPY google-geocode ../google-geocode
 
 COPY macros ../macros
 
@@ -61,7 +65,15 @@ COPY meilisearch-minimal-api ../meilisearch-minimal-api
 
 COPY partial-struct ../partial-struct
 
+COPY quickbooks ../quickbooks
+
 COPY ramp-minimal-api ../ramp-minimal-api
+
+COPY shippo ../shippo
+
+COPY slack ../slack
+
+COPY tailscale ../tailscale
 
 COPY diesel-sentry ../diesel-sentry
 
