@@ -115,7 +115,7 @@ where
 
         let mut txn = start_sentry_db_transaction("sql.query", &query);
         let span = tracing::Span::current();
-        span.record("db.statement", &query.as_str());
+        span.record("db.statement", query.as_str());
 
         let result = <C as LoadConnection<B>>::load(&mut self.inner, source);
         txn.finish();
@@ -153,8 +153,8 @@ where
             .map_err(ConnectionError::CouldntSetupConfiguration)?;
 
         let span = tracing::Span::current();
-        span.record("db.name", &info.current_database.as_str());
-        span.record("db.version", &info.version.as_str());
+        span.record("db.name", info.current_database.as_str());
+        span.record("db.version", info.version.as_str());
 
         tracing::debug!("db.name: {}", info.current_database);
         tracing::debug!("db.version: {}", info.version);
@@ -205,7 +205,7 @@ where
         let query = debug_query::<Self::Backend, _>(&source).to_string();
         let mut txn = start_sentry_db_transaction("sql.query", &query);
         let span = tracing::Span::current();
-        span.record("db.statement", &query.as_str());
+        span.record("db.statement", query.as_str());
 
         let result = self.inner.execute_returning_count(source);
         txn.finish();

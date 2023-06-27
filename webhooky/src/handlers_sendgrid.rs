@@ -10,9 +10,9 @@ pub struct SendGridWebhookVerification;
 
 #[async_trait]
 impl Extractor for SendGridWebhookVerification {
-    async fn from_request<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<SendGridWebhookVerification, HttpError> {
-        let headers = Headers::from_request(rqctx.clone()).await?;
-        let body = UntypedBody::from_request(rqctx.clone()).await?;
+    async fn from_request<Context: ServerContext>(rqctx: &RequestContext<Context>, request: hyper::Request<hyper::Body>) -> Result<SendGridWebhookVerification, HttpError> {
+        let headers = Headers::from_request(rqctx).await?;
+        let body = UntypedBody::from_request(rqctx, request).await?;
 
         let signature = headers.0.get("X-Twilio-Email-Event-Webhook-Signature").and_then(|header_value| header_value.to_str().ok()).and_then(|signature| {
             base64::decode(signature).ok()

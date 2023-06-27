@@ -323,7 +323,11 @@ pub async fn encrypt_github_secrets(
     sodiumoxide::init().map_err(|_| anyhow!("initializing sodiumoxide failed!"))?;
 
     // Get the public key for the repo.
-    let pk = github.actions().get_repo_public_key(&company.github_org, repo).await?;
+    let pk = github
+        .actions()
+        .get_repo_public_key(&company.github_org, repo)
+        .await?
+        .body;
     let pke = base64::decode(pk.key)?;
 
     // Resize our slice.
@@ -416,12 +420,12 @@ pub async fn get_github_file(
     branch: &str,
     file: &str,
 ) -> Result<octorust::types::ContentFile> {
-    let mut file = github.repos().get_content_file(owner, repo, file, branch).await?;
+    let mut file = github.repos().get_content_file(owner, repo, file, branch).await?.body;
 
     // If the content is empty and the encoding is none then we likely hit a "too large" file case.
     // Try requesting the blob directly
     if file.content.is_empty() && file.encoding == "none" {
-        let blob = github.git().get_blob(owner, repo, &file.sha).await?;
+        let blob = github.git().get_blob(owner, repo, &file.sha).await?.body;
 
         // We are only interested in the copying over the content and encoding fields, everything
         // else from the original response should still be valid

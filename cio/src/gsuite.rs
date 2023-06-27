@@ -350,7 +350,7 @@ pub async fn update_google_group_settings(db: &Database, group: &Group, company:
         tokio::time::sleep(time::Duration::from_secs(1)).await;
         result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
     }
-    let mut settings = result?;
+    let mut settings = result?.body;
 
     // Update the groups settings.
     settings.email = email.to_string();

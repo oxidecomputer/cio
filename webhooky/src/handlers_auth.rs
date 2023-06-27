@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::Utc;
@@ -20,7 +18,7 @@ use zoom_api::Client as Zoom;
 use crate::{context::ServerContext, server::AuthCallback};
 
 pub async fn handle_auth_google_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let event = query_args.into_inner();
@@ -109,20 +107,20 @@ pub async fn handle_auth_google_callback(
 }
 
 pub async fn handle_auth_gusto_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
     let event = query_args.into_inner();
 
     // Initialize the Gusto client.
-    let mut g = Gusto::new_from_env("", "");
+    let mut g = Gusto::new_from_env("", "", gusto_api::RootProductionServer {});
 
     // Let's get the token from the code.
     let t = g.get_access_token(&event.code, &event.state).await?;
 
     // Let's get the company ID.
-    let current_user = g.current_user().get_me().await?;
+    let current_user = g.current_user().get_me().await?.body;
     let mut company_id = String::new();
     if let Some(roles) = current_user.roles {
         if let Some(payroll_admin) = roles.payroll_admin {
@@ -168,7 +166,7 @@ pub async fn handle_auth_gusto_callback(
 }
 
 pub async fn handle_auth_zoom_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -187,7 +185,8 @@ pub async fn handle_auth_zoom_callback(
             zoom_api::types::LoginType::Noop, // We don't know the login type, so let's leave it empty.
             false,
         )
-        .await?;
+        .await?
+        .body;
 
     // Let's get the domain from the email.
     let mut domain = "".to_string();
@@ -229,7 +228,7 @@ pub async fn handle_auth_zoom_callback(
 }
 
 pub async fn handle_auth_slack_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -357,7 +356,7 @@ pub async fn handle_auth_slack_callback(
 }
 
 pub async fn handle_auth_quickbooks_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();
@@ -413,7 +412,7 @@ pub async fn handle_auth_quickbooks_callback(
 }
 
 pub async fn handle_auth_docusign_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<()> {
     let api_context = rqctx.context();

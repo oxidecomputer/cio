@@ -42,7 +42,7 @@ impl GitHubRFDRepo {
     }
 
     pub async fn new_with_client(company: &Company, client: Arc<octorust::Client>) -> Result<Self> {
-        let full_repo = client.repos().get(&company.github_org, "rfd").await?;
+        let full_repo = client.repos().get(&company.github_org, "rfd").await?.body;
 
         Ok(Self {
             client,
@@ -166,7 +166,8 @@ impl GitHubRFDBranch {
             .client
             .repos()
             .get_content_file(&self.owner, &self.repo, &path, &self.branch)
-            .await;
+            .await
+            .map(|response| response.body);
 
         info!(
             "[rfd.contents] Retrieved asciidoc README from GitHub {} / {}",
@@ -191,7 +192,8 @@ impl GitHubRFDBranch {
                     .client
                     .repos()
                     .get_content_file(&self.owner, &self.repo, &md_path, &self.branch)
-                    .await?;
+                    .await?
+                    .body;
 
                 let decoded = decode_base64_to_string(&f.content);
                 (md_path, decoded, true, f.sha, f.html_url)
@@ -241,7 +243,7 @@ impl GitHubRFDBranch {
                 .get_content_vec_entries(&branch.owner, &branch.repo, &dir, &branch.branch)
                 .await?;
 
-            for file in resp {
+            for file in resp.body {
                 info!(
                     "[rfd.get_images] Processing file {} ({}) {} / {}",
                     file.path, file.type_, branch.repo, branch.branch
@@ -291,7 +293,8 @@ impl GitHubRFDBranch {
                     // direction
                     Default::default(),
                 )
-                .await?;
+                .await?
+                .body;
 
             pulls
                 .into_iter()
@@ -327,7 +330,8 @@ impl GitHubRFDBranch {
                 0,
                 0,
             )
-            .await?;
+            .await?
+            .body;
         let latest_commit = commits
             .get(0)
             .ok_or_else(|| anyhow!("No commits found for branch {}", self.branch))?;

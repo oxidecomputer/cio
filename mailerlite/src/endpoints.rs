@@ -516,7 +516,7 @@ mod tests {
 
         match parsed {
             GetSubscriberResponse::Success { data } => {
-                let expected_date_time = Utc.timestamp(1630519430, 0);
+                let expected_date_time = Utc.timestamp_opt(1630519430, 0).unwrap();
 
                 assert_eq!(data.subscribed_at, Some(expected_date_time));
                 assert_eq!(data.created_at, expected_date_time);
@@ -542,7 +542,7 @@ mod tests {
             subscribed_at: None,
             ip_address: None,
             // 2022-10-25T14:35:34Z
-            opted_in_at: Some(Utc.timestamp(1666708534, 0)),
+            opted_in_at: Some(Utc.timestamp_opt(1666708534, 0).unwrap()),
             optin_ip: Some(std::net::Ipv4Addr::new(127, 0, 0, 1)),
             unsubscribed_at: None,
         };

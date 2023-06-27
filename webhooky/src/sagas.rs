@@ -7,6 +7,7 @@ use cio_api::{
     db::Database,
     functions::{FnOutput, Function},
 };
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use slog::Drain;
 use slog_scope_futures::FutureExt as _;
@@ -68,7 +69,7 @@ where
 #[derive(Debug)]
 pub struct Saga;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Params {
     cmd_name: String,
     saga_id: uuid::Uuid,
@@ -81,38 +82,48 @@ pub struct Context {
 
 impl steno::SagaType for Saga {
     // Type for the saga's parameters
-    type SagaParamsType = Params;
+    // type SagaParamsType = Params;
 
     // Type for the application-specific context (see above)
     type ExecContextType = Arc<Context>;
 }
 
-async fn undo_action(_action_context: steno::ActionContext<Saga>) -> Result<()> {
-    // This is a noop, we don't have to undo anything.
-    Ok(())
+lazy_static! {
+    static ref EXEC_CMD: Arc<dyn steno::Action<Saga>> = steno::new_action_noop_undo("exec", action_run_cmd);
 }
 
-/// Create a new saga with the given parameters and then execute it.
-pub async fn do_saga(
+pub fn create_registry() -> steno::ActionRegistry<Saga> {
+    let mut registry = steno::ActionRegistry::<Saga>::new();
+    registry.register(EXEC_CMD.clone());
+
+    registry
+}
+
+pub async fn run_cmd(
     db: &Database,
     sec: &steno::SecClient,
+    registry: Arc<steno::ActionRegistry<Saga>>,
     id: &uuid::Uuid,
-    template: steno::SagaTemplate<Saga>,
     cmd_name: &str,
 ) -> Result<()> {
-    let context = Arc::new(Context { db: db.clone() });
     let params = Params {
         cmd_name: cmd_name.to_string(),
         saga_id: *id,
     };
 
-    let saga_template = Arc::new(template);
+    let mut builder = steno::DagBuilder::new(steno::SagaName::new(cmd_name));
+    builder.append(steno::Node::action(cmd_name, cmd_name, EXEC_CMD.as_ref()));
 
-    let saga_id = steno::SagaId(*id);
+    let dag = Arc::new(steno::SagaDag::new(
+        builder.build().expect("Failed to build DAG for execution saga"),
+        serde_json::to_value(&params).unwrap(),
+    ));
+
+    let context = Arc::new(Context { db: db.clone() });
+    let saga_id = steno::SagaId(params.saga_id);
 
     // Create the saga.
-    sec.saga_create(saga_id, Arc::new(context), saga_template, cmd_name.to_string(), params)
-        .await?;
+    sec.saga_create(saga_id, Arc::new(context), dag, registry).await?;
 
     // Set it running.
     sec.saga_start(saga_id).await?;
@@ -120,28 +131,10 @@ pub async fn do_saga(
     Ok(())
 }
 
-pub async fn run_cmd(db: &Database, sec: &steno::SecClient, id: &uuid::Uuid, cmd_name: &str) -> Result<()> {
-    let mut builder = steno::SagaTemplateBuilder::new();
-    builder.append(
-        // name of this action's output (can be used in subsequent actions)
-        cmd_name,
-        // human-readable label for the action
-        cmd_name,
-        steno::ActionFunc::new_action(
-            // action function
-            action_run_cmd,
-            // undo function
-            undo_action,
-        ),
-    );
-
-    do_saga(db, sec, id, builder.build(), cmd_name).await
-}
-
 async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<FnOutput, steno::ActionError> {
     let db = &action_context.user_data().db;
-    let cmd_name = &action_context.saga_params().cmd_name;
-    let saga_id = &action_context.saga_params().saga_id;
+    let cmd_name = &action_context.saga_params::<Params>()?.cmd_name;
+    let saga_id = &action_context.saga_params::<Params>()?.saga_id;
 
     if let Some(sub_cmd) = crate::core::into_job_command(cmd_name) {
         if let Ok(mem) = SelfMemory::new() {

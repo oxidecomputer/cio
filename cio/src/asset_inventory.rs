@@ -174,7 +174,8 @@ impl NewAssetItem {
             let png_file = drive_client
                 .files()
                 .create_or_update(drive_id, parent_id, &file_name, "image/png", &png_bytes)
-                .await?;
+                .await?
+                .body;
             self.barcode_png = format!("https://drive.google.com/uc?export=download&id={}", png_file.id);
 
             // Now do the SVG.
@@ -188,7 +189,8 @@ impl NewAssetItem {
             let svg_file = drive_client
                 .files()
                 .create_or_update(drive_id, parent_id, &file_name, "image/svg+xml", svg_bytes)
-                .await?;
+                .await?
+                .body;
             self.barcode_svg = format!("https://drive.google.com/uc?export=download&id={}", svg_file.id);
 
             // Generate the barcode label.
@@ -205,7 +207,8 @@ impl NewAssetItem {
             let label_file = drive_client
                 .files()
                 .create_or_update(drive_id, parent_id, &file_name, "application/pdf", &label_bytes)
-                .await?;
+                .await?
+                .body;
             self.barcode_pdf_label = format!("https://drive.google.com/uc?export=download&id={}", label_file.id);
         }
 
@@ -243,11 +246,16 @@ impl AssetItem {
 
             // Figure out where our directory is.
             // It should be in the shared drive : "Automated Documents"/"rfds"
-            let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
+            let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
             let drive_id = shared_drive.id.to_string();
 
             // Get the directory by the name.
-            let parent_id = drive_client.files().create_folder(&drive_id, "", "assets").await?;
+            let parent_id = drive_client
+                .files()
+                .create_folder(&drive_id, "", "assets")
+                .await?
+                .body
+                .id;
 
             let mut sw: NewAssetItem = From::from(self.clone());
             sw.expand(&drive_client, &drive_id, &parent_id).await?
@@ -288,11 +296,16 @@ pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()>
 
     // Figure out where our directory is.
     // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?;
+    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
     let drive_id = shared_drive.id.to_string();
 
     // Get the directory by the name.
-    let parent_id = drive_client.files().create_folder(&drive_id, "", "assets").await?;
+    let parent_id = drive_client
+        .files()
+        .create_folder(&drive_id, "", "assets")
+        .await?
+        .body
+        .id;
 
     // Get all the records from Airtable.
     let results: Vec<airtable_api::Record<AssetItem>> = company

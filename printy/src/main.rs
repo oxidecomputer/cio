@@ -1,4 +1,4 @@
-use std::{env, fs::File, io::Write, process::Command, str::from_utf8, sync::Arc};
+use std::{env, fs::File, io::Write, process::Command, str::from_utf8};
 
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
@@ -72,7 +72,7 @@ async fn main() -> Result<(), String> {
     let config_dropshot = ConfigDropshot {
         bind_address: service_address.parse().unwrap(),
         request_body_max_bytes: 100000000,
-        tls: None,
+        // tls: None,
     };
 
     /*
@@ -154,7 +154,7 @@ impl Context {
     path = "/",
 }]
 async fn api_get_schema(
-    rqctx: Arc<RequestContext<Context>>,
+    rqctx: RequestContext<Context>,
     _auth: Bearer<EnvToken>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
     let api_context = rqctx.context();
@@ -167,7 +167,7 @@ async fn api_get_schema(
     method = GET,
     path = "/ping",
 }]
-async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping(_rqctx: RequestContext<Context>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("pong".to_string()))
 }
 
@@ -177,7 +177,7 @@ async fn ping(_rqctx: Arc<RequestContext<Context>>) -> Result<HttpResponseOk<Str
     path = "/print/rollo",
 }]
 async fn listen_print_rollo_requests(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _auth: Bearer<EnvToken>,
     body_param: TypedBody<String>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
@@ -205,7 +205,7 @@ async fn listen_print_rollo_requests(
     path = "/print/zebra",
 }]
 async fn listen_print_zebra_requests(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _auth: Bearer<EnvToken>,
     body_param: TypedBody<PrintRequest>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
@@ -233,7 +233,7 @@ async fn listen_print_zebra_requests(
     path = "/print/receipt",
 }]
 async fn listen_print_receipt_requests(
-    _rqctx: Arc<RequestContext<Context>>,
+    _rqctx: RequestContext<Context>,
     _auth: Bearer<EnvToken>,
     body_param: TypedBody<PrintRequest>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {

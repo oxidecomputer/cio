@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn test_converts_from_api_datetime_to_utc() {
-        let test_date = FormattedDateTime(NaiveDateTime::from_timestamp(1667229189, 0));
+        let test_date = FormattedDateTime(NaiveDateTime::from_timestamp_opt(1667229189, 0).unwrap());
 
         let sub = ApiSubscriber {
             id: "12345".to_string(),
@@ -245,7 +245,7 @@ mod tests {
 
         // At this point in time the Chicago timezone is five hours behind UTC, so we expect that
         // the timezone post conversion is five hours ahead
-        let expected_date = Utc.timestamp(1667229189 + (5 * 60 * 60), 0);
+        let expected_date = Utc.timestamp_opt(1667229189 + (5 * 60 * 60), 0).unwrap();
 
         assert_eq!(converted.subscribed_at, Some(expected_date));
         assert_eq!(converted.unsubscribed_at, Some(expected_date));

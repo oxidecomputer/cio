@@ -326,7 +326,9 @@ impl Company {
             // Return early.
             return None;
         }
-        Some(Okta::new(&self.okta_api_key).with_host(self.okta_endpoint()))
+        let mut client = Okta::new(&self.okta_api_key);
+        client.with_host_override(self.okta_endpoint());
+        Some(client)
     }
 
     fn okta_endpoint(&self) -> String {
@@ -382,7 +384,12 @@ impl Company {
         for topic in topics {
             // Check if the webhook already exists.
             let mut exists = false;
-            match shipbob.webhooks().get_all(topic.clone()).await {
+            match shipbob
+                .webhooks()
+                .get_all(topic.clone())
+                .await
+                .map(|response| response.body)
+            {
                 Ok(webhooks) => {
                     for webhook in webhooks {
                         // Check if we already have the webhooks.
@@ -494,7 +501,7 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "zoom".to_string()).await {
             // Initialize the Zoom client.
-            let mut zoom = Zoom::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+            let zoom = Zoom::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
 
             if t.is_expired() {
                 // Update the token if it is expired.
@@ -600,7 +607,11 @@ impl Company {
         // Get the APIToken from the database.
         if let Some(mut t) = APIToken::get_from_db(db, self.id, "gusto".to_string()).await {
             // Initialize the Gusto client.
-            let mut gusto = Gusto::new_from_env(t.access_token.to_string(), t.refresh_token.to_string());
+            let gusto = Gusto::new_from_env(
+                t.access_token.to_string(),
+                t.refresh_token.to_string(),
+                gusto_api::RootProductionServer {},
+            );
 
             if t.is_expired() {
                 // Only refresh the token if it is expired.
@@ -985,7 +996,7 @@ impl Company {
     pub fn authenticate_github(&self) -> Result<octorust::Client> {
         // Parse our env variables.
         let app_id_str = env::var("GH_APP_ID")?;
-        let app_id = app_id_str.parse::<u64>()?;
+        let app_id = app_id_str.parse::<i64>()?;
 
         let encoded_private_key = env::var("GH_PRIVATE_KEY")?;
         let private_key = base64::decode(encoded_private_key)?;
@@ -1008,13 +1019,12 @@ impl Company {
         let retry_policy = reqwest_retry::policies::ExponentialBackoff::builder().build_with_max_retries(3);
         let client = reqwest_middleware::ClientBuilder::new(http)
             // Trace HTTP requests. See the tracing crate to make use of these traces.
-            .with(reqwest_tracing::TracingMiddleware)
+            .with(reqwest_tracing::TracingMiddleware::default())
             // Retry failed requests.
             .with(reqwest_retry::RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
 
         Ok(octorust::Client::custom(
-            "https://api.github.com",
             concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
             Credentials::InstallationToken(token_generator),
             client,
@@ -1113,15 +1123,16 @@ impl Company {
     // Creates a minimal type for callers that need information about the RFD repo, but
     // do not want to parse data from the full API response
     pub async fn rfd_repo(&self) -> Result<RFDRepo> {
-        self.authenticate_github()?
+        Ok(self
+            .authenticate_github()?
             .repos()
             .get(&self.github_org, self.rfd_repo_name())
             .await
-            .map(|repo| RFDRepo {
+            .map(|response| RFDRepo {
                 owner: self.github_org.clone(),
                 name: self.rfd_repo_name().to_string(),
-                default_branch: repo.default_branch,
-            })
+                default_branch: response.body.default_branch,
+            })?)
     }
 }
 

@@ -249,7 +249,8 @@ pub async fn refresh_pulls() -> Result<()> {
                     octorust::types::PullsListSort::Created,
                     octorust::types::Order::Asc,
                 )
-                .await?;
+                .await?
+                .body;
 
             for pull in pulls {
                 println!("{:#?}", pull);
