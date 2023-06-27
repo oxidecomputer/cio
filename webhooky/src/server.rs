@@ -190,7 +190,7 @@ pub async fn create_server(
     let config_dropshot = ConfigDropshot {
         bind_address: s.address.parse()?,
         request_body_max_bytes: 107374182400, // 100 Gigiabytes.
-                                              // tls: None,
+        ..Default::default()
     };
 
     /*
