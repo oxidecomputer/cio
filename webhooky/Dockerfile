@@ -87,6 +87,8 @@ COPY Cargo.lock ./Cargo.lock
 
 COPY rust-toolchain.toml ./rust-toolchain.toml
 
+COPY checkr ../checkr
+
 # Move the deps we need to compile.
 COPY cio ../cio
 
