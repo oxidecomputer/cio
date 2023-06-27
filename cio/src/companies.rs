@@ -33,6 +33,7 @@ use octorust::{
 use okta::Client as Okta;
 use quickbooks::QuickBooks;
 use ramp_minimal_api::RampClient as Ramp;
+use rsa::{RsaPrivateKey, pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey}};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sheets::Client as GoogleSheets;
@@ -999,16 +1000,12 @@ impl Company {
         let app_id = app_id_str.parse::<i64>()?;
 
         let encoded_private_key = env::var("GH_PRIVATE_KEY")?;
-        let private_key = base64::decode(encoded_private_key)?;
+        let private_key = String::from_utf8(base64::decode(encoded_private_key)?)?;
 
-        // Decode the key.
-        let key = match nom_pem::decode_block(&private_key) {
-            Ok(k) => k,
-            Err(e) => bail!("nom_pem decode_block failed: {:?}", e),
-        };
+        let key = RsaPrivateKey::from_pkcs1_pem(private_key.as_str())?.to_pkcs1_der()?.to_bytes().to_vec();
 
         // Get the JWT credentials.
-        let jwt = JWTCredentials::new(app_id, key.data)?;
+        let jwt = JWTCredentials::new(app_id, key)?;
 
         // Create the HTTP cache.
         let http_cache = Box::new(FileBasedCache::new("/tmp/.cache/github"));
