@@ -41,7 +41,14 @@ pub async fn run_subcmd_job(server_context: &ServerContext, cmd_name: &str) -> R
     let id = uuid::Uuid::new_v4();
 
     // Run the saga.
-    crate::sagas::run_cmd(db, &server_context.sec, &id, cmd_name).await?;
+    crate::sagas::run_cmd(
+        db,
+        &server_context.sec,
+        server_context.exec_registry.clone(),
+        &id,
+        cmd_name,
+    )
+    .await?;
 
     Ok(id)
 }

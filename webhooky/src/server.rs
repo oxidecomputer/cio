@@ -190,7 +190,7 @@ pub async fn create_server(
     let config_dropshot = ConfigDropshot {
         bind_address: s.address.parse()?,
         request_body_max_bytes: 107374182400, // 100 Gigiabytes.
-        tls: None,
+                                              // tls: None,
     };
 
     /*
@@ -379,7 +379,7 @@ pub async fn do_job(ctx: ServerContext, job: String) {
     method = GET,
     path = "/ping",
 }]
-async fn ping(_rqctx: Arc<RequestContext<ServerContext>>) -> Result<HttpResponseOk<String>, HttpError> {
+async fn ping(_rqctx: RequestContext<ServerContext>) -> Result<HttpResponseOk<String>, HttpError> {
     Ok(HttpResponseOk("pong".to_string()))
 }
 
@@ -395,11 +395,11 @@ pub struct CounterResponse {
     path = "/products/sold/count",
 }]
 async fn listen_products_sold_count_requests(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseOk<CounterResponse>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
-    match txn.run(|| crate::handlers::handle_products_sold_count(rqctx)).await {
+    match txn.run(|| crate::handlers::handle_products_sold_count(&rqctx)).await {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
 
@@ -419,14 +419,14 @@ async fn listen_products_sold_count_requests(
     path = "/github",
 }]
 async fn listen_github_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body: HmacVerifiedBody<crate::handlers_github::GitHubWebhookVerification, GitHubWebhook>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let webhook = body.into_inner()?;
 
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&webhook)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&webhook)).await;
 
-    if let Err(e) = txn.run(|| crate::handlers_github::handle_github(rqctx, webhook)).await {
+    if let Err(e) = txn.run(|| crate::handlers_github::handle_github(&rqctx, webhook)).await {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -448,14 +448,14 @@ pub struct RFDPathParams {
     path = "/rfd/{num}",
 }]
 async fn trigger_rfd_update_by_number(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
     path_params: Path<RFDPathParams>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_rfd_update_by_number(rqctx, path_params))
+        .run(|| crate::handlers::handle_rfd_update_by_number(&rqctx, path_params))
         .await
     {
         // Send the error to sentry.
@@ -473,12 +473,10 @@ async fn trigger_rfd_update_by_number(
     method = GET,
     path = "/github/ratelimit",
 }]
-async fn github_rate_limit(
-    rqctx: Arc<RequestContext<ServerContext>>,
-) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+async fn github_rate_limit(rqctx: RequestContext<ServerContext>) -> Result<HttpResponseOk<GitHubRateLimit>, HttpError> {
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
-    match txn.run(|| crate::handlers::handle_github_rate_limit(rqctx)).await {
+    match txn.run(|| crate::handlers::handle_github_rate_limit(&rqctx)).await {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
 
@@ -511,15 +509,15 @@ pub struct GitHubRateLimit {
     path = "/airtable/employees/print_home_address_label",
 }]
 async fn listen_airtable_employees_print_home_address_label_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_employees_print_home_address_label(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_employees_print_home_address_label(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -540,15 +538,15 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
     path = "/airtable/certificates/renew",
 }]
 async fn listen_airtable_certificates_renew_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_certificates_renew(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_certificates_renew(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -569,15 +567,15 @@ async fn listen_airtable_certificates_renew_webhooks(
     path = "/airtable/assets/items/print_barcode_label",
 }]
 async fn listen_airtable_assets_items_print_barcode_label_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_assets_items_print_barcode_label(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_assets_items_print_barcode_label(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -598,15 +596,15 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
     path = "/airtable/swag/inventory/items/print_barcode_labels",
 }]
 async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -627,15 +625,15 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
     path = "/airtable/applicants/request_background_check",
 }]
 async fn listen_airtable_applicants_request_background_check_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_applicants_request_background_check(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_applicants_request_background_check(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -657,15 +655,15 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
     path = "/airtable/applicants/update",
 }]
 async fn listen_airtable_applicants_update_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_applicants_update(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_applicants_update(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -687,15 +685,15 @@ async fn listen_airtable_applicants_update_webhooks(
     path = "/airtable/applicants/recreate_piia",
 }]
 async fn listen_airtable_applicants_recreate_piia_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::listen_airtable_applicants_recreate_piia_webhooks(rqctx, body))
+        .run(|| crate::handlers::listen_airtable_applicants_recreate_piia_webhooks(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -717,15 +715,15 @@ async fn listen_airtable_applicants_recreate_piia_webhooks(
     path = "/airtable/shipments/outbound/create",
 }]
 async fn listen_airtable_shipments_outbound_create_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_shipments_outbound_create(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_shipments_outbound_create(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -755,15 +753,15 @@ pub struct AirtableRowEvent {
     path = "/airtable/shipments/outbound/reprint_label",
 }]
 async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_shipments_outbound_reprint_label(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_shipments_outbound_reprint_label(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -784,15 +782,15 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
     path = "/airtable/shipments/outbound/reprint_receipt",
 }]
 async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -813,16 +811,16 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
     path = "/airtable/shipments/outbound/resend_shipment_status_email_to_recipient",
 }]
 async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
         .run(|| {
-            crate::handlers::handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(rqctx, body)
+            crate::handlers::handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(&rqctx, body)
         })
         .await
     {
@@ -844,15 +842,15 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
     path = "/airtable/shipments/outbound/schedule_pickup",
 }]
 async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -913,14 +911,14 @@ pub struct IncomingEmail {
     path = "/applicant/review/submit",
 }]
 async fn listen_applicant_review_requests(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
     body_param: TypedBody<cio_api::applicant_reviews::NewApplicantReview>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
-    if let Err(e) = txn.run(|| crate::handlers::handle_applicant_review(rqctx, body)).await {
+    if let Err(e) = txn.run(|| crate::handlers::handle_applicant_review(&rqctx, body)).await {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -943,11 +941,11 @@ struct ApplicantInfoParams {
     path = "/applicant/info/{email}",
 }]
 async fn listen_applicant_info(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<HiringToken>,
     path_params: Path<ApplicantInfoParams>,
 ) -> Result<HttpResponseOk<ApplicantInfo>, HttpError> {
-    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+    let mut txn = start_sentry_http_transaction::<()>(&rqctx, None).await;
 
     log::info!("Running applicant info handler");
 
@@ -975,11 +973,11 @@ async fn listen_applicant_info(
     path = "/applicant/info/{email}/upload-token",
 }]
 async fn listen_applicant_upload_token(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<HiringToken>,
     path_params: Path<ApplicantInfoParams>,
 ) -> Result<HttpResponseOk<ApplicantUploadToken>, HttpError> {
-    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+    let mut txn = start_sentry_http_transaction::<()>(&rqctx, None).await;
 
     log::info!("Running applicant upload token handler");
 
@@ -1008,15 +1006,15 @@ async fn listen_applicant_upload_token(
     path = "/application-test/submit",
 }]
 async fn listen_test_application_submit_requests(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<HiringToken>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_test_application_submit(rqctx, body))
+        .run(|| crate::handlers::handle_test_application_submit(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -1036,15 +1034,15 @@ async fn listen_test_application_submit_requests(
     path = "/application/submit",
 }]
 async fn listen_application_submit_requests(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<HiringToken>,
     body_param: TypedBody<cio_api::application_form::ApplicationForm>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_application_submit(rqctx, body))
+        .run(|| crate::handlers::handle_application_submit(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -1092,7 +1090,7 @@ pub struct ApplicationFileUploadData {
     path = "/application-test/files/upload",
 }]
 async fn listen_test_application_files_upload_requests_cors(
-    _qctx: Arc<RequestContext<ServerContext>>,
+    _qctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
     let headers = resp.headers_mut();
@@ -1111,12 +1109,12 @@ async fn listen_test_application_files_upload_requests_cors(
     path = "/application-test/files/upload",
 }]
 async fn listen_test_application_files_upload_requests(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     bearer: BearerToken,
     body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     // We require that the user has supplied an upload token in the bearer header
     if let Some(token) = bearer.inner() {
@@ -1143,7 +1141,7 @@ async fn listen_test_application_files_upload_requests(
         match token_result {
             Ok(_) => {
                 let upload_result = txn
-                    .run(|| crate::handlers::handle_test_application_files_upload(rqctx, body))
+                    .run(|| crate::handlers::handle_test_application_files_upload(&rqctx, body))
                     .await;
 
                 match upload_result {
@@ -1183,16 +1181,14 @@ async fn listen_test_application_files_upload_requests(
     path = "/application/files/upload",
 }]
 async fn listen_application_files_upload_requests_cors(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<String>>, HttpError> {
     let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
     let headers = resp.headers_mut();
 
-    let allowed_origins = crate::cors::get_cors_origin_header(
-        rqctx.clone(),
-        &["https://apply.oxide.computer", "https://oxide.computer"],
-    )
-    .await?;
+    let allowed_origins =
+        crate::cors::get_cors_origin_header(&rqctx, &["https://apply.oxide.computer", "https://oxide.computer"])
+            .await?;
     headers.insert("Access-Control-Allow-Origin", allowed_origins);
     headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
     headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
@@ -1207,12 +1203,12 @@ async fn listen_application_files_upload_requests_cors(
     path = "/application/files/upload",
 }]
 async fn listen_application_files_upload_requests(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     bearer: BearerToken,
     body_param: TypedBody<ApplicationFileUploadData>,
 ) -> Result<HttpResponseHeaders<HttpResponseOk<HashMap<String, String>>>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     // We require that the user has supplied an upload token in the bearer header
     if let Some(token) = bearer.inner() {
@@ -1242,13 +1238,13 @@ async fn listen_application_files_upload_requests(
             Ok(_) => {
                 // Check the origin header. In the future this may be upgraded to a hard failure
                 let origin_access = crate::cors::get_cors_origin_header(
-                    rqctx.clone(),
+                    &rqctx,
                     &["https://apply.oxide.computer", "https://oxide.computer"],
                 )
                 .await;
 
                 let upload_result = txn
-                    .run(|| crate::handlers::handle_application_files_upload(rqctx, body))
+                    .run(|| crate::handlers::handle_application_files_upload(&rqctx, body))
                     .await;
 
                 match upload_result {
@@ -1301,15 +1297,15 @@ async fn listen_application_files_upload_requests(
     path = "/airtable/shipments/inbound/create",
 }]
 async fn listen_airtable_shipments_inbound_create_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<AirtableToken>,
     body_param: TypedBody<AirtableRowEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_airtable_shipments_inbound_create(rqctx, body))
+        .run(|| crate::handlers::handle_airtable_shipments_inbound_create(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -1330,15 +1326,15 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
     path = "/store/order",
 }]
 async fn listen_store_order_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
     body_param: TypedBody<Order>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_store_order_create(rqctx, body))
+        .run(|| crate::handlers::handle_store_order_create(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -1359,14 +1355,14 @@ async fn listen_store_order_create(
     path = "/easypost/tracking/update",
 }]
 async fn listen_easypost_tracking_update_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body_param: TypedBody<EasyPostTrackingUpdateEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_easypost_tracking_update(rqctx, body))
+        .run(|| crate::handlers::handle_easypost_tracking_update(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -1430,15 +1426,15 @@ pub struct EasyPostTrackingUpdateEvent {
     path = "/shippo/tracking/update",
 }]
 async fn listen_shippo_tracking_update_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: QueryToken<ShippoToken>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_shippo_tracking_update(rqctx, body))
+        .run(|| crate::handlers::handle_shippo_tracking_update(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -1468,15 +1464,15 @@ pub struct ShippoTrackingUpdateEvent {
     path = "/checkr/background/update",
 }]
 async fn listen_checkr_background_update_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body: HmacVerifiedBodyAudit<crate::handlers_checkr::CheckrWebhookVerification, checkr::WebhookEvent>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let webhook = body.into_inner()?;
 
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&webhook)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&webhook)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_checkr_background_update(rqctx, webhook))
+        .run(|| crate::handlers::handle_checkr_background_update(&rqctx, webhook))
         .await
     {
         // Send the error to sentry.
@@ -1512,9 +1508,9 @@ pub struct AuthCallback {
     path = "/auth/google/consent",
 }]
 async fn listen_auth_google_consent(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     // Initialize the Google client.
     // You can use any of the libs here, they all use the same endpoint
@@ -1534,13 +1530,13 @@ async fn listen_auth_google_consent(
     path = "/auth/google/callback",
 }]
 async fn listen_auth_google_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_google_callback(rqctx, query_args))
+        .run(|| crate::handlers_auth::handle_auth_google_callback(&rqctx, query_args))
         .await
     {
         // Send the error to sentry.
@@ -1559,9 +1555,9 @@ async fn listen_auth_google_callback(
     path = "/auth/github/consent",
 }]
 async fn listen_auth_github_consent(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     txn.finish(http::StatusCode::OK);
 
@@ -1576,11 +1572,11 @@ async fn listen_auth_github_consent(
     path = "/auth/github/callback",
 }]
 async fn listen_auth_github_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     txn.run(|| {
         warn!("github callback: {:?}", body);
@@ -1597,12 +1593,12 @@ async fn listen_auth_github_callback(
     path = "/auth/gusto/consent",
 }]
 async fn listen_auth_gusto_consent(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     // Initialize the Gusto client.
-    let g = txn.run(|| Gusto::new_from_env("", ""));
+    let g = txn.run(|| Gusto::new_from_env("", "", gusto_api::RootProductionServer {}));
 
     txn.finish(http::StatusCode::OK);
 
@@ -1618,13 +1614,13 @@ async fn listen_auth_gusto_consent(
     path = "/auth/gusto/callback",
 }]
 async fn listen_auth_gusto_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_gusto_callback(rqctx, query_args))
+        .run(|| crate::handlers_auth::handle_auth_gusto_callback(&rqctx, query_args))
         .await
     {
         // Send the error to sentry.
@@ -1643,11 +1639,11 @@ async fn listen_auth_gusto_callback(
     path = "/auth/zoom/deauthorization",
 }]
 async fn listen_auth_zoom_deauthorization(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     txn.run(|| {
         warn!("zoom deauthorization: {:?}", body);
@@ -1664,9 +1660,9 @@ async fn listen_auth_zoom_deauthorization(
     path = "/auth/zoom/consent",
 }]
 async fn listen_auth_zoom_consent(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     // Initialize the Zoom client.
     let g = txn.run(|| Zoom::new_from_env("", ""));
@@ -1684,13 +1680,13 @@ async fn listen_auth_zoom_consent(
     path = "/auth/zoom/callback",
 }]
 async fn listen_auth_zoom_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_zoom_callback(rqctx, query_args))
+        .run(|| crate::handlers_auth::handle_auth_zoom_callback(&rqctx, query_args))
         .await
     {
         // Send the error to sentry.
@@ -1709,9 +1705,9 @@ async fn listen_auth_zoom_callback(
     path = "/auth/slack/consent",
 }]
 async fn listen_auth_slack_consent(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     // Initialize the Slack client.
     let s = txn.run(|| Slack::new_from_env("", "", ""));
@@ -1729,13 +1725,13 @@ async fn listen_auth_slack_consent(
     path = "/auth/slack/callback",
 }]
 async fn listen_auth_slack_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_slack_callback(rqctx, query_args))
+        .run(|| crate::handlers_auth::handle_auth_slack_callback(&rqctx, query_args))
         .await
     {
         // Send the error to sentry.
@@ -1754,9 +1750,9 @@ async fn listen_auth_slack_callback(
     path = "/auth/quickbooks/consent",
 }]
 async fn listen_auth_quickbooks_consent(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     // Initialize the QuickBooks client.
     let g = txn.run(|| QuickBooks::new_from_env("", "", ""));
@@ -1774,13 +1770,13 @@ async fn listen_auth_quickbooks_consent(
     path = "/auth/quickbooks/callback",
 }]
 async fn listen_auth_quickbooks_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_quickbooks_callback(rqctx, query_args))
+        .run(|| crate::handlers_auth::handle_auth_quickbooks_callback(&rqctx, query_args))
         .await
     {
         // Send the error to sentry.
@@ -1799,11 +1795,11 @@ async fn listen_auth_quickbooks_callback(
     path = "/plaid",
 }]
 async fn listen_auth_plaid_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     txn.run(|| {
         warn!("plaid callback: {:?}", body);
@@ -1820,9 +1816,9 @@ async fn listen_auth_plaid_callback(
     path = "/auth/docusign/consent",
 }]
 async fn listen_auth_docusign_consent(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
 ) -> Result<HttpResponseOk<UserConsentURL>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     // Initialize the DocuSign client.
     let g = txn.run(|| DocuSign::new_from_env("", "", "", ""));
@@ -1840,13 +1836,13 @@ async fn listen_auth_docusign_consent(
     path = "/auth/docusign/callback",
 }]
 async fn listen_auth_docusign_callback(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     query_args: Query<AuthCallback>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers_auth::handle_auth_docusign_callback(rqctx, query_args))
+        .run(|| crate::handlers_auth::handle_auth_docusign_callback(&rqctx, query_args))
         .await
     {
         // Send the error to sentry.
@@ -1865,15 +1861,15 @@ async fn listen_auth_docusign_callback(
     path = "/docusign/envelope/update",
 }]
 async fn listen_docusign_envelope_update_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body: HmacVerifiedBody<crate::handlers_docusign::DocusignWebhookVerification, docusign::Envelope>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let webhook = body.into_inner()?;
 
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&webhook)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&webhook)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_docusign_envelope_update(rqctx, webhook))
+        .run(|| crate::handlers::handle_docusign_envelope_update(&rqctx, webhook))
         .await
     {
         // Send the error to sentry.
@@ -1892,14 +1888,14 @@ async fn listen_docusign_envelope_update_webhooks(
     path = "/analytics/page_view",
 }]
 async fn listen_analytics_page_view_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body_param: TypedBody<NewPageView>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_analytics_page_view(rqctx, body))
+        .run(|| crate::handlers::handle_analytics_page_view(&rqctx, body))
         .await
     {
         // Send the error to sentry.
@@ -1919,14 +1915,17 @@ async fn listen_analytics_page_view_webhooks(
     content_type = "application/x-www-form-urlencoded"
 }]
 async fn listen_slack_commands_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, BotCommand>,
 ) -> Result<HttpResponseOk<serde_json::Value>, HttpError> {
     let command = body.into_inner()?;
 
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&command)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&command)).await;
 
-    match txn.run(|| crate::handlers::handle_slack_commands(rqctx, command)).await {
+    match txn
+        .run(|| crate::handlers::handle_slack_commands(&rqctx, command))
+        .await
+    {
         Ok(r) => {
             txn.finish(http::StatusCode::OK);
 
@@ -1947,15 +1946,15 @@ async fn listen_slack_commands_webhooks(
     content_type = "application/x-www-form-urlencoded"
 }]
 async fn listen_slack_interactive_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     body: HmacVerifiedBodyAudit<crate::handlers_slack::SlackWebhookVerification, InteractiveEvent>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
     let event = body.into_inner()?;
 
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&event.payload)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&event.payload)).await;
 
     if let Err(e) = txn
-        .run(|| crate::handlers::handle_slack_interactive(rqctx, event.payload))
+        .run(|| crate::handlers::handle_slack_interactive(&rqctx, event.payload))
         .await
     {
         // Send the error to sentry.
@@ -1974,14 +1973,14 @@ async fn listen_slack_interactive_webhooks(
     path = "/shipbob",
 }]
 async fn listen_shipbob_webhooks(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: QueryTokenAudit<InternalToken>,
     body_param: TypedBody<serde_json::Value>,
 ) -> Result<HttpResponseOk<String>, HttpError> {
     let body = body_param.into_inner();
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), Some(&body)).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, Some(&body)).await;
 
-    if let Err(e) = txn.run(|| crate::handlers::handle_shipbob(rqctx, body)).await {
+    if let Err(e) = txn.run(|| crate::handlers::handle_shipbob(&rqctx, body)).await {
         // Send the error to sentry.
         txn.finish(http::StatusCode::INTERNAL_SERVER_ERROR);
         return Err(handle_anyhow_err_as_http_err(e));
@@ -2016,11 +2015,11 @@ fn rfd_index_page_selector(item: &RFDIndexEntry, _scan_params: &RFDIndexScanPara
     path = "/rfds",
 }]
 async fn listen_rfd_index(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<RFDToken>,
     query: Query<PaginationParams<RFDIndexScanParam, RFDIndexPageSelector>>,
 ) -> Result<HttpResponseOk<ResultsPage<RFDIndexEntry>>, HttpError> {
-    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+    let mut txn = start_sentry_http_transaction::<()>(&rqctx, None).await;
 
     let params = query.into_inner();
     let offset = match params.page {
@@ -2056,11 +2055,11 @@ async fn listen_rfd_index(
     path = "/rfd/{num}",
 }]
 async fn listen_rfd_view(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<RFDToken>,
     path_params: Path<RFDPathParams>,
 ) -> Result<HttpResponseOk<RFDEntry>, HttpError> {
-    let mut txn = start_sentry_http_transaction::<()>(rqctx.clone(), None).await;
+    let mut txn = start_sentry_http_transaction::<()>(&rqctx, None).await;
 
     match txn
         .run(|| crate::handlers_rfd::handle_rfd_view(&rqctx.context().app, path_params.into_inner().num))
@@ -2088,10 +2087,10 @@ async fn listen_rfd_view(
     path = "/run/sync-repos",
 }]
 async fn trigger_sync_repos_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-repos"))
@@ -2116,10 +2115,10 @@ async fn trigger_sync_repos_create(
     path = "/run/sync-rfds",
 }]
 async fn trigger_sync_rfds_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-rfds"))
@@ -2144,10 +2143,10 @@ async fn trigger_sync_rfds_create(
     path = "/run/sync-travel",
 }]
 async fn trigger_sync_travel_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-travel"))
@@ -2172,10 +2171,10 @@ async fn trigger_sync_travel_create(
     path = "/run/sync-zoho",
 }]
 async fn trigger_sync_zoho_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-zoho"))
@@ -2200,10 +2199,10 @@ async fn trigger_sync_zoho_create(
     path = "/run/sync-functions",
 }]
 async fn trigger_sync_functions_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-functions"))
@@ -2228,10 +2227,10 @@ async fn trigger_sync_functions_create(
     path = "/run/sync-finance",
 }]
 async fn trigger_sync_finance_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-finance"))
@@ -2256,10 +2255,10 @@ async fn trigger_sync_finance_create(
     path = "/run/sync-shipments",
 }]
 async fn trigger_sync_shipments_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-shipments"))
@@ -2284,10 +2283,10 @@ async fn trigger_sync_shipments_create(
     path = "/run/sync-shorturls",
 }]
 async fn trigger_sync_shorturls_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-shorturls"))
@@ -2312,10 +2311,10 @@ async fn trigger_sync_shorturls_create(
     path = "/run/sync-configs",
 }]
 async fn trigger_sync_configs_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-configs"))
@@ -2340,10 +2339,10 @@ async fn trigger_sync_configs_create(
     path = "/run/sync-recorded-meetings",
 }]
 async fn trigger_sync_recorded_meetings_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-recorded-meetings"))
@@ -2368,10 +2367,10 @@ async fn trigger_sync_recorded_meetings_create(
     path = "/run/sync-asset-inventory",
 }]
 async fn trigger_sync_asset_inventory_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-asset-inventory"))
@@ -2396,10 +2395,10 @@ async fn trigger_sync_asset_inventory_create(
     path = "/run/sync-swag-inventory",
 }]
 async fn trigger_sync_swag_inventory_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-swag-inventory"))
@@ -2424,10 +2423,10 @@ async fn trigger_sync_swag_inventory_create(
     path = "/run/sync-interviews",
 }]
 async fn trigger_sync_interviews_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-interviews"))
@@ -2452,10 +2451,10 @@ async fn trigger_sync_interviews_create(
     path = "/run/sync-applications",
 }]
 async fn trigger_sync_applications_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-applications"))
@@ -2480,10 +2479,10 @@ async fn trigger_sync_applications_create(
     path = "/run/sync-analytics",
 }]
 async fn trigger_sync_analytics_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-analytics"))
@@ -2508,10 +2507,10 @@ async fn trigger_sync_analytics_create(
     path = "/run/sync-companies",
 }]
 async fn trigger_sync_companies_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-companies"))
@@ -2536,10 +2535,10 @@ async fn trigger_sync_companies_create(
     path = "/run/sync-other",
 }]
 async fn trigger_sync_other_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-other"))
@@ -2564,10 +2563,10 @@ async fn trigger_sync_other_create(
     path = "/run/sync-huddles",
 }]
 async fn trigger_sync_huddles_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-huddles"))
@@ -2592,10 +2591,10 @@ async fn trigger_sync_huddles_create(
     path = "/run/sync-mailing-lists",
 }]
 async fn trigger_sync_mailing_lists_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-mailing-lists"))
@@ -2620,10 +2619,10 @@ async fn trigger_sync_mailing_lists_create(
     path = "/run/sync-journal-clubs",
 }]
 async fn trigger_sync_journal_clubs_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-journal-clubs"))
@@ -2648,10 +2647,10 @@ async fn trigger_sync_journal_clubs_create(
     path = "/run/sync-api-tokens",
 }]
 async fn trigger_sync_api_tokens_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn
         .run(|| crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-api-tokens"))
@@ -2677,10 +2676,10 @@ async fn trigger_sync_api_tokens_create(
     path = "/run/cleanup",
 }]
 async fn trigger_cleanup_create(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: RequestContext<ServerContext>,
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<()>, HttpError> {
-    let mut txn = start_sentry_http_transaction(rqctx.clone(), None::<()>).await;
+    let mut txn = start_sentry_http_transaction(&rqctx, None::<()>).await;
 
     match txn.run(|| do_cleanup(rqctx.context())).await {
         Ok(_) => {
@@ -2747,7 +2746,7 @@ pub struct SentryTransaction {
 }
 
 async fn start_sentry_http_transaction<T: serde::Serialize>(
-    rqctx: Arc<RequestContext<ServerContext>>,
+    rqctx: &RequestContext<ServerContext>,
     body: Option<T>,
 ) -> SentryTransaction {
     // Create a new Sentry hub for every request.
@@ -2761,7 +2760,7 @@ async fn start_sentry_http_transaction<T: serde::Serialize>(
     hub.start_session();
 
     // Get the raw headers.
-    let raw_req = rqctx.request.lock().await;
+    let raw_req = &rqctx.request;
     let raw_headers = raw_req.headers().clone();
 
     let data = body.as_ref().map(|b| serde_json::to_string(b).unwrap());

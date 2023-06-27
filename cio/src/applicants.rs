@@ -516,7 +516,7 @@ impl Applicant {
         if (self.status == crate::applicant_status::Status::Onboarding.to_string()
             || self.status == crate::applicant_status::Status::GivingOffer.to_string())
             && self.start_date.is_some()
-            && self.start_date.unwrap() <= Utc::now().date().naive_utc()
+            && self.start_date.unwrap() <= Utc::now().date_naive()
         {
             // We shouldn't also check if we have an employee for the user, only if the employee had
             // been hired and left.
@@ -1196,7 +1196,8 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
             true,  // supports_all_drives
             true,  // supports_team_drives
         )
-        .await?;
+        .await?
+        .body;
     let mime_type = drive_file.mime_type;
     let name = drive_file.name;
 
@@ -1205,7 +1206,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
 
     let result: String = if mime_type == "application/pdf" {
         // Get the PDF contents from Drive.
-        let contents = drive_client.files().download_by_id(&id).await?;
+        let contents = drive_client.files().download_by_id(&id).await?.body;
 
         path.push(format!("{}.pdf", id));
 
@@ -1214,7 +1215,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
 
         read_pdf(&name, path.clone()).await?
     } else {
-        let contents = drive_client.files().download_by_id(&id).await?;
+        let contents = drive_client.files().download_by_id(&id).await?.body;
         path.push(&name);
 
         let mut file = fs::File::create(&path).await?;
@@ -2054,7 +2055,7 @@ The applicants Airtable \
         let drive_client = company.authenticate_google_drive(db).await?;
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?;
+        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?.body;
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -2074,7 +2075,9 @@ The applicants Airtable \
             let name_folder_id = drive_client
                 .files()
                 .create_folder(&shared_drive.id, "", &self.name)
-                .await?;
+                .await?
+                .body
+                .id;
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Offer Letter") {
@@ -2326,7 +2329,7 @@ The applicants Airtable \
         let drive_client = company.authenticate_google_drive(db).await?;
         // Figure out where our directory is.
         // It should be in the shared drive : "Offer Letters"
-        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?;
+        let shared_drive = drive_client.drives().get_by_name("Offer Letters").await?.body;
         let drive_id = shared_drive.id.to_string();
 
         // TODO: only save the documents if we don't already have them.
@@ -2346,7 +2349,9 @@ The applicants Airtable \
             let name_folder_id = drive_client
                 .files()
                 .create_folder(&shared_drive.id, "", &self.name)
-                .await?;
+                .await?
+                .body
+                .id;
 
             let mut filename = format!("{} - {}.pdf", self.name, document.name);
             if document.name.contains("Employee Mediation") || document.name.contains("Employee_Mediation") {
@@ -2407,7 +2412,8 @@ pub async fn refresh_new_applicants_and_reviews(
             // since
             None,
         )
-        .await?;
+        .await?
+        .body;
 
     // We want all the applicants without a sheet id, since this is the list of applicants we care
     // about. Everything else came from Google Sheets and therefore uses the old system.

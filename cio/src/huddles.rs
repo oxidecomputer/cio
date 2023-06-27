@@ -56,6 +56,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> 
                     "", // time_zone
                 )
                 .await
+                .map(|response| response.body)
             {
                 // If the event is cancelled, we can just carry on our merry way.
                 if event.status.to_lowercase().trim() == "cancelled" {
@@ -66,7 +67,7 @@ pub async fn sync_changes_to_google_events(db: &Database, company: &Company) -> 
                 let date = event.start.unwrap().date_time.unwrap();
                 let pacific_time = date.with_timezone(&chrono_tz::US::Pacific);
                 // Update the date of the meeting based on the calendar event.
-                record.fields.date = pacific_time.date().naive_utc();
+                record.fields.date = pacific_time.date_naive();
 
                 // Clear out the fields that are functions since the API cannot take values for those.
                 record.fields.name = "".to_string();
@@ -134,6 +135,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                             "", // time_zone
                         )
                         .await
+                        .map(|response| response.body)
                     {
                         // Modify the properties of the event so we can update it.
                         event.description = description.trim().to_string();
@@ -156,6 +158,7 @@ The Airtable workspace lives at: https://{}-huddle.corp.{}
                                 &event,
                             )
                             .await
+                            .map(|response| response.body)
                         {
                             Ok(_) => (),
                             Err(err) => debug!(
@@ -219,6 +222,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<(
                     "", // time_zone
                 )
                 .await
+                .map(|response| response.body)
             {
                 // If the event is cancelled, we can just carry on our merry way.
                 if event.status.to_lowercase().trim() == "cancelled" {
@@ -265,7 +269,8 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<(
                                     0,  // max attendees, 0 to ignore
                                     "", // time_zone
                                 )
-                                .await?;
+                                .await?
+                                .body;
                             // We need to update the event instance, not delete it, and set the status to
                             // cancelled.
                             // https://developers.google.com/calendar/recurringevents#modifying_or_deleting_instances
@@ -319,7 +324,7 @@ pub async fn send_huddle_reminders(db: &Database, company: &Company) -> Result<(
                 // Set the email data.
                 email_data.huddle_name = slug.to_string();
                 email_data.email = huddle.email.to_string();
-                email_data.date = pacific_time.date().format(date_format).to_string();
+                email_data.date = pacific_time.date_naive().format(date_format).to_string();
 
                 // Get the discussion topics for the meeting.
                 for id in &record.fields.proposed_discussion {
@@ -518,7 +523,8 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
                 "",                                  // time_zone
                 "",                                  // updated_min
             )
-            .await?;
+            .await?
+            .body;
 
         // Iterate over all the events, searching for our search string.
         let mut recurring_events: Vec<String> = Vec::new();
@@ -535,7 +541,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
 
             if event.recurring_event_id.is_empty() || event.recurring_event_id != event.id {
                 // Let's add the event to our HashMap.
-                let date = event.start.as_ref().unwrap().date_time.unwrap().date().naive_utc();
+                let date = event.start.as_ref().unwrap().date_time.unwrap().date_naive();
                 gcal_events.insert(date, event.clone());
 
                 continue;
@@ -559,12 +565,13 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
                     "",   // time_min
                     "",   // time_zone
                 )
-                .await?;
+                .await?
+                .body;
             for instance in instances {
                 // Let's add the event to our HashMap.
                 if instance.start.as_ref().unwrap().date_time.is_some() {
                     // Let's add the event to our HashMap.
-                    let date = instance.start.as_ref().unwrap().date_time.unwrap().date().naive_utc();
+                    let date = instance.start.as_ref().unwrap().date_time.unwrap().date_naive();
                     gcal_events.insert(date, instance.clone());
                 }
             }
@@ -659,7 +666,7 @@ pub async fn sync_huddles(db: &Database, company: &Company) -> Result<()> {
         for (date, event) in gcal_events {
             // Create events up to one quarter in advance.
             let in_range = Utc::now().checked_add_signed(Duration::weeks(13)).unwrap();
-            if date > Utc::now().date().naive_utc() && date <= in_range.date().naive_utc() {
+            if date > Utc::now().date_naive() && date <= in_range.date_naive() {
                 // We are in the future.
                 // Create an Airtable record.
                 let meeting = Meeting {

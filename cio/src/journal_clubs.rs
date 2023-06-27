@@ -298,7 +298,7 @@ pub async fn get_meetings_from_repo(github: &octorust::Client, company: &Company
     let owner = &company.github_org;
     let repo = "papers";
 
-    let r = github.repos().get(owner, repo).await;
+    let r = github.repos().get(owner, repo).await.map(|response| response.body);
 
     if let Err(e) = r {
         if e.to_string().contains("404 Not Found") {

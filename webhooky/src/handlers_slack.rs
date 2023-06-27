@@ -1,13 +1,13 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use dropshot::{Extractor, RequestContext, ServerContext, UntypedBody};
+use dropshot::{RequestContext, ServerContext, SharedExtractor, UntypedBody};
 use dropshot_verify_request::sig::HmacSignatureVerifier;
 use hmac::Hmac;
 use log::{info, warn};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 
 use crate::http::Headers;
 
@@ -18,7 +18,7 @@ pub struct SlackWebhookVerification;
 impl HmacSignatureVerifier for SlackWebhookVerification {
     type Algo = Hmac<Sha256>;
 
-    async fn key<Context: ServerContext>(_: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
+    async fn key<Context: ServerContext>(_: &RequestContext<Context>) -> Result<Vec<u8>> {
         Ok(std::env::var("SLACK_WH_KEY")
             .map(|key| key.into_bytes())
             .map_err(|err| {
@@ -27,8 +27,8 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
             })?)
     }
 
-    async fn signature<Context: ServerContext>(rqctx: Arc<RequestContext<Context>>) -> Result<Vec<u8>> {
-        let headers = Headers::from_request(rqctx.clone()).await?;
+    async fn signature<Context: ServerContext>(rqctx: &RequestContext<Context>) -> Result<Vec<u8>> {
+        let headers = Headers::from_request(rqctx).await?;
         let signature = headers
             .0
             .get("X-Slack-Signature")
@@ -47,10 +47,10 @@ impl HmacSignatureVerifier for SlackWebhookVerification {
     }
 
     async fn content<'a, 'b, Context: ServerContext>(
-        rqctx: &'a Arc<RequestContext<Context>>,
+        rqctx: &'a RequestContext<Context>,
         body: &'b UntypedBody,
     ) -> anyhow::Result<Cow<'b, [u8]>> {
-        let headers = Headers::from_request(rqctx.clone()).await?;
+        let headers = Headers::from_request(rqctx).await?;
         let timestamp = headers
             .0
             .get("X-Slack-Request-Timestamp")
