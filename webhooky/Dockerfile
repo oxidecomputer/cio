@@ -94,6 +94,8 @@ COPY cio ../cio
 
 COPY cio-api-types ../cio-api-types
 
+COPY docusign ../docusign
+
 COPY macros ../macros
 
 COPY mailerlite ../mailerlite
