@@ -291,7 +291,7 @@ pub async fn server(
             .every(5.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-travel")});
         scheduler
-            .every(5.minutes())
+            .every(1.minutes())
             .run(|| async { crate::health::scheduler_health_check() });
 
         // Run the RFD changelog.
