@@ -33,6 +33,7 @@ use signal_hook::{
     iterator::Signals,
 };
 use slack_chat_api::{BotCommand, Slack};
+use std::any::Any;
 use zoom_api::Client as Zoom;
 
 use crate::{
@@ -398,8 +399,8 @@ async fn listen_github_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers_github::handle_github(&rqctx, body.into_inner()?)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 #[derive(Deserialize, Debug, JsonSchema)]
@@ -419,8 +420,8 @@ async fn trigger_rfd_update_by_number(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_rfd_update_by_number(&rqctx, path_params)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Get our current GitHub rate limit. */
@@ -460,8 +461,8 @@ async fn listen_airtable_employees_print_home_address_label_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_employees_print_home_address_label(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -478,8 +479,8 @@ async fn listen_airtable_certificates_renew_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_certificates_renew(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -496,8 +497,8 @@ async fn listen_airtable_assets_items_print_barcode_label_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_assets_items_print_barcode_label(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -514,8 +515,8 @@ async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -532,8 +533,8 @@ async fn listen_airtable_applicants_request_background_check_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_applicants_request_background_check(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -551,8 +552,8 @@ async fn listen_airtable_applicants_update_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_applicants_update(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -570,8 +571,8 @@ async fn listen_airtable_applicants_recreate_piia_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::listen_airtable_applicants_recreate_piia_webhooks(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -589,8 +590,8 @@ async fn listen_airtable_shipments_outbound_create_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_shipments_outbound_create(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /// An Airtable row event.
@@ -616,8 +617,8 @@ async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_shipments_outbound_reprint_label(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -634,8 +635,8 @@ async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -655,8 +656,8 @@ async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_reci
         body_param.into_inner(),
     )
     .await
-    .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+    .map(accepted)
+    .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -673,8 +674,8 @@ async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /// A SendGrid incoming email event.
@@ -731,8 +732,8 @@ async fn listen_applicant_review_requests(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_applicant_review(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -790,8 +791,8 @@ async fn listen_test_application_submit_requests(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_test_application_submit(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -807,8 +808,8 @@ async fn listen_application_submit_requests(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_application_submit(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /// Application file upload data.
@@ -1032,8 +1033,8 @@ async fn listen_airtable_shipments_inbound_create_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_airtable_shipments_inbound_create(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -1050,8 +1051,8 @@ async fn listen_store_order_create(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_store_order_create(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -1067,8 +1068,8 @@ async fn listen_easypost_tracking_update_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_easypost_tracking_update(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /// An EasyPost tracking update event.
@@ -1128,8 +1129,8 @@ async fn listen_shippo_tracking_update_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_shippo_tracking_update(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /// A Shippo tracking update event.
@@ -1154,8 +1155,8 @@ async fn listen_checkr_background_update_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_checkr_background_update(&rqctx, body.into_inner()?)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 #[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
@@ -1204,8 +1205,8 @@ async fn listen_auth_google_callback(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers_auth::handle_auth_google_callback(&rqctx, query_args)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Get the consent URL for GitHub auth. */
@@ -1265,8 +1266,8 @@ async fn listen_auth_gusto_callback(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers_auth::handle_auth_gusto_callback(&rqctx, query_args)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Listen to deauthorization requests for our Zoom app. */
@@ -1312,8 +1313,8 @@ async fn listen_auth_zoom_callback(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers_auth::handle_auth_zoom_callback(&rqctx, query_args)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Get the consent URL for Slack auth. */
@@ -1343,8 +1344,8 @@ async fn listen_auth_slack_callback(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers_auth::handle_auth_slack_callback(&rqctx, query_args)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Get the consent URL for QuickBooks auth. */
@@ -1374,8 +1375,8 @@ async fn listen_auth_quickbooks_callback(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers_auth::handle_auth_quickbooks_callback(&rqctx, query_args)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Listen for webhooks from Plaid. */
@@ -1421,8 +1422,8 @@ async fn listen_auth_docusign_callback(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers_auth::handle_auth_docusign_callback(&rqctx, query_args)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Listen for updates to our docusign envelopes. */
@@ -1436,8 +1437,8 @@ async fn listen_docusign_envelope_update_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_docusign_envelope_update(&rqctx, body.into_inner()?)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Listen for analytics page view events. */
@@ -1451,8 +1452,8 @@ async fn listen_analytics_page_view_webhooks(
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
     crate::handlers::handle_analytics_page_view(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseAccepted("ok".to_string()))
+        .map(accepted)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Listen for Slack commands webhooks. */
@@ -1483,8 +1484,8 @@ async fn listen_slack_interactive_webhooks(
 ) -> Result<HttpResponseOk<String>, HttpError> {
     crate::handlers::handle_slack_interactive(&rqctx, body.into_inner()?.payload)
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseOk("ok".to_string()))
+        .map(ok)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /** Listen for shipbob webhooks. */
@@ -1499,8 +1500,8 @@ async fn listen_shipbob_webhooks(
 ) -> Result<HttpResponseOk<String>, HttpError> {
     crate::handlers::handle_shipbob(&rqctx, body_param.into_inner())
         .await
-        .map_err(handle_anyhow_err_as_http_err)?;
-    Ok(HttpResponseOk("ok".to_string()))
+        .map(ok)
+        .map_err(handle_anyhow_err_as_http_err)
 }
 
 // The RFD index does not support any sorting mechanisms
@@ -1930,6 +1931,14 @@ async fn do_cleanup(ctx: &ServerContext) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn ok(_: impl Any) -> HttpResponseOk<String> {
+    HttpResponseOk("ok".to_string())
+}
+
+fn accepted(_: impl Any) -> HttpResponseAccepted<String> {
+    HttpResponseAccepted("ok".to_string())
 }
 
 fn handle_anyhow_err_as_http_err(err: anyhow::Error) -> HttpError {
