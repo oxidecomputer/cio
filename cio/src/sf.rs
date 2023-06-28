@@ -13,8 +13,8 @@ use zoho_api::{
 use crate::{companies::Company, db::Database, rack_line::RackLineSubscriber, schema::rack_line_subscribers};
 
 pub async fn refresh_sf_leads(db: &Database, company: &Company) -> Result<()> {
-    // Subscribers are only sent to Zoho once. After that their data is owned by Zoho. If they are
-    // removed from the system, we do not re-create
+    // Subscribers are only sent to SalesForce once. After that their data is owned by SalesForce.
+    // If they are removed from the system, we do not re-create
     let not_yet_processed = rack_line_subscribers::dsl::sf_lead_id.eq("".to_string());
 
     // Skip any subscribers that are explicitly marked as exclusions
@@ -110,35 +110,6 @@ pub async fn push_new_rack_line_subscribers_to_sf(
                 }
             }
         }
-
-        // let notes: Vec<NotesInput> = updates
-        //     .iter()
-        //     .filter_map(|subscriber_update| {
-        //         // For each subscriber, attempt to also send their note data (if they have any)
-        //         if !subscriber_update.notes.is_empty() {
-        //             let mut note_input = NotesInput::default();
-
-        //             note_input.note_content = Some(subscriber_update.notes.clone());
-        //             note_input.parent_id = serde_json::Value::String(subscriber_update.zoho_lead_id.clone());
-        //             note_input.se_module = "Leads".to_string();
-
-        //             Some(note_input)
-        //         } else {
-        //             None
-        //         }
-        //     })
-        //     .collect();
-
-        // // Only do work if there are notes to insert
-        // if !notes.is_empty() {
-        //     let notes_results = notes_client.insert(notes, None).await?;
-
-        //     for note_result in notes_results.data {
-        //         if let ModuleUpdateResponseEntry::Error(_) = note_result {
-        //             log::warn!("Failed to write note to Zoho. response: {:?}", note_result);
-        //         }
-        //     }
-        // }
     }
 
     Ok(())
