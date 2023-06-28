@@ -47,38 +47,59 @@ impl SelfMemory {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
+struct Health<E> {
+    memory: SelfMemory,
+    processes: Vec<(i32, Result<String, procfs::ProcError>)>,
+    tmp_size: Result<u64, E>,
+    github_cache_size: Result<u64, E>
+}
+
 pub fn scheduler_health_check() {
     log::info!("Scheduler heartbeat");
 
-    if let Ok(mem) = SelfMemory::new() {
-        log::info!("Instance memory {:?}", mem);
-    }
+    let health = Health {
+        memory: SelfMemory::new().expect("Failed to read memory during health check"),
+        processes: procfs::process::all_processes().expect("Failed to list processes").into_iter()
+        .filter_map(|res| {
+            res.ok().and_then(|proc| {
+                let comm = proc.stat().map(|stat| stat.comm);
 
-    if let Ok(processes) = procfs::process::all_processes() {
-        let running = processes
-            .into_iter()
-            .filter_map(|res| {
-                res.ok().and_then(|proc| {
-                    let comm = proc.stat().map(|stat| stat.comm);
+                let is_webhooky = comm.map(|c| c.contains("webhooky")).unwrap_or(false);
 
-                    let is_webhooky = comm.map(|c| c.contains("webhooky")).unwrap_or(false);
-
-                    if is_webhooky {
-                        Some((proc.pid, proc.stat().map(|stat| stat.comm)))
-                    } else {
-                        None
-                    }
-                })
+                if is_webhooky {
+                    Some((proc.pid, proc.stat().map(|stat| stat.comm)))
+                } else {
+                    None
+                }
             })
-            .collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>(),
+        tmp_size: fs_extra::dir::get_size("/tmp"),
+        github_cache_size: fs_extra::dir::get_size("/tmp/.cache/github"),
+    };
 
-        log::info!("Processes {:?}", running);
-    } else {
-        log::info!("Failed to list processes");
-    }
+    log::info!("Report health {:?}", health);
 
-    let cache_size = fs_extra::dir::get_size("/tmp/.cache/github");
-    log::info!("GitHub cache size {:?}", cache_size);
+    // if let Ok(mem) = SelfMemory::new() {
+    //     log::info!("Instance memory {:?}", mem);
+    // }
+
+    // if let Ok(processes) =  {
+    //     let running = processes
+    //         ;
+
+    //     log::info!("Processes {:?}", running);
+    // } else {
+    //     log::info!("Failed to list processes");
+    // }
+
+    // let tmp_size = ;
+    // log::info!("/tmp size {:?}", tmp_size);
+
+    // let cache_size = 
+    // log::info!("GitHub cache size {:?}", cache_size);
 }
 
 #[cfg(test)]
