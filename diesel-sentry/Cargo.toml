@@ -11,7 +11,7 @@ repository = "https://github.com/oxidecomputer/cio.git"
 diesel = { version = "=2.0.4", features = ["r2d2", "postgres", "i-implement-a-third-party-backend-and-opt-into-breaking-changes"] }
 serde = "1"
 # This HAS to match that in webhooky or else it won't work
-sentry = { default-features = false, features = ["anyhow", "backtrace", "panic", "contexts", "debug-images", "tracing", "log", "slog", "rustls"], version = "0.27.0" }
+sentry = { default-features = false, features = ["anyhow", "backtrace", "panic", "contexts", "debug-images", "tracing", "log", "slog", "rustls", "transport"], version = "0.27.0" }
 # sentry = {  features = ["anyhow", "backtrace", "default", "panic", "contexts", "debug-images", "tracing", "log"], git = "https://github.com/jessfraz/sentry-rust", rev = "ddcbd07f75c6973ee7096e490a54745db73817b7"  }
 tracing = "^0.1"
 uuid = { version = "^1.0", features = [ "v4", "serde" ] }
