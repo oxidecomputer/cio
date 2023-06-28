@@ -838,7 +838,7 @@ dependencies = [
  "tailscale-api",
  "titlecase",
  "tokio",
- "toml 0.5.11",
+ "toml",
  "tracing",
  "tracing-subscriber",
  "tripactions",
@@ -1586,7 +1586,7 @@ dependencies = [
  "slog-term",
  "tokio",
  "tokio-rustls 0.24.1",
- "toml 0.7.5",
+ "toml",
  "uuid 1.4.0",
  "version_check",
  "waitgroup",
@@ -6279,15 +6279,6 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tracing",
-]
-
-[[package]]
-name = "toml"
-version = "0.5.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
-dependencies = [
- "serde",
 ]
 
 [[package]]
