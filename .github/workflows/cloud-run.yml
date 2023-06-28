@@ -10,7 +10,6 @@ on:
       - 'cio/**'
       - '.github/workflows/cloud-run.yml'
       - 'macros/**'
-      - 'diesel-sentry/**'
       - 'dropshot-verify-request/**'
       - 'meilisearch-minimal-api/**'
       - 'parse-rfd/**'

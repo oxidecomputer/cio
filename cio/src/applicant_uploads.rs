@@ -40,7 +40,7 @@ impl UploadTokenStore {
         let email = email.to_string();
         let token_lifetime = self.token_lifetime;
 
-        pool.transaction(move |conn| {
+        pool.transaction(move |mut conn| {
             let token = upload_tokens::dsl::upload_tokens
                 .filter(upload_tokens::dsl::email.eq(email.clone()))
                 .filter(upload_tokens::dsl::expires_at.gt(Utc::now()))

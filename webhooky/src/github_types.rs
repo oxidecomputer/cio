@@ -6,7 +6,7 @@ use cio_api::{
     core::{GitHubCommit, GitHubPullRequest},
     repos::GitHubUser,
 };
-use log::warn;
+use log::{error, warn};
 use octorust::Client as GitHub;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -229,8 +229,7 @@ cc @augustuswm"#,
             self,
         );
 
-        // Send the error to sentry.
-        sentry::integrations::anyhow::capture_anyhow(&e);
+        error!("GitHub hook fails {:?}", err);
 
         err
     }
