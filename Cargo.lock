@@ -1622,7 +1622,7 @@ dependencies = [
  "proc-macro2 1.0.63",
  "quote 1.0.28",
  "serde",
- "serde_tokenstream 0.2.0",
+ "serde_tokenstream",
  "syn 2.0.22",
 ]
 
@@ -3165,7 +3165,7 @@ dependencies = [
  "proc-macro2 1.0.63",
  "quote 1.0.28",
  "serde",
- "serde_tokenstream 0.1.7",
+ "serde_tokenstream",
  "syn 1.0.109",
 ]
 
@@ -5318,17 +5318,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96426c9936fd7a0124915f9185ea1d20aa9445cc9821142f0a73bc9207a2e186"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "serde_tokenstream"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "797ba1d80299b264f3aac68ab5d12e5825a561749db4df7cd7c8083900c5d4e9"
-dependencies = [
- "proc-macro2 1.0.63",
- "serde",
- "syn 1.0.109",
 ]
 
 [[package]]
