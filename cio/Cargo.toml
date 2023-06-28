@@ -33,7 +33,7 @@ cloudflare = { git = "https://github.com/augustuswm/cloudflare-rs", default-feat
 csv = "1.1"
 comrak = "0.17"
 diesel = { version = "=2.0.4", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
-diffy = "^0.2.0"
+diffy = "^0.3.0"
 docusign = { path = "../docusign" }
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
 flate2 = "1"
