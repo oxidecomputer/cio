@@ -5387,6 +5387,7 @@ dependencies = [
 [[package]]
 name = "sf-client"
 version = "0.1.0"
+source = "git+https://github.com/oxidecomputer/sf-client?branch=main#677029a49fa48036d07ac776d2fb34beda418661"
 dependencies = [
  "async-trait",
  "chrono",
