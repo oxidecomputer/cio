@@ -30,15 +30,9 @@ extern crate serde_json;
 #[macro_use]
 extern crate cio_api;
 
-use std::env;
-
 use anyhow::{bail, Result};
 use clap::Parser;
 use log::info;
-use sentry::{
-    protocol::{Context as SentryContext, Event},
-    IntoDsn,
-};
 use slog::Drain;
 use std::fs::File;
 
@@ -61,59 +55,17 @@ async fn tokio_main() -> Result<()> {
         log::info!("Memory at start of command exec {:?}: {:?}", opts.subcmd, mem);
     }
 
-    // Initialize sentry.
-    let sentry_dsn = env::var("WEBHOOKY_SENTRY_DSN").unwrap_or_default();
-    let _guard = sentry::init(sentry::ClientOptions {
-        debug: opts.debug,
-        dsn: sentry_dsn.clone().into_dsn()?,
-
-        // Send 10% of all transactions to Sentry.
-        // This can be increased as we figure out what volume looks like at
-        traces_sample_rate: 0.1,
-
-        // Define custom rate limiting for database query events. Without aggressive rate limiting
-        // these will far exceed any transactions limits we are allowed.
-        before_send: Some(std::sync::Arc::new(|event: Event<'static>| {
-            if let Some(SentryContext::Trace(trace_ctx)) = event.contexts.get("trace") {
-                if let Some(ref op) = trace_ctx.op {
-                    if op == "db.sql.query" && rand::random::<f32>() > 0.001 {
-                        return None;
-                    }
-                }
-            }
-
-            Some(event)
-        })),
-
-        release: Some(env::var("GIT_HASH").unwrap_or_default().into()),
-        environment: Some(
-            env::var("SENTRY_ENV")
-                .unwrap_or_else(|_| "development".to_string())
-                .into(),
-        ),
-
-        // We want to send 100% of errors to Sentry.
-        sample_rate: 1.0,
-
-        default_integrations: true,
-
-        session_mode: sentry::SessionMode::Request,
-        ..sentry::ClientOptions::default()
-    });
-
     let logger = if opts.json {
         let drain = slog_json::Json::new(std::io::stdout())
             .add_default_keys()
             .build()
             .fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
-        let drain = sentry::integrations::slog::SentryDrain::new(drain);
         slog::Logger::root(drain, slog::slog_o!())
     } else {
         let decorator = slog_term::TermDecorator::new().build();
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
-        let drain = sentry::integrations::slog::SentryDrain::new(drain);
         slog::Logger::root(drain, slog::slog_o!())
     };
 
@@ -132,7 +84,6 @@ async fn tokio_main() -> Result<()> {
     let context = ServerContext::new(1, logger).await?;
 
     if let Err(err) = run_main_cmd(opts.clone(), api, context).await {
-        sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", err));
         bail!("running cmd `{:?}` failed: {:?}", &opts.subcmd, err);
     }
 
@@ -140,20 +91,12 @@ async fn tokio_main() -> Result<()> {
 }
 
 pub async fn run_main_cmd(opts: crate::core::Opts, api: APIConfig, context: ServerContext) -> Result<()> {
-    sentry::configure_scope(|scope| {
-        scope.set_tag("command", &std::env::args().collect::<Vec<String>>().join(" "));
-    });
-
     if let Ok(mem) = SelfMemory::new() {
         log::info!("Memory at start of command run {:?}: {:?}", opts.subcmd, mem);
     }
 
     match opts.subcmd.clone() {
         crate::core::SubCommand::Server(s) => {
-            sentry::configure_scope(|scope| {
-                scope.set_tag("do-cron", s.do_cron.to_string());
-            });
-
             crate::server::server(s, api.api, context, opts.debug).await?;
         }
         crate::core::SubCommand::CreateServerSpec(spec) => {

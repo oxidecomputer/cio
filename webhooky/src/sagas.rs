@@ -61,7 +61,6 @@ where
     .build()
     .fuse();
 
-    let drain = sentry::integrations::slog::SentryDrain::new(drain);
     slog::Logger::root(drain, slog::slog_o!("cmd" => cmd_name, "saga_id" => saga_id))
 }
 

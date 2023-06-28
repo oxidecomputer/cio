@@ -1,15 +1,12 @@
-use std::{env, fs::File, io::Write, process::Command, str::from_utf8};
-
+use cio_api_types::swag_inventory::PrintRequest;
 use dropshot::{
     endpoint, ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpError, HttpResponseAccepted,
     HttpResponseOk, HttpServerStarter, RequestContext, TypedBody,
 };
 use dropshot_verify_request::bearer::Bearer;
 use log::{info, warn};
-use sentry::IntoDsn;
+use std::{env, fs::File, io::Write, process::Command, str::from_utf8};
 use uuid::Uuid;
-
-use cio_api_types::swag_inventory::PrintRequest;
 
 mod bearer;
 
@@ -21,10 +18,8 @@ async fn main() -> Result<(), String> {
     let mut log_builder = pretty_env_logger::formatted_builder();
     log_builder.parse_filters("info");
 
-    let logger = sentry::integrations::log::SentryLogger::with_dest(log_builder.build());
-
+    let logger = log_builder.build();
     log::set_boxed_logger(Box::new(logger)).unwrap();
-
     log::set_max_level(log::LevelFilter::Info);
 
     // Try to get the current git hash.
@@ -46,21 +41,6 @@ async fn main() -> Result<(), String> {
         }
     };
     info!("git hash: {}", git_hash);
-
-    // Initialize sentry.
-    let sentry_dsn = env::var("PRINTY_SENTRY_DSN").unwrap_or_default();
-    let _guard = sentry::init(sentry::ClientOptions {
-        dsn: sentry_dsn.into_dsn().unwrap(),
-
-        release: Some(git_hash.into()),
-        environment: Some(
-            env::var("SENTRY_ENV")
-                .unwrap_or_else(|_| "development".to_string())
-                .into(),
-        ),
-        default_integrations: true,
-        ..sentry::ClientOptions::default()
-    });
 
     let service_address = "0.0.0.0:8080";
 
@@ -181,7 +161,6 @@ async fn listen_print_rollo_requests(
     _auth: Bearer<EnvToken>,
     body_param: TypedBody<String>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let url = body_param.into_inner();
     let printer = get_printer("rollo");
     info!("printer {:?}", printer);
@@ -195,7 +174,6 @@ async fn listen_print_rollo_requests(
     }
 
     // Print the body to the rollo printer.
-    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -209,7 +187,6 @@ async fn listen_print_zebra_requests(
     _auth: Bearer<EnvToken>,
     body_param: TypedBody<PrintRequest>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let r = body_param.into_inner();
     let printer = get_printer("zebra");
     info!("printer {:?}", printer);
@@ -223,7 +200,6 @@ async fn listen_print_zebra_requests(
     }
 
     // Print the body to the rollo printer.
-    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 
@@ -237,7 +213,6 @@ async fn listen_print_receipt_requests(
     _auth: Bearer<EnvToken>,
     body_param: TypedBody<PrintRequest>,
 ) -> Result<HttpResponseAccepted<String>, HttpError> {
-    sentry::start_session();
     let r = body_param.into_inner();
     let printer = get_printer("receipt");
     info!("printer {:?}", printer);
@@ -251,7 +226,6 @@ async fn listen_print_receipt_requests(
     }
 
     // Print the body to the rollo printer.
-    sentry::end_session();
     Ok(HttpResponseAccepted("ok".to_string()))
 }
 

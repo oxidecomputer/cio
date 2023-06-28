@@ -118,26 +118,13 @@ pub async fn handle_github(rqctx: &RequestContext<ServerContext>, event: GitHubW
                 // The branch name is empty.
                 // We can throw this out, log it and return early.
                 // This should never happen, but we won't rule it out because computers.
-                sentry::with_scope(
-                    |scope| {
-                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                        scope.set_tag("github.event.type", &event_type_string);
-                    },
-                    || {
-                        warn!("`push` event branch name is empty");
-                    },
-                );
+                warn!("`push` event branch name is empty event.type: {:?}", &event_type_string);
                 return Ok(());
             }
         }
         EventType::Repository => {
             let company = Company::get_from_github_org(&api_context.app.db, &event.repository.owner.login).await?;
             let github = company.authenticate_github()?;
-
-            sentry::configure_scope(|scope| {
-                scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                scope.set_tag("github.event.type", &event_type_string);
-            });
 
             let result = handle_repository_event(&github, &api_context.app, event.clone(), &company).await;
 
@@ -153,7 +140,6 @@ pub async fn handle_github(rqctx: &RequestContext<ServerContext>, event: GitHubW
                         event.repository.name,
                         e
                     );
-                    sentry::integrations::anyhow::capture_anyhow(&e);
                 }
             }
 
@@ -173,11 +159,6 @@ pub async fn handle_github(rqctx: &RequestContext<ServerContext>, event: GitHubW
         match repo_name {
             Repo::RFD => match event_type {
                 EventType::Push => {
-                    sentry::configure_scope(|scope| {
-                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                        scope.set_tag("github.event.type", &event_type_string);
-                    });
-
                     match handle_rfd_push(github.clone(), &api_context.app, event.clone()).await {
                         Ok(_) => ( /* Silence */ ),
                         Err(e) => {
@@ -188,10 +169,6 @@ pub async fn handle_github(rqctx: &RequestContext<ServerContext>, event: GitHubW
                     }
                 }
                 EventType::PullRequest => {
-                    sentry::configure_scope(|scope| {
-                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                        scope.set_tag("github.event.type", &event_type_string);
-                    });
                     // Let's create the check run.
                     let check_run_id = event.create_check_run(&github).await?;
 
@@ -219,11 +196,6 @@ pub async fn handle_github(rqctx: &RequestContext<ServerContext>, event: GitHubW
             },
             Repo::Configs => {
                 if let EventType::Push = event_type {
-                    sentry::configure_scope(|scope| {
-                        scope.set_context("github.webhook", sentry::protocol::Context::Other(event.clone().into()));
-                        scope.set_tag("github.event.type", &event_type_string);
-                    });
-
                     match handle_configs_push(&github, &api_context.app, event.clone(), &company).await {
                         Ok(message) => {
                             info!("{}", message);

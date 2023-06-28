@@ -33,7 +33,6 @@ cloudflare = { git = "https://github.com/augustuswm/cloudflare-rs", default-feat
 csv = "1.1"
 comrak = "0.17"
 diesel = { version = "=2.0.4", features = ["serde_json", "postgres", "chrono", "128-column-tables", "r2d2"]  }
-diesel-sentry = { path = "../diesel-sentry" }
 diffy = "^0.3.0"
 docusign = { path = "../docusign" }
 dropshot = { git = "https://github.com/oxidecomputer/dropshot" }
@@ -82,7 +81,6 @@ ring = "0.16.20"
 rsa = "0.9.2"
 schemars = { version = "0.8", features = ["chrono", "uuid"] }
 sendgrid-api = "0.7.0-rc.1"
-sentry = { version = "^0.27.0", default-features = false, features = ["anyhow", "log", "backtrace", "panic", "contexts", "tracing", "rustls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sheets = "0.7.0-rc.1"

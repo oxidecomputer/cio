@@ -1,18 +1,15 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    env,
-    path::Path,
-    str::from_utf8,
-};
-
 use anyhow::{anyhow, bail, Result};
 use log::info;
 use octorust::Client as GitHub;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::get;
-use sentry::IntoDsn;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::Path,
+    str::from_utf8,
+};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
@@ -363,44 +360,9 @@ pub fn setup_logger() {
     log_builder.parse_filters("info");
     log_builder.is_test(true);
 
-    let logger = sentry::integrations::log::SentryLogger::with_dest(log_builder.build());
-
+    let logger = log_builder.build();
     log::set_boxed_logger(Box::new(logger)).unwrap_or_default();
-
     log::set_max_level(log::LevelFilter::Info);
-
-    // Initialize sentry.
-    let sentry_dsn = env::var("SENTRY_DSN").unwrap_or_default();
-
-    if !sentry_dsn.is_empty() {
-        let mut sha = env::var("GITHUB_SHA").unwrap_or_default();
-        if !sha.is_empty() {
-            sha = sha.chars().take(8).collect();
-        }
-
-        let _guard = sentry::init(sentry::ClientOptions {
-            dsn: sentry_dsn.into_dsn().unwrap(),
-
-            release: Some(sha.into()),
-            environment: Some(
-                env::var("SENTRY_ENV")
-                    .unwrap_or_else(|_| "rust_test".to_string())
-                    .into(),
-            ),
-            ..Default::default()
-        });
-
-        // Identify some items about the run here.
-        sentry::configure_scope(|scope| {
-            scope.set_tag("github.workflow", env::var("GITHUB_WORKFLOW").unwrap_or_default());
-            scope.set_tag("github.actions", env::var("GITHUB_ACTIONS").unwrap_or_default());
-            scope.set_tag("github.event.name", env::var("GITHUB_EVENT_NAME").unwrap_or_default());
-            scope.set_tag("github.ref", env::var("GITHUB_REF").unwrap_or_default());
-            scope.set_tag("github.sha", env::var("GITHUB_SHA").unwrap_or_default());
-            scope.set_tag("runner.os", env::var("RUNNER_OS").unwrap_or_default());
-            scope.set_tag("ci", env::var("CI").unwrap_or_default());
-        });
-    }
 }
 
 pub async fn get_github_entry_contents(

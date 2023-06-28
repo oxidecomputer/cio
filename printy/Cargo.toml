@@ -17,7 +17,6 @@ http = "0.2.6"
 log = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"] }
 pretty_env_logger = "0.4"
-sentry = { version = "^0.27.0", default-features = false, features = ["anyhow", "log", "backtrace", "panic", "contexts", "debug-images", "tracing", "rustls"] }
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "^1.0", features = ["serde", "v4"] }
 schemars = "0.8"
