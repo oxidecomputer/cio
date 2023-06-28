@@ -1,9 +1,7 @@
-use std::{env, process::Command};
-
 use cio_api::swag_inventory::BarcodeScan;
 use hidapi::HidApi;
 use log::info;
-use sentry::IntoDsn;
+use std::{env, process::Command};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -11,7 +9,7 @@ async fn main() -> Result<(), String> {
     let mut log_builder = pretty_env_logger::formatted_builder();
     log_builder.parse_filters("info");
 
-    let logger = sentry::integrations::log::SentryLogger::with_dest(log_builder.build());
+    let logger = log_builder.build();
 
     log::set_boxed_logger(Box::new(logger)).unwrap();
 
@@ -31,23 +29,6 @@ async fn main() -> Result<(), String> {
         o[0..8].to_string()
     };
     info!("git hash: {}", git_hash);
-
-    // Initialize sentry.
-    // In addition to all the sentry env variables, you will also need to set
-    //  - CIO_DATABASE_URL
-    let sentry_dsn = env::var("BARCODEY_SENTRY_DSN").unwrap_or_default();
-    let _guard = sentry::init(sentry::ClientOptions {
-        dsn: sentry_dsn.into_dsn().unwrap(),
-
-        release: Some(git_hash.into()),
-        environment: Some(
-            env::var("SENTRY_ENV")
-                .unwrap_or_else(|_| "development".to_string())
-                .into(),
-        ),
-        default_integrations: true,
-        ..sentry::ClientOptions::default()
-    });
 
     let api = HidApi::new().expect("Failed to create API instance");
     let mut vendor_id: u16 = u16::MIN;

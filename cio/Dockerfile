@@ -75,8 +75,6 @@ COPY slack ../slack
 
 COPY tailscale ../tailscale
 
-COPY diesel-sentry ../diesel-sentry
-
 COPY dropshot-verify-request ../dropshot-verify-request
 
 COPY zoho-client ../zoho-client
