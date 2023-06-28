@@ -39,7 +39,7 @@ use rsa::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use sf_client::{JwtAuthenticator, LoginClaims, AuthorizationServer};
+use sf_client::{AuthorizationServer, JwtAuthenticator, LoginClaims};
 use sheets::Client as GoogleSheets;
 use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
