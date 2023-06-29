@@ -8,6 +8,7 @@ use cio_api::{
     functions::{FnOutput, Function},
 };
 use lazy_static::lazy_static;
+use log::info;
 use serde::{Deserialize, Serialize};
 use slog::Drain;
 use slog_scope_futures::FutureExt as _;
@@ -122,10 +123,16 @@ pub async fn run_cmd(
     let saga_id = steno::SagaId(params.saga_id);
 
     // Create the saga.
-    sec.saga_create(saga_id, Arc::new(context), dag, registry).await?;
+    let saga = sec.saga_create(saga_id, Arc::new(context), dag, registry).await?;
 
     // Set it running.
     sec.saga_start(saga_id).await?;
+
+    // Listen for the saga to complete
+    tokio::spawn(async {
+        let result = saga.await;
+        info!("Saga completed {:?}", result);
+    });
 
     Ok(())
 }
