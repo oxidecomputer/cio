@@ -128,6 +128,10 @@ pub async fn run_job_cmd(cmd: crate::core::SubCommand, context: Context) -> Resu
             cio_api::tailscale::cleanup_old_tailscale_cloudflare_dns(&company).await?;
             cio_api::customers::sync_customer_meeting_notes(&company).await?;
         }
+        crate::core::SubCommand::SyncSalesForce(_) => {
+            let Context { db, company, .. } = context;
+            cio_api::sf::refresh_sf_leads(&db, &company).await?;
+        }
         crate::core::SubCommand::SyncShipments(_) => {
             let Context { db, company, .. } = context;
             let inbound_result = cio_api::shipments::refresh_inbound_shipments(&db, &company).await;

@@ -1,14 +1,10 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use chrono::{Duration, Utc};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl};
 use regex::Regex;
-use serde_json::json;
+use serde::Serialize;
 use sf_client::ExternalId;
-use zoho_api::{
-    client::{ModuleUpdateResponseEntry, ModuleUpdateResponseEntryError},
-    modules::{Leads, LeadsInput, Notes, NotesInput},
-};
 
 use crate::{companies::Company, db::Database, rack_line::RackLineSubscriber, schema::rack_line_subscribers};
 
@@ -61,8 +57,7 @@ pub async fn push_new_rack_line_subscribers_to_sf(
     company: &Company,
 ) -> Result<()> {
     if !subscribers_to_process.is_empty() {
-        let initial_req_count = subscribers_to_process.len();
-        let sf = company.authenticate_sf()?;
+        let sf = company.authenticate_sf().await?;
 
         let no_employees_cleaner = Regex::new(r"[A-Za-z ~.,+<>]").expect("Failed to build employee number regex");
 
@@ -71,39 +66,67 @@ pub async fn push_new_rack_line_subscribers_to_sf(
         // them internally. By the time the batch size is a problem, this method of syncing will be
         // replaced.
         for subscriber in subscribers_to_process.iter_mut() {
-            if !subscriber.name.empty() {
+            if !subscriber.name.is_empty() {
                 let mut name_parts = subscriber.name.rsplitn(2, ' ').peekable();
 
                 if name_parts.peek().is_some() {
-                    let last_name = name_parts.next().map(String::from).expect("Iter unwrap failed after checking that it had at least one element");
-    
+                    let last_name = name_parts
+                        .next()
+                        .map(String::from)
+                        .expect("Iter unwrap failed after checking that it had at least one element");
+
                     // We can not submit a lead with an empty last name
                     if !last_name.is_empty() {
                         let first_name = name_parts.next().map(String::from);
 
                         let update = LeadUpdate {
-                            first_name,
+                            first_name: first_name.unwrap_or_default(),
                             last_name,
-                            email: subscriber.email,
-                            company: subscriber.company,
-                            number_of_employees: no_employees_cleaner.replace_all(&subscriber.company_size, "").parse::<i64>().ok();,
+                            email: subscriber.email.clone(),
+                            company: subscriber.company.clone(),
+                            number_of_employees: no_employees_cleaner
+                                .replace_all(&subscriber.company_size, "")
+                                .parse::<i64>()
+                                .ok(),
                             lead_source: "Rack Line Waitlist".to_string(),
                             interest: subscriber.interest.clone(),
                         };
 
-                        let lead = sf.upsert_object("Lead", &ExternalId::new("Airtable_Lead_Record_Id__c".to_string(), subscriber.airtable_record_id.clone()), &update).await?;
+                        let lead = sf
+                            .upsert_object(
+                                "Lead",
+                                &ExternalId::new(
+                                    "Airtable_Lead_Record_Id__c".to_string(),
+                                    subscriber.airtable_record_id.clone(),
+                                ),
+                                &update,
+                            )
+                            .await?
+                            .body
+                            .ok_or_else(|| anyhow!("API failed to return created record"))?;
 
-                        log::info!("Created CRM lead {} => {}", subscriber.id, lead.body.id)
+                        if lead.success {
+                            let lead_id = lead
+                                .id
+                                .expect("SalesForce reported a successful create but failed to return a record id");
 
-                        subscriber.sf_lead_id = lead.body.id;
+                            log::info!("Created CRM lead {} => {}", subscriber.id, lead_id);
 
-                        subscriber.update(&db).await {
+                            subscriber.sf_lead_id = lead_id;
+
+                            if let Err(err) = subscriber.update(db).await {
+                                log::error!(
+                                    "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} lead_id: {} err: {:?}",
+                                    subscriber.id,
+                                    subscriber.airtable_record_id,
+                                    subscriber.sf_lead_id,
+                                    err
+                                );
+                            }
+                        } else {
                             log::error!(
-                                "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} lead_id: {} err: {:?}",
-                                update.id,
-                                update.airtable_record_id,
-                                subscriber.sf_lead_id,
-                                err
+                                "SalesForce reported errors when attempting to upsert object: {:?}",
+                                lead.errors
                             );
                         }
                     }

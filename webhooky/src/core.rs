@@ -41,6 +41,7 @@ pub enum SubCommand {
     SyncRepos(SyncRepos),
     #[clap(name = "sync-rfds")]
     SyncRFDs(SyncRFDs),
+    SyncSalesForce(SyncSalesForce),
     SyncShipments(SyncShipments),
     SyncShorturls(SyncShorturls),
     SyncSwagInventory(SyncSwagInventory),
@@ -136,6 +137,10 @@ pub struct SyncRepos {}
 #[derive(Parser, Debug, Clone)]
 pub struct SyncRFDs {}
 
+/// A subcommand for running the background job of syncing SalesForce leads.
+#[derive(Parser, Debug, Clone)]
+pub struct SyncSalesForce {}
+
 /// A subcommand for running the background job of syncing shipments.
 #[derive(Parser, Debug, Clone)]
 pub struct SyncShipments {}
@@ -175,6 +180,7 @@ pub fn into_job_command(cmd: &str) -> Option<SubCommand> {
         "sync-recorded-meetings" => Some(SubCommand::SyncRecordedMeetings(SyncRecordedMeetings {})),
         "sync-repos" => Some(SubCommand::SyncRepos(SyncRepos {})),
         "sync-rfds" => Some(SubCommand::SyncRFDs(SyncRFDs {})),
+        "sync-salesforce" => Some(SubCommand::SyncSalesForce(SyncSalesForce {})),
         "sync-shipments" => Some(SubCommand::SyncShipments(SyncShipments {})),
         "sync-shorturls" => Some(SubCommand::SyncShorturls(SyncShorturls {})),
         "sync-swag-inventory" => Some(SubCommand::SyncSwagInventory(SyncSwagInventory {})),
