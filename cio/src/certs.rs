@@ -107,7 +107,10 @@ impl NewCertificate {
         domains.extend(self.sans.clone());
 
         // Order a new TLS certificate for a domain.
-        let mut ord_new = acc.new_order(&self.domain, &domains[1..].iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
+        let mut ord_new = acc.new_order(
+            &self.domain,
+            &domains[1..].iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        )?;
 
         log::info!("Created new cert order for {}", self.domain);
 
