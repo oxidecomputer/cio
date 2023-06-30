@@ -2,7 +2,7 @@
 use std::{env, time};
 
 use acme_lib::{create_p384_key, persist::FilePersist, Certificate as AcmeCertificate, Directory, DirectoryUrl};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
@@ -103,19 +103,25 @@ impl NewCertificate {
 
         log::info!("Authenticated with cert provider");
 
+        let mut domains = vec![self.domain.clone()];
+        domains.extend(self.sans.clone());
+
         // Order a new TLS certificate for a domain.
-        let mut ord_new = acc.new_order(&self.domain, &self.sans.iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
+        let mut ord_new = acc.new_order(&self.domain, &domains[1..].iter().map(|s| s.as_str()).collect::<Vec<_>>())?;
 
         log::info!("Created new cert order for {}", self.domain);
+
+        let mut ord_csr = None;
 
         // If the ownership of the domain(s) have already been
         // authorized in a previous order, you might be able to
         // skip validation. The ACME API provider decides.
-        let ord_csr = loop {
+        for _ in 0..3 {
             // are we done?
-            if let Some(ord_csr) = ord_new.confirm_validations() {
+            if let Some(validated) = ord_new.confirm_validations() {
                 log::info!("Cert order validated for {}", self.domain);
-                break ord_csr;
+                ord_csr = Some(validated);
+                break;
             }
 
             // Get the possible authorizations (for a single domain
@@ -124,84 +130,94 @@ impl NewCertificate {
 
             // Get the proff we need for the TXT record:
             // _acme-challenge.<domain-to-be-proven>.  TXT  <proof>
-            let challenge = auths[0].dns_challenge();
+            for (i, auth) in auths.into_iter().enumerate() {
+                let domain = &domains[i];
+                let challenge = auth.dns_challenge();
 
-            log::info!("Retrieved acme challenge for {}", self.domain);
+                log::info!("Retrieved acme challenge for {}", domain);
 
-            // Create a TXT record for _acme-challenge.{domain} with the value of
-            // the proof.
-            // Use the Cloudflare API for this.
-            let record_name = format!("_acme-challenge.{}", &self.domain.replace("*.", ""));
+                // Create a TXT record for _acme-challenge.{domain} with the value of
+                // the proof.
+                // Use the Cloudflare API for this.
+                let record_name = format!("_acme-challenge.{}", &domain.replace("*.", ""));
 
-            // Ensure our DNS record exists.
-            api_client
-                .ensure_record(
-                    DnsRecord {
-                        name: record_name.to_string(),
-                        type_: DnsRecordType::TXT,
-                        content: challenge.dns_proof(),
-                    },
-                    DnsUpdateMode::Replace,
-                )
-                .await?;
+                // Ensure our DNS record exists.
+                api_client
+                    .ensure_record(
+                        DnsRecord {
+                            name: record_name.to_string(),
+                            type_: DnsRecordType::TXT,
+                            content: challenge.dns_proof(),
+                        },
+                        DnsUpdateMode::Replace,
+                    )
+                    .await?;
+
+                log::info!(
+                    "Created _acme-challenge record for {}. Sleeping before starting validation",
+                    domain
+                );
+
+                // TODO: make this less awful than a sleep.
+                let dur = time::Duration::from_secs(10);
+                tokio::time::sleep(dur).await;
+
+                log::info!("Waiting for validation for {} to complete", domain);
+
+                // After the TXT record is accessible, the calls
+                // this to tell the ACME API to start checking the
+                // existence of the proof.
+                //
+                // The order at ACME will change status to either
+                // confirm ownership of the domain, or fail due to the
+                // not finding the proof. To see the change, we poll
+                // the API with 5000 milliseconds wait between.
+                challenge.validate(5000)?;
+
+                log::info!("Validation for {} returned result. Updating state", domain);
+
+                // Update the state against the ACME API.
+                ord_new.refresh()?;
+            }
+        }
+
+        if let Some(ord_csr) = ord_csr {
+            // Ownership is proven. Create a private key for
+            // the certificate. These are provided for convenience, you
+            // can provide your own keypair instead if you want.
+            let pkey_pri = create_p384_key();
 
             log::info!(
-                "Created _acme-challenge record for {}. Sleeping before starting validation",
+                "Submitting completed request and awaiting certificate for {}",
                 self.domain
             );
 
-            // TODO: make this less awful than a sleep.
-            let dur = time::Duration::from_secs(10);
-            tokio::time::sleep(dur).await;
+            // Submit the CSR. This causes the ACME provider to enter a
+            // state of "processing" that must be polled until the
+            // certificate is either issued or rejected. Again we poll
+            // for the status change.
+            let ord_cert = ord_csr.finalize_pkey(pkey_pri, 5000)?;
 
-            log::info!("Waiting for validation for {} to complete", self.domain);
+            // Now download the certificate. Also stores the cert in
+            // the persistence.
+            let cert = ord_cert.download_and_save_cert()?;
 
-            // After the TXT record is accessible, the calls
-            // this to tell the ACME API to start checking the
-            // existence of the proof.
-            //
-            // The order at ACME will change status to either
-            // confirm ownership of the domain, or fail due to the
-            // not finding the proof. To see the change, we poll
-            // the API with 5000 milliseconds wait between.
-            challenge.validate(5000)?;
+            log::info!("Retrieved certificate for {}", self.domain);
 
-            log::info!("Validation for {} returned result. Updating state", self.domain);
+            self.load_cert(cert.certificate().as_bytes())?;
 
-            // Update the state against the ACME API.
-            ord_new.refresh()?;
-        };
+            // Set default values. Certificates and keys are stored externally
+            self.private_key = String::new();
+            self.certificate = String::new();
+            self.cio_company_id = company.id;
 
-        // Ownership is proven. Create a private key for
-        // the certificate. These are provided for convenience, you
-        // can provide your own keypair instead if you want.
-        let pkey_pri = create_p384_key();
-
-        log::info!(
-            "Submitting completed request and awaiting certificate for {}",
-            self.domain
-        );
-
-        // Submit the CSR. This causes the ACME provider to enter a
-        // state of "processing" that must be polled until the
-        // certificate is either issued or rejected. Again we poll
-        // for the status change.
-        let ord_cert = ord_csr.finalize_pkey(pkey_pri, 5000)?;
-
-        // Now download the certificate. Also stores the cert in
-        // the persistence.
-        let cert = ord_cert.download_and_save_cert()?;
-
-        log::info!("Retrieved certificate for {}", self.domain);
-
-        self.load_cert(cert.certificate().as_bytes())?;
-
-        // Set default values. Certificates and keys are stored externally
-        self.private_key = String::new();
-        self.certificate = String::new();
-        self.cio_company_id = company.id;
-
-        Ok(cert)
+            Ok(cert)
+        } else {
+            Err(anyhow!(
+                "Failed to reach confirmation on certificate for {}",
+                self.domain
+            ))
+        }
     }
 
     pub fn load_cert(&mut self, certificate: &[u8]) -> Result<()> {
