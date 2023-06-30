@@ -348,6 +348,7 @@ table! {
         private_key_github_actions_secret_name -> Varchar,
         notify_slack_channels -> Array<Text>,
         cio_company_id -> Int4,
+        sans -> Array<Text>,
         airtable_record_id -> Varchar,
     }
 }
