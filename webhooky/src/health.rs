@@ -47,16 +47,22 @@ impl SelfMemory {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
+struct Health<E> {
+    memory: SelfMemory,
+    processes: Vec<(i32, Result<String, procfs::ProcError>)>,
+    tmp_size: Result<u64, E>,
+    github_cache_size: Result<u64, E>,
+}
+
 pub fn scheduler_health_check() {
     log::info!("Scheduler heartbeat");
 
-    if let Ok(mem) = SelfMemory::new() {
-        log::info!("Instance memory {:?}", mem);
-    }
-
-    if let Ok(processes) = procfs::process::all_processes() {
-        let running = processes
-            .into_iter()
+    let health = Health {
+        memory: SelfMemory::new().expect("Failed to read memory during health check"),
+        processes: procfs::process::all_processes()
+            .expect("Failed to list processes")
             .filter_map(|res| {
                 res.ok().and_then(|proc| {
                     let comm = proc.stat().map(|stat| stat.comm);
@@ -70,15 +76,12 @@ pub fn scheduler_health_check() {
                     }
                 })
             })
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>(),
+        tmp_size: fs_extra::dir::get_size("/tmp"),
+        github_cache_size: fs_extra::dir::get_size("/tmp/.cache/github"),
+    };
 
-        log::info!("Processes {:?}", running);
-    } else {
-        log::info!("Failed to list processes");
-    }
-
-    let cache_size = fs_extra::dir::get_size("/tmp/.cache/github");
-    log::info!("GitHub cache size {:?}", cache_size);
+    log::info!("Report health {:?}", health);
 }
 
 #[cfg(test)]

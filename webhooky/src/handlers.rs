@@ -20,7 +20,7 @@ use cio_api::{
 use diesel::{BoolExpressionMethods, ExpressionMethods, PgTextExpressionMethods, QueryDsl};
 use dropshot::{Path, RequestContext};
 use google_drive::traits::{DriveOps, FileOps};
-use log::{info, warn};
+use log::{error, info, warn};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use slack_chat_api::{
     BotCommand, FormattedMessage, InputBlock, InputBlockElement, InputType, InteractivePayload, InteractiveResponse,
@@ -583,7 +583,7 @@ pub async fn handle_slack_interactive(
         if action.action_id == "function" {
             // Run the command in the background so we don't have to wait for it.
             if let Err(e) = crate::handlers_cron::run_subcmd_job(ctx, &action.value).await {
-                sentry::integrations::anyhow::capture_anyhow(&anyhow::anyhow!("{:?}", e));
+                error!("Subcommand execution failed {:?}", e);
             }
         }
     }
@@ -1235,12 +1235,8 @@ pub async fn handle_store_order_create(rqctx: &RequestContext<ServerContext>, ev
 
 pub async fn handle_easypost_tracking_update(
     _rqctx: &RequestContext<ServerContext>,
-    event: crate::server::EasyPostTrackingUpdateEvent,
+    _event: crate::server::EasyPostTrackingUpdateEvent,
 ) -> Result<()> {
-    //let api_context = rqctx.context();
-
-    sentry::capture_message(&format!("easypost webhook: {:#?}", event), sentry::Level::Info);
-
     Ok(())
 }
 
@@ -1443,12 +1439,9 @@ pub async fn handle_shipbob(rqctx: &RequestContext<ServerContext>, event: serde_
     let shipbob_topic = headers.get("shipbob-topic").unwrap().to_str()?;
     let shipbob_subscription_id = headers.get("shipbob-subscription-id").unwrap().to_str()?;
 
-    sentry::capture_message(
-        &format!(
-            "shipbob headers: topic `{}` subscription id `{}`: `{}`",
-            shipbob_topic, shipbob_subscription_id, event
-        ),
-        sentry::Level::Info,
+    info!(
+        "shipbob headers: topic `{}` subscription id `{}`: `{}`",
+        shipbob_topic, shipbob_subscription_id, event
     );
 
     Ok(())
