@@ -112,7 +112,7 @@ impl NewCertificate {
             &domains[1..].iter().map(|s| s.as_str()).collect::<Vec<_>>(),
         )?;
 
-        log::info!("Created new cert order for {}", self.domain);
+        log::info!("Created new cert order for {:?}", domains);
 
         let mut ord_csr = None;
 
@@ -122,7 +122,7 @@ impl NewCertificate {
         for _ in 0..3 {
             // are we done?
             if let Some(validated) = ord_new.confirm_validations() {
-                log::info!("Cert order validated for {}", self.domain);
+                log::info!("Cert order validated for {:?}", domains);
                 ord_csr = Some(validated);
                 break;
             }
@@ -133,8 +133,8 @@ impl NewCertificate {
 
             // Get the proff we need for the TXT record:
             // _acme-challenge.<domain-to-be-proven>.  TXT  <proof>
-            for (i, auth) in auths.into_iter().enumerate() {
-                let domain = &domains[i];
+            for auth in auths {
+                let domain = auth.domain_name();
                 let challenge = auth.dns_challenge();
 
                 log::info!("Retrieved acme challenge for {}", domain);
