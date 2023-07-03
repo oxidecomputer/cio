@@ -13,7 +13,6 @@ name = "cio-api"
 path = "src/main.rs"
 
 [dependencies]
-acme-lib = "^0.8.0"
 airtable-api = { path = "../airtable" }
 anyhow = "1"
 async-bb8-diesel = { git = "https://github.com/oxidecomputer/async-bb8-diesel", rev = "be3d9bc"  }
@@ -51,6 +50,7 @@ hmac = "0.12.1"
 http = "0.2.6"
 image = "=0.23.14"
 Inflector = "^0.11.4"
+instant-acme = "0.3.2"
 lopdf = { git = "https://github.com/J-F-Liu/lopdf", branch = "master" }
 log = { version = "0.4", features = ["serde"] }
 macros = { path = "../macros" }
@@ -71,6 +71,7 @@ printpdf = { version = "=0.5.2", features = ["embedded_images"] }
 quickbooks = { path = "../quickbooks" }
 ramp-minimal-api = { path = "../ramp-minimal-api" }
 rand = { version = "^0.8.5", features = ["alloc"] }
+rcgen = "0.11.1"
 regex = "1"
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 reqwest-middleware = "0.2"
