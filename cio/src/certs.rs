@@ -226,10 +226,21 @@ impl NewCertificate {
             }
         };
 
-        Ok(AcmeCertificate {
+        let certificate = AcmeCertificate {
             private_key: cert.serialize_private_key_pem().as_bytes().to_vec(),
             certificate_chain: cert_chain_pem.as_bytes().to_vec(),
-        })
+        };
+
+        log::info!("Retrieved certificate for {:?}", domains);
+
+        self.load_cert(&certificate.certificate_chain)?;
+
+        // Set default values. Certificates and keys are stored externally
+        self.private_key = String::new();
+        self.certificate = String::new();
+        self.cio_company_id = company.id;
+
+        Ok(certificate)
     }
 
     pub fn load_cert(&mut self, certificate: &[u8]) -> Result<()> {
