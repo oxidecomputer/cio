@@ -21,6 +21,7 @@ use openssl::x509::X509;
 use rcgen::{Certificate as GeneratedCertificate, CertificateParams, DistinguishedName};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::env::var;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     time::sleep,
@@ -102,7 +103,7 @@ impl NewCertificate {
 
         let account = Account::create(
             &NewAccount {
-                contact: &[],
+                contact: &[&var("CERT_ACCOUNT")?],
                 terms_of_service_agreed: true,
                 only_return_existing: false,
             },
