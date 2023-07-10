@@ -136,7 +136,10 @@ pub async fn push_new_rack_line_subscribers_to_sf(
                             log::info!("Upsert record info SalesForce: {:?}", update);
                         }
                     } else {
-                        log::info!("Unable to upsert lead without a last name: {:?}", subscriber.airtable_record_id);
+                        log::info!(
+                            "Unable to upsert lead without a last name: {:?}",
+                            subscriber.airtable_record_id
+                        );
                     }
                 }
             }
