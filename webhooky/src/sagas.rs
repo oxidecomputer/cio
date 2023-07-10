@@ -34,8 +34,10 @@ impl SagaLogOutput {
 
 impl io::Write for SagaLogOutput {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let mut out = self.output.lock().unwrap();
-        out.extend(buf);
+        // Drop any log messages
+
+        // let mut out = self.output.lock().unwrap();
+        // out.extend(buf);
 
         Ok(buf.len())
     }
@@ -81,10 +83,6 @@ pub struct Context {
 }
 
 impl steno::SagaType for Saga {
-    // Type for the saga's parameters
-    // type SagaParamsType = Params;
-
-    // Type for the application-specific context (see above)
     type ExecContextType = Arc<Context>;
 }
 
