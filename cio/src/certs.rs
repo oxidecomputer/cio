@@ -1,8 +1,7 @@
 #![allow(clippy::from_over_into)]
-use std::{env, time};
+use std::time::Duration;
 
-use acme_lib::{create_p384_key, persist::FilePersist, Certificate as AcmeCertificate, Directory, DirectoryUrl};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_bb8_diesel::AsyncRunQueryDsl;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
@@ -12,13 +11,21 @@ use google_storage1::{
     hyper::client::connect::Connection,
     hyper::Uri,
 };
+use instant_acme::{
+    Account, AuthorizationStatus, ChallengeType, Identifier, LetsEncrypt, NewAccount, NewOrder, OrderStatus,
+};
 use macros::db;
 use mime::Mime;
 use octorust::types::FullRepository;
 use openssl::x509::X509;
+use rcgen::{Certificate as GeneratedCertificate, CertificateParams, DistinguishedName};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncRead, AsyncWrite};
+use std::env::var;
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    time::sleep,
+};
 
 use crate::{
     airtable::AIRTABLE_CERTIFICATES_TABLE,
@@ -77,6 +84,15 @@ pub struct NewCertificate {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
+
+    // Subject alternative names to append to the certificate
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sans: Vec<String>,
+}
+
+pub struct AcmeCertificate {
+    private_key: Vec<u8>,
+    certificate_chain: Vec<u8>,
 }
 
 impl NewCertificate {
@@ -85,49 +101,60 @@ impl NewCertificate {
     pub async fn create_cert(&mut self, company: &Company) -> Result<AcmeCertificate> {
         let api_client = company.authenticate_dns_providers().await?;
 
-        // Save/load keys and certificates to a temporary directory, we will re-save elsewhere.
-        let persist = FilePersist::new(env::temp_dir());
-
-        // Create a directory entrypoint.
-        // Use DirectoryUrl::LetsEncrypStaging for dev/testing.
-        let dir = Directory::from_url(persist, DirectoryUrl::LetsEncrypt)?;
-
-        // Reads the private account key from persistence, or
-        // creates a new one before accessing the API to establish
-        // that it's there.
-        let acc = dir.account(&company.gsuite_subject)?;
+        let account = Account::create(
+            &NewAccount {
+                contact: &[&var("CERT_ACCOUNT")?],
+                terms_of_service_agreed: true,
+                only_return_existing: false,
+            },
+            LetsEncrypt::Production.url(),
+            None,
+        )
+        .await?;
 
         log::info!("Authenticated with cert provider");
 
-        // Order a new TLS certificate for a domain.
-        let mut ord_new = acc.new_order(&self.domain, &[])?;
+        let mut domains = vec![self.domain.clone()];
+        domains.extend(self.sans.clone());
 
-        log::info!("Created new cert order for {}", self.domain);
+        let identifiers = domains.clone().into_iter().map(Identifier::Dns).collect::<Vec<_>>();
+        let mut order = account
+            .new_order(&NewOrder {
+                identifiers: &identifiers,
+            })
+            .await?;
 
-        // If the ownership of the domain(s) have already been
-        // authorized in a previous order, you might be able to
-        // skip validation. The ACME API provider decides.
-        let ord_csr = loop {
-            // are we done?
-            if let Some(ord_csr) = ord_new.confirm_validations() {
-                log::info!("Cert order validated for {}", self.domain);
-                break ord_csr;
+        let state = order.state();
+
+        log::info!("Created cert order state: {:?}", state);
+
+        let authorizations = order.authorizations().await?;
+        let mut challenges = Vec::with_capacity(authorizations.len());
+
+        log::info!("Retrieved authorization credentials");
+
+        for authz in &authorizations {
+            log::info!("Handling authorization for {:?}", authz.identifier);
+
+            match &authz.status {
+                AuthorizationStatus::Pending => {}
+                AuthorizationStatus::Valid => continue,
+                unhandled => return Err(anyhow!("Unhandled cert authorization status: {:?}", unhandled)),
             }
 
-            // Get the possible authorizations (for a single domain
-            // this will only be one element).
-            let auths = ord_new.authorizations()?;
+            // We'll use the DNS challenges for this example, but you could
+            // pick something else to use here.
 
-            // Get the proff we need for the TXT record:
-            // _acme-challenge.<domain-to-be-proven>.  TXT  <proof>
-            let challenge = auths[0].dns_challenge();
+            let challenge = authz
+                .challenges
+                .iter()
+                .find(|c| c.r#type == ChallengeType::Dns01)
+                .ok_or_else(|| anyhow::anyhow!("Failed to find cert DNS challenge: {:?}", authz.challenges))?;
 
-            log::info!("Retrieved acme challenge for {}", self.domain);
+            let Identifier::Dns(identifier) = &authz.identifier;
 
-            // Create a TXT record for _acme-challenge.{domain} with the value of
-            // the proof.
-            // Use the Cloudflare API for this.
-            let record_name = format!("_acme-challenge.{}", &self.domain.replace("*.", ""));
+            // Create a TXT record for _acme-challenge.{domain} with the value of the proof.
+            let record_name = format!("_acme-challenge.{}", identifier);
 
             // Ensure our DNS record exists.
             api_client
@@ -135,69 +162,85 @@ impl NewCertificate {
                     DnsRecord {
                         name: record_name.to_string(),
                         type_: DnsRecordType::TXT,
-                        content: challenge.dns_proof(),
+                        content: order.key_authorization(challenge).dns_value(),
                     },
                     DnsUpdateMode::Replace,
                 )
                 .await?;
 
-            log::info!(
-                "Created _acme-challenge record for {}. Sleeping before starting validation",
-                self.domain
-            );
+            challenges.push((identifier, &challenge.url));
+        }
 
-            // TODO: make this less awful than a sleep.
-            let dur = time::Duration::from_secs(10);
-            tokio::time::sleep(dur).await;
+        for (_, url) in &challenges {
+            order.set_challenge_ready(url).await?;
+        }
 
-            log::info!("Waiting for validation for {} to complete", self.domain);
+        let mut delay = Duration::from_millis(5000);
 
-            // After the TXT record is accessible, the calls
-            // this to tell the ACME API to start checking the
-            // existence of the proof.
-            //
-            // The order at ACME will change status to either
-            // confirm ownership of the domain, or fail due to the
-            // not finding the proof. To see the change, we poll
-            // the API with 5000 milliseconds wait between.
-            challenge.validate(5000)?;
+        for i in 0..5 {
+            sleep(delay).await;
+            let state = order.refresh().await?;
+            if let OrderStatus::Ready = state.status {
+                log::info!("Reached final order state: {state:?}");
+                break;
+            }
 
-            log::info!("Validation for {} returned result. Updating state", self.domain);
+            delay *= 2;
 
-            // Update the state against the ACME API.
-            ord_new.refresh()?;
+            if i < 5 {
+                log::info!("Order is not ready on attempt {i}, waiting {delay:?}");
+            } else {
+                return Err(anyhow::anyhow!("Order ready checks ran out of attempts"));
+            }
+        }
+
+        let state = order.state();
+
+        if state.status != OrderStatus::Ready {
+            return Err(anyhow::anyhow!("UNhandled order status: {:?}", state.status));
+        }
+
+        log::info!("Order is ready, creating CSR for {:?}", domains);
+
+        let mut params = CertificateParams::new(domains.clone());
+        params.distinguished_name = DistinguishedName::new();
+        let cert = GeneratedCertificate::from_params(params)?;
+        let csr = cert.serialize_request_der()?;
+
+        log::info!("Finalizing CSR for {:?}", domains);
+
+        order.finalize(&csr).await?;
+
+        let mut attempt = 1;
+        let cert_chain_pem = loop {
+            match order.certificate().await? {
+                Some(cert_chain_pem) => break cert_chain_pem,
+                None => {
+                    sleep(Duration::from_secs(1)).await;
+                    attempt += 1;
+
+                    if attempt > 10 {
+                        return Err(anyhow!("Exhausted attempts to retrieve certificate"));
+                    }
+                }
+            }
         };
 
-        // Ownership is proven. Create a private key for
-        // the certificate. These are provided for convenience, you
-        // can provide your own keypair instead if you want.
-        let pkey_pri = create_p384_key();
+        let certificate = AcmeCertificate {
+            private_key: cert.serialize_private_key_pem().as_bytes().to_vec(),
+            certificate_chain: cert_chain_pem.as_bytes().to_vec(),
+        };
 
-        log::info!(
-            "Submitting completed request and awaiting certificate for {}",
-            self.domain
-        );
+        log::info!("Retrieved certificate for {:?}", domains);
 
-        // Submit the CSR. This causes the ACME provider to enter a
-        // state of "processing" that must be polled until the
-        // certificate is either issued or rejected. Again we poll
-        // for the status change.
-        let ord_cert = ord_csr.finalize_pkey(pkey_pri, 5000)?;
-
-        // Now download the certificate. Also stores the cert in
-        // the persistence.
-        let cert = ord_cert.download_and_save_cert()?;
-
-        log::info!("Retrieved certificate for {}", self.domain);
-
-        self.load_cert(cert.certificate().as_bytes())?;
+        self.load_cert(&certificate.certificate_chain)?;
 
         // Set default values. Certificates and keys are stored externally
         self.private_key = String::new();
         self.certificate = String::new();
         self.cio_company_id = company.id;
 
-        Ok(cert)
+        Ok(certificate)
     }
 
     pub fn load_cert(&mut self, certificate: &[u8]) -> Result<()> {
@@ -260,11 +303,9 @@ impl NewCertificate {
         // Write the certificate and key to the requested locations
         for store in storage {
             store
-                .write_cert(&self.domain, renewed_certificate.certificate().as_bytes())
+                .write_cert(&self.domain, &renewed_certificate.certificate_chain)
                 .await?;
-            store
-                .write_key(&self.domain, renewed_certificate.private_key().as_bytes())
-                .await?;
+            store.write_key(&self.domain, &renewed_certificate.private_key).await?;
         }
 
         log::info!("Stored certificate and key for {}", self.domain);

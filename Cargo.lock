@@ -13,22 +13,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "acme-lib"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "292ac9d513052341a7f5bdae61f31c4dc93c1dce2598508f52709df08cecc8b0"
-dependencies = [
- "base64 0.13.1",
- "lazy_static",
- "log 0.4.19",
- "openssl",
- "serde",
- "serde_json",
- "time 0.1.45",
- "ureq",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -750,17 +734,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "chunked_transfer"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cca491388666e04d7248af3f60f0c40cfb0991c72205595d7c396e3510207d1a"
-
-[[package]]
 name = "cio-api"
 version = "0.2.0"
 dependencies = [
  "Inflector",
- "acme-lib",
  "airtable-api",
  "anyhow",
  "async-bb8-diesel",
@@ -796,6 +773,7 @@ dependencies = [
  "hmac 0.12.1",
  "http",
  "image 0.23.14",
+ "instant-acme",
  "log 0.4.19",
  "lopdf 0.31.0",
  "macros",
@@ -816,6 +794,7 @@ dependencies = [
  "quickbooks",
  "ramp-minimal-api",
  "rand",
+ "rcgen",
  "regex",
  "reqwest",
  "reqwest-middleware",
@@ -1046,33 +1025,6 @@ name = "constant_time_eq"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
-
-[[package]]
-name = "cookie"
-version = "0.14.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03a5d7b21829bc7b4bf4754a978a241ae54ea55a40f92bb20216e54096f4b951"
-dependencies = [
- "percent-encoding 2.3.0",
- "time 0.2.27",
- "version_check",
-]
-
-[[package]]
-name = "cookie_store"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3818dfca4b0cb5211a659bbcbb94225b7127407b2b135e650d717bfb78ab10d3"
-dependencies = [
- "cookie",
- "idna 0.2.3",
- "log 0.4.19",
- "publicsuffix",
- "serde",
- "serde_json",
- "time 0.2.27",
- "url 2.4.0",
-]
 
 [[package]]
 name = "core-foundation"
@@ -2147,7 +2099,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -2202,7 +2154,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -2246,7 +2198,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -2312,7 +2264,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -2346,7 +2298,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -2630,6 +2582,7 @@ dependencies = [
  "http",
  "hyper",
  "rustls 0.21.2",
+ "rustls-native-certs",
  "tokio",
  "tokio-rustls 0.24.1",
 ]
@@ -2681,17 +2634,6 @@ name = "idna"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38f09e0f0b1fb55fdee1f17470ad800da77af5186a1a76c026b679358b7e844e"
-dependencies = [
- "matches",
- "unicode-bidi",
- "unicode-normalization",
-]
-
-[[package]]
-name = "idna"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "418a0a6fab821475f634efe3ccc45c013f742efe03d853e8d3355d5cb850ecf8"
 dependencies = [
  "matches",
  "unicode-bidi",
@@ -2793,6 +2735,21 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "instant-acme"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8b94f62e8dd2b561e7646bd0cc92e4c9d940859fc1c146ad8ab6e5d3e6f7c03"
+dependencies = [
+ "base64 0.21.2",
+ "hyper",
+ "hyper-rustls 0.24.0",
+ "ring",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]
@@ -2906,7 +2863,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6971da4d9c3aa03c3d8f3ff0f4155b534aad021292003895a469716b2a230378"
 dependencies = [
  "base64 0.21.2",
- "pem",
+ "pem 1.1.1",
  "ring",
  "serde",
  "serde_json",
@@ -3569,7 +3526,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -3602,7 +3559,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -3904,6 +3861,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8835c273a76a90455d7344889b0964598e3316e2a79ede8e36f16bdcf2228b8"
 dependencies = [
  "base64 0.13.1",
+]
+
+[[package]]
+name = "pem"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b13fe415cdf3c8e44518e18a7c95a13431d9bdf6d15367d82b23c377fdd441a"
+dependencies = [
+ "base64 0.21.2",
+ "serde",
 ]
 
 [[package]]
@@ -4332,25 +4299,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "publicsuffix"
-version = "1.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95b4ce31ff0a27d93c8de1849cf58162283752f065a90d508f1105fa6c9a213f"
-dependencies = [
- "idna 0.2.3",
- "url 2.4.0",
-]
-
-[[package]]
-name = "qstring"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d464fae65fff2680baf48019211ce37aaec0c78e9264c84a3e484717f965104e"
-dependencies = [
- "percent-encoding 2.3.0",
-]
-
-[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4472,6 +4420,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rcgen"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4954fbc00dcd4d8282c987710e50ba513d351400dbdd00e803a05172a90d8976"
+dependencies = [
+ "pem 2.0.1",
+ "ring",
+ "time 0.3.22",
+ "yasna",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4580,7 +4540,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots 0.22.6",
+ "webpki-roots",
  "winreg",
 ]
 
@@ -4678,7 +4638,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -4807,27 +4767,14 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35edb675feee39aec9c99fa5ff985081995a06d594114ae14cbe797ad7b7a6d7"
-dependencies = [
- "base64 0.13.1",
- "log 0.4.19",
- "ring",
- "sct 0.6.1",
- "webpki 0.21.4",
-]
-
-[[package]]
-name = "rustls"
 version = "0.20.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fff78fc74d175294f4e83b28343315ffcfb114b156f0185e9741cb5570f50e2f"
 dependencies = [
  "log 0.4.19",
  "ring",
- "sct 0.7.0",
- "webpki 0.22.0",
+ "sct",
+ "webpki",
 ]
 
 [[package]]
@@ -4839,7 +4786,7 @@ dependencies = [
  "log 0.4.19",
  "ring",
  "rustls-webpki",
- "sct 0.7.0",
+ "sct",
 ]
 
 [[package]]
@@ -4961,16 +4908,6 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "sct"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b362b83898e0e69f38515b82ee15aa80636befe47c3b6d3d89a911e78fc228ce"
-dependencies = [
- "ring",
- "untrusted",
-]
-
-[[package]]
-name = "sct"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d53dcdb7c9f8158937a7981b48accfd39a43af418591a5d008c7b22b5e1b7ca4"
@@ -5072,7 +5009,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -5483,7 +5420,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -5523,7 +5460,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -6269,7 +6206,7 @@ checksum = "c43ee83903113e03984cb9e5cebe6c04a5116269e900e3ddba8f068a62adda59"
 dependencies = [
  "rustls 0.20.8",
  "tokio",
- "webpki 0.22.0",
+ "webpki",
 ]
 
 [[package]]
@@ -6443,7 +6380,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
@@ -6574,25 +6511,6 @@ name = "untrusted"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
-
-[[package]]
-name = "ureq"
-version = "1.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b8b063c2d59218ae09f22b53c42eaad0d53516457905f5235ca4bc9e99daa71"
-dependencies = [
- "base64 0.13.1",
- "chunked_transfer",
- "cookie",
- "cookie_store",
- "log 0.4.19",
- "once_cell",
- "qstring",
- "rustls 0.19.1",
- "url 2.4.0",
- "webpki 0.21.4",
- "webpki-roots 0.21.1",
-]
 
 [[package]]
 name = "url"
@@ -6881,16 +6799,6 @@ dependencies = [
 
 [[package]]
 name = "webpki"
-version = "0.21.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8e38c0608262c46d4a56202ebabdeb094cef7e560ca7a226c6bf055188aa4ea"
-dependencies = [
- "ring",
- "untrusted",
-]
-
-[[package]]
-name = "webpki"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f095d78192e208183081cc07bc5515ef55216397af48b873e5edcd72637fa1bd"
@@ -6901,20 +6809,11 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "0.21.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aabe153544e473b775453675851ecc86863d2a81d786d741f6b76778f2a48940"
-dependencies = [
- "webpki 0.21.4",
-]
-
-[[package]]
-name = "webpki-roots"
 version = "0.22.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c71e40d7d2c34a5106301fb632274ca37242cd0c9d3e64dbece371a40a2d87"
 dependencies = [
- "webpki 0.22.0",
+ "webpki",
 ]
 
 [[package]]
@@ -7153,6 +7052,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09041cd90cf85f7f8b2df60c646f853b7f535ce68f85244eb6731cf89fa498ec"
 
 [[package]]
+name = "yasna"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e17bb3549cc1321ae1296b9cdc2698e2b6cb1992adfa19a8c72e5b7a738f44cd"
+dependencies = [
+ "time 0.3.22",
+]
+
+[[package]]
 name = "yup-oauth2"
 version = "8.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7233,7 +7141,7 @@ dependencies = [
  "log 0.4.19",
  "mime 0.3.17",
  "parse_link_header",
- "pem",
+ "pem 1.1.1",
  "percent-encoding 2.3.0",
  "reqwest",
  "reqwest-conditional-middleware",
