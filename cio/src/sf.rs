@@ -51,6 +51,8 @@ struct LeadUpdate {
     interest: String,
 }
 
+static REMOTE_ACTIVE: bool = false;
+
 pub async fn push_new_rack_line_subscribers_to_sf(
     subscribers_to_process: &mut [RackLineSubscriber],
     db: &Database,
@@ -92,43 +94,49 @@ pub async fn push_new_rack_line_subscribers_to_sf(
                             interest: subscriber.interest.clone(),
                         };
 
-                        let lead = sf
-                            .upsert_object(
-                                "Lead",
-                                &ExternalId::new(
-                                    "Airtable_Lead_Record_Id__c".to_string(),
-                                    subscriber.airtable_record_id.clone(),
-                                ),
-                                &update,
-                            )
-                            .await?
-                            .body
-                            .ok_or_else(|| anyhow!("API failed to return created record"))?;
+                        if REMOTE_ACTIVE {
+                            let lead = sf
+                                .upsert_object(
+                                    "Lead",
+                                    &ExternalId::new(
+                                        "Airtable_Lead_Record_Id__c".to_string(),
+                                        subscriber.airtable_record_id.clone(),
+                                    ),
+                                    &update,
+                                )
+                                .await?
+                                .body
+                                .ok_or_else(|| anyhow!("API failed to return created record"))?;
 
-                        if lead.success {
-                            let lead_id = lead
-                                .id
-                                .expect("SalesForce reported a successful create but failed to return a record id");
+                            if lead.success {
+                                let lead_id = lead
+                                    .id
+                                    .expect("SalesForce reported a successful create but failed to return a record id");
 
-                            log::info!("Created CRM lead {} => {}", subscriber.id, lead_id);
+                                log::info!("Created CRM lead {} => {}", subscriber.id, lead_id);
 
-                            subscriber.sf_lead_id = lead_id;
+                                subscriber.sf_lead_id = lead_id;
 
-                            if let Err(err) = subscriber.update(db).await {
+                                if let Err(err) = subscriber.update(db).await {
+                                    log::error!(
+                                        "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} lead_id: {} err: {:?}",
+                                        subscriber.id,
+                                        subscriber.airtable_record_id,
+                                        subscriber.sf_lead_id,
+                                        err
+                                    );
+                                }
+                            } else {
                                 log::error!(
-                                    "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} lead_id: {} err: {:?}",
-                                    subscriber.id,
-                                    subscriber.airtable_record_id,
-                                    subscriber.sf_lead_id,
-                                    err
+                                    "SalesForce reported errors when attempting to upsert object: {:?}",
+                                    lead.errors
                                 );
                             }
                         } else {
-                            log::error!(
-                                "SalesForce reported errors when attempting to upsert object: {:?}",
-                                lead.errors
-                            );
+                            log::info!("Upsert record info SalesForce: {:?}", update);
                         }
+                    } else {
+                        log::info!("Unable to upsert lead without a last name: {:?}", subscriber.airtable_record_id);
                     }
                 }
             }
