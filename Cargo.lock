@@ -2408,9 +2408,9 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hidapi"
-version = "1.5.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "798154e4b6570af74899d71155fb0072d5b17e6aa12f39c8ef22c60fb8ec99e7"
+checksum = "794c84123f70c5ac93c45f0fed6edd39db80aab71a62097982e4ab13b43e8bb7"
 dependencies = [
  "cc",
  "libc",
