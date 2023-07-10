@@ -45,6 +45,7 @@ pub mod recorded_meetings;
 pub mod repos;
 pub mod rfd;
 pub mod schema;
+pub mod sf;
 pub mod shipment_status;
 pub mod shipments;
 pub mod shorturls;

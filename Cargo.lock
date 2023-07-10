@@ -807,6 +807,7 @@ dependencies = [
  "sendgrid-api",
  "serde",
  "serde_json",
+ "sf-client",
  "sheets",
  "shipbob",
  "shippo",
@@ -5318,6 +5319,20 @@ dependencies = [
  "proc-macro2 1.0.63",
  "quote 1.0.28",
  "syn 2.0.22",
+]
+
+[[package]]
+name = "sf-client"
+version = "0.1.0"
+source = "git+https://github.com/oxidecomputer/sf-client?branch=main#677029a49fa48036d07ac776d2fb34beda418661"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "jsonwebtoken",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

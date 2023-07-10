@@ -52,6 +52,10 @@ pub struct NewRackLineSubscriber {
     pub zoho_lead_id: String,
     #[serde(default)]
     pub zoho_lead_exclude: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sf_lead_id: String,
+    #[serde(default)]
+    pub sf_lead_exclude: bool,
 }
 
 impl NewRackLineSubscriber {
@@ -170,6 +174,8 @@ impl Default for NewRackLineSubscriber {
             cio_company_id: Default::default(),
             zoho_lead_id: Default::default(),
             zoho_lead_exclude: false,
+            sf_lead_id: Default::default(),
+            sf_lead_exclude: false,
         }
     }
 }
@@ -184,6 +190,10 @@ impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
         // Notes and tags are owned by Airtable
         self.notes = record.notes;
         self.tags = record.tags;
+
+        // Exclusions are owned by Airtable
+        self.zoho_lead_exclude = record.zoho_lead_exclude;
+        self.sf_lead_exclude = record.sf_lead_exclude;
 
         Ok(())
     }
