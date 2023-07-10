@@ -157,6 +157,7 @@ fn create_api() -> ApiDescription<ServerContext> {
     api.register(trigger_sync_repos_create).unwrap();
     api.register(trigger_sync_rfds_create).unwrap();
     api.register(trigger_sync_shipments_create).unwrap();
+    api.register(trigger_sync_salesforce_create).unwrap();
     api.register(trigger_sync_shorturls_create).unwrap();
     api.register(trigger_sync_swag_inventory_create).unwrap();
     api.register(trigger_sync_travel_create).unwrap();
@@ -278,6 +279,9 @@ pub async fn server(
         scheduler
             .every(14.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-rfds")});
+        scheduler
+            .every(1.hours())
+            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-salesforce")});
         scheduler
             .every(2.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shipments")});
@@ -1652,6 +1656,21 @@ async fn trigger_sync_finance_create(
     _auth: Bearer<InternalToken>,
 ) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
     crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-finance")
+        .await
+        .map(HttpResponseAccepted)
+        .map_err(handle_anyhow_err_as_http_err)
+}
+
+/** Listen for triggering a function run of sync salesforce. */
+#[endpoint {
+    method = POST,
+    path = "/run/sync-salesforce",
+}]
+async fn trigger_sync_salesforce_create(
+    rqctx: RequestContext<ServerContext>,
+    _auth: Bearer<InternalToken>,
+) -> Result<HttpResponseAccepted<uuid::Uuid>, HttpError> {
+    crate::handlers_cron::run_subcmd_job(rqctx.context(), "sync-salesforce")
         .await
         .map(HttpResponseAccepted)
         .map_err(handle_anyhow_err_as_http_err)
