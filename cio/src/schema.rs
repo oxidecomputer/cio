@@ -765,6 +765,8 @@ table! {
         cio_company_id -> Int4,
         zoho_lead_id -> Varchar,
         zoho_lead_exclude -> Bool,
+        sf_lead_id -> Varchar,
+        sf_lead_exclude -> Bool,
         airtable_record_id -> Varchar,
     }
 }

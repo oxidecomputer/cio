@@ -39,6 +39,7 @@ use rsa::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use sf_client::{AuthorizationServer, JwtAuthenticator, LoginClaims, SfClient};
 use sheets::Client as GoogleSheets;
 use shipbob::Client as ShipBob;
 use slack_chat_api::Slack;
@@ -565,6 +566,13 @@ impl Company {
         }
 
         bail!("no token");
+    }
+
+    /// Authenticate with SalesForce.
+    pub async fn authenticate_sf(&self) -> Result<SfClient> {
+        let claims = LoginClaims::from_env(AuthorizationServer::Live)?;
+        let client = SfClient::new("58.0".to_string(), JwtAuthenticator::from_env(claims)?).await?;
+        Ok(client)
     }
 
     /// Authenticate with DocuSign.
