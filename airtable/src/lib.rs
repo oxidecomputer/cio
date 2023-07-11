@@ -36,7 +36,7 @@
  * ```
  */
 #![allow(clippy::field_reassign_with_default)]
-use std::{env, fmt, fmt::Debug};
+use std::{env, fmt, fmt::Debug, marker::PhantomData};
 
 use anyhow::{bail, Result};
 use chrono::{offset::Utc, DateTime};
@@ -56,7 +56,7 @@ pub struct Airtable {
     base_id: String,
     enterprise_account_id: String,
 
-    client: reqwest_middleware::ClientWithMiddleware,
+    pub(crate) client: reqwest_middleware::ClientWithMiddleware,
 }
 
 /// Get the API key from the AIRTABLE_API_KEY env variable.
@@ -115,7 +115,13 @@ impl Airtable {
         &self.key
     }
 
-    fn request<B>(&self, method: Method, path: String, body: B, query: Option<Vec<(&str, String)>>) -> Result<Request>
+    pub(crate) fn request<B>(
+        &self,
+        method: Method,
+        path: String,
+        body: B,
+        query: Option<Vec<(&str, String)>>,
+    ) -> Result<Request>
     where
         B: Serialize,
     {
@@ -212,6 +218,10 @@ impl Airtable {
         }
 
         Ok(records)
+    }
+
+    pub fn pages<T: DeserializeOwned>(&self, table: &str, view: &str, fields: Vec<&str>) -> Pages<T> {
+        Pages::new(self, table, view, &fields)
     }
 
     /// Get record from a table.
@@ -601,6 +611,71 @@ impl Airtable {
         }
 
         Ok(())
+    }
+}
+
+pub struct Pages<'a, T> {
+    client: &'a Airtable,
+    table: String,
+    view: String,
+    fields: Vec<String>,
+    offset: Option<String>,
+    record_type: PhantomData<T>,
+}
+
+impl<'a, T> Pages<'a, T>
+where
+    T: DeserializeOwned,
+{
+    pub fn new(client: &'a Airtable, table: &str, view: &str, fields: &[&str]) -> Self {
+        Self {
+            client,
+            table: table.to_string(),
+            view: view.to_string(),
+            fields: fields.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+            offset: Some(String::new()),
+            record_type: PhantomData,
+        }
+    }
+
+    pub async fn next(&mut self) -> Result<Option<Vec<Record<T>>>> {
+        if self.offset.is_none() {
+            return Ok(None);
+        }
+
+        let mut params = vec![("pageSize", "100".to_string()), ("view", self.view.to_string())];
+
+        if let Some(offset) = &self.offset {
+            if !offset.is_empty() {
+                params.push(("offset", offset.clone()));
+            }
+        }
+
+        for field in &self.fields {
+            params.push(("fields[]", field.to_string()));
+        }
+
+        // Build the request.
+        let request = self
+            .client
+            .request(Method::GET, self.table.to_string(), (), Some(params))?;
+
+        let response = self.client.client.execute(request).await?;
+        match response.status() {
+            StatusCode::OK => {
+                let api_response: APICall<T> = response.json().await?;
+                self.offset = if !api_response.offset.is_empty() {
+                    Some(api_response.offset)
+                } else {
+                    None
+                };
+
+                Ok(Some(api_response.records))
+            }
+            s => {
+                bail!("status code: {}, body: {}", s, response.text().await?);
+            }
+        }
     }
 }
 

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use slog::Drain;
 use slog_scope_futures::FutureExt as _;
 
-use crate::health::SelfMemory;
+use crate::health::report_health;
 
 #[derive(Debug, Clone)]
 struct SagaLogOutput {
@@ -104,6 +104,8 @@ pub async fn run_cmd(
     id: &uuid::Uuid,
     cmd_name: &str,
 ) -> Result<()> {
+    report_health(&format!("Run cmd [{}]", cmd_name));
+
     let params = Params {
         cmd_name: cmd_name.to_string(),
         saga_id: *id,
@@ -120,16 +122,25 @@ pub async fn run_cmd(
     let context = Arc::new(Context { db: db.clone() });
     let saga_id = steno::SagaId(params.saga_id);
 
+    report_health(&format!("Create saga [{}]", cmd_name));
+
     // Create the saga.
     let saga = sec.saga_create(saga_id, Arc::new(context), dag, registry).await?;
+
+    report_health(&format!("Start saga {}", cmd_name));
 
     // Set it running.
     sec.saga_start(saga_id).await?;
 
+    report_health(&format!("Spawn saga {}", cmd_name));
+
+    let complete_msg = format!("Saga Complete {}", cmd_name);
+
     // Listen for the saga to complete
-    tokio::spawn(async {
+    tokio::spawn(async move {
         let result = saga.await;
         info!("Saga completed {:?}", result);
+        report_health(&complete_msg);
     });
 
     Ok(())
@@ -140,21 +151,21 @@ async fn action_run_cmd(action_context: steno::ActionContext<Saga>) -> Result<Fn
     let cmd_name = &action_context.saga_params::<Params>()?.cmd_name;
     let saga_id = &action_context.saga_params::<Params>()?.saga_id;
 
-    if let Some(sub_cmd) = crate::core::into_job_command(cmd_name) {
-        if let Ok(mem) = SelfMemory::new() {
-            log::info!("Memory before running {}({}): {:?}", cmd_name, saga_id, mem);
-        }
+    report_health(&format!("Create job command [{}]", cmd_name));
 
+    if let Some(sub_cmd) = crate::core::into_job_command(cmd_name) {
         let saga_log_output = SagaLogOutput::new();
         let output_handle = saga_log_output.handle();
+
+        report_health(&format!("Created job logger [{}]", cmd_name));
+
         let logger = create_saga_logger(saga_log_output, cmd_name.to_string(), saga_id.to_string());
 
         let context = crate::context::Context::new(1).await.map_err(AsActionError)?;
-        let result = crate::job::run_job_cmd(sub_cmd, context).with_logger(logger).await;
 
-        if let Ok(mem) = SelfMemory::new() {
-            log::info!("Memory after running {}({}): {:?}", cmd_name, saga_id, mem);
-        }
+        report_health(&format!("Await job [{}]", cmd_name));
+
+        let result = crate::job::run_job_cmd(sub_cmd, context).with_logger(logger).await;
 
         match result {
             Ok(_) => {
