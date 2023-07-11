@@ -31,13 +31,13 @@ extern crate serde_json;
 extern crate cio_api;
 
 use anyhow::{bail, Result};
+use cio_api::health::SelfMemory;
 use clap::Parser;
 use log::info;
 use slog::Drain;
 use std::fs::File;
 
 use crate::context::ServerContext;
-use crate::health::SelfMemory;
 use crate::server::APIConfig;
 
 fn main() -> Result<()> {
