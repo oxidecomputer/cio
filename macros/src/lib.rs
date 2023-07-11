@@ -531,7 +531,10 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                             None => {
                                 // We do not have the record in Airtable, Let's create it.
                                 // Create the record in Airtable.
-                                db_record.create_in_airtable(db).await?;
+                                // db_record.create_in_airtable(db).await?;
+
+                                // AM: Disable while debugging
+                                log::info!("Airtable record create needed: {:?}", db_record);
 
                                 // Remove it from the map.
                                 airtable_records.remove(&db_record.id);
