@@ -84,10 +84,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_scheduler_health_check_runs() {
+    fn test_get_health_runs() {
         pretty_env_logger::init();
 
-        let _ = super::scheduler_health_check();
+        let _ = super::get_health();
     }
 
     #[test]
