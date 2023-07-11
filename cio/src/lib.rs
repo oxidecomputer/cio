@@ -32,6 +32,7 @@ pub mod functions;
 pub mod github_commits;
 pub mod github_prs;
 pub mod gsuite;
+pub mod health;
 pub mod huddles;
 pub mod interviews;
 pub mod journal_clubs;

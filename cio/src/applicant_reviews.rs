@@ -160,35 +160,53 @@ pub async fn refresh_reviews(db: &Database, company: &Company) -> Result<()> {
         return Ok(());
     }
 
-    let is: Vec<airtable_api::Record<ApplicantReview>> = company
-        .authenticate_airtable(&company.airtable_base_id_hiring)
-        .list_records(&ApplicantReview::airtable_table(), "Grid view", vec![])
-        .await?;
+    let company_id = company.id;
 
-    for record in is {
-        if record.fields.name.is_empty() || record.fields.applicant.is_empty() {
-            // Ignore it, it's a blank record.
-            continue;
+    let client = company.authenticate_airtable(&company.airtable_base_id_hiring);
+    let mut pages = client.pages::<ApplicantReview>(&ApplicantReview::airtable_table(), "Grid view", vec![]);
+
+    while let Some(records) = pages.next().await? {
+        let records = records
+            .into_iter()
+            .filter(|record| !record.fields.name.is_empty() && !record.fields.applicant.is_empty())
+            .collect::<Vec<_>>();
+
+        let chunks: Vec<Vec<_>> = records.chunks(10).map(|chunk| chunk.to_vec()).collect();
+
+        for chunk in chunks {
+            let mut tasks = vec![];
+
+            for record in chunk {
+                let db = db.clone();
+
+                tasks.push(tokio::spawn(async move {
+                    let new_review: NewApplicantReview = record.fields.into();
+
+                    let mut review = new_review.upsert_in_db(&db).await?;
+                    if review.airtable_record_id.is_empty() {
+                        review.airtable_record_id = record.id;
+                    }
+                    review.cio_company_id = company_id;
+
+                    review.expand(&db).await?;
+                    review.update(&db).await?;
+
+                    Ok::<(), anyhow::Error>(())
+                }));
+            }
+
+            futures::future::join_all(tasks)
+                .await
+                .into_iter()
+                .collect::<std::result::Result<Vec<_>, tokio::task::JoinError>>()?;
         }
-
-        let new_review: NewApplicantReview = record.fields.into();
-
-        let mut review = new_review.upsert_in_db(db).await?;
-        if review.airtable_record_id.is_empty() {
-            review.airtable_record_id = record.id;
-        }
-        review.cio_company_id = company.id;
-
-        review.expand(db).await?;
-
-        review.update(db).await?;
     }
 
     // Update them all from the database.
-    ApplicantReviews::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
+    // ApplicantReviews::get_from_db(db, company.id)
+    //     .await?
+    //     .update_airtable(db)
+    //     .await?;
 
     Ok(())
 }

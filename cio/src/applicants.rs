@@ -2444,7 +2444,7 @@ pub async fn refresh_new_applicants_and_reviews(
 
             // Iterate over the applicants and update them.
             // We should do these concurrently, but limit it to maybe 3 at a time.
-            let applicant_chunks = applicants.chunks(3).map(|c| c.to_vec()).collect::<Vec<_>>();
+            let applicant_chunks = applicants.chunks(5).map(|c| c.to_vec()).collect::<Vec<_>>();
 
             for applicant_chunk in applicant_chunks {
                 let ids = applicant_chunk.iter().map(|a| a.id).collect::<Vec<_>>();
