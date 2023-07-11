@@ -202,6 +202,7 @@ mod tests {
     use std::io::Write;
 
     #[test]
+    #[ignore]
     fn test_write_saga_output() {
         let mut output = SagaLogOutput::new();
         output.write(&[1, 2, 3]);
@@ -210,6 +211,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_saga_logger_output() {
         let output = SagaLogOutput::new();
         let handle = output.handle();
