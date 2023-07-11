@@ -640,6 +640,7 @@ where
 
     pub async fn next(&mut self) -> Result<Option<Vec<Record<T>>>> {
         if self.offset.is_none() {
+            log::debug!("[airtable-api] Page does not have an offset. Returning.");
             return Ok(None);
         }
 
@@ -647,8 +648,11 @@ where
 
         if let Some(offset) = &self.offset {
             if !offset.is_empty() {
+                log::debug!("[airtable-api] Fetching page of results with offset {}", offset);
                 params.push(("offset", offset.clone()));
             }
+        } else {
+            log::debug!("[airtable-api] Requesting first page of records");
         }
 
         for field in &self.fields {
@@ -661,9 +665,12 @@ where
             .request(Method::GET, self.table.to_string(), (), Some(params))?;
 
         let response = self.client.client.execute(request).await?;
+
         match response.status() {
             StatusCode::OK => {
                 let api_response: APICall<T> = response.json().await?;
+                log::debug!("[airtable-api] Retrieved page response");
+
                 self.offset = if !api_response.offset.is_empty() {
                     Some(api_response.offset)
                 } else {
@@ -673,6 +680,11 @@ where
                 Ok(Some(api_response.records))
             }
             s => {
+                log::debug!("[airtable-api] Pagination request returned an error. Stopping requests.");
+
+                // Once we hit an error we stop pagination
+                self.offset = None;
+
                 bail!("status code: {}, body: {}", s, response.text().await?);
             }
         }
