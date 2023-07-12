@@ -62,7 +62,8 @@ meilisearch-minimal-api = { path = "../meilisearch-minimal-api" }
 md-5 = "0.10.5"
 mime = "0.3.0"
 names = "^0.14.0"
-octorust = { version = "0.7.0-rc.1", features = ["httpcache"] }
+# octorust = { version = "0.7.0-rc.1", features = ["httpcache"] }
+octorust = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "cache-testing", features = ["httpcache"] }
 okta = "0.7.0-rc.1"
 openssl = "0.10"
 parse-rfd = { path = "../parse-rfd" }
