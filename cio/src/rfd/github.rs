@@ -277,6 +277,28 @@ impl GitHubRFDBranch {
         // If this is an update is occurring on the master branch than we can skip the look up as
         // we only want pull requests that are coming from an RFD branch
         let prs = if self.branch != self.default_branch {
+            let pre_filtered = self
+                .client
+                .pulls()
+                .list_all(
+                    &self.owner,
+                    &self.repo,
+                    octorust::types::IssuesListState::All,
+                    // head
+                    &format!("{}:{}", self.owner, self.branch),
+                    // base
+                    "",
+                    // sort
+                    Default::default(),
+                    // direction
+                    Default::default(),
+                )
+                .await?
+                .body
+                .into_iter()
+                .map(|pull| pull.into())
+                .collect::<Vec<GitHubPullRequest>>();
+
             let pulls = self
                 .client
                 .pulls()
@@ -296,7 +318,7 @@ impl GitHubRFDBranch {
                 .await?
                 .body;
 
-            pulls
+            let filtered = pulls
                 .into_iter()
                 .filter_map(|pull| {
                     let pull_branch = pull.head.ref_.trim_start_matches("refs/heads/");
@@ -307,7 +329,19 @@ impl GitHubRFDBranch {
                         None
                     }
                 })
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>();
+
+            if filtered != pre_filtered {
+                log::info!(
+                    "[rfd.branch] Mismatch between filtered and pre-filtered pull requests {:?} ::: {:?}",
+                    pre_filtered,
+                    filtered
+                );
+            } else {
+                log::info!("[rfd.branch] Filter and pre-filtered lists are equivalent");
+            }
+
+            filtered
         } else {
             vec![]
         };
