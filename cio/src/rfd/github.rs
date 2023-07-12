@@ -338,7 +338,10 @@ impl GitHubRFDBranch {
                     filtered
                 );
             } else {
-                log::info!("[rfd.branch] Filter and pre-filtered lists are equivalent {:?}", pre_filtered);
+                log::info!(
+                    "[rfd.branch] Filter and pre-filtered lists are equivalent {:?}",
+                    pre_filtered
+                );
             }
 
             filtered
