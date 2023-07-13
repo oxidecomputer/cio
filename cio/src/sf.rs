@@ -58,7 +58,7 @@ struct LeadUpdate {
     interest: String,
 }
 
-static REMOTE_ACTIVE: bool = false;
+static REMOTE_ACTIVE: bool = true;
 
 pub async fn push_new_rack_line_subscribers_to_sf(
     subscribers_to_process: &mut [RackLineSubscriber],
