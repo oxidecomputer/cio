@@ -133,7 +133,11 @@ pub async fn push_new_rack_line_subscribers_to_sf(
                                 );
                             }
                         } else {
-                            log::info!("Upsert record info SalesForce: {:?}", update);
+                            log::info!(
+                                "Upsert record info SalesForce ({}): {:?}",
+                                subscriber.airtable_record_id,
+                                update
+                            );
                         }
                     } else {
                         log::info!(
