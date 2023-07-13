@@ -35,7 +35,10 @@ const formatSection = (section, content) => {
   let currSection = section.getParent();
 
   while (level-- && currSection) {
-    parentSections.push(currSection.getName());
+    if (typeof currSection.getName === 'function') {
+      parentSections.push(currSection.getName());
+    }
+
     currSection = currSection.getParent();
   }
 
