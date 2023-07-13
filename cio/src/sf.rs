@@ -102,7 +102,9 @@ pub async fn push_new_rack_line_subscribers_to_sf(
                         };
 
                         if REMOTE_ACTIVE {
-                            let lead = sf
+                            log::info!("Upserting lead against Airtable_Lead_Record_Id__c {}", subscriber.airtable_record_id);
+
+                            let response = sf
                                 .upsert_object(
                                     "Lead",
                                     &ExternalId::new(
@@ -111,7 +113,11 @@ pub async fn push_new_rack_line_subscribers_to_sf(
                                     ),
                                     &update,
                                 )
-                                .await?
+                                .await;
+
+                            log::info!("Received lead upsert response {:?}", response);
+
+                            let lead = response?
                                 .body
                                 .ok_or_else(|| anyhow!("API failed to return created record"))?;
 
