@@ -66,7 +66,7 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
     let repo = GitHubRFDRepo::new(&context.company).await?;
     let updates = repo.get_rfd_sync_updates().await?;
 
-    let batches = chunk(updates, 3);
+    let batches = chunk(updates, 10);
 
     // TODO: Turn this into proper batch jobs instead of small parallelism
     for batch in batches.into_iter() {
