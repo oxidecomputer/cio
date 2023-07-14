@@ -16,6 +16,9 @@ pub async fn refresh_sf_leads(db: &Database, company: &Company) -> Result<()> {
     // Skip any subscribers that are explicitly marked as exclusions
     let not_excluded = rack_line_subscribers::dsl::sf_lead_exclude.eq(false);
 
+    // Skip any subscribers without a company field
+    let has_company = rack_line_subscribers::dsl::company.ne("".to_string());
+
     // Only consider subscribers that signed up over 5 minutes ago. While SalesForce should prevent
     // the submission of duplicate records with the same external AirTable record id, we do not
     // need to do work for subscribers that may already be being processed by a hook handler
@@ -25,7 +28,12 @@ pub async fn refresh_sf_leads(db: &Database, company: &Company) -> Result<()> {
     let outside_webhook_time_window = rack_line_subscribers::dsl::date_added.le(five_min_ago);
 
     let mut subscribers_to_process = rack_line_subscribers::dsl::rack_line_subscribers
-        .filter(not_yet_processed.and(not_excluded).and(outside_webhook_time_window))
+        .filter(
+            not_yet_processed
+                .and(not_excluded)
+                .and(outside_webhook_time_window)
+                .and(has_company),
+        )
         .limit(10)
         .load_async::<RackLineSubscriber>(db.pool())
         .await?;
