@@ -121,33 +121,40 @@ pub async fn push_new_rack_line_subscribers_to_sf(
 
                             log::info!("Received lead upsert response {:?}", response);
 
-                            let lead = response?
-                                .body
-                                .ok_or_else(|| anyhow!("API failed to return created record"))?;
+                            match response {
+                                Ok(response) => {
+                                    let lead = response
+                                        .body
+                                        .ok_or_else(|| anyhow!("API failed to return created record"))?;
 
-                            if lead.success {
-                                let lead_id = lead
-                                    .id
-                                    .expect("SalesForce reported a successful create but failed to return a record id");
+                                    if lead.success {
+                                        let lead_id = lead.id.expect(
+                                            "SalesForce reported a successful create but failed to return a record id",
+                                        );
 
-                                log::info!("Created CRM lead {} => {}", subscriber.id, lead_id);
+                                        log::info!("Created CRM lead {} => {}", subscriber.id, lead_id);
 
-                                subscriber.sf_lead_id = lead_id;
+                                        subscriber.sf_lead_id = lead_id;
 
-                                if let Err(err) = subscriber.update(db).await {
-                                    log::error!(
-                                        "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} lead_id: {} err: {:?}",
-                                        subscriber.id,
-                                        subscriber.airtable_record_id,
-                                        subscriber.sf_lead_id,
-                                        err
-                                    );
+                                        if let Err(err) = subscriber.update(db).await {
+                                            log::error!(
+                                                "Failed to write RackLineSubscriber back to database. id: {} airtable_record_id: {} lead_id: {} err: {:?}",
+                                                subscriber.id,
+                                                subscriber.airtable_record_id,
+                                                subscriber.sf_lead_id,
+                                                err
+                                            );
+                                        }
+                                    } else {
+                                        log::error!(
+                                            "SalesForce reported errors when attempting to upsert object: {:?}",
+                                            lead.errors
+                                        );
+                                    }
                                 }
-                            } else {
-                                log::error!(
-                                    "SalesForce reported errors when attempting to upsert object: {:?}",
-                                    lead.errors
-                                );
+                                Err(err) => {
+                                    log::error!("SalesForce reported an API error during upsert {:?}", err);
+                                }
                             }
                         } else {
                             log::info!(
