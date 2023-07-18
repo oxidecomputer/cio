@@ -34,7 +34,7 @@ pub async fn refresh_sf_leads(db: &Database, company: &Company) -> Result<()> {
                 .and(outside_webhook_time_window)
                 .and(has_company),
         )
-        .limit(10)
+        .limit(100)
         .load_async::<RackLineSubscriber>(db.pool())
         .await?;
 

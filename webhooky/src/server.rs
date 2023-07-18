@@ -280,7 +280,7 @@ pub async fn server(
             .every(14.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-rfds")});
         scheduler
-            .every(1.hours())
+            .every(30.minutes())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-salesforce")});
         scheduler
             .every(2.hours())
