@@ -934,10 +934,10 @@ async fn listen_application_files_upload_requests_cors(
     let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk("".to_string()));
     let headers = resp.headers_mut();
 
-    // let allowed_origins =
-    //     crate::cors::get_cors_origin_header(&rqctx, &["https://apply.oxide.computer", "https://oxide.computer"])
-    //         .await?;
-    headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
+    let allowed_origins =
+        crate::cors::get_cors_origin_header(&rqctx, &["https://apply.oxide.computer", "https://oxide.computer"])
+            .await?;
+    headers.insert("Access-Control-Allow-Origin", allowed_origins);
     headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
     headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
 
@@ -984,11 +984,11 @@ async fn listen_application_files_upload_requests(
         match token_result {
             Ok(_) => {
                 // Check the origin header. In the future this may be upgraded to a hard failure
-                // let origin_access = crate::cors::get_cors_origin_header(
-                //     &rqctx,
-                //     &["https://apply.oxide.computer", "https://oxide.computer"],
-                // )
-                // .await;
+                let origin_access = crate::cors::get_cors_origin_header(
+                    &rqctx,
+                    &["https://apply.oxide.computer", "https://oxide.computer"],
+                )
+                .await;
 
                 let upload_result = crate::handlers::handle_application_files_upload(&rqctx, body).await;
 
@@ -996,18 +996,18 @@ async fn listen_application_files_upload_requests(
                     Ok(r) => {
                         let mut resp = HttpResponseHeaders::new_unnamed(HttpResponseOk(r));
 
-                        // match origin_access {
-                        //     Ok(origin) => {
-                        let headers = resp.headers_mut();
-                        headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
-                        //     }
-                        //     Err(err) => {
-                        //         warn!(
-                        //             "Submission to /application/files/upload failed CORS check. Err {:?}",
-                        //             err
-                        //         );
-                        //     }
-                        // }
+                        match origin_access {
+                            Ok(origin) => {
+                                let headers = resp.headers_mut();
+                                headers.insert("Access-Control-Allow-Origin", origin);
+                            }
+                            Err(err) => {
+                                warn!(
+                                    "Submission to /application/files/upload failed CORS check. Err {:?}",
+                                    err
+                                );
+                            }
+                        }
 
                         Ok(resp)
                     }
