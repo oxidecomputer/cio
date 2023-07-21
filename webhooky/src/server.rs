@@ -937,7 +937,7 @@ async fn listen_application_files_upload_requests_cors(
     let allowed_origins =
         crate::cors::get_cors_origin_header(&rqctx, &["https://apply.oxide.computer", "https://oxide.computer"])
             .await?;
-    headers.insert("Access-Control-Allow-Origin", allowed_origins);
+    headers.insert("Access-Control-Allow-Origin", HeaderValue::from_static("*"));
     headers.insert("Access-Control-Allow-Headers", HeaderValue::from_static("*"));
     headers.insert("Access-Control-Allow-Method", HeaderValue::from_static("*"));
 
