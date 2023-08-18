@@ -1172,9 +1172,9 @@ impl UpdateAirtableRecord<Applicant> for Applicant {
         self.interviews = record.interviews;
         self.geocode_cache = record.geocode_cache;
         self.link_to_reviews = record.link_to_reviews;
-        self.resume_contents = truncate(&self.resume_contents, 100000);
-        self.materials_contents = truncate(&self.materials_contents, 100000);
-        self.question_why_oxide = truncate(&self.question_why_oxide, 100000);
+        self.resume_contents = truncate(&self.resume_contents, 90000);
+        self.materials_contents = truncate(&self.materials_contents, 90000);
+        self.question_why_oxide = truncate(&self.question_why_oxide, 90000);
 
         Ok(())
     }
