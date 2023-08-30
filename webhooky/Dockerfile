@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 	asciidoctor \
 	ca-certificates \
 	libpq5 \
-	libssl1.1 \
+	libssl3 \
 	libusb-1.0-0-dev \
 	lmodern \
   p7zip \
