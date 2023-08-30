@@ -56,7 +56,7 @@ USER webhooky
 # Cargo Nightly Stage
 # ------------------------------------------------------------------------------
 
-FROM rust:latest AS cargo-nightly
+FROM rust:bullseye AS cargo-nightly
 
 ENV DEBIAN_FRONTEND=noninteractive
 
