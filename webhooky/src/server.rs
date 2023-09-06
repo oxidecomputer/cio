@@ -231,27 +231,27 @@ pub async fn server(
         /*
          * Setup our cron jobs, with our timezone.
          */
-        scheduler
-            .every(1.day())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-analytics")});
+        // scheduler
+        //     .every(1.day())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-analytics")});
         scheduler
             .every(23.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-api-tokens")});
         scheduler
             .every(7.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-applications")});
-        scheduler
-            .every(2.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-asset-inventory")});
+        // scheduler
+        //     .every(2.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-asset-inventory")});
         scheduler
             .every(12.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-companies")});
         scheduler
             .every(1.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-configs")});
-        scheduler
-            .every(6.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-finance")});
+        // scheduler
+        //     .every(6.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-finance")});
         // scheduler
         //     .every(12.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-functions")});
@@ -261,9 +261,9 @@ pub async fn server(
         scheduler
             .every(4.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-interviews")});
-        scheduler
-            .every(12.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-journal-clubs")});
+        // scheduler
+        //     .every(12.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-journal-clubs")});
         scheduler
             .every(9.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-mailing-lists")});
@@ -288,12 +288,12 @@ pub async fn server(
         scheduler
             .every(3.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shorturls")});
-        scheduler
-            .every(9.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-swag-inventory")});
-        scheduler
-            .every(5.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-travel")});
+        // scheduler
+        //     .every(9.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-swag-inventory")});
+        // scheduler
+        //     .every(5.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-travel")});
         scheduler
             .every(1.minutes())
             .run(|| async { crate::health::scheduler_health_check() });
