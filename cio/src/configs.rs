@@ -2752,12 +2752,12 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company, c
     sync_users(db, &github, configs.users, company, config).await?;
 
     // Sync links.
-    let (links, certs, ghout, ann) = tokio::join!(
+    let (links, certs, ann) = tokio::join!(
         sync_links(db, configs.links, configs.huddles, company),
         // Sync certificates.
         sync_certificates(db, &github, configs.certificates, company),
         // Sync github outside collaborators.
-        sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company),
+        // sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company),
         refresh_anniversary_events(db, company),
     );
 
@@ -2767,9 +2767,9 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company, c
     if let Err(e) = certs {
         warn!("error syncing certificates: {}", e);
     }
-    if let Err(e) = ghout {
-        warn!("error syncing github outside collaborators: {}", e);
-    }
+    // if let Err(e) = ghout {
+    //     warn!("error syncing github outside collaborators: {}", e);
+    // }
     if let Err(e) = ann {
         warn!("error refreshing anniversary events: {}", e);
     }
