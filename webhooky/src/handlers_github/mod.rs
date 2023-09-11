@@ -4,7 +4,7 @@ use chrono::offset::Utc;
 use cio_api::{
     companies::Company,
     configs::{
-        get_configs_from_repo, sync_buildings, sync_certificates, sync_github_outside_collaborators, sync_groups,
+        get_configs_from_repo, sync_buildings, sync_certificates, sync_groups,
         sync_links, sync_resources, sync_users,
     },
     core::GitHubCommit,
