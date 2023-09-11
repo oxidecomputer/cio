@@ -501,12 +501,12 @@ pub async fn handle_configs_push(
     }
 
     // Check if the github-outside-collaborators.toml file changed.
-    if commit.file_changed("configs/github-outside-collaborators.toml") {
-        // Sync github outside collaborators.
-        sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, company)
-            .await?;
-        a("[SUCCESS]: GitHub outside collaborators");
-    }
+    // if commit.file_changed("configs/github-outside-collaborators.toml") {
+    //     // Sync github outside collaborators.
+    //     sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, company)
+    //         .await?;
+    //     a("[SUCCESS]: GitHub outside collaborators");
+    // }
 
     // Check if the huddles file changed.
     if commit.file_changed("configs/huddles.toml") {
