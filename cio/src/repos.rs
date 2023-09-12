@@ -374,7 +374,6 @@ impl GithubRepo {
      * - Give the GitHub teams: "eng" and "all", push access to every repository.
      * - Turns off the wiki.
      * - Adds protection to the default branch to disallow force pushes.
-     * - Adds outside collaborators to their specified repositories.
      */
     pub async fn sync_settings(&self, github: &octorust::Client, company: &Company) -> Result<()> {
         // Skip archived repositories.
@@ -598,7 +597,6 @@ pub async fn refresh_db_github_repos(db: &Database, company: &Company) -> Result
  * - Give the GitHub teams: "eng" and "all", push access to every repository.
  * - Turns off the wiki.
  * - Adds protection to the default branch to disallow force pushes.
- * - Adds outside collaborators to their specified repositories.
  */
 pub async fn sync_all_repo_settings(db: &Database, company: &Company, app_config: &AppConfig) -> Result<()> {
     let github = company.authenticate_github()?;
