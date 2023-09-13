@@ -112,7 +112,7 @@ pub async fn push_new_rack_line_subscribers_to_zoho(
         let updates: Vec<&mut RackLineSubscriber> = subscribers
             .into_iter()
             .zip(results.data.into_iter())
-            .filter_map(|(mut subscriber, lead_result)|  {
+            .filter_map(|(subscriber, lead_result)|  {
                 match lead_result {
                     ModuleUpdateResponseEntry::Success(success) => {
                         subscriber.zoho_lead_id = success.details.id;

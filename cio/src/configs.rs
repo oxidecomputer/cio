@@ -67,9 +67,6 @@ pub struct Config {
     #[serde(default)]
     pub links: BTreeMap<String, LinkConfig>,
 
-    #[serde(default, alias = "github-outside-collaborators")]
-    pub github_outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
-
     #[serde(default)]
     pub huddles: BTreeMap<String, HuddleConfig>,
 
@@ -1697,15 +1694,6 @@ impl UpdateAirtableRecord<Link> for Link {
     }
 }
 
-/// The data type for GitHub outside collaborators to repositories.
-#[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
-pub struct GitHubOutsideCollaboratorsConfig {
-    pub description: String,
-    pub users: Vec<String>,
-    pub repos: Vec<String>,
-    pub perm: String,
-}
-
 /// The data type for a huddle meeting that syncs with Airtable and notes in GitHub.
 #[derive(Debug, Default, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
 pub struct HuddleConfig {
@@ -1772,143 +1760,6 @@ pub async fn get_configs_from_repo(github: &octorust::Client, company: &Company)
 
     Ok(config)
 }
-
-/// Sync GitHub outside collaborators with our configs.
-// pub async fn sync_github_outside_collaborators(
-//     db: &Database,
-//     github: &octorust::Client,
-//     outside_collaborators: BTreeMap<String, GitHubOutsideCollaboratorsConfig>,
-//     company: &Company,
-// ) -> Result<()> {
-//     // We create a map of the collaborators per repo.
-//     // This way we can delete any collaborators that should no longer have access.
-//     let mut collaborators_map: BTreeMap<String, Vec<String>> = BTreeMap::new();
-
-//     // Add the outside contributors to the specified repos.
-//     for (name, outside_collaborators_config) in outside_collaborators {
-//         info!("running configuration for outside collaborators: {}", name);
-//         for repo in &outside_collaborators_config.repos {
-//             // Push the collaborators to our map, so we can use it later.
-//             match collaborators_map.get(repo) {
-//                 Some(val) => {
-//                     let mut users = val.clone();
-//                     // Update the users to include this user.
-//                     let mut collaborators = outside_collaborators_config.users.clone();
-//                     users.append(&mut collaborators);
-//                     collaborators_map.insert(repo.to_string(), users.to_vec());
-//                 }
-//                 None => {
-//                     collaborators_map.insert(repo.to_string(), outside_collaborators_config.users.clone());
-//                 }
-//             }
-
-//             let mut perm = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Pull;
-//             if outside_collaborators_config.perm == "push" {
-//                 perm = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
-//             }
-
-//             // Iterate over the users.
-//             for user in &outside_collaborators_config.users {
-//                 if github
-//                     .repos()
-//                     .check_collaborator(&company.github_org, repo, user)
-//                     .await
-//                     .is_err()
-//                 {
-//                     // The user is not already a collaborator
-//                     // Add the collaborator.
-//                     match github
-//                         .repos()
-//                         .add_collaborator(
-//                             &company.github_org,
-//                             repo,
-//                             user,
-//                             &octorust::types::ReposAddCollaboratorRequest {
-//                                 permission: Some(perm.clone()),
-//                                 permissions: Default::default(),
-//                             },
-//                         )
-//                         .await
-//                     {
-//                         Ok(_) => {
-//                             info!(
-//                                 "[{}] added user {} as a collaborator ({}) on repo {}",
-//                                 name, user, perm, repo
-//                             );
-//                         }
-//                         Err(e) => info!(
-//                             "[{}] adding user {} as a collaborator ({}) on repo {} FAILED: {}",
-//                             name, user, perm, repo, e
-//                         ),
-//                     }
-//                 } else {
-//                     info!(
-//                         "[{}] user {} is already a collaborator ({}) on repo {}",
-//                         name, user, perm, repo
-//                     );
-//                 }
-//             }
-//         }
-
-//         info!("successfully ran configuration for outside collaborators: {}", name);
-//     }
-
-//     // Get all the internal to the company collaborators.
-//     let mut internal_github_users: Vec<String> = Vec::new();
-//     let internal_users = Users::get_from_db(db, company.id).await?;
-//     for i in internal_users {
-//         if !i.github.is_empty() {
-//             internal_github_users.push(i.github.to_string());
-//         }
-//     }
-
-//     for (repo, mut collaborators) in collaborators_map {
-//         // Remove any duplicates.
-//         collaborators.sort_unstable();
-//         collaborators.dedup();
-
-//         // Get the collaborators on the repo.
-//         let github_collaborators = github
-//             .repos()
-//             .list_all_collaborators(&company.github_org, &repo, octorust::types::Affiliation::All)
-//             .await?
-//             .body;
-
-//         // Iterate over the users added to the repo, and make sure they exist in our
-//         // vector.
-//         for existing_collaborator in github_collaborators {
-//             // Check if they are an internal user.
-//             if internal_github_users
-//                 .iter()
-//                 .any(|internal| internal.to_lowercase() == existing_collaborator.login.to_lowercase())
-//             {
-//                 // They are an internal user so continue;
-//                 continue;
-//             }
-
-//             // Check if they should have access.
-//             if collaborators
-//                 .iter()
-//                 .any(|external| external.to_lowercase() == existing_collaborator.login.to_lowercase())
-//             {
-//                 // They are supposed to be an external collaborator so continue;
-//                 continue;
-//             }
-
-//             // Remove the user.
-//             info!(
-//                 "REPO: {} USER: {} should not have access! Removing!",
-//                 repo, existing_collaborator.login
-//             );
-//             github
-//                 .repos()
-//                 .remove_collaborator(&company.github_org, &repo, &existing_collaborator.login)
-//                 .await?;
-//         }
-//     }
-
-//     Ok(())
-// }
 
 /// Sync our users with our database and then update Airtable from the database.
 pub async fn sync_users(
@@ -2756,8 +2607,6 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company, c
         sync_links(db, configs.links, configs.huddles, company),
         // Sync certificates.
         sync_certificates(db, &github, configs.certificates, company),
-        // Sync github outside collaborators.
-        // sync_github_outside_collaborators(db, &github, configs.github_outside_collaborators, company),
         refresh_anniversary_events(db, company),
     );
 
@@ -2767,9 +2616,6 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company, c
     if let Err(e) = certs {
         warn!("error syncing certificates: {}", e);
     }
-    // if let Err(e) = ghout {
-    //     warn!("error syncing github outside collaborators: {}", e);
-    // }
     if let Err(e) = ann {
         warn!("error refreshing anniversary events: {}", e);
     }
