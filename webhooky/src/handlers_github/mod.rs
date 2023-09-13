@@ -4,8 +4,7 @@ use chrono::offset::Utc;
 use cio_api::{
     companies::Company,
     configs::{
-        get_configs_from_repo, sync_buildings, sync_certificates, sync_groups,
-        sync_links, sync_resources, sync_users,
+        get_configs_from_repo, sync_buildings, sync_certificates, sync_groups, sync_links, sync_resources, sync_users,
     },
     core::GitHubCommit,
     repos::NewRepo,
@@ -499,14 +498,6 @@ pub async fn handle_configs_push(
         sync_certificates(&api_context.db, github, configs.certificates, company).await?;
         a("[SUCCESS]: certificates");
     }
-
-    // Check if the github-outside-collaborators.toml file changed.
-    // if commit.file_changed("configs/github-outside-collaborators.toml") {
-    //     // Sync github outside collaborators.
-    //     sync_github_outside_collaborators(&api_context.db, github, configs.github_outside_collaborators, company)
-    //         .await?;
-    //     a("[SUCCESS]: GitHub outside collaborators");
-    // }
 
     // Check if the huddles file changed.
     if commit.file_changed("configs/huddles.toml") {
