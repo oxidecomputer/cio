@@ -246,9 +246,9 @@ pub async fn server(
         scheduler
             .every(12.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-companies")});
-        // scheduler
-        //     .every(1.hours())
-        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-configs")});
+        scheduler
+            .every(1.hours())
+            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-configs")});
         // scheduler
         //     .every(6.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-finance")});
