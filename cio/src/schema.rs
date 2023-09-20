@@ -814,6 +814,7 @@ table! {
         relevant_components -> Array<Text>,
         pdf_link_github -> Varchar,
         pdf_link_google_drive -> Varchar,
+        labels -> Array<Text>,
         cio_company_id -> Int4,
         airtable_record_id -> Varchar,
     }

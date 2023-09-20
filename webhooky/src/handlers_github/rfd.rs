@@ -828,10 +828,10 @@ pub struct ParseRFDLabels;
 impl RFDUpdateAction for ParseRFDLabels {
     async fn run(
         &self,
-        ctx: &mut RFDUpdateActionContext,
+        _ctx: &mut RFDUpdateActionContext,
         rfd: &mut RFD,
     ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
-        rfd.labels = rfd.content()?.get_labels();
+        rfd.labels = rfd.content().map_err(into_continue)?.get_labels();
         Ok(RFDUpdateActionResponse::default())
     }
 }
