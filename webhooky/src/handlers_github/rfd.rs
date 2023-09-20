@@ -821,3 +821,17 @@ impl RFDUpdateAction for EnsureRFDOnDefaultIsInValidState {
 fn into_continue(err: impl Into<anyhow::Error>) -> RFDUpdateActionErr {
     RFDUpdateActionErr::Continue(err.into())
 }
+
+pub struct ParseRFDLabels;
+
+#[async_trait]
+impl RFDUpdateAction for ParseRFDLabels {
+    async fn run(
+        &self,
+        ctx: &mut RFDUpdateActionContext,
+        rfd: &mut RFD,
+    ) -> Result<RFDUpdateActionResponse, RFDUpdateActionErr> {
+        rfd.labels = rfd.content()?.get_labels();
+        Ok(RFDUpdateActionResponse::default())
+    }
+}
