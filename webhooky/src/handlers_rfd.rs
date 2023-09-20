@@ -12,7 +12,7 @@ use crate::{
     handlers_github::{
         rfd::{
             CopyImagesToGCP, CreatePullRequest, EnsureRFDOnDefaultIsInValidState,
-            EnsureRFDWithPullRequestIsInValidState, GenerateShortUrls, UpdateDiscussionUrl, UpdatePDFs,
+            EnsureRFDWithPullRequestIsInValidState, GenerateShortUrls, ParseRFDLabels, UpdateDiscussionUrl, UpdatePDFs,
             UpdatePullRequest, UpdateSearch,
         },
         RFDUpdater,
@@ -82,8 +82,8 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
                     Box::new(UpdatePDFs),
                     Box::new(CreatePullRequest),
                     Box::new(UpdatePullRequest),
+                    Box::new(ParseRFDLabels),
                     Box::new(UpdateDiscussionUrl),
-                    Box::new(RFDUpdater),
                     Box::new(EnsureRFDWithPullRequestIsInValidState),
                     Box::new(EnsureRFDOnDefaultIsInValidState),
                 ]);
