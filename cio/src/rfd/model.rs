@@ -84,6 +84,8 @@ pub struct NewRFD {
     pub pdf_link_github: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub pdf_link_google_drive: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub labels: Vec<String>,
     /// The CIO company ID.
     #[serde(default)]
     #[partial(RFDIndexEntry(skip))]
@@ -197,6 +199,7 @@ impl NewRFD {
                 // while new PDFs are generated
                 pdf_link_github: Default::default(),
                 pdf_link_google_drive: Default::default(),
+                labels: Default::default(),
                 cio_company_id: company.id,
             },
             location: readme.location,
