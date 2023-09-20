@@ -40,6 +40,7 @@ pub async fn handle_rfd_index(ctx: &Context, offset: i32, limit: u32) -> Result<
             rfds::dsl::milestones,
             rfds::dsl::relevant_components,
             rfds::dsl::pdf_link_google_drive,
+            rfds::dsl::labels,
         ))
         .load_async::<RFDIndexEntry>(ctx.db.pool())
         .await?;

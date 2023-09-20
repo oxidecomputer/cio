@@ -205,6 +205,22 @@ impl<'a> RFDContent<'a> {
         }
     }
 
+    pub fn get_labels(&self) -> Vec<String> {
+        let re = Regex::new(r"(?m)(labels:.*$)").unwrap();
+
+        match re.find(self.raw()) {
+            Some(v) => v
+                .as_str()
+                .replace("labels:", "")
+                .trim()
+                .to_string()
+                .split(";")
+                .map(|label| label.to_string())
+                .collect::<Vec<_>>(),
+            None => Default::default(),
+        }
+    }
+
     /// Get the state value stored within the document. If one can not be found, then an empty
     /// string is returned
     pub fn get_state(&self) -> String {
