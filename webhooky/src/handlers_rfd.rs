@@ -83,6 +83,7 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
                     Box::new(CreatePullRequest),
                     Box::new(UpdatePullRequest),
                     Box::new(UpdateDiscussionUrl),
+                    Box::new(RFDUpdater),
                     Box::new(EnsureRFDWithPullRequestIsInValidState),
                     Box::new(EnsureRFDOnDefaultIsInValidState),
                 ]);

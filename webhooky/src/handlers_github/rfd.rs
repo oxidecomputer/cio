@@ -46,6 +46,7 @@ impl Default for RFDUpdater {
             Box::new(GenerateShortUrls),
             Box::new(CreatePullRequest),
             Box::new(UpdatePullRequest),
+            Box::new(ParseRFDLabels),
             Box::new(UpdateDiscussionUrl),                    // Stops on error
             Box::new(EnsureRFDWithPullRequestIsInValidState), // Stops on error
             Box::new(EnsureRFDOnDefaultIsInValidState),       // Stops on error
