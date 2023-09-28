@@ -2535,9 +2535,9 @@ pub async fn sync_certificates(
 
         certificate.load_from_reader(&cert_reader).await?;
 
-        // If the cert is going to expire in less than 12 days, renew it.
+        // If the cert is going to expire in less than 20 days, renew it.
         // Otherwise, return early.
-        if certificate.valid_days_left > 12 {
+        if certificate.valid_days_left > 20 {
             info!(
                 "cert {} is valid for {} more days, skipping",
                 certificate.domain, certificate.valid_days_left
