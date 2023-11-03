@@ -579,24 +579,24 @@ impl ProviderWriteOps for gsuite_api::Client {
         {
             Ok(u) => {
                 // Update the user with the settings from the config for the user.
-                let gsuite_user = crate::gsuite::update_gsuite_user(&u, user, false, company).await;
+                // let gsuite_user = crate::gsuite::update_gsuite_user(&u, user, false, company).await;
 
-                match self.users().update(&gsuite_user.id, &gsuite_user).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        bail!("failed to update user `{}` in gsuite: {:?}\n", user.id, e);
-                    }
-                };
+                // match self.users().update(&gsuite_user.id, &gsuite_user).await {
+                //     Ok(_) => {}
+                //     Err(e) => {
+                //         bail!("failed to update user `{}` in gsuite: {:?}\n", user.id, e);
+                //     }
+                // };
 
-                crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
+                // crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
 
                 // Add the user to their teams and groups.
                 crate::gsuite::update_user_google_groups(self, user, company).await?;
 
-                info!("updated user `{}` in GSuite", user.id);
+                // info!("updated user `{}` in GSuite", user.id);
 
                 // Return the ID.
-                return Ok(gsuite_user.id);
+                return Ok(u.id);
             }
             Err(e) => {
                 // If the error is Not Found we need to add them.
