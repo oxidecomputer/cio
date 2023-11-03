@@ -590,7 +590,7 @@ impl ProviderWriteOps for gsuite_api::Client {
 
                 // crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
 
-                // // Add the user to their teams and groups.
+                // Add the user to their teams and groups.
                 crate::gsuite::update_user_google_groups(self, user, company).await?;
 
                 // info!("updated user `{}` in GSuite", user.id);
