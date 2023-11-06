@@ -952,32 +952,34 @@ pub async fn handle_applicant_review(
         bail!("review is empty");
     }
 
-    // Add them to the database.
-    let mut review = event.upsert(&api_context.app.db).await?;
+    tokio::spawn(async {
+        // Add them to the database.
+        let mut review = event.upsert(&api_context.app.db).await?;
 
-    info!("applicant review created successfully: {:?}", event);
+        info!("applicant review created successfully: {:?}", event);
 
-    // Add the person to the scorers field of the applicant.
-    review.expand(&api_context.app.db).await?;
-    let review = review.update(&api_context.app.db).await?;
+        // Add the person to the scorers field of the applicant.
+        review.expand(&api_context.app.db).await?;
+        let review = review.update(&api_context.app.db).await?;
 
-    // Get the applicant for the review.
-    let mut applicant = Applicant::get_from_airtable(
-        // Get the record id for the applicant.
-        review.applicant.get(0).unwrap(),
-        &api_context.app.db,
-        event.cio_company_id,
-    )
-    .await?;
+        // Get the applicant for the review.
+        let mut applicant = Applicant::get_from_airtable(
+            // Get the record id for the applicant.
+            review.applicant.get(0).unwrap(),
+            &api_context.app.db,
+            event.cio_company_id,
+        )
+        .await?;
 
-    // Update the scorers for the applicant.
-    // This will also update the database after.
-    applicant.update_reviews_scoring(&api_context.app.db).await?;
+        // Update the scorers for the applicant.
+        // This will also update the database after.
+        applicant.update_reviews_scoring(&api_context.app.db).await?;
 
-    println!(
-        "applicant {} with review by {} updated successfully",
-        applicant.email, review.reviewer
-    );
+        println!(
+            "applicant {} with review by {} updated successfully",
+            applicant.email, review.reviewer
+        );
+    });
 
     Ok(())
 }
