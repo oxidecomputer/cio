@@ -119,6 +119,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             pub async fn upsert(&self, db: &crate::db::Database) -> anyhow::Result<#new_struct_name> {
                 let mut record = self.upsert_in_db(db).await?;
 
+                log::info!("Upserted #new_struct_name into database. Upserting to Airtable");
+
                 // Let's also update this record in Airtable.
                 let new_airtable_record = match record.upsert_in_airtable(db).await {
                     Ok(airtable_record) => airtable_record,
@@ -127,6 +129,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                         return Err(err);
                     }
                 };
+
+                log::info!("Upserted #new_struct_name record to Airtable");
 
                 if record.airtable_record_id.is_empty(){
                     // Now we have the id we need to update the database.
@@ -139,10 +143,14 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             /// Create or update the record in the database.
             pub async fn upsert_in_db(&self, db: &crate::db::Database) -> anyhow::Result<#new_struct_name> {
+                log::info!("Upserting #new_struct_name record");
+
                 // See if we already have the record in the database.
                 if let Some(r) = #new_struct_name::get_from_db(db, #function_args).await {
                     // Update the record.
                     // TODO: special error here.
+
+                    log::info!("Found existing #new_struct_name record. Performing update");
                     let record = diesel::update(#db_schema::dsl::#db_schema)
                         .filter(#db_schema::dsl::id.eq(r.id))
                         .set(self.clone())
@@ -150,6 +158,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                     return Ok(record);
                 }
+
+                log::info!("No existing #new_struct_name record. Performing create");
 
                 let r = self.create_in_db(db).await?;
 
@@ -373,6 +383,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 // First check if we have an `airtable_record_id` for this record.
                 // If we do we can move ahead faster.
                 if !self.airtable_record_id.is_empty() {
+                    log::info!("Attempt to perform update of Airtable #new_struct_name record");
                     let mut er: Option<airtable_api::Record<#new_struct_name>> = self.get_existing_airtable_record(db).await;
 
                     if let Some(mut existing_record) = er {
@@ -381,6 +392,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                     }
                     // Otherwise we need to continue through the other loop.
                 }
+
+                log::info!("Falling back to very slow Airtable lookup for #new_struct_name record");
 
                 // Since we don't know the airtable record id, we need to find it by looking
                 // through all the existing records in Airtable and matching on our database id.
@@ -396,6 +409,8 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                         return Err(anyhow::anyhow!("Invalid airtable record returned for record {}", self.id))
                     }
                 }
+
+                log::info!("Record does not exist in Airtable. Creating new #new_struct_name record");
 
                 // We've tried everything to find the record in our existing Airtable but it is not
                 // there. We need to create it.
