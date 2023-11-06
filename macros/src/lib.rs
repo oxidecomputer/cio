@@ -379,7 +379,6 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 None
             }
 
-
             /// Create or update a row in the Airtable base.
             pub async fn upsert_in_airtable(&mut self, db: &crate::db::Database) -> anyhow::Result<airtable_api::Record<#new_struct_name>> {
                 // First check if we have an `airtable_record_id` for this record.
