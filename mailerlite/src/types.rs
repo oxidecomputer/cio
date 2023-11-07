@@ -147,18 +147,18 @@ impl ApiSubscriberGroup {
 }
 
 #[derive(Debug, Clone, Error)]
-pub struct FailedToTranslateDateError;
+pub struct FailedToTranslateDateError(NaiveDateTime);
 
 impl fmt::Display for FailedToTranslateDateError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Failed to translate date",)
+        write!(f, "Failed to translate date: {}", self.0)
     }
 }
 
 fn into_utc(datetime: FormattedDateTime, from_tz: &impl TimeZone) -> Result<DateTime<Utc>, FailedToTranslateDateError> {
     match datetime.0.and_local_timezone(from_tz.to_owned()) {
         LocalResult::Single(dt) => Ok(dt.with_timezone(&Utc)),
-        _ => Err(FailedToTranslateDateError),
+        _ => Err(FailedToTranslateDateError(datetime.0)),
     }
 }
 

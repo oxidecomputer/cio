@@ -32,7 +32,7 @@ pub enum MailerliteError {
         status: Option<StatusCode>,
         error: Arc<ReqwestError>,
     },
-    #[error("Failed to translate from API date representation to UTC")]
+    #[error("Failed to translate from API date representation to UTC: {0}")]
     DateTranslationError(FailedToTranslateDateError),
 }
 
