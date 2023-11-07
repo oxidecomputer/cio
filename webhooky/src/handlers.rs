@@ -946,13 +946,13 @@ pub async fn handle_applicant_review(
     rqctx: &RequestContext<ServerContext>,
     event: cio_api::applicant_reviews::NewApplicantReview,
 ) -> Result<()> {
-    let api_context = rqctx.context();
+    let api_context = rqctx.context().clone();
 
     if event.name.is_empty() || event.applicant.is_empty() || event.reviewer.is_empty() || event.evaluation.is_empty() {
         bail!("review is empty");
     }
 
-    tokio::spawn(async {
+    tokio::spawn(async move {
         // Add them to the database.
         let mut review = event.upsert(&api_context.app.db).await?;
 
@@ -979,6 +979,8 @@ pub async fn handle_applicant_review(
             "applicant {} with review by {} updated successfully",
             applicant.email, review.reviewer
         );
+
+        Ok::<(), anyhow::Error>(())
     });
 
     Ok(())
