@@ -11,6 +11,7 @@ on:
       - '.github/workflows/cloud-run-crons.yml'
       - 'macros/**'
       - 'dropshot-verify-request/**'
+      - 'mailerlite/**'
       - 'meilisearch-minimal-api/**'
       - 'parse-rfd/**'
       - 'ramp-minimal-api/**'
