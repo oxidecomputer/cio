@@ -82,6 +82,7 @@ pub struct ApiSubscriber {
 
 impl ApiSubscriber {
     pub fn into_subscriber(self, tz: &impl TimeZone) -> Result<Subscriber, FailedToTranslateDateError> {
+        log::info!("Convert mailerlite API subscriber to internal record {:?}", self);
         Ok(Subscriber {
             id: self.id,
             email: self.email,
