@@ -183,6 +183,11 @@ impl NewCertificate {
             if let OrderStatus::Ready = state.status {
                 log::info!("Reached final order state: {state:?}");
                 break;
+            } else {
+                log::info!(
+                    "Order for {:?} is not yet in a final state. It is currently in {state:?}",
+                    domains
+                );
             }
 
             delay *= 2;
