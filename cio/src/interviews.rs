@@ -150,6 +150,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                 cio_company_id: company.id,
             };
 
+            info!("Handling calendar event {:?} ({:?})", event.id, event.attendees);
+
             for attendee in event.attendees {
                 // Skip the Interviews calendar.
                 if attendee.email.ends_with("@group.calendar.google.com") {
@@ -183,6 +185,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                         continue;
                     } else {
                         // Just continue, likely the applicant added another email to the event.
+                        info!("Skipping email: {}", attendee.email);
                         continue;
                     }
                 }
@@ -261,6 +264,8 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
                 if !final_email.is_empty() {
                     interview.interviewers.push(final_email.to_string());
                     continue;
+                } else {
+                    info!("Failed to find attendee email in {:?}", attendee);
                 }
             }
 
@@ -285,6 +290,7 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
 
             let name = interview.name.to_string();
             if name.is_empty() {
+                info!("Interview name is empty, skipping record {}", interview.google_event_id);
                 // Continue early.
                 continue;
             }
@@ -303,6 +309,10 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
             if interview.interviewers.is_empty() {
                 // Continue early.
                 // We only care about interviews where the candidate has interviewers.
+                info!(
+                    "Interviewers list is empty, skipping record {}",
+                    interview.google_event_id
+                );
                 continue;
             }
             interview.upsert(db).await?;
