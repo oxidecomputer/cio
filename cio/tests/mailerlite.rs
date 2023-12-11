@@ -15,7 +15,7 @@ async fn test_mark_subscriber() {
     setup();
 
     let client = cio_api::mailerlite::Mailerlite::new().unwrap();
-    let res = client.mark_mailing_list_subscriber("").await.unwrap();
+    let _res = client.mark_mailing_list_subscriber("").await.unwrap();
 }
 
 #[ignore]
@@ -27,10 +27,10 @@ async fn test_mark_batch() {
     let list = client.pending_mailing_list_subscribers().await.unwrap();
 
     let batch = list.chunks(10).next().unwrap();
-    let res = client.mark_mailing_list_subscribers(batch.to_vec()).await.unwrap();
+    let _res = client.mark_mailing_list_subscribers(batch.to_vec()).await.unwrap();
 
     let batch = list.chunks(10).next().unwrap();
-    let res = client.mark_mailing_list_subscribers(batch.to_vec()).await.unwrap();
+    let _res = client.mark_mailing_list_subscribers(batch.to_vec()).await.unwrap();
 
-    let list = client.pending_mailing_list_subscribers().await.unwrap();
+    let _list = client.pending_mailing_list_subscribers().await.unwrap();
 }

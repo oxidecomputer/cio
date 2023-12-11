@@ -245,8 +245,7 @@ mod tests {
 
         let lines = records
             .split('\n')
-            .into_iter()
-            .filter(|s| s.len() != 0)
+            .filter(|s| !s.is_empty())
             .map(|s| serde_json::from_str::<Line>(s).unwrap())
             .collect::<Vec<_>>();
 

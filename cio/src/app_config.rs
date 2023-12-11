@@ -265,7 +265,7 @@ from = 'test@testemaildomain.com'
 
     #[test]
     fn test_received_letter() {
-        let config: ApplyConfig = toml::from_str(&mock_apply_toml()).unwrap();
+        let config: ApplyConfig = toml::from_str(mock_apply_toml()).unwrap();
         let applicant = mock_applicant();
 
         let letter = config.create_received_letter(&applicant);
@@ -279,7 +279,7 @@ from = 'test@testemaildomain.com'
 
     #[test]
     fn test_rejection_letter() {
-        let config: ApplyConfig = toml::from_str(&mock_apply_toml()).unwrap();
+        let config: ApplyConfig = toml::from_str(mock_apply_toml()).unwrap();
         let applicant = mock_applicant();
 
         let letter = config.create_rejection_letter("test-rejection", &applicant).unwrap();
@@ -293,7 +293,7 @@ from = 'test@testemaildomain.com'
 
     #[test]
     fn test_missing_rejection_letter() {
-        let config: ApplyConfig = toml::from_str(&mock_apply_toml()).unwrap();
+        let config: ApplyConfig = toml::from_str(mock_apply_toml()).unwrap();
         let applicant = mock_applicant();
         let letter = config.create_rejection_letter("test-missing", &applicant);
 

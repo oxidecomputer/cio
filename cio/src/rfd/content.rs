@@ -214,7 +214,7 @@ impl<'a> RFDContent<'a> {
                 .replace("labels:", "")
                 .trim()
                 .to_string()
-                .split(";")
+                .split(';')
                 .map(|label| label.to_string())
                 .collect::<Vec<_>>(),
             None => Default::default(),
@@ -1067,7 +1067,7 @@ in velit.
             "{}/tests/ref/asciidoc_to_pdf.pdf",
             std::env::var("CARGO_MANIFEST_DIR").unwrap()
         );
-        let expected = std::fs::read(&ref_path).unwrap();
+        let expected = std::fs::read(ref_path).unwrap();
 
         assert_eq!(expected, pdf);
     }

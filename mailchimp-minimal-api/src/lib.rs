@@ -195,11 +195,11 @@ impl error::Error for MailChimpError {
 #[cfg(test)]
 mod tests {
     use super::{AuthMode, MailChimpError};
-    use base64;
+    
     use std::str::from_utf8;
 
-    static VALID_FORMAT: &'static str = "5555555555555555-us6";
-    static INVALID_FORMAT: &'static str = "5555555555555555us6";
+    static VALID_FORMAT: &str = "5555555555555555-us6";
+    static INVALID_FORMAT: &str = "5555555555555555us6";
 
     #[test]
     fn test_computes_datacenter() {
