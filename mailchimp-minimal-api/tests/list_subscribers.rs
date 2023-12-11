@@ -11,5 +11,5 @@ async fn test_get_subscriber_list() {
         .await
         .unwrap();
 
-    assert!(0 < list.len());
+    assert!(!list.is_empty());
 }

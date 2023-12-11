@@ -1238,7 +1238,7 @@ pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<
     };
 
     // Delete the temporary file, if it exists.
-    for p in vec![path, output] {
+    for p in [path, output] {
         if p.exists() && !p.is_dir() {
             fs::remove_file(p).await?;
         }
@@ -1274,7 +1274,7 @@ async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
     };
 
     // Delete the temporary file, if it exists.
-    for p in vec![path, output] {
+    for p in [path, output] {
         if p.exists() && !p.is_dir() {
             fs::remove_file(p).await?;
         }

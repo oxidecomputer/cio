@@ -3002,6 +3002,6 @@ manager = 'orb'
         assert_eq!(user.first_name, "Test");
         assert_eq!(user.last_name, "User");
         assert_eq!(user.denied_services, vec![]);
-        assert_eq!(user.gusto_pull_permission, false);
+        assert!(!user.gusto_pull_permission);
     }
 }
