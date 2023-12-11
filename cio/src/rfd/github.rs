@@ -11,7 +11,7 @@ use crate::{
     companies::Company,
     core::GitHubPullRequest,
     utils::is_image,
-    utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo},
+    utils::{create_or_update_file_in_github_repo, decode_base64_to_string, get_file_content_from_repo, SliceExt},
 };
 
 use super::{PDFStorage, RFDContent, RFDNumber, RFDPdf};
@@ -346,7 +346,7 @@ impl PDFStorage for GitHubRFDBranch {
             &self.repo,
             &self.branch,
             &rfd_path,
-            pdf.contents.to_vec(),
+            pdf.contents.to_vec().trim(),
         )
         .await
         .map(|_| "".to_string())

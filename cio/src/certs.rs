@@ -34,7 +34,7 @@ use crate::{
     db::Database,
     dns_providers::{DNSProviderOps, DnsRecord, DnsRecordType, DnsUpdateMode},
     schema::certificates,
-    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo},
+    utils::{create_or_update_file_in_github_repo, get_file_content_from_repo, SliceExt},
 };
 
 /// A data type to hold the values of a let's encrypt certificate for a domain.
@@ -391,7 +391,7 @@ impl CertificateStorage for GitHubBackend {
             &self.repo,
             &repo.default_branch,
             &self.path(domain, "fullchain.pem"),
-            data.to_vec(),
+            data.to_vec().trim(),
         )
         .await?;
 
@@ -410,7 +410,7 @@ impl KeyStorage for GitHubBackend {
             &self.repo,
             &repo.default_branch,
             &self.path(domain, "privkey.pem"),
-            data.to_vec(),
+            data.to_vec().trim(),
         )
         .await?;
 
