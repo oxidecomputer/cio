@@ -14,7 +14,7 @@ use crate::{
     configs::{get_configs_from_repo, User},
     core::{DiscussionTopic, Meeting, MeetingReminderEmailData},
     db::Database,
-    utils::create_or_update_file_in_github_repo,
+    utils::{create_or_update_file_in_github_repo, SliceExt},
 };
 
 /// Make sure if an event is moved in Google Calendar that Airtable is updated.
@@ -476,7 +476,7 @@ pub async fn sync_huddle_meeting_notes(company: &Company) -> Result<()> {
                 "reports",
                 "",
                 &notes_path,
-                notes.as_bytes().to_vec(),
+                notes.as_bytes().to_vec().trim(),
             )
             .await?;
         }

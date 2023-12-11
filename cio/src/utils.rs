@@ -140,7 +140,6 @@ pub async fn create_or_update_file_in_github_repo(
     path: &str,
     new_content: Vec<u8>,
 ) -> Result<()> {
-    let content = new_content.trim();
     // Add the starting "/" so this works.
     // TODO: figure out why it doesn't work without it.
     let mut file_path = path.to_string();
@@ -157,7 +156,7 @@ pub async fn create_or_update_file_in_github_repo(
         };
 
     if !existing_content.is_empty() || !sha.is_empty() {
-        if content == existing_content {
+        if new_content == existing_content {
             // They are the same so we can return early, we do not need to update the
             // file.
             info!("github file contents at {} are the same, no update needed", file_path);
@@ -167,7 +166,7 @@ pub async fn create_or_update_file_in_github_repo(
         // When the pdfs are generated they change the modified time that is
         // encoded in the file. We want to get that diff and see if it is
         // the only change so that we are not always updating those files.
-        let diff = diffy::create_patch_bytes(&existing_content, &content);
+        let diff = diffy::create_patch_bytes(&existing_content, &new_content);
         let bdiff = diff.to_bytes();
         let str_diff = from_utf8(&bdiff).unwrap_or("");
         if str_diff.contains("-/ModDate")
@@ -187,7 +186,7 @@ pub async fn create_or_update_file_in_github_repo(
         "[github content] Writing file to GitHub repo: {} / path: {} / content_length: {} / existing_content_length: {}",
         repo,
         file_path,
-        content.len(),
+        new_content.len(),
         existing_content.len()
     );
 
@@ -206,7 +205,7 @@ pub async fn create_or_update_file_in_github_repo(
                 ),
                 sha,
                 branch: branch.to_string(),
-                content: base64::encode(content),
+                content: base64::encode(new_content),
                 committer: Default::default(),
                 author: Default::default(),
             },
@@ -225,7 +224,7 @@ pub async fn create_or_update_file_in_github_repo(
     }
 }
 
-trait SliceExt {
+pub trait SliceExt {
     fn trim(&self) -> Self;
 }
 

@@ -2,7 +2,7 @@ use anyhow::Result;
 use handlebars::{Context, Handlebars, Helper, HelperResult, Output, RenderContext};
 use serde::{Deserialize, Serialize};
 
-use crate::{configs::User, shorturls::ShortUrl, utils::create_or_update_file_in_github_repo};
+use crate::{configs::User, shorturls::ShortUrl, utils::{create_or_update_file_in_github_repo, SliceExt}};
 
 /// Helper function so the terraform names do not start with a number.
 /// Otherwise terraform will fail.
@@ -72,7 +72,7 @@ pub async fn generate_nginx_files_for_shorturls(
             repo,
             "", // leaving the branch blank gives us the default branch
             &nginx_file,
-            nginx_rendered.as_bytes().to_vec(),
+            nginx_rendered.as_bytes().to_vec().trim(),
         )
         .await?;
     }
@@ -93,7 +93,7 @@ pub async fn generate_nginx_files_for_shorturls(
             repo,
             "", // leaving the branch blank gives us the default branch
             &nginx_paths_file,
-            nginx_paths_rendered.as_bytes().to_vec(),
+            nginx_paths_rendered.as_bytes().to_vec().trim(),
         )
         .await?;
     }
