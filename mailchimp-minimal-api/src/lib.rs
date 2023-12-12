@@ -195,7 +195,7 @@ impl error::Error for MailChimpError {
 #[cfg(test)]
 mod tests {
     use super::{AuthMode, MailChimpError};
-    
+
     use std::str::from_utf8;
 
     static VALID_FORMAT: &str = "5555555555555555-us6";
