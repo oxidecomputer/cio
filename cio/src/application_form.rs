@@ -105,11 +105,18 @@ impl ApplicationForm {
         // Initialize the GSuite sheets client.
         let drive_client = company.authenticate_google_drive(db).await?;
 
-        // Expand the application.
-        applicant.expand(db, &drive_client, &config.apply).await?;
+        // It can take too long to expand and update an application. Instead perform that work
+        // asynchronously
+        let db = db.clone();
+        tokio::spawn(async move {
+            // Expand the application.
+            applicant.expand(&db, &drive_client, &config.apply).await?;
 
-        // Update airtable and the database again.
-        applicant.update(db).await?;
+            // Update airtable and the database again.
+            applicant.update(&db).await?;
+
+            Ok::<(), anyhow::Error>(())
+        });
 
         Ok(())
     }
