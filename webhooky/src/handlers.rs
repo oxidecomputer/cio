@@ -954,13 +954,13 @@ pub async fn handle_applicant_review(
 
     tokio::spawn(async move {
         // Add them to the database.
-        let mut review = event.upsert(&api_context.app.db).await?;
+        let mut review = event.upsert(&api_context.app.db).await.map_err(|err| { error!("Failed to upsert review: {:#?}", err); err })?;
 
         info!("applicant review created successfully: {:?}", event);
 
         // Add the person to the scorers field of the applicant.
-        review.expand(&api_context.app.db).await?;
-        let review = review.update(&api_context.app.db).await?;
+        review.expand(&api_context.app.db).await.map_err(|err| { error!("Failed to expand review: {:#?}", err); err })?;
+        let review = review.update(&api_context.app.db).await.map_err(|err| { error!("Failed to upsert review: {:#?}", err); err })?;
 
         // Get the applicant for the review.
         let mut applicant = Applicant::get_from_airtable(
@@ -969,11 +969,11 @@ pub async fn handle_applicant_review(
             &api_context.app.db,
             event.cio_company_id,
         )
-        .await?;
+        .await.map_err(|err| { error!("Failed retrieve applicant from airtable: {:#?}", err); err })?;
 
         // Update the scorers for the applicant.
         // This will also update the database after.
-        applicant.update_reviews_scoring(&api_context.app.db).await?;
+        applicant.update_reviews_scoring(&api_context.app.db).await.map_err(|err| { error!("Failed to update scoring: {:#?}", err); err })?;
 
         println!(
             "applicant {} with review by {} updated successfully",
