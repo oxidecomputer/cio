@@ -21,6 +21,7 @@ use crate::{
     airtable_table = "AIRTABLE_REVIEWS_TABLE",
     match_on = {
         "name" = "String",
+        "applicant" = "Vec<String>",
     },
 }]
 #[derive(Debug, Insertable, AsChangeset, PartialEq, Clone, JsonSchema, Deserialize, Serialize)]
