@@ -34,20 +34,34 @@ use serde::{
     Deserialize, Serialize,
 };
 
-/// Endpoint for the Shippo API.
-const ENDPOINT: &str = "https://api.goshippo.com/";
+/// URL for the Shippo API.
+const BASE_URL: &str = "https://api.goshippo.com/";
+
+/// Options for requests to API.
+pub struct ApiOpt {
+    base_url: Url,
+    token: String,
+}
 
 /// Entrypoint for interacting with the Shippo API.
 pub struct Shippo {
-    token: String,
-
     client: Arc<Client>,
+    opt: ApiOpt,
 }
 
 impl Shippo {
-    /// Create a new Shippo client struct. It takes a type that can convert into
-    /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API Token your requests will work.
+    /// Create a new Shippo client.
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - Shippo API authentication
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let client = Shippo::new("secret");
+    /// let client2 = Shippo::new_from_env();
+    /// ```
     pub fn new<K>(token: K) -> Self
     where
         K: ToString,
@@ -55,32 +69,38 @@ impl Shippo {
         let client = Client::builder().build();
         match client {
             Ok(c) => Self {
-                token: token.to_string(),
-
                 client: Arc::new(c),
+                opt: ApiOpt {
+                    token: token.to_string(),
+                    base_url: Url::parse(BASE_URL).unwrap(),
+                },
             },
             Err(e) => panic!("creating client failed: {e:?}"),
         }
     }
 
-    /// Create a new Shippo client struct from environment variables. It
-    /// takes a type that can convert into
-    /// an &str (`String` or `Vec<u8>` for example). As long as the function is
-    /// given a valid API Token and your requests will work.
+    /// Create a new Shippo client struct from environment variables:
+    /// env::var(SHIPPO_API_TOKEN) - used for API authentication header
     pub fn new_from_env() -> Self {
         let token = env::var("SHIPPO_API_TOKEN").unwrap();
 
         Shippo::new(token)
     }
 
+    /// Set the base url for `Shippo`
+    pub fn base_url(mut self, base_url: Url) -> Self {
+        self.opt.base_url = base_url;
+        self
+    }
+
     fn request<B>(&self, method: Method, path: &str, body: B, query: Option<Vec<(String, String)>>) -> Request
     where
         B: Serialize,
     {
-        let base = Url::parse(ENDPOINT).unwrap();
+        let base = &self.opt.base_url;
         let url = base.join(path).unwrap();
 
-        let bt = format!("ShippoToken {}", self.token);
+        let bt = format!("ShippoToken {}", self.opt.token);
         let bearer = header::HeaderValue::from_str(&bt).unwrap();
 
         // Set the default headers.
@@ -517,7 +537,7 @@ impl error::Error for APIError {
 }
 
 /// The data type for an API response.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct APIResponse {
     #[serde(
         default,
@@ -537,7 +557,7 @@ pub struct APIResponse {
 }
 
 /// The data type for an API response.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct OrdersAPIResponse {
     #[serde(
         default,
@@ -557,7 +577,7 @@ pub struct OrdersAPIResponse {
 }
 
 /// The data type for an API response for carrier accounts.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct CarrierAccountsAPIResponse {
     #[serde(
         default,
@@ -577,7 +597,7 @@ pub struct CarrierAccountsAPIResponse {
 }
 
 /// The data type for a transactions API response.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct TransactionsAPIResponse {
     #[serde(
         default,
@@ -598,7 +618,7 @@ pub struct TransactionsAPIResponse {
 
 /// The data type for a Shipment.
 /// FROM: https://goshippo.com/docs/reference#shipments
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Shipment {
     /// "Waiting" shipments have been successfully submitted but not yet been
     /// processed. "Queued" shipments are currently being processed. "Success"
@@ -656,7 +676,7 @@ pub struct Shipment {
 
 /// The data type for a carrier account.
 /// FROM: https://goshippo.com/docs/reference#carrier-accounts
-#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize, PartialEq)]
 pub struct CarrierAccount {
     /// Unique identifier of the given CarrierAccount object.
     pub object_id: String,
@@ -685,7 +705,7 @@ pub struct CarrierAccount {
 
 /// The data type for an address.
 /// FROM: https://goshippo.com/docs/reference#addresses
-#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize, PartialEq)]
 pub struct Address {
     /// Unique identifier of the given Address object. This ID is required to
     /// create a Shipment object.
@@ -781,7 +801,7 @@ impl Address {
 
 /// The data type for a parcel.
 /// FROM: https://goshippo.com/docs/reference#parcels
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Parcel {
     /// A Parcel will only be valid when all required values have been sent and
     /// validated successfully.
@@ -841,7 +861,7 @@ pub struct Parcel {
 /// A rate is an available service of a shipping provider for a given shipment,
 /// typically including the price and transit time.
 /// FROM: https://goshippo.com/docs/reference#rates
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Rate {
     /// Unique identifier of the given Rate object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -906,7 +926,7 @@ pub struct Rate {
 }
 
 /// The service level data type.
-#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize, PartialEq)]
 pub struct ServiceLevel {
     /// Name of the Rate's servicelevel, e.g. "International Priority" or
     /// "Standard Post".
@@ -935,7 +955,7 @@ pub struct ServiceLevel {
     pub terms: String,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct NewShipment {
     /// Address object that should be used as sender Address.
     #[serde(default)]
@@ -953,7 +973,7 @@ pub struct NewShipment {
 
 /// The data type for a pickup.
 /// FROM: https://goshippo.com/docs/reference#pickups
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Pickup {
     /// Unique identifier of the given Pickup object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1018,7 +1038,7 @@ pub struct Pickup {
 }
 
 /// The location data type.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Location {
     /// Where your parcels will be available for pickup.
     /// "Security Deck" and "Shipping Dock" are only supported for DHL Express.
@@ -1042,7 +1062,7 @@ pub struct Location {
     pub address: Address,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct NewPickup {
     #[serde(default)]
     pub carrier_account: String,
@@ -1060,7 +1080,7 @@ pub struct NewPickup {
 /// The data type for a transaction.
 /// A transaction is the purchase of a shipping label from a shipping provider for a specific service.
 /// FROM: https://goshippo.com/docs/reference#transactions
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Transaction {
     /// Unique identifier of the given Transaction object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1145,7 +1165,7 @@ pub struct Transaction {
     pub test: bool,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct NewTransaction {
     pub rate: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1156,7 +1176,7 @@ pub struct NewTransaction {
     pub r#async: bool,
 }
 
-#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize, PartialEq)]
 pub struct Message {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub source: String,
@@ -1166,7 +1186,7 @@ pub struct Message {
     pub text: String,
 }
 
-#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize, PartialEq)]
 pub struct ValidationResults {
     #[serde(default)]
     pub is_valid: bool,
@@ -1180,7 +1200,7 @@ pub struct ValidationResults {
 /// The data type for a tracking status.
 /// Tracking Status objects are used to track shipments.
 /// FROM: https://goshippo.com/docs/reference#tracks
-#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize, PartialEq)]
 pub struct TrackingStatus {
     /// Name of the carrier of the shipment to track.
     #[serde(
@@ -1243,7 +1263,7 @@ pub struct TrackingStatus {
     pub metadata: String,
 }
 
-#[derive(Clone, Default, Debug, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, JsonSchema, Serialize, Deserialize, PartialEq)]
 pub struct Status {
     /// Indicates the high level status of the shipment.
     /// 'UNKNOWN' | 'PRE_TRANSIT' | 'TRANSIT' | 'DELIVERED' | 'RETURNED' | 'FAILURE'
@@ -1272,7 +1292,7 @@ pub struct Status {
     pub location: Option<TrackingLocation>,
 }
 
-#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, JsonSchema, Serialize, Deserialize, PartialEq)]
 pub struct TrackingLocation {
     #[serde(
         default,
@@ -1318,7 +1338,7 @@ impl TrackingLocation {
 /// Customs declarations are relevant information, including one or multiple
 /// customs items, you need to provide for customs clearance for your international shipments.
 /// FROM: https://goshippo.com/docs/reference#customs-declarations
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct CustomsDeclaration {
     /// Unique identifier of the given object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1401,7 +1421,7 @@ pub struct CustomsDeclaration {
 
 /// An order object.
 /// FROM: https://goshippo.com/docs/reference#orders
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Order {
     /// Unique identifier of the given object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -1501,7 +1521,7 @@ pub struct Order {
 /// A customs item object.
 /// Customs items are distinct items in your international shipment parcel.
 /// FROM: https://goshippo.com/docs/reference#customs-items
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct CustomsItem {
     /// Unique identifier of the given object.
     #[serde(default, skip_serializing_if = "String::is_empty")]
