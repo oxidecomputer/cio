@@ -156,43 +156,43 @@ pub async fn handle_github(rqctx: &RequestContext<ServerContext>, event: GitHubW
         let github = Arc::new(company.authenticate_github()?);
 
         match repo_name {
-            Repo::RFD => match event_type {
-                EventType::Push => {
-                    match handle_rfd_push(github.clone(), &api_context.app, event.clone()).await {
-                        Ok(_) => ( /* Silence */ ),
-                        Err(e) => {
-                            event
-                                .create_comment(&github, &event.get_error_string("updating RFD on `push`", e))
-                                .await?;
-                        }
-                    }
-                }
-                EventType::PullRequest => {
-                    // Let's create the check run.
-                    let check_run_id = event.create_check_run(&github).await?;
+            // Repo::RFD => match event_type {
+            //     EventType::Push => {
+            //         match handle_rfd_push(github.clone(), &api_context.app, event.clone()).await {
+            //             Ok(_) => ( /* Silence */ ),
+            //             Err(e) => {
+            //                 event
+            //                     .create_comment(&github, &event.get_error_string("updating RFD on `push`", e))
+            //                     .await?;
+            //             }
+            //         }
+            //     }
+            //     EventType::PullRequest => {
+            //         // Let's create the check run.
+            //         let check_run_id = event.create_check_run(&github).await?;
 
-                    match handle_rfd_pull_request(&api_context.app, event.clone(), &company).await {
-                        Ok((conclusion, message)) => {
-                            event
-                                .update_check_run(&github, check_run_id, &message, conclusion)
-                                .await?;
-                        }
-                        Err(e) => {
-                            event
-                                .update_check_run(
-                                    &github,
-                                    check_run_id,
-                                    &event.get_error_string("updating RFD on `pull_request`", e),
-                                    octorust::types::ChecksCreateRequestConclusion::Failure,
-                                )
-                                .await?;
-                        }
-                    }
-                }
-                EventType::CheckRun => {}
-                EventType::CheckSuite => {}
-                _ => (),
-            },
+            //         match handle_rfd_pull_request(&api_context.app, event.clone(), &company).await {
+            //             Ok((conclusion, message)) => {
+            //                 event
+            //                     .update_check_run(&github, check_run_id, &message, conclusion)
+            //                     .await?;
+            //             }
+            //             Err(e) => {
+            //                 event
+            //                     .update_check_run(
+            //                         &github,
+            //                         check_run_id,
+            //                         &event.get_error_string("updating RFD on `pull_request`", e),
+            //                         octorust::types::ChecksCreateRequestConclusion::Failure,
+            //                     )
+            //                     .await?;
+            //             }
+            //         }
+            //     }
+            //     EventType::CheckRun => {}
+            //     EventType::CheckSuite => {}
+            //     _ => (),
+            // },
             Repo::Configs => {
                 if let EventType::Push = event_type {
                     match handle_configs_push(&github, &api_context.app, event.clone(), &company).await {
