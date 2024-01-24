@@ -1352,9 +1352,12 @@ pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company, c
 
     // Iterate over the applicants and find any that have the status: giving offer.
     for mut applicant in applicants {
-        applicant
-            .do_docusign_offer(db, &ds, config.envelopes.create_offer_letter(&applicant))
-            .await?;
+        let offer_letter = match applicant.role.as_str() {
+            "Sales" => config.envelopes.create_sales_offer_letter(&applicant),
+            _ => config.envelopes.create_offer_letter(&applicant),
+        };
+
+        applicant.do_docusign_offer(db, &ds, offer_letter).await?;
 
         applicant
             .do_docusign_piia(db, &ds, config.envelopes.create_piia_letter(&applicant))
