@@ -9,7 +9,7 @@ use gsuite_api::{
     },
     Client as GSuite,
 };
-use log::info;
+use log::{info, warn};
 use serde_json::Value;
 
 use crate::{
@@ -325,6 +325,7 @@ pub async fn update_group_aliases(gsuite: &GSuite, g: &GSuiteGroup) -> Result<()
         {
             Ok(_) => (),
             Err(e) => {
+                warn!("Received error response from Google Group alias update: {:?}", e);
                 if e.to_string().contains("Entity already exists") {
                     // Ignore the error.
                     continue;
@@ -346,10 +347,15 @@ pub async fn update_google_group_settings(db: &Database, group: &Group, company:
     let email = format!("{}@{}", group.name, company.gsuite_domain);
     let mut result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
     if result.is_err() {
+        warn!("First attempt to lookup Google Group failed: {:?}", result);
         // Try again.
         tokio::time::sleep(time::Duration::from_secs(1)).await;
         result = ggs.groups().get(google_groups_settings::types::Alt::Json, &email).await;
     }
+    if result.is_err() {
+        warn!("Second attempt to lookup Google Group failed: {:?}", result);
+    }
+
     let mut settings = result?.body;
 
     // Update the groups settings.
@@ -373,11 +379,17 @@ pub async fn update_google_group_settings(db: &Database, group: &Group, company:
         .update(google_groups_settings::types::Alt::Json, &email, &settings)
         .await;
     if result2.is_err() {
+        warn!("First attempt to update Google Group failed: {:?}", result2);
+
         // Try again.
         tokio::time::sleep(time::Duration::from_secs(1)).await;
         ggs.groups()
             .update(google_groups_settings::types::Alt::Json, &email, &settings)
-            .await?;
+            .await
+            .map_err(|err| {
+                warn!("Second attempt to update Google Group failed: {:?}", err);
+                err
+            })?;
     }
 
     info!("updated gsuite groups settings {}", group.name);
