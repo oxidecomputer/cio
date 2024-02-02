@@ -155,7 +155,7 @@ fn create_api() -> ApiDescription<ServerContext> {
     api.register(trigger_sync_other_create).unwrap();
     api.register(trigger_sync_recorded_meetings_create).unwrap();
     api.register(trigger_sync_repos_create).unwrap();
-    api.register(trigger_sync_rfds_create).unwrap();
+    // api.register(trigger_sync_rfds_create).unwrap();
     api.register(trigger_sync_shipments_create).unwrap();
     api.register(trigger_sync_salesforce_create).unwrap();
     api.register(trigger_sync_shorturls_create).unwrap();
@@ -276,9 +276,9 @@ pub async fn server(
         scheduler
             .every(16.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-repos")});
-        scheduler
-            .every(14.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-rfds")});
+        // scheduler
+        //     .every(14.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-rfds")});
         scheduler
             .every(30.minutes())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-salesforce")});
