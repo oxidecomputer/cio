@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
 	ruby-dev \
 	make \
 	curl \
-    texlive-latex-base \
+  texlive-latex-base \
 	texlive-fonts-recommended \
 	texlive-fonts-extra \
 	texlive-latex-extra \
