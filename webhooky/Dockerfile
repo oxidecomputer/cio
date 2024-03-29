@@ -42,7 +42,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
 
 RUN gem install rouge
 
-RUN gem install asciidoctor-pdf -v 2.3.10
+RUN gem install asciidoctor-pdf -v 2.3.15
 RUN gem install asciidoctor-mermaid -v 0.4.1
 
 # Create the cache directory that pupeteer expected to exist
