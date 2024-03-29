@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
 	pandoc \
 	poppler-utils \
 	ruby \
+	ruby-dev \
 	curl \
     texlive-latex-base \
 	texlive-fonts-recommended \
