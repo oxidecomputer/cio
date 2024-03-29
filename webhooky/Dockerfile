@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
 	poppler-utils \
 	ruby \
 	ruby-dev \
+	make \
 	curl \
     texlive-latex-base \
 	texlive-fonts-recommended \
