@@ -98,12 +98,7 @@ jobs:
       shell: bash
       run: REVISION=$(gcloud run revisions list --platform managed --region "$RUN_REGION" --service $SERVICE_NAME --sort-by ~deployed --quiet | sed -n '2 p' | awk '{print $2}'); echo "::set-output name=version::${REVISION/webhooky-/}"
       id: extract_version
-    - name: Create Sentry release
-      uses: getsentry/action-release@v1
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{secrets.SENTRY_ORG}}
-        SENTRY_PROJECT: webhooky
-      with:
-        environment: production
-        version: ${{ steps.extract_sha.outputs.hash }}
+    - name: The job has failed
+      if: ${{ failure() }}
+      run: |-
+        cat /var/lib/gems/2.7.0/extensions/x86_64-linux/2.7.0/bigdecimal-3.1.7/mkmf.log

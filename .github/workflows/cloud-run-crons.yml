@@ -94,3 +94,7 @@ jobs:
           --max-instances=1 \
           --min-instances=1 \
           --allow-unauthenticated
+    - name: The job has failed
+      if: ${{ failure() }}
+      run: |-
+        cat /var/lib/gems/2.7.0/extensions/x86_64-linux/2.7.0/bigdecimal-3.1.7/mkmf.log
