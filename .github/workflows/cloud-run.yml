@@ -98,7 +98,3 @@ jobs:
       shell: bash
       run: REVISION=$(gcloud run revisions list --platform managed --region "$RUN_REGION" --service $SERVICE_NAME --sort-by ~deployed --quiet | sed -n '2 p' | awk '{print $2}'); echo "::set-output name=version::${REVISION/webhooky-/}"
       id: extract_version
-    - name: The job has failed
-      if: ${{ failure() }}
-      run: |-
-        cat /var/lib/gems/2.7.0/extensions/x86_64-linux/2.7.0/bigdecimal-3.1.7/mkmf.log
