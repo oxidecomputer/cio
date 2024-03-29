@@ -52,7 +52,7 @@ jobs:
         key: ${{ runner.os }}-cargo-build-target-${{ github.ref }}
 
     # Setup gcloud CLI
-    - uses: google-github-actions/setup-gcloud
+    - uses: google-github-actions/setup-gcloud@v2
       with:
         service_account_key: ${{ secrets.GOOGLE_CLOUD_SA_KEY }}
         project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
