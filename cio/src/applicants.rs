@@ -1776,19 +1776,19 @@ The applicants Airtable \
         }
         self.analysis_samples = analysis_samples;
 
-        let mut presentation_samples =
-            parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
-        if presentation_samples.is_empty() {
-            presentation_samples = parse_question(
-                r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
-                "Questionnaire",
-                &materials_contents,
-            );
-            if presentation_samples.is_empty() {
-                presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
-            }
-        }
-        self.presentation_samples = presentation_samples;
+        // let mut presentation_samples =
+        //     parse_question(r"Presentation sample\(s\)", "Questionnaire", &materials_contents);
+        // if presentation_samples.is_empty() {
+        //     presentation_samples = parse_question(
+        //         r"I(?s:.*)you don’t have a publicl(?s:.*)available presentation(?s:.*)pleas(?s:.*)describe a topic on which you have presented in th(?s:.*)past\.",
+        //         "Questionnaire",
+        //         &materials_contents,
+        //     );
+        //     if presentation_samples.is_empty() {
+        //         presentation_samples = parse_question(r"Presentation samples", "Questionnaire", &materials_contents);
+        //     }
+        // }
+        self.presentation_samples = String::new();
 
         let mut exploratory_samples = parse_question(r"Exploratory sample\(s\)", "Questionnaire", &materials_contents);
         if exploratory_samples.is_empty() {
