@@ -591,7 +591,8 @@ impl ProviderWriteOps for gsuite_api::Client {
                 // crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
 
                 // Add the user to their teams and groups.
-                crate::gsuite::update_user_google_groups(self, user, company).await?;
+                // No longer doing group syncing
+                // crate::gsuite::update_user_google_groups(self, user, company).await?;
 
                 // info!("updated user `{}` in GSuite", user.id);
 
@@ -623,7 +624,8 @@ impl ProviderWriteOps for gsuite_api::Client {
 
         crate::gsuite::update_user_aliases(self, &gsuite_user, user.aliases.clone(), company).await?;
 
-        crate::gsuite::update_user_google_groups(self, user, company).await?;
+        // No longer doing group syncing
+        // crate::gsuite::update_user_google_groups(self, user, company).await?;
 
         info!("created user `{}` in GSuite", user.email);
 

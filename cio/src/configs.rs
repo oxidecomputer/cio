@@ -2420,19 +2420,21 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
     // Iterate over all the groups in our database.
     // TODO: delete any groups that are not in the database for each vendor.
     for g in db_groups {
-        if g.supports_provisioning_in(&ExternalServices::GitHub) {
-            github.ensure_group(db, company, &g).await?;
-        }
+        // No more group syncing
 
-        if g.supports_provisioning_in(&ExternalServices::Google) {
-            gsuite.ensure_group(db, company, &g).await?;
-        }
+        // if g.supports_provisioning_in(&ExternalServices::GitHub) {
+        //     github.ensure_group(db, company, &g).await?;
+        // }
 
-        if let Some(ref okta) = okta_auth {
-            if g.supports_provisioning_in(&ExternalServices::Okta) {
-                okta.ensure_group(db, company, &g).await?;
-            }
-        }
+        // if g.supports_provisioning_in(&ExternalServices::Google) {
+        //     gsuite.ensure_group(db, company, &g).await?;
+        // }
+
+        // if let Some(ref okta) = okta_auth {
+        //     if g.supports_provisioning_in(&ExternalServices::Okta) {
+        //         okta.ensure_group(db, company, &g).await?;
+        //     }
+        // }
     }
 
     // Update groups in airtable.
