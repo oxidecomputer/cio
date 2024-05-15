@@ -891,7 +891,12 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
     fn last_name(&self) -> String {
         let split = self.name.splitn(2, ' ');
         let parts: Vec<&str> = split.collect();
-        parts[1].to_string()
+
+        if parts.len() > 0 {
+            parts[1].to_string()
+        } else {
+            String::new()
+        }
     }
 
     async fn compute_username(&self, db: &Database, company: &Company) -> String {
