@@ -892,7 +892,7 @@ The applicants Airtable is at: https://airtable-applicants.corp.oxide.computer\
         let split = self.name.splitn(2, ' ');
         let parts: Vec<&str> = split.collect();
 
-        if parts.len() > 0 {
+        if parts.len() > 1 {
             parts[1].to_string()
         } else {
             String::new()
