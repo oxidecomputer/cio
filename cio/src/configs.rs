@@ -2426,9 +2426,9 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         //     github.ensure_group(db, company, &g).await?;
         // }
 
-        // if g.supports_provisioning_in(&ExternalServices::Google) {
-        //     gsuite.ensure_group(db, company, &g).await?;
-        // }
+        if g.supports_provisioning_in(&ExternalServices::Google) {
+            gsuite.ensure_group(db, company, &g).await?;
+        }
 
         // if let Some(ref okta) = okta_auth {
         //     if g.supports_provisioning_in(&ExternalServices::Okta) {
