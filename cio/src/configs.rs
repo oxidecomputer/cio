@@ -21,7 +21,7 @@ use gsuite_api::types::{
     Building as GSuiteBuilding, CalendarResource as GSuiteCalendarResource, Group as GSuiteGroup, User as GSuiteUser,
 };
 use gusto_api::Client as Gusto;
-use log::{info, warn};
+use log::{error, info, warn};
 use macros::db;
 use schemars::JsonSchema;
 use sendgrid_api::{traits::MailOps, Client as SendGrid};
