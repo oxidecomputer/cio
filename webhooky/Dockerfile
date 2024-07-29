@@ -55,14 +55,12 @@ RUN cd /usr/local/lib && \
 USER webhooky
 
 # ------------------------------------------------------------------------------
-# Cargo Nightly Stage
+# Cargo Stage
 # ------------------------------------------------------------------------------
 
-FROM rust:bullseye AS cargo-nightly
+FROM rust:bullseye AS cargo
 
 ENV DEBIAN_FRONTEND=noninteractive
-
-RUN rustup default nightly
 
 WORKDIR /usr/src/webhooky
 
@@ -71,7 +69,7 @@ WORKDIR /usr/src/webhooky
 # Cargo Build Stage
 # ------------------------------------------------------------------------------
 
-FROM cargo-nightly AS cargo-build
+FROM cargo AS cargo-build
 
 RUN apt-get update && apt-get install -y \
 	ca-certificates \
