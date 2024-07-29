@@ -282,9 +282,9 @@ pub async fn server(
         scheduler
             .every(30.minutes())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-salesforce")});
-        scheduler
-            .every(2.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shipments")});
+        // scheduler
+        //     .every(2.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shipments")});
         scheduler
             .every(3.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shorturls")});
