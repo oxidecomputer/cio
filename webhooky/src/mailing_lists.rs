@@ -73,9 +73,9 @@ pub async fn sync_pending_wait_list_subscribers(db: &Database) -> Result<()> {
 
     for chunk in subscribers.chunks(50) {
         for subscriber in chunk {
-            let existing = RackLineSubscriber::get_from_db(db, subscriber.email.clone()).await;
+            // let existing = RackLineSubscriber::get_from_db(db, subscriber.email.clone()).await;
 
-            if existing.is_none() {
+            // if existing.is_none() {
                 log::info!("Mailerlite subscriber {} needs to be added to wait list", subscriber.id);
                 let new_subscriber: NewRackLineSubscriber = subscriber.clone().into();
                 let _ = new_subscriber.upsert(db).await.map_err(|err| {
@@ -86,12 +86,12 @@ pub async fn sync_pending_wait_list_subscribers(db: &Database) -> Result<()> {
                     );
                     err
                 })?;
-            } else {
-                log::info!(
-                    "Mailerlite subscriber {} already exists in wait list database",
-                    subscriber.id
-                );
-            }
+            // } else {
+                // log::info!(
+                    // "Mailerlite subscriber {} already exists in wait list database",
+                    // subscriber.id
+                // );
+            // }
         }
 
         match client.mark_wait_list_subscribers(chunk.to_vec()).await {
