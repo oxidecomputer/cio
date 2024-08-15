@@ -31,7 +31,7 @@ pub async fn refresh_sf_leads(db: &Database, company: &Company) -> Result<()> {
         .filter(
             not_yet_processed
                 .and(not_excluded)
-                .and(outside_webhook_time_window)
+                // .and(outside_webhook_time_window)
                 .and(has_company),
         )
         .limit(1000)
