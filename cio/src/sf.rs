@@ -78,6 +78,8 @@ pub async fn push_new_rack_line_subscribers_to_sf(
         // them internally. By the time the batch size is a problem, this method of syncing will be
         // replaced.
         for subscriber in subscribers_to_process.iter_mut() {
+            log::info!("Processing {}", subscriber.airtable_record_id);
+
             if !subscriber.name.is_empty() {
                 let mut name_parts = subscriber.name.rsplitn(2, ' ').peekable();
 
