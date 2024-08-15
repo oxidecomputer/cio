@@ -66,6 +66,8 @@ pub async fn push_new_rack_line_subscribers_to_sf(
     db: &Database,
     company: &Company,
 ) -> Result<()> {
+    log::info!(count = subscribers_to_process.len(), "Processing subscribers");
+
     if !subscribers_to_process.is_empty() {
         let sf = company.authenticate_sf().await?;
 
