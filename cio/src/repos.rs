@@ -449,78 +449,78 @@ impl GithubRepo {
             }
         }
 
-        // Get this repository's teams.
-        let mut ts: Vec<octorust::types::Team> = Default::default();
-        match github
-            .repos()
-            .list_all_teams(&company.github_org, &self.name)
-            .await
-            .map(|response| response.body)
-        {
-            Ok(v) => ts = v,
-            Err(e) => {
-                info!("Failed to get teams for repo {}. err: {:?}", self.name, e);
+        // // Get this repository's teams.
+        // let mut ts: Vec<octorust::types::Team> = Default::default();
+        // match github
+        //     .repos()
+        //     .list_all_teams(&company.github_org, &self.name)
+        //     .await
+        //     .map(|response| response.body)
+        // {
+        //     Ok(v) => ts = v,
+        //     Err(e) => {
+        //         info!("Failed to get teams for repo {}. err: {:?}", self.name, e);
 
-                // If we get a 404 for teams then likely the repo is new, we can just move on and
-                // add the teams.
-                if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
-                    bail!("could not list teams for repo {}: {}", self.name, e);
-                }
-            }
-        }
-        // Create the BTreeMap of teams.
-        let mut teams: BTreeMap<String, octorust::types::Team> = Default::default();
-        for t in ts {
-            teams.insert(t.name.to_string(), t);
-        }
+        //         // If we get a 404 for teams then likely the repo is new, we can just move on and
+        //         // add the teams.
+        //         if !e.to_string().contains("404") && !e.to_string().contains("Not Found") {
+        //             bail!("could not list teams for repo {}: {}", self.name, e);
+        //         }
+        //     }
+        // }
+        // // Create the BTreeMap of teams.
+        // let mut teams: BTreeMap<String, octorust::types::Team> = Default::default();
+        // for t in ts {
+        //     teams.insert(t.name.to_string(), t);
+        // }
 
-        // For each team id, add the team to the permissions.
-        for team_name in &default_teams {
-            let perms = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
+        // // For each team id, add the team to the permissions.
+        // for team_name in &default_teams {
+        //     let perms = octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequestPermission::Push;
 
-            // Check if the team already has the permission.
-            if let Some(val) = teams.get(team_name) {
-                if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin" {
-                    // Continue since they already have permission.
-                    info!(
-                        "team {} already has push access to {}/{}",
-                        team_name, company.github_org, self.name
-                    );
+        //     // Check if the team already has the permission.
+        //     if let Some(val) = teams.get(team_name) {
+        //         if val.permission == perms.to_string() || val.permission.to_lowercase() == *"admin" {
+        //             // Continue since they already have permission.
+        //             info!(
+        //                 "team {} already has push access to {}/{}",
+        //                 team_name, company.github_org, self.name
+        //             );
 
-                    continue;
-                }
-            }
+        //             continue;
+        //         }
+        //     }
 
-            match github
-                .teams()
-                .add_or_update_repo_permissions_in_org(
-                    &company.github_org,
-                    team_name,
-                    &company.github_org,
-                    &self.name,
-                    &octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequest {
-                        permission: Some(perms),
-                    },
-                )
-                .await
-            {
-                Ok(_) => (),
-                Err(e) => {
-                    info!("Failed to update repo permissions on {}. err: {:?}", self.name, e);
-                    bail!(
-                        "adding repo permission for team {} in repo {} failed: {}",
-                        team_name,
-                        self.name,
-                        e
-                    )
-                }
-            }
+        //     match github
+        //         .teams()
+        //         .add_or_update_repo_permissions_in_org(
+        //             &company.github_org,
+        //             team_name,
+        //             &company.github_org,
+        //             &self.name,
+        //             &octorust::types::TeamsAddUpdateRepoPermissionsInOrgRequest {
+        //                 permission: Some(perms),
+        //             },
+        //         )
+        //         .await
+        //     {
+        //         Ok(_) => (),
+        //         Err(e) => {
+        //             info!("Failed to update repo permissions on {}. err: {:?}", self.name, e);
+        //             bail!(
+        //                 "adding repo permission for team {} in repo {} failed: {}",
+        //                 team_name,
+        //                 self.name,
+        //                 e
+        //             )
+        //         }
+        //     }
 
-            info!(
-                "gave team {} push access to {}/{}",
-                team_name, company.github_org, self.name
-            );
-        }
+        //     info!(
+        //         "gave team {} push access to {}/{}",
+        //         team_name, company.github_org, self.name
+        //     );
+        // }
 
         Ok(())
     }
