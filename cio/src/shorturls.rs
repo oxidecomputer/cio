@@ -254,7 +254,6 @@ pub async fn refresh_shorturls(db: &Database, company: &Company) -> Result<()> {
     let out_repos = vec![company.shorturl_repo()];
 
     generate_shorturls_for_repos(db, &github, company, &provider, &out_repos[..]).await?;
-    generate_shorturls_for_rfds(db, &github, company, &provider, &out_repos[..]).await?;
     generate_shorturls_for_configs_links(db, &github, company, &provider, &out_repos[..]).await?;
 
     Ok(())

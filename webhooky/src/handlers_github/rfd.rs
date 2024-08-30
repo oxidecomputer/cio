@@ -468,21 +468,7 @@ impl RFDUpdateAction for UpdatePDFs {
 pub struct GenerateShortUrls;
 
 impl GenerateShortUrls {
-    pub async fn generate(api_context: &Context, github: &octorust::Client) -> Result<()> {
-        let out_repos = vec![api_context.company.shorturl_repo()];
-
-        // Create all the shorturls for the RFD if we need to, this would be on added files, only.
-        generate_shorturls_for_rfds(
-            &api_context.db,
-            github,
-            &api_context.company,
-            &api_context.company.authenticate_dns_providers().await?,
-            &out_repos,
-        )
-        .await?;
-
-        info!("[SUCCESS]: updated shorturls for the rfds");
-
+    pub async fn generate(_api_context: &Context, _github: &octorust::Client) -> Result<()> {
         Ok(())
     }
 }
