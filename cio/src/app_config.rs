@@ -90,6 +90,7 @@ pub struct NewHireIssue {
     pub assignees: Vec<String>,
     pub alerts: Vec<String>,
     pub default_groups: Vec<String>,
+    #[serde(default)]
     pub aws_roles: Vec<String>,
 }
 
