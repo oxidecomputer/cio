@@ -205,124 +205,124 @@ impl ProviderReadOps for ramp_minimal_api::RampClient {
 #[async_trait]
 impl ProviderWriteOps for octorust::Client {
     async fn ensure_user(&self, _db: &Database, company: &Company, user: &User, _config: &AppConfig) -> Result<String> {
-        if user.denied_services.contains(&ExternalServices::GitHub) {
-            log::info!(
-                "User {} is denied access to {}. Exiting provisioning.",
-                user.id,
-                ExternalServices::GitHub
-            );
+        // if user.denied_services.contains(&ExternalServices::GitHub) {
+        //     log::info!(
+        //         "User {} is denied access to {}. Exiting provisioning.",
+        //         user.id,
+        //         ExternalServices::GitHub
+        //     );
 
-            return Ok(String::new());
-        }
+        //     return Ok(String::new());
+        // }
 
-        if user.github.is_empty() {
-            // Return early, this user doesn't have a github handle.
-            return Ok(String::new());
-        }
+        // if user.github.is_empty() {
+        //     // Return early, this user doesn't have a github handle.
+        //     return Ok(String::new());
+        // }
 
-        let role = if user.is_group_admin {
-            octorust::types::OrgsSetMembershipUserRequestRole::Admin
-        } else {
-            octorust::types::OrgsSetMembershipUserRequestRole::Member
-        };
+        // let role = if user.is_group_admin {
+        //     octorust::types::OrgsSetMembershipUserRequestRole::Admin
+        // } else {
+        //     octorust::types::OrgsSetMembershipUserRequestRole::Member
+        // };
 
-        // Check if the user is already a member of the org.
-        let user_exists = match self
-            .orgs()
-            .get_membership_for_user(&company.github_org, &user.github)
-            .await
-            .map(|response| response.body)
-        {
-            Ok(membership) => {
-                if membership.role.to_string() == role.to_string() {
-                    info!(
-                        "user `{}` is already a member of the github org `{}` with role `{}`",
-                        user.id, company.github_org, role
-                    );
+        // // Check if the user is already a member of the org.
+        // let user_exists = match self
+        //     .orgs()
+        //     .get_membership_for_user(&company.github_org, &user.github)
+        //     .await
+        //     .map(|response| response.body)
+        // {
+        //     Ok(membership) => {
+        //         if membership.role.to_string() == role.to_string() {
+        //             info!(
+        //                 "user `{}` is already a member of the github org `{}` with role `{}`",
+        //                 user.id, company.github_org, role
+        //             );
 
-                    true
-                } else {
-                    false
-                }
-            }
-            Err(e) => {
-                // If the error is Not Found we need to add them.
-                if !e.to_string().contains("404") {
-                    // Otherwise bail.
-                    bail!(
-                        "checking if user `{}` is a member of the github org `{}` failed: {}",
-                        user.id,
-                        company.github_org,
-                        e
-                    );
-                }
+        //             true
+        //         } else {
+        //             false
+        //         }
+        //     }
+        //     Err(e) => {
+        //         // If the error is Not Found we need to add them.
+        //         if !e.to_string().contains("404") {
+        //             // Otherwise bail.
+        //             bail!(
+        //                 "checking if user `{}` is a member of the github org `{}` failed: {}",
+        //                 user.id,
+        //                 company.github_org,
+        //                 e
+        //             );
+        //         }
 
-                false
-            }
-        };
+        //         false
+        //     }
+        // };
 
-        if !user_exists {
-            // We need to add the user to the org or update their role, do it now.
-            if let Err(err) = self
-                .orgs()
-                .set_membership_for_user(
-                    &company.github_org,
-                    &user.github,
-                    &octorust::types::OrgsSetMembershipUserRequest {
-                        role: Some(role.clone()),
-                    },
-                )
-                .await
-            {
-                warn!(
-                    "Failed to add user / update role {} @ {} on {} : {}",
-                    user.id, role, company.github_org, err
-                );
-                return Err(err.into());
-            };
+        // if !user_exists {
+        //     // We need to add the user to the org or update their role, do it now.
+        //     if let Err(err) = self
+        //         .orgs()
+        //         .set_membership_for_user(
+        //             &company.github_org,
+        //             &user.github,
+        //             &octorust::types::OrgsSetMembershipUserRequest {
+        //                 role: Some(role.clone()),
+        //             },
+        //         )
+        //         .await
+        //     {
+        //         warn!(
+        //             "Failed to add user / update role {} @ {} on {} : {}",
+        //             user.id, role, company.github_org, err
+        //         );
+        //         return Err(err.into());
+        //     };
 
-            info!(
-                "updated user `{}` as a member of the github org `{}` with role `{}`",
-                user.id, company.github_org, role
-            );
-        }
+        //     info!(
+        //         "updated user `{}` as a member of the github org `{}` with role `{}`",
+        //         user.id, company.github_org, role
+        //     );
+        // }
 
         // Get all the GitHub teams.
-        let gh_teams = self.list_provider_groups(company).await?;
+        // let gh_teams = self.list_provider_groups(company).await?;
 
         // Now we need to ensure our user is a member of all the correct groups.
-        for group in &user.groups {
-            // Ensure that this is a valid group before performing operations
-            if let Some(github_team) = gh_teams.iter().find(|team| &team.name == group) {
-                let is_member = self
-                    .check_user_is_member_of_group(company, user, &github_team.name)
-                    .await?;
+        // for group in &user.groups {
+        //     // Ensure that this is a valid group before performing operations
+        //     if let Some(github_team) = gh_teams.iter().find(|team| &team.name == group) {
+        //         let is_member = self
+        //             .check_user_is_member_of_group(company, user, &github_team.name)
+        //             .await?;
 
-                if !is_member {
-                    // We need to add the user to the team or update their role, do it now.
-                    self.add_user_to_group(company, user, &github_team.name).await?;
-                }
-            }
-        }
+        //         if !is_member {
+        //             // We need to add the user to the team or update their role, do it now.
+        //             self.add_user_to_group(company, user, &github_team.name).await?;
+        //         }
+        //     }
+        // }
 
         // Iterate over all the teams and if the user is a member and should not
         // be, remove them from the team.
-        for team in &gh_teams {
-            if user.groups.contains(&team.slug) {
-                // They should be in the team, continue.
-                continue;
-            }
+        // for team in &gh_teams {
+        //     if user.groups.contains(&team.slug) {
+        //         // They should be in the team, continue.
+        //         continue;
+        //     }
 
-            // Now we have a github team. The user should not be a member of it,
-            // but we need to make sure they are not a member.
-            let is_member = self.check_user_is_member_of_group(company, user, &team.slug).await?;
+        //     // Now we have a github team. The user should not be a member of it,
+        //     // but we need to make sure they are not a member.
+        //     let is_member = self.check_user_is_member_of_group(company, user, &team.slug).await?;
 
-            // They are a member of the team.
-            // We need to remove them.
-            if is_member {
-                self.remove_user_from_group(company, user, &team.slug).await?;
-            }
-        }
+        //     // They are a member of the team.
+        //     // We need to remove them.
+        //     if is_member {
+        //         self.remove_user_from_group(company, user, &team.slug).await?;
+        //     }
+        // }
 
         // We don't need to store the user id, so just return an empty string here.
         Ok(String::new())
