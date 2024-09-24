@@ -547,18 +547,18 @@ impl UserConfig {
             }
         }
 
-        // Add the user to their GitHub teams and the org.
-        if !new_user.github.is_empty() {
-            // Add them to the org and any teams they need to be added to.
-            // We don't return an id here.
-            match github.ensure_user(db, company, &new_user, config).await {
-                Ok(id) => Ok(id),
-                Err(err) => {
-                    warn!("Failed to ensure GitHub user `{}`: {}", new_user.id, err);
-                    Err(err)
-                }
-            }?;
-        }
+        // // Add the user to their GitHub teams and the org.
+        // if !new_user.github.is_empty() {
+        //     // Add them to the org and any teams they need to be added to.
+        //     // We don't return an id here.
+        //     match github.ensure_user(db, company, &new_user, config).await {
+        //         Ok(id) => Ok(id),
+        //         Err(err) => {
+        //             warn!("Failed to ensure GitHub user `{}`: {}", new_user.id, err);
+        //             Err(err)
+        //         }
+        //     }?;
+        // }
 
         match ramp.ensure_user(db, company, &new_user, config).await {
             Ok(ramp_id) => {
