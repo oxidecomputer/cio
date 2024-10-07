@@ -30,8 +30,6 @@ use crate::{
 /// The data type for a recorded meeting.
 #[db {
     new_struct_name = "RecordedMeeting",
-    airtable_base = "misc",
-    airtable_table = "AIRTABLE_RECORDED_MEETINGS_TABLE",
     match_on = {
         "google_event_id" = "String",
     },
@@ -72,23 +70,6 @@ pub struct NewRecordedMeeting {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a RecordedMeeting.
-#[async_trait]
-impl UpdateAirtableRecord<RecordedMeeting> for RecordedMeeting {
-    async fn update_airtable_record(&mut self, record: RecordedMeeting) -> Result<()> {
-        if !record.transcript_id.is_empty() {
-            self.transcript_id = record.transcript_id;
-        }
-        if !record.transcript.is_empty() {
-            self.transcript = record.transcript;
-        }
-
-        self.transcript = truncate(&self.transcript, 100000);
-
-        Ok(())
-    }
 }
 
 /// Convert the recorded meeting into a Slack message.
@@ -690,16 +671,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
                 // Update the meeting.
                 meeting.transcript = m.transcript.to_string();
                 meeting.transcript_id = m.transcript_id.to_string();
-
-                // Get it from Airtable.
-                if let Some(existing_airtable) = m.get_existing_airtable_record(db).await {
-                    if meeting.transcript.is_empty() {
-                        meeting.transcript = existing_airtable.fields.transcript.to_string();
-                    }
-                    if meeting.transcript_id.is_empty() {
-                        meeting.transcript_id = existing_airtable.fields.transcript_id.to_string();
-                    }
-                }
             } else {
                 // We have a new meeting, let's send the notification.
                 let _ = meeting.send_slack_notification(db, company).await.map_err(|err| {
@@ -715,11 +686,6 @@ pub async fn refresh_google_recorded_meetings(db: &Database, company: &Company) 
             completed_events.push(event.id.to_string());
         }
     }
-
-    RecordedMeetings::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
 
     Ok(())
 }

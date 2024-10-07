@@ -64,8 +64,6 @@ impl From<&OnboardingAssignees> for Vec<String> {
 /// The data type for a NewApplicant.
 #[db {
     new_struct_name = "Applicant",
-    airtable_base = "hiring",
-    airtable_table = "AIRTABLE_APPLICATIONS_TABLE",
     match_on = {
         "email" = "String",
         "sheet_id" = "String",
@@ -461,7 +459,7 @@ impl Applicant {
         // Initialize the GSuite sheets client.
         let drive_client = company.authenticate_google_drive(db).await?;
 
-        self.keep_fields_from_airtable(db).await;
+        // self.keep_fields_from_airtable(db).await;
 
         // Expand the application.
         if let Err(e) = self.expand(db, &drive_client, &app_config.apply).await {
@@ -565,7 +563,7 @@ impl Applicant {
 
     /// Update applicant reviews counts.
     pub async fn update_reviews_scoring(&mut self, db: &Database) -> Result<()> {
-        self.keep_fields_from_airtable(db).await;
+        // self.keep_fields_from_airtable(db).await;
 
         // Create the Airtable client.
         let company = Company::get_by_id(db, self.cio_company_id).await?;
@@ -750,7 +748,7 @@ impl Applicant {
     /// Send an invite to the applicant to do a background check.
     pub async fn send_background_check_invitation(&mut self, db: &Database) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
-        self.keep_fields_from_airtable(db).await;
+        // self.keep_fields_from_airtable(db).await;
 
         let company = self.company(db).await?;
         let checkr_auth = company.authenticate_checkr();
@@ -1170,21 +1168,6 @@ fn parse_question(q1: &str, q2: &str, materials_contents: &str) -> String {
     Default::default()
 }
 
-/// Implement updating the Airtable record for an Applicant.
-#[async_trait]
-impl UpdateAirtableRecord<Applicant> for Applicant {
-    async fn update_airtable_record(&mut self, record: Applicant) -> Result<()> {
-        self.interviews = record.interviews;
-        self.geocode_cache = record.geocode_cache;
-        self.link_to_reviews = record.link_to_reviews;
-        self.resume_contents = truncate(&self.resume_contents, 90000);
-        self.materials_contents = truncate(&self.materials_contents, 90000);
-        self.question_why_oxide = truncate(&self.question_why_oxide, 90000);
-
-        Ok(())
-    }
-}
-
 /// Get the contexts of a file in Google Drive by it's URL as a text string.
 pub async fn get_file_contents(drive_client: &GoogleDrive, url: &str) -> Result<String> {
     let id = url
@@ -1291,8 +1274,6 @@ async fn read_pdf(name: &str, path: std::path::PathBuf) -> Result<String> {
 /// The data type for a ApplicantReviewer.
 #[db {
     new_struct_name = "ApplicantReviewer",
-    airtable_base = "hiring",
-    airtable_table = "AIRTABLE_REVIEWER_LEADERBOARD_TABLE",
     match_on = {
         "email" = "String",
     },
@@ -1324,14 +1305,6 @@ pub struct NewApplicantReviewer {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for an ApplicantReviewer.
-#[async_trait]
-impl UpdateAirtableRecord<ApplicantReviewer> for ApplicantReviewer {
-    async fn update_airtable_record(&mut self, _record: ApplicantReviewer) -> Result<()> {
-        Ok(())
-    }
 }
 
 pub async fn refresh_docusign_for_applicants(db: &Database, company: &Company, config: &AppConfig) -> Result<()> {
@@ -1977,7 +1950,7 @@ The applicants Airtable \
         new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
-        self.keep_fields_from_airtable(db).await;
+        // self.keep_fields_from_airtable(db).await;
 
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
@@ -2026,7 +1999,7 @@ The applicants Airtable \
         envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
-        self.keep_fields_from_airtable(db).await;
+        // self.keep_fields_from_airtable(db).await;
 
         let company = self.company(db).await?;
 
@@ -2182,7 +2155,7 @@ The applicants Airtable \
         new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
-        self.keep_fields_from_airtable(db).await;
+        // self.keep_fields_from_airtable(db).await;
 
         // We look for "Onboarding" here as well since we want to make sure we can actually update
         // the data for the user.
@@ -2231,7 +2204,7 @@ The applicants Airtable \
         new_envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
-        self.keep_fields_from_airtable(db).await;
+        // self.keep_fields_from_airtable(db).await;
 
         // Only allow documents to be re-generated if we are in the process of or have already
         // hired this applicant
@@ -2270,35 +2243,35 @@ The applicants Airtable \
         }
     }
 
-    pub async fn keep_fields_from_airtable(&mut self, db: &Database) {
-        // Let's get the existing record from Airtable, so we can use it as the source
-        // of truth for various things.
-        if let Some(ex) = self.get_existing_airtable_record(db).await {
-            let existing = ex.fields;
-            // We keep the scorers from Airtable in case someone assigned someone from the UI.
-            self.scorers = existing.scorers.clone();
-            // Keep the interviewers from Airtable since they are updated out of bound by Airtable.
-            self.interviews = existing.interviews.clone();
-            // Keep the reviews, since these are updated out of band by Airtable.
-            self.link_to_reviews = existing.link_to_reviews;
+    // pub async fn keep_fields_from_airtable(&mut self, db: &Database) {
+    //     // Let's get the existing record from Airtable, so we can use it as the source
+    //     // of truth for various things.
+    //     if let Some(ex) = self.get_existing_airtable_record(db).await {
+    //         let existing = ex.fields;
+    //         // We keep the scorers from Airtable in case someone assigned someone from the UI.
+    //         self.scorers = existing.scorers.clone();
+    //         // Keep the interviewers from Airtable since they are updated out of bound by Airtable.
+    //         self.interviews = existing.interviews.clone();
+    //         // Keep the reviews, since these are updated out of band by Airtable.
+    //         self.link_to_reviews = existing.link_to_reviews;
 
-            // We want to keep the status and status raw since we might have modified
-            // it to move a candidate along in the process.
-            self.status = existing.status.to_string();
-            self.raw_status = existing.raw_status.to_string();
+    //         // We want to keep the status and status raw since we might have modified
+    //         // it to move a candidate along in the process.
+    //         self.status = existing.status.to_string();
+    //         self.raw_status = existing.raw_status.to_string();
 
-            // Mostly the start date will populate from docusign, but just in case they
-            // are someone who worked remotely, we might have to manually set it.
-            // If docusign is incorrect, make sure Airtable always has the source of truth.
-            self.start_date = existing.start_date;
-        } else {
-            log::warn!(
-                "Could not find existing Airtable record for email -> {}, id -> {}",
-                self.email,
-                self.id
-            );
-        }
-    }
+    //         // Mostly the start date will populate from docusign, but just in case they
+    //         // are someone who worked remotely, we might have to manually set it.
+    //         // If docusign is incorrect, make sure Airtable always has the source of truth.
+    //         self.start_date = existing.start_date;
+    //     } else {
+    //         log::warn!(
+    //             "Could not find existing Airtable record for email -> {}, id -> {}",
+    //             self.email,
+    //             self.id
+    //         );
+    //     }
+    // }
 
     pub async fn update_applicant_from_docusign_piia_envelope(
         &mut self,
@@ -2307,7 +2280,7 @@ The applicants Airtable \
         envelope: docusign::Envelope,
     ) -> Result<()> {
         // Keep the fields from Airtable we need just in case they changed.
-        self.keep_fields_from_airtable(db).await;
+        // self.keep_fields_from_airtable(db).await;
 
         let company = self.company(db).await?;
 
@@ -2480,11 +2453,6 @@ pub async fn refresh_new_applicants_and_reviews(
             }
         }
     }
-
-    // Update Airtable.
-    // TODO: this might cause some racy problems, maybe only run at night (?)
-    // Or maybe always get the latest from the database and update airtable with that (?)
-    // Applicants::get_from_db(db, company.id)?.update_airtable(db).await?;
 
     Ok(())
 }

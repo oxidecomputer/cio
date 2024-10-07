@@ -28,8 +28,6 @@ use crate::{
 
 #[db {
     new_struct_name = "SoftwareVendor",
-    airtable_base = "finance",
-    airtable_table = "AIRTABLE_SOFTWARE_VENDORS_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "name" = "String",
@@ -83,23 +81,6 @@ pub struct NewSoftwareVendor {
 /// This is only used for serialize
 fn is_zero(num: &f32) -> bool {
     *num == 0.0
-}
-
-/// Implement updating the Airtable record for a SoftwareVendor.
-#[async_trait]
-impl UpdateAirtableRecord<SoftwareVendor> for SoftwareVendor {
-    async fn update_airtable_record(&mut self, record: SoftwareVendor) -> Result<()> {
-        // This is a function so we can't change it through the API.
-        self.total_cost_per_month = 0.0;
-        // Keep this the same, we update it from the transactions.
-        self.link_to_transactions = record.link_to_transactions;
-        // Keep this the same, we update it from the accounts payable.
-        self.link_to_accounts_payable = record.link_to_accounts_payable;
-        // Keep this the same, we update it from the expensed items.
-        self.link_to_expensed_items = record.link_to_expensed_items;
-
-        Ok(())
-    }
 }
 
 /// Convert the vendor into a Slack message.
@@ -222,111 +203,8 @@ impl NewSoftwareVendor {
     }
 }
 
-/// Sync software vendors from Airtable.
-pub async fn refresh_software_vendors(db: &Database, company: &Company) -> Result<()> {
-    let gsuite = company.authenticate_google_admin(db).await?;
-
-    let github = company.authenticate_github()?;
-
-    let okta_auth = company.authenticate_okta();
-
-    let slack_auth = company.authenticate_slack(db).await;
-
-    // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SoftwareVendor>> = company
-        .authenticate_airtable(&company.airtable_base_id_finance)
-        .list_records(&SoftwareVendor::airtable_table(), "Grid view", vec![])
-        .await?;
-    for vendor_record in results {
-        let mut vendor: NewSoftwareVendor = vendor_record.fields.into();
-
-        let new_cost_per_user_per_month = vendor.cost_per_user_per_month;
-
-        // Get the existing record if there is one.
-        let existing = SoftwareVendor::get_from_db(db, company.id, vendor.name.to_string()).await;
-        // Set the existing cost and number of users, since we want to know
-        // via slack notification if it changed.
-        vendor.cost_per_user_per_month = if let Some(ref ex) = existing {
-            ex.cost_per_user_per_month
-        } else {
-            0.0
-        };
-        vendor.users = if let Some(ref ex) = existing { ex.users } else { 0 };
-
-        // Set the company id.
-        vendor.cio_company_id = company.id;
-
-        let users = if vendor.name == "GitHub" {
-            // Update the number of GitHub users in our org.
-            let org = github.orgs().get(&company.github_org).await?.body;
-            org.plan.unwrap().filled_seats as i32
-        } else if vendor.name == "Okta" && okta_auth.is_some() {
-            let okta = okta_auth.as_ref().unwrap();
-            let users = okta.list_provider_users(company).await?;
-            users.len() as i32
-        } else if vendor.name == "Google Workspace" {
-            let users = gsuite.list_provider_users(company).await?;
-            users.len() as i32
-        } else if vendor.name == "Slack" && slack_auth.is_ok() {
-            let slack = slack_auth.as_ref().unwrap();
-            let users = slack.billable_info().await?;
-            let mut count = 0;
-            for (_, user) in users {
-                if user.billing_active {
-                    count += 1;
-                }
-            }
-
-            count
-        } else if vendor.name == "Airtable"
-            || vendor.name == "Ramp"
-            || vendor.name == "Brex"
-            || vendor.name == "Gusto"
-            || vendor.name == "Expensify"
-        {
-            // Airtable, Brex, Gusto, Expensify are all the same number of users as
-            // in all@.
-            let group = Group::get_from_db(db, company.id, "all".to_string()).await.unwrap();
-            let airtable_group = group.get_existing_airtable_record(db).await.unwrap();
-
-            airtable_group.fields.members.len() as i32
-        } else {
-            vendor.users
-        };
-
-        // Send the slack notification if the number of users or cost changed.
-        // This will also set the values for users and cost_per_user_per_month, so
-        // do this before sending to the database.
-        vendor
-            .send_slack_notification_if_price_changed(db, company, users, new_cost_per_user_per_month)
-            .await?;
-
-        // Upsert the record in our database.
-        let mut db_vendor = vendor.upsert_in_db(db).await?;
-
-        if db_vendor.airtable_record_id.is_empty() {
-            db_vendor.airtable_record_id = vendor_record.id;
-        }
-
-        // Update the cost per month.
-        db_vendor.total_cost_per_month =
-            (db_vendor.cost_per_user_per_month * db_vendor.users as f32) + db_vendor.flat_cost_per_month;
-
-        db_vendor.update(db).await?;
-    }
-
-    SoftwareVendors::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    Ok(())
-}
-
 #[db {
     new_struct_name = "CreditCardTransaction",
-    airtable_base = "finance",
-    airtable_table = "AIRTABLE_CREDIT_CARD_TRANSACTIONS_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "transaction_id" = "String",
@@ -377,14 +255,6 @@ pub struct NewCreditCardTransaction {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a CreditCardTransaction.
-#[async_trait]
-impl UpdateAirtableRecord<CreditCardTransaction> for CreditCardTransaction {
-    async fn update_airtable_record(&mut self, _record: CreditCardTransaction) -> Result<()> {
-        Ok(())
-    }
 }
 
 pub async fn refresh_ramp_transactions(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
@@ -451,11 +321,6 @@ pub async fn refresh_ramp_transactions(db: &Database, company: &Company, config:
         nt.upsert(db).await?;
     }
 
-    CreditCardTransactions::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
     Ok(())
 }
 
@@ -516,11 +381,6 @@ pub async fn refresh_ramp_reimbursements(db: &Database, company: &Company, confi
 
         nt.upsert(db).await?;
     }
-
-    ExpensedItems::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
 
     Ok(())
 }
@@ -621,8 +481,6 @@ pub async fn refresh_brex_transactions(db: &Database, company: &Company, config:
 
 #[db {
     new_struct_name = "AccountsPayable",
-    airtable_base = "finance",
-    airtable_table = "AIRTABLE_ACCOUNTS_PAYABLE_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "confirmation_number" = "String",
@@ -664,14 +522,6 @@ pub struct NewAccountsPayable {
     pub cio_company_id: i32,
 }
 
-/// Implement updating the Airtable record for a AccountsPayable.
-#[async_trait]
-impl UpdateAirtableRecord<AccountsPayable> for AccountsPayable {
-    async fn update_airtable_record(&mut self, _record: AccountsPayable) -> Result<()> {
-        Ok(())
-    }
-}
-
 pub mod bill_com_date_format {
     use chrono::NaiveDate;
     use serde::{self, Deserialize, Deserializer};
@@ -694,51 +544,8 @@ pub mod bill_com_date_format {
     }
 }
 
-/// Sync accounts payable.
-pub async fn refresh_accounts_payable(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
-    // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<AccountsPayable>> = company
-        .authenticate_airtable(&company.airtable_base_id_finance)
-        .list_records(&AccountsPayable::airtable_table(), "Grid view", vec![])
-        .await?;
-    for bill_record in results {
-        let mut bill: NewAccountsPayable = bill_record.fields.into();
-
-        let vendor = clean_vendor_name(&bill.vendor, config);
-        // Try to find the merchant in our list of vendors.
-        match SoftwareVendor::get_from_db(db, company.id, vendor.to_string()).await {
-            Some(v) => {
-                bill.link_to_vendor = vec![v.airtable_record_id.to_string()];
-            }
-            None => {
-                info!("could not find vendor that matches {}", vendor);
-            }
-        }
-
-        // Upsert the record in our database.
-        let mut db_bill = bill.upsert_in_db(db).await?;
-
-        db_bill.cio_company_id = company.id;
-
-        if db_bill.airtable_record_id.is_empty() {
-            db_bill.airtable_record_id = bill_record.id;
-        }
-
-        db_bill.update(db).await?;
-    }
-
-    AccountsPayables::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    Ok(())
-}
-
 #[db {
     new_struct_name = "ExpensedItem",
-    airtable_base = "finance",
-    airtable_table = "AIRTABLE_EXPENSED_ITEMS_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "transaction_id" = "String",
@@ -791,22 +598,9 @@ pub struct NewExpensedItem {
     pub cio_company_id: i32,
 }
 
-/// Implement updating the Airtable record for a ExpensedItem.
-#[async_trait]
-impl UpdateAirtableRecord<ExpensedItem> for ExpensedItem {
-    async fn update_airtable_record(&mut self, _record: ExpensedItem) -> Result<()> {
-        Ok(())
-    }
-}
-
 /// Read the Expensify transactions from a csv.
 /// We don't run this except locally.
 pub async fn refresh_expensify_transactions(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
-    ExpensedItems::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
     let mut path = env::current_dir()?;
     path.push("expensify.csv");
 
@@ -1109,19 +903,19 @@ fn clean_merchant_name(merchant_name: &str, config: &FinanceConfig) -> String {
 }
 
 pub async fn refresh_all_finance(db: &Database, company: &Company, config: &FinanceConfig) -> Result<()> {
-    let (sv, reim, trans, ap, qb) = tokio::join!(
-        refresh_software_vendors(db, company),
-        refresh_ramp_reimbursements(db, company, config),
-        refresh_ramp_transactions(db, company, config),
-        refresh_accounts_payable(db, company, config),
-        sync_quickbooks(db, company, config),
-    );
+    // let (sv, reim, trans, ap, qb) = tokio::join!(
+    //     refresh_software_vendors(db, company),
+    //     refresh_ramp_reimbursements(db, company, config),
+    //     refresh_ramp_transactions(db, company, config),
+    //     refresh_accounts_payable(db, company, config),
+    //     sync_quickbooks(db, company, config),
+    // );
 
-    sv?;
-    reim?;
-    trans?;
-    ap?;
-    qb?;
+    // sv?;
+    // reim?;
+    // trans?;
+    // ap?;
+    // qb?;
 
     Ok(())
 }

@@ -20,8 +20,6 @@ use crate::{
 
 #[db {
     new_struct_name = "Function",
-    airtable_base = "cio",
-    airtable_table = "AIRTABLE_FUNCTIONS_TABLE",
     match_on = {
         "saga_id" = "String",
     },
@@ -46,16 +44,6 @@ pub struct NewFunction {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a Function.
-#[async_trait]
-impl UpdateAirtableRecord<Function> for Function {
-    async fn update_airtable_record(&mut self, _record: Function) -> Result<()> {
-        // Provide leeway in case this is causing log updates to fail
-        self.logs = truncate(&self.logs, 90_000);
-        Ok(())
-    }
 }
 
 fn get_color_based_from_status_and_conclusion(status: &str, conclusion: &str) -> String {
@@ -424,12 +412,6 @@ pub async fn refresh_functions(db: &Database, company: &Company) -> Result<()> {
 
         new.send_slack_notification(db, company).await?;
     }
-
-    // AM: Disabling the bulk function updates. There are too many to actually update this way.
-    // If we want to continue this process we should first build a work plan that pairs down
-    // what data actually needs to be updated, and then running through that plan (ensuring it is)
-    // still relevant. This does not fully avoid race conditions, but could help.
-    // Functions::get_from_db(&db, 1).await?.update_airtable(&db).await?;
 
     Ok(())
 }

@@ -40,8 +40,6 @@ use crate::{
 /// A data type to hold the values of a let's encrypt certificate for a domain.
 #[db {
     new_struct_name = "Certificate",
-    airtable_base = "misc",
-    airtable_table = "AIRTABLE_CERTIFICATES_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "domain" = "String",
@@ -283,14 +281,6 @@ impl NewCertificate {
         // Display trait produces this format, which is kinda dumb.
         // Apr 19 08:48:46 2019 GMT
         Ok(Utc.datetime_from_str(&not_after, "%h %e %H:%M:%S %Y %Z")?)
-    }
-}
-
-/// Implement updating the Airtable record for a Certificate.
-#[async_trait]
-impl UpdateAirtableRecord<Certificate> for Certificate {
-    async fn update_airtable_record(&mut self, _record: Certificate) -> Result<()> {
-        Ok(())
     }
 }
 

@@ -17,8 +17,6 @@ use crate::{
 /// The data type for a RackLineSubscriber.
 #[db {
     new_struct_name = "RackLineSubscriber",
-    airtable_base = "customer_leads",
-    airtable_table = "AIRTABLE_RACK_LINE_SIGNUPS_TABLE",
     match_on = {
         "email" = "String",
     },
@@ -177,25 +175,6 @@ impl Default for NewRackLineSubscriber {
             sf_lead_id: Default::default(),
             sf_lead_exclude: false,
         }
-    }
-}
-
-/// Implement updating the Airtable record for a RackLineSubscriber.
-#[async_trait]
-impl UpdateAirtableRecord<RackLineSubscriber> for RackLineSubscriber {
-    async fn update_airtable_record(&mut self, record: RackLineSubscriber) -> Result<()> {
-        // Set the link_to_people from the original so it stays intact.
-        self.link_to_people = record.link_to_people;
-
-        // Notes and tags are owned by Airtable
-        self.notes = record.notes;
-        self.tags = record.tags;
-
-        // Exclusions are owned by Airtable
-        self.zoho_lead_exclude = record.zoho_lead_exclude;
-        self.sf_lead_exclude = record.sf_lead_exclude;
-
-        Ok(())
     }
 }
 

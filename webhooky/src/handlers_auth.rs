@@ -302,9 +302,8 @@ pub async fn handle_auth_slack_callback(
             .get_result_async::<APIToken>(api_context.app.db.pool())
             .await?
     } else {
-        token.create_in_db(&api_context.app.db).await?
+        token.create(&api_context.app.db).await?
     };
-    new_token.upsert_in_airtable(&api_context.app.db).await?;
 
     // Save the user token to the database.
     if let Some(authed_user) = t.authed_user {
@@ -347,9 +346,8 @@ pub async fn handle_auth_slack_callback(
                 .get_result_async::<APIToken>(api_context.app.db.pool())
                 .await?
         } else {
-            user_token.create_in_db(&api_context.app.db).await?
+            user_token.create(&api_context.app.db).await?
         };
-        new_user_token.upsert_in_airtable(&api_context.app.db).await?;
     }
 
     Ok(())

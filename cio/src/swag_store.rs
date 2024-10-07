@@ -67,7 +67,7 @@ impl Order {
         let shipment: NewOutboundShipment = self.to_outbound_shipment().await?;
 
         // Add the shipment to the database.
-        let mut new_shipment = shipment.upsert_in_db(db).await?;
+        let mut new_shipment = shipment.upsert(db).await?;
         // Create or update the shipment from shippo.
         new_shipment.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.

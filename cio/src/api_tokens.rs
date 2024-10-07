@@ -16,8 +16,6 @@ use crate::{
 
 #[db {
     new_struct_name = "APIToken",
-    airtable_base = "cio",
-    airtable_table = "AIRTABLE_API_TOKENS_TABLE",
     match_on = {
         "auth_company_id" = "i32",
         "product" = "String",
@@ -67,19 +65,6 @@ pub struct NewAPIToken {
     /// This is the actual company that we match on for getting the token.
     #[serde(default)]
     pub auth_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a APIToken.
-#[async_trait]
-impl UpdateAirtableRecord<APIToken> for APIToken {
-    async fn update_airtable_record(&mut self, _record: APIToken) -> Result<()> {
-        // Link to the correct company.
-        let db = Database::new().await;
-        let company = Company::get_by_id(&db, self.auth_company_id).await?;
-        self.company = vec![company.airtable_record_id];
-
-        Ok(())
-    }
 }
 
 impl NewAPIToken {
@@ -135,13 +120,4 @@ impl APIToken {
         true
         // }
     }
-}
-
-pub async fn refresh_api_tokens(db: &Database, company: &Company) -> Result<()> {
-    APITokens::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    Ok(())
 }

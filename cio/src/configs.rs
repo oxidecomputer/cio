@@ -159,8 +159,6 @@ impl FromSql<VarChar, Pg> for ExternalServices {
 /// The data type for a user.
 #[db {
     new_struct_name = "User",
-    airtable_base = "directory",
-    airtable_table = "AIRTABLE_EMPLOYEES_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "username" = "String",
@@ -445,63 +443,13 @@ impl UserConfig {
             }
         }
 
-        // If we have an existing user, sync down Airtable fields that we allow modifications on
-        if let Some(e) = &existing {
-            if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
-                self.home_address_street_1 = airtable_record.fields.home_address_street_1.to_string();
-                self.home_address_street_2 = airtable_record.fields.home_address_street_2.to_string();
-                self.home_address_city = airtable_record.fields.home_address_city.to_string();
-                self.home_address_state = airtable_record.fields.home_address_state.to_string();
-                self.home_address_zipcode = airtable_record.fields.home_address_zipcode.to_string();
-                self.home_address_country = airtable_record.fields.home_address_country.to_string();
-                self.birthday = airtable_record.fields.birthday;
-
-                log::info!(
-                    "Fetched address data from existing Airtable record for user {} during sync",
-                    e.id
-                );
-            } else {
-                log::info!("Failed to find existing Airtable record for user {} during sync", e.id);
-            }
-        }
-
         // See if we have a gusto user for the user.
         // The user's email can either be their personal email or their oxide email.
         if let Some(gusto_user) = gusto_users.get(&self.email) {
             self.update_from_gusto(gusto_user);
         } else if let Some(gusto_user) = gusto_users.get(&self.recovery_email) {
             self.update_from_gusto(gusto_user);
-        } else {
-            // For a new hire we may have an airtable entry, but not a Gusto record. Grab their
-            // date of birth, start date, and address from Airtable.
-            if let Some(e) = &existing {
-                // Redundant lookup
-                if let Some(airtable_record) = e.get_existing_airtable_record(db).await {
-                    // Keep the start date in airtable if we already have one.
-                    if self.start_date == crate::utils::default_date()
-                        && airtable_record.fields.start_date != crate::utils::default_date()
-                    {
-                        self.start_date = airtable_record.fields.start_date;
-                    }
-
-                    self.gusto_id = airtable_record.fields.gusto_id;
-                }
-
-                // If we found a Gusto id in Airtable then update the user record based on that id.
-                // TODO: This logic (combined with the email lookup above is very likely incorrect.
-                // It is possible (though unlikely) that the two of these diverge and result in
-                // returning different accounts)
-                if !e.gusto_id.is_empty() {
-                    if let Some(gusto_user) = gusto_users_by_id.get(&e.gusto_id) {
-                        self.update_from_gusto(gusto_user);
-                    }
-                } else if let Ok((ref gusto, ref gusto_company_id)) = gusto_auth {
-                    self.populate_home_address().await?;
-                    // Create the user in Gusto if necessary.
-                    self.create_in_gusto_if_needed(gusto, gusto_company_id).await?;
-                }
-            }
-        }
+        } else { }
 
         // Expand the user.
         self.expand(db, company).await?;
@@ -975,7 +923,7 @@ impl User {
         // Let's create the shipment.
         let new_shipment = NewOutboundShipment::from(self.clone());
         // Let's add it to our database.
-        let mut shipment = new_shipment.upsert_in_db(db).await?;
+        let mut shipment = new_shipment.upsert(db).await?;
         // Create the shipment in shippo.
         shipment.create_or_get_shippo_shipment(db).await?;
         // Update airtable and the database again.
@@ -1242,67 +1190,9 @@ xoxo,
     }
 }
 
-/// Implement updating the Airtable record for a User.
-#[async_trait]
-impl UpdateAirtableRecord<User> for User {
-    async fn update_airtable_record(&mut self, record: User) -> Result<()> {
-        // Get the current groups in Airtable so we can link to them.
-        // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new().await;
-        let groups = Groups::get_from_airtable(&db, self.cio_company_id).await?;
-
-        let mut links: Vec<String> = Default::default();
-        // Iterate over the group names in our record and match it against the
-        // group ids and see if we find a match.
-        for group in &self.groups {
-            // Iterate over the groups to get the ID.
-            for g in groups.values() {
-                if *group == g.fields.name {
-                    // Append the ID to our links.
-                    links.push(g.id.to_string());
-                    // Break the loop and return early.
-                    break;
-                }
-            }
-        }
-
-        self.groups = links;
-
-        self.geocode_cache = record.geocode_cache.to_string();
-
-        if self.start_date == crate::utils::default_date() && record.start_date != crate::utils::default_date() {
-            self.start_date = record.start_date;
-        }
-
-        if !record.google_anniversary_event_id.is_empty() {
-            self.google_anniversary_event_id = record.google_anniversary_event_id.to_string();
-        }
-
-        // Set the building to right building link.
-        // Get the current buildings in Airtable so we can link to it.
-        // TODO: make this more dry so we do not call it every single damn time.
-        let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await?;
-        // Iterate over the buildings to get the ID.
-        for building in buildings.values() {
-            if self.building == building.fields.name {
-                // Set the ID.
-                self.link_to_building = vec![building.id.to_string()];
-                // Break the loop and return early.
-                break;
-            }
-        }
-
-        self.work_address_formatted = self.work_address_formatted.replace("\\n", "\n");
-
-        Ok(())
-    }
-}
-
 /// The data type for a group. This applies to Google Groups.
 #[db {
     new_struct_name = "Group",
-    airtable_base = "directory",
-    airtable_table = "AIRTABLE_GROUPS_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "name" = "String",
@@ -1474,21 +1364,9 @@ impl Group {
     }
 }
 
-/// Implement updating the Airtable record for a Group.
-#[async_trait]
-impl UpdateAirtableRecord<Group> for Group {
-    async fn update_airtable_record(&mut self, record: Group) -> Result<()> {
-        // Make sure we don't mess with the members since that is populated by the Users table.
-        self.members = record.members;
-        Ok(())
-    }
-}
-
 /// The data type for a building.
 #[db {
     new_struct_name = "Building",
-    airtable_base = "directory",
-    airtable_table = "AIRTABLE_BUILDINGS_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "name" = "String",
@@ -1541,21 +1419,6 @@ impl BuildingConfig {
     }
 }
 
-/// Implement updating the Airtable record for a Building.
-#[async_trait]
-impl UpdateAirtableRecord<Building> for Building {
-    async fn update_airtable_record(&mut self, record: Building) -> Result<()> {
-        // Make sure we don't mess with the employees since that is populated by the Users table.
-        self.employees = record.employees.clone();
-        // Make sure we don't mess with the conference_rooms since that is populated by the Conference Rooms table.
-        self.conference_rooms = record.conference_rooms;
-
-        self.geocode_cache = record.geocode_cache;
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, JsonSchema, Serialize, Deserialize, FromSqlRow, AsExpression, Default)]
 #[diesel(sql_type = VarChar)]
 pub enum ResourceCategory {
@@ -1604,8 +1467,6 @@ fn default_resource_category() -> ResourceCategory {
 /// availability that people can book through GSuite.
 #[db {
     new_struct_name = "Resource",
-    airtable_base = "directory",
-    airtable_table = "AIRTABLE_RESOURCES_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "name" = "String",
@@ -1635,35 +1496,10 @@ pub struct NewResourceConfig {
     pub cio_company_id: i32,
 }
 
-/// Implement updating the Airtable record for a Resource.
-#[async_trait]
-impl UpdateAirtableRecord<Resource> for Resource {
-    async fn update_airtable_record(&mut self, _record: Resource) -> Result<()> {
-        // Set the building to right building link.
-        // Get the current buildings in Airtable so we can link to it.
-        // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new().await;
-        let buildings = Buildings::get_from_airtable(&db, self.cio_company_id).await?;
-        // Iterate over the buildings to get the ID.
-        for building in buildings.values() {
-            if self.building == building.fields.name {
-                // Set the ID.
-                self.link_to_building = vec![building.id.to_string()];
-                // Break the loop and return early.
-                break;
-            }
-        }
-
-        Ok(())
-    }
-}
-
 /// The data type for a link. These get turned into short links like
 /// `{name}.corp.oxide.compuer` by the `shorturls` subcommand.
 #[db {
     new_struct_name = "Link",
-    airtable_base = "directory",
-    airtable_table = "AIRTABLE_LINKS_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "name" = "String",
@@ -1684,14 +1520,6 @@ pub struct LinkConfig {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a Link.
-#[async_trait]
-impl UpdateAirtableRecord<Link> for Link {
-    async fn update_airtable_record(&mut self, _record: Link) -> Result<()> {
-        Ok(())
-    }
 }
 
 /// The data type for a huddle meeting that syncs with Airtable and notes in GitHub.
@@ -2123,9 +1951,6 @@ pub async fn sync_users(
 
     info!("updated configs users in the database");
 
-    // Update users in airtable.
-    Users::get_from_db(db, company.id).await?.update_airtable(db).await?;
-
     Ok(())
 }
 
@@ -2247,12 +2072,6 @@ pub async fn sync_buildings(
         info!("created building from gsuite: {}", id);
     }
 
-    // Update buildings in airtable.
-    Buildings::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
     Ok(())
 }
 
@@ -2365,12 +2184,6 @@ pub async fn sync_resources(
         info!("created conference room in gsuite: {}", id);
     }
 
-    // Update resources in airtable.
-    Resources::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
     Ok(())
 }
 
@@ -2436,9 +2249,6 @@ pub async fn sync_groups(db: &Database, groups: BTreeMap<String, GroupConfig>, c
         //     }
         // }
     }
-
-    // Update groups in airtable.
-    Groups::get_from_db(db, company.id).await?.update_airtable(db).await?;
 
     Ok(())
 }
@@ -2507,9 +2317,6 @@ pub async fn sync_links(
     }
     info!("updated configs links in the database");
 
-    // Update links in airtable.
-    Links::get_from_db(db, company.id).await?.update_airtable(db).await?;
-
     Ok(())
 }
 
@@ -2575,12 +2382,6 @@ pub async fn sync_certificates(
         info!("Certificate for {} needs to be deleted", cert.domain);
     }
     info!("updated configs certificates in the database");
-
-    // Update certificates in airtable.
-    Certificates::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
 
     Ok(())
 }

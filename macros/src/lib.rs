@@ -20,12 +20,6 @@ struct Params {
     ///   - id: i32
     ///   - airtable_record_id: String
     new_struct_name: String,
-    /// The name of the table in Airtable where this information should be sync on every
-    /// database operation.
-    airtable_table: String,
-    /// The Airtable base where this information should be sync on every
-    /// database operation.
-    airtable_base: String,
     /// A boolean representing if the new struct has a custom PartialEq implementation.
     /// If so, we will not add the derive method PartialEq to the new struct.
     #[serde(default)]
@@ -85,31 +79,13 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
         let og_struct_name = og_struct.ident;
 
-        // Get the Airtable information.
-        let airtable_base = format_ident!("airtable_base_id_{}", params.airtable_base);
-        let airtable_table = format_ident!("{}", params.airtable_table);
-
-        let airtable = quote! {
+        let db_impl = quote! {
         // Import what we need from diesel so the database queries work.
         use diesel::prelude::*;
 
         impl #og_struct_name {
             /// Create a new record in the database and Airtable.
             pub async fn create(&self, db: &crate::db::Database) -> anyhow::Result<#new_struct_name> {
-                let mut new_record = self.create_in_db(db).await?;
-
-                // Let's also create this record in Airtable.
-                let new_airtable_record = new_record.create_in_airtable(db).await?;
-
-                // Now we have the id we need to update the database.
-                new_record.airtable_record_id = new_airtable_record.id.to_string();
-                let r = new_record.update_in_db(db).await?;
-                Ok(r)
-            }
-
-            /// Create a new record in the database.
-            pub async fn create_in_db(&self, db: &crate::db::Database) -> anyhow::Result<#new_struct_name> {
-                // // TODO: special error here.
                 let r = diesel::insert_into(crate::schema::#db_schema::table)
                     .values(self.clone())
                     .get_result_async(db.pool()).await?;
@@ -119,32 +95,6 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             /// Create or update the record in the database and Airtable.
             pub async fn upsert(&self, db: &crate::db::Database) -> anyhow::Result<#new_struct_name> {
-                let mut record = self.upsert_in_db(db).await?;
-
-                log::info!("Upserted {} into database. Upserting to Airtable", #new_struct_name_str);
-
-                // Let's also update this record in Airtable.
-                let new_airtable_record = match record.upsert_in_airtable(db).await {
-                    Ok(airtable_record) => airtable_record,
-                    Err(err) => {
-                        log::error!("Failed to upsert persisted database record into Airtable. id: {}", record.id);
-                        return Err(err);
-                    }
-                };
-
-                log::info!("Upserted {} record to Airtable", #new_struct_name_str);
-
-                if record.airtable_record_id.is_empty(){
-                    // Now we have the id we need to update the database.
-                    record.airtable_record_id = new_airtable_record.id.to_string();
-                    return record.update_in_db(db).await;
-                }
-
-                Ok(record)
-            }
-
-            /// Create or update the record in the database.
-            pub async fn upsert_in_db(&self, db: &crate::db::Database) -> anyhow::Result<#new_struct_name> {
                 log::info!("Upserting {} record", #new_struct_name_str);
 
                 // See if we already have the record in the database.
@@ -163,7 +113,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                 log::info!("No existing {} record. Performing create", #new_struct_name_str);
 
-                let r = self.create_in_db(db).await?;
+                let r = self.create(db).await?;
 
                 Ok(r)
             }
@@ -197,19 +147,6 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
             /// Update the record in the database and Airtable.
             pub async fn update(&self, db: &crate::db::Database) -> anyhow::Result<Self> {
                 // Update the record.
-                let mut record = self.update_in_db(db).await?;
-
-                // Let's also update this record in Airtable.
-                let new_airtable_record = record.upsert_in_airtable(db).await?;
-
-                // Now we have the id we need to update the database.
-                record.airtable_record_id = new_airtable_record.id.to_string();
-                record.update_in_db(db).await
-            }
-
-            /// Update the record in the database.
-            pub async fn update_in_db(&self, db: &crate::db::Database) -> anyhow::Result<Self> {
-                // Update the record.
                 let record = diesel::update(#db_schema::dsl::#db_schema)
                     .filter(#db_schema::dsl::id.eq(self.id))
                     .set(self.clone())
@@ -239,6 +176,14 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 Ok(record)
             }
 
+            /// Get a record by its airtable id.
+            pub async fn get_by_airtable_id(db: &crate::db::Database, id: &str) -> anyhow::Result<Self> {
+                let record = #db_schema::dsl::#db_schema.filter(#db_schema::dsl::airtable_record_id.eq(id.to_string()))
+                    .first_async::<#new_struct_name>(db.pool()).await?;
+
+                Ok(record)
+            }
+
             /// Get the company object for a record.
             pub async fn company(&self, db: &crate::db::Database) -> anyhow::Result<crate::companies::Company> {
                 match crate::companies::Company::get_by_id(db, self.cio_company_id).await {
@@ -247,193 +192,12 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 }
             }
 
-            /// Get the row in our airtable workspace.
-            pub async fn get_from_airtable(id: &str, db: &crate::db::Database, cio_company_id: i32) -> anyhow::Result<Self> {
-                let record = #new_struct_name::airtable_from_company_id(db, cio_company_id).await?
-                    .get_record(&#new_struct_name::airtable_table(), id)
-                    .await?;
-
-                Ok(record.fields)
-            }
-
             /// Delete a record from the database and Airtable.
             pub async fn delete(&self, db: &crate::db::Database) -> anyhow::Result<()> {
-                self.delete_from_db(db).await?;
-
-                // Let's also delete the record from Airtable.
-                self.delete_from_airtable(db).await?;
-
-                Ok(())
-            }
-
-            /// Delete a record from the database.
-            pub async fn delete_from_db(&self, db: &crate::db::Database) -> anyhow::Result<()> {
                 diesel::delete(
                     crate::schema::#db_schema::dsl::#db_schema.filter(
                         crate::schema::#db_schema::dsl::id.eq(self.id)))
                         .execute_async(db.pool()).await?;
-
-                Ok(())
-            }
-
-            /// Create the Airtable client.
-            /// We do this in it's own function so our other functions are more DRY.
-            async fn airtable(&self, db: &crate::db::Database) -> anyhow::Result<airtable_api::Airtable> {
-                // Get the company for the company_id.
-                let company = self.company(db).await?;
-                Ok(company.authenticate_airtable(&company.#airtable_base))
-            }
-
-            /// Create the Airtable client.
-            /// We do this in it's own function so our other functions are more DRY.
-            async fn airtable_from_company_id(db: &crate::db::Database, cio_company_id: i32) -> anyhow::Result<airtable_api::Airtable> {
-                // Get the company for the company_id.
-                let company = crate::companies::Company::get_by_id(db, cio_company_id).await?;
-                Ok(company.authenticate_airtable(&company.#airtable_base))
-            }
-
-            /// Return the Airtable table name.
-            /// We do this in it's own function so our other functions are more DRY.
-            fn airtable_table() -> String {
-                #airtable_table.to_string()
-            }
-
-            /// Create the row in the Airtable base.
-            pub async fn create_in_airtable(&mut self, db: &crate::db::Database) -> anyhow::Result<airtable_api::Record<#new_struct_name>> {
-                let mut mut_self = self.clone();
-                // Run the custom trait to update the new record from the old record.
-                // We do this because where we join Airtable tables, things tend to get a little
-                // weird if we aren't nit picky about this.
-                mut_self.update_airtable_record(self.clone()).await?;
-
-                // Create the record.
-                let record = airtable_api::Record {
-                    id: "".to_string(),
-                    created_time: None,
-                    fields: mut_self,
-                };
-
-                // Send the new record to the Airtable client.
-                let records : Vec<airtable_api::Record<#new_struct_name>> = self.airtable(db).await?
-                    .create_records(&#new_struct_name::airtable_table(), vec![record])
-                    .await
-                    ?;
-
-                log::info!("[airtable] created new row: {:?}", self);
-
-                // Return the first record back.
-                Ok(records.get(0).unwrap().clone())
-            }
-
-            /// Update the record in Airtable.
-            pub async fn update_in_airtable(&self, db: &crate::db::Database, existing_record: &mut airtable_api::Record<#new_struct_name>) -> anyhow::Result<airtable_api::Record<#new_struct_name>> {
-                let mut mut_self = self.clone();
-                // Run the custom trait to update the new record from the old record.
-                // We do this because where we join Airtable tables, things tend to get a little
-                // weird if we aren't nit picky about this.
-                mut_self.update_airtable_record(existing_record.fields.clone()).await?;
-
-                // If the Airtable record and the record that was passed in are the same, then we can return early since
-                // we do not need to update it in Airtable.
-                // We do this after we update the record so that any fields that are links to other
-                // tables match as well and this can return true even if we have linked records.
-                if mut_self == existing_record.fields {
-                    log::info!("[airtable] id={} table={} in given object equals Airtable record, skipping update", self.id, #new_struct_name::airtable_table());
-                    return Ok(existing_record.clone());
-                }
-
-                existing_record.fields = mut_self;
-
-                // Send the updated record to Airtable.
-                let records : Vec<airtable_api::Record<#new_struct_name>> = self.airtable(db).await?.update_records(
-                    &#new_struct_name::airtable_table(),
-                    vec![existing_record.clone()],
-                ).await?;
-
-                log::info!("[airtable] id={} table={} updated", self.id, #new_struct_name::airtable_table());
-
-                if records.is_empty() {
-                    return Ok(existing_record.clone());
-                }
-
-                Ok(records.get(0).unwrap().clone())
-            }
-
-            /// Get the existing record in Airtable that matches this id.
-            pub async fn get_existing_airtable_record(&self, db: &crate::db::Database) -> Option<airtable_api::Record<#new_struct_name>> {
-                if self.airtable_record_id.is_empty() {
-                    return None;
-                }
-                    // Let's get the existing record from airtable.
-                    if let Ok(a) = self.airtable(db).await {
-                            match a.get_record(&#new_struct_name::airtable_table(), &self.airtable_record_id)
-                            .await {
-                                Ok(v) => return Some(v),
-                                Err(e) => {
-                                    log::info!("getting airtable record failed: {}", self.airtable_record_id);
-                                    return None;
-                                }
-                            }
-                    }
-
-                None
-            }
-
-            /// Create or update a row in the Airtable base.
-            pub async fn upsert_in_airtable(&mut self, db: &crate::db::Database) -> anyhow::Result<airtable_api::Record<#new_struct_name>> {
-                // First check if we have an `airtable_record_id` for this record.
-                // If we do we can move ahead faster.
-                if !self.airtable_record_id.is_empty() {
-                    log::info!("Attempt to perform update of Airtable {}", #new_struct_name_str);
-                    let mut er: Option<airtable_api::Record<#new_struct_name>> = self.get_existing_airtable_record(db).await;
-
-                    if let Some(mut existing_record) = er {
-                        // Return the result from the update.
-                        return self.update_in_airtable(db, &mut existing_record).await;
-                    }
-                    // Otherwise we need to continue through the other loop.
-                }
-
-                log::info!("Falling back to very slow Airtable lookup for {} record", #new_struct_name_str);
-
-                // Since we don't know the airtable record id, we need to find it by looking
-                // through all the existing records in Airtable and matching on our database id.
-                // This is slow so we should always try to make sure we have the airtable_record_id
-                // set. This function is mostly here until we migrate away from the old way of doing
-                // things.
-                let mut records = #new_struct_name_plural::get_records_from_airtable(db, self.cio_company_id, &[self.id]).await?;
-
-                if records.len() == 1 {
-                    if let Some(mut record) = records.get_mut(&self.id) {
-                        return self.update_in_airtable(db, record).await;
-                    } else {
-                        return Err(anyhow::anyhow!("Invalid airtable record returned for record {}", self.id))
-                    }
-                }
-
-                log::info!("Record does not exist in Airtable. Creating new {} record", #new_struct_name_str);
-
-                // We've tried everything to find the record in our existing Airtable but it is not
-                // there. We need to create it.
-                let record = self.create_in_airtable(db).await?;
-
-                Ok(record)
-            }
-
-            /// Delete a record from Airtable.
-            pub async fn delete_from_airtable(&self, db: &crate::db::Database) -> anyhow::Result<()> {
-                if !self.airtable_record_id.is_empty() {
-                    // Delete the record from airtable.
-                    if let Err(e) = self.airtable(db).await?.delete_record(&#new_struct_name::airtable_table(), &self.airtable_record_id).await {
-                        // Ignore if we got a NOT_FOUND error since then the record does not exist.
-                        if e.to_string().contains("NOT_FOUND") {
-                            return Ok(());
-                        }
-
-                        // Otherwise return the actual error.
-                        anyhow::bail!("deleting record: `{:?}` from Airtable failed: {}", self, e);
-                    }
-                }
 
                 Ok(())
             }
@@ -470,107 +234,6 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                     Err(e) => Err(anyhow::anyhow!("getting `{:?}` from the database for cio_company_id `{}` failed: {}", #new_struct_name_plural(vec![]), cio_company_id, e)),
                 }
             }
-
-            /// Get the current records for this type from Airtable.
-            pub async fn get_from_airtable(db: &crate::db::Database, cio_company_id: i32) -> anyhow::Result<std::collections::BTreeMap<i32, airtable_api::Record<#new_struct_name>>> {
-                let result: Vec<airtable_api::Record<#new_struct_name>> = #new_struct_name::airtable_from_company_id(db, cio_company_id).await?
-                    .list_records(&#new_struct_name::airtable_table(), "Grid view", vec![])
-                    .await?;
-
-                let mut records: std::collections::BTreeMap<i32, airtable_api::Record<#new_struct_name>> =
-                    Default::default();
-                for record in result {
-                    records.insert(record.fields.id, record);
-                }
-
-                Ok(records)
-            }
-
-            pub async fn get_records_from_airtable(db: &crate::db::Database, cio_company_id: i32, ids: &[i32]) -> anyhow::Result<std::collections::BTreeMap<i32, airtable_api::Record<#new_struct_name>>> {
-                let client = #new_struct_name::airtable_from_company_id(db, cio_company_id).await?;
-                let mut pages = client.pages::<#new_struct_name>(&#new_struct_name::airtable_table(), "Grid view", vec![]);
-                let mut airtable_records: std::collections::BTreeMap<i32, airtable_api::Record<#new_struct_name>> = Default::default();
-
-                while let Some(records) = pages.next().await? {
-                    for record in records {
-                        if ids.contains(&record.fields.id) {
-                            airtable_records.insert(record.fields.id, record);
-                        }
-                    }
-
-                    // If we find a record for every requested id we can return early
-                    if airtable_records.len() == ids.len() {
-                        return Ok(airtable_records);
-                    }
-                }
-
-                Ok(airtable_records)
-            }
-
-            /// Update Airtable records in a table from a vector.
-            pub async fn update_airtable(&self, db: &crate::db::Database) -> anyhow::Result<()> {
-                use anyhow::Context;
-
-                if self.0.is_empty() {
-                    // Return early.
-                    return Ok(());
-                }
-
-                let ids = self.0.iter().map(|r| r.id).collect::<Vec<_>>();
-                let mut airtable_records = #new_struct_name_plural::get_records_from_airtable(db, self.0.get(0).unwrap().cio_company_id, &ids).await?;
-
-                for record in &self.0 {
-                    // Get the latest of this record from the database.
-                    // This make this less racy if we have a bunch and things got
-                    // out of sync.
-                    if let Ok(mut db_record) = #new_struct_name::get_by_id(db, record.id).await {
-                        // See if we have it in our Airtable records.
-                        match airtable_records.get_mut(&db_record.id) {
-                            Some(airtable_record) => {
-
-                                // Update the record in Airtable.
-                                match db_record.update_in_airtable(db, airtable_record).await {
-                                    // We do not need to do anything else with the record once it is updated
-                                    Ok(_record) => (),
-                                    Err(err) => {
-                                        // We need to log the error so that we can address the underlying issue, but
-                                        // we do not want to abandon all of the rest of the record updates when a
-                                        // single record fails to be written
-                                        log::error!("Failed to update already persisted Airtable record (internal record: {} Airtable record: {})", db_record.id, record.id);
-                                        log::error!("Failed to update a record in airtable: {}", err);
-                                    }
-                                };
-
-                                // Remove it from the map.
-                                airtable_records.remove(&db_record.id);
-                            }
-                            None => {
-                                // We do not have the record in Airtable, Let's create it.
-                                // Create the record in Airtable.
-                                // db_record.create_in_airtable(db).await?;
-
-                                // AM: Disable while debugging
-                                log::info!("Airtable record create needed: {:?}", db_record);
-
-                                // Remove it from the map.
-                                airtable_records.remove(&db_record.id);
-                            }
-                        }
-                    }
-                }
-
-                // AM: Extract out deletions to an explicit sync
-
-                // Iterate over the records remaining and remove them from airtable
-                // since they don't exist in our vector.
-                // for (_, record) in records {
-                //     // TODO: Ensure it didn't _just_ get added to the database.
-                //     // Delete the record from airtable.
-                //     record.fields.airtable(db).await?.delete_record(&#new_struct_name::airtable_table(), &record.id).await?;
-                // }
-
-                Ok(())
-            }
         }
         };
 
@@ -604,7 +267,7 @@ fn do_db(attr: TokenStream, item: TokenStream) -> TokenStream {
                 pub airtable_record_id: String,
             }
 
-            #airtable
+            #db_impl
         );
 
         new_struct

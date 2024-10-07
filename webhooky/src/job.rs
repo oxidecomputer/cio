@@ -7,14 +7,6 @@ pub async fn run_job_cmd(cmd: crate::core::SubCommand, context: Context) -> Resu
             let Context { db, company, .. } = context;
             cio_api::rfd::send_rfd_changelog(&db, &company).await?;
         }
-        crate::core::SubCommand::SyncAnalytics(_) => {
-            let Context { db, company, .. } = context;
-            cio_api::analytics::refresh_analytics(&db, &company).await?;
-        }
-        crate::core::SubCommand::SyncAPITokens(_) => {
-            let Context { db, company, .. } = context;
-            cio_api::api_tokens::refresh_api_tokens(&db, &company).await?;
-        }
         crate::core::SubCommand::SyncApplications(_) => {
             let Context {
                 app_config,
@@ -26,18 +18,9 @@ pub async fn run_job_cmd(cmd: crate::core::SubCommand, context: Context) -> Resu
             // Do the new applicants.
             let app_config = app_config.read().unwrap().clone();
             cio_api::applicants::refresh_new_applicants_and_reviews(&db, &company, &app_config).await?;
-            cio_api::applicant_reviews::refresh_reviews(&db, &company).await?;
 
             // Refresh DocuSign for the applicants.
             cio_api::applicants::refresh_docusign_for_applicants(&db, &company, &app_config).await?;
-        }
-        crate::core::SubCommand::SyncAssetInventory(_) => {
-            let Context { db, company, .. } = context;
-            cio_api::asset_inventory::refresh_asset_items(&db, &company).await?;
-        }
-        crate::core::SubCommand::SyncCompanies(_) => {
-            let Context { db, .. } = context;
-            cio_api::companies::refresh_companies(&db).await?;
         }
         crate::core::SubCommand::SyncConfigs(_) => {
             let Context {
@@ -132,39 +115,9 @@ pub async fn run_job_cmd(cmd: crate::core::SubCommand, context: Context) -> Resu
             let Context { db, company, .. } = context;
             cio_api::sf::refresh_sf_leads(&db, &company).await?;
         }
-        crate::core::SubCommand::SyncShipments(_) => {
-            let Context { db, company, .. } = context;
-            let inbound_result = cio_api::shipments::refresh_inbound_shipments(&db, &company).await;
-            let outbound_result = cio_api::shipments::refresh_outbound_shipments(&db, &company).await;
-
-            if let Err(ref e) = inbound_result {
-                log::error!("Failed to refresh inbound shipments {:?}", e);
-            }
-
-            if let Err(ref e) = outbound_result {
-                log::error!("Failed to refresh outbound shipments {:?}", e);
-            }
-
-            inbound_result?;
-            outbound_result?;
-        }
         crate::core::SubCommand::SyncShorturls(_) => {
             let Context { db, company, .. } = context;
             cio_api::shorturls::refresh_shorturls(&db, &company).await?;
-        }
-        crate::core::SubCommand::SyncSwagInventory(_) => {
-            let Context { db, company, .. } = context;
-            cio_api::swag_inventory::refresh_swag_items(&db, &company).await?;
-            cio_api::swag_inventory::refresh_swag_inventory_items(&db, &company).await?;
-            cio_api::swag_inventory::refresh_barcode_scans(&db, &company).await?;
-        }
-        crate::core::SubCommand::SyncTravel(_) => {
-            let Context { db, company, .. } = context;
-            cio_api::travel::refresh_trip_actions(&db, &company).await?;
-        }
-        crate::core::SubCommand::SyncZoho(_) => {
-            let Context { db, company, .. } = context;
-            cio_api::zoho::refresh_leads(&db, &company).await?;
         }
         other => anyhow::bail!("Non-job subcommand passed to job runner {:?}", other),
     }
