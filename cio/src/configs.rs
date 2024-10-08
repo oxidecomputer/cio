@@ -2391,45 +2391,45 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company, c
 
     let configs = get_configs_from_repo(&github, company).await?;
 
-    // Sync buildings.
-    // Syncing buildings must happen before we sync resource.
-    if let Err(err) = sync_buildings(db, configs.buildings, company).await {
-        error!("Failed to sync buildings: {:?}", err);
-    }
+    // // Sync buildings.
+    // // Syncing buildings must happen before we sync resource.
+    // if let Err(err) = sync_buildings(db, configs.buildings, company).await {
+    //     error!("Failed to sync buildings: {:?}", err);
+    // }
 
-    // Sync resources.
-    if let Err(err) = sync_resources(db, configs.resources, company).await {
-        error!("Failed to sync resources: {:?}", err);
-    }
+    // // Sync resources.
+    // if let Err(err) = sync_resources(db, configs.resources, company).await {
+    //     error!("Failed to sync resources: {:?}", err);
+    // }
 
-    // Sync groups.
-    // Syncing groups must happen before we sync the users.
-    if let Err(err) = sync_groups(db, configs.groups, company).await {
-        error!("Failed to sync groups: {:?}", err);
-    }
+    // // Sync groups.
+    // // Syncing groups must happen before we sync the users.
+    // if let Err(err) = sync_groups(db, configs.groups, company).await {
+    //     error!("Failed to sync groups: {:?}", err);
+    // }
 
-    // Sync users.
-    if let Err(err) = sync_users(db, &github, configs.users, company, config).await {
-        error!("Failed to sync users: {:?}", err);
-    }
+    // // Sync users.
+    // if let Err(err) = sync_users(db, &github, configs.users, company, config).await {
+    //     error!("Failed to sync users: {:?}", err);
+    // }
 
     // Sync links.
     let (links, certs, ann) = tokio::join!(
-        sync_links(db, configs.links, configs.huddles, company),
+        // sync_links(db, configs.links, configs.huddles, company),
         // Sync certificates.
         sync_certificates(db, &github, configs.certificates, company),
-        refresh_anniversary_events(db, company),
+        // refresh_anniversary_events(db, company),
     );
 
-    if let Err(e) = links {
-        warn!("error syncing links: {}", e);
-    }
-    if let Err(e) = certs {
-        warn!("error syncing certificates: {}", e);
-    }
-    if let Err(e) = ann {
-        warn!("error refreshing anniversary events: {}", e);
-    }
+    // if let Err(e) = links {
+    //     warn!("error syncing links: {}", e);
+    // }
+    // if let Err(e) = certs {
+    //     warn!("error syncing certificates: {}", e);
+    // }
+    // if let Err(e) = ann {
+    //     warn!("error refreshing anniversary events: {}", e);
+    // }
 
     Ok(())
 }

@@ -211,18 +211,18 @@ pub async fn server(
         // scheduler
         //     .every(1.day())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-analytics")});
-        scheduler
-            .every(23.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-api-tokens")});
+        // scheduler
+        //     .every(23.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-api-tokens")});
         scheduler
             .every(7.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-applications")});
         // scheduler
         //     .every(2.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-asset-inventory")});
-        scheduler
-            .every(12.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-companies")});
+        // scheduler
+        //     .every(12.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-companies")});
         scheduler
             .every(1.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-configs")});
@@ -232,18 +232,18 @@ pub async fn server(
         // scheduler
         //     .every(12.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-functions")});
-        scheduler
-            .every(1.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-huddles")});
+        // scheduler
+        //     .every(1.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-huddles")});
         scheduler
             .every(4.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-interviews")});
         // scheduler
         //     .every(12.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-journal-clubs")});
-        scheduler
-            .every(3.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-mailing-lists")});
+        // scheduler
+        //     .every(3.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-mailing-lists")});
         // scheduler
         //     .every(18.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-other")});
@@ -256,15 +256,15 @@ pub async fn server(
         // scheduler
         //     .every(14.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-rfds")});
-        scheduler
-            .every(30.minutes())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-salesforce")});
+        // scheduler
+        //     .every(30.minutes())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-salesforce")});
         // scheduler
         //     .every(2.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shipments")});
-        scheduler
-            .every(3.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shorturls")});
+        // scheduler
+        //     .every(3.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shorturls")});
         // scheduler
         //     .every(9.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-swag-inventory")});
@@ -1642,11 +1642,6 @@ async fn trigger_cleanup_create(
         .await
         .map(HttpResponseAccepted)
         .map_err(handle_anyhow_err_as_http_err)
-}
-
-#[derive(Deserialize, Debug, JsonSchema)]
-pub struct FunctionPathParams {
-    pub uuid: String,
 }
 
 async fn do_cleanup(ctx: &ServerContext) -> Result<()> {
