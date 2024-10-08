@@ -1545,7 +1545,6 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
     // we do not.
     let shipments = OutboundShipments::get_from_db(db, company.id).await?;
     for mut s in shipments {
-
         // Update the shipment from shippo, this will only apply if the provider is set as "Shippo".
         s.create_or_get_shippo_shipment(db).await?;
 

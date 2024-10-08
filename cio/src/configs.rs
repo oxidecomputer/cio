@@ -449,7 +449,8 @@ impl UserConfig {
             self.update_from_gusto(gusto_user);
         } else if let Some(gusto_user) = gusto_users.get(&self.recovery_email) {
             self.update_from_gusto(gusto_user);
-        } else { }
+        } else {
+        }
 
         // Expand the user.
         self.expand(db, company).await?;

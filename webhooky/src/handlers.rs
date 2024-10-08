@@ -32,10 +32,7 @@ use std::{collections::HashMap, ffi::OsStr, str::FromStr};
 use crate::{
     context::ServerContext,
     handlers_github::RFDUpdater,
-    server::{
-        ApplicationFileUploadData, CounterResponse, GitHubRateLimit, RFDPathParams,
-        ShippoTrackingUpdateEvent,
-    },
+    server::{ApplicationFileUploadData, CounterResponse, GitHubRateLimit, RFDPathParams, ShippoTrackingUpdateEvent},
     slack_commands::SlackCommand,
 };
 
