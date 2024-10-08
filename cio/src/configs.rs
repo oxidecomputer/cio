@@ -2388,9 +2388,9 @@ pub async fn sync_certificates(
 }
 
 pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company, config: &AppConfig) -> Result<()> {
-    let github = company.authenticate_github()?;
+    // let github = company.authenticate_github()?;
 
-    let configs = get_configs_from_repo(&github, company).await?;
+    // let configs = get_configs_from_repo(&github, company).await?;
 
     // // Sync buildings.
     // // Syncing buildings must happen before we sync resource.
@@ -2415,12 +2415,12 @@ pub async fn refresh_db_configs_and_airtable(db: &Database, company: &Company, c
     // }
 
     // Sync links.
-    let (links, certs, ann) = tokio::join!(
+    // let (links, certs, ann) = tokio::join!(
         // sync_links(db, configs.links, configs.huddles, company),
         // Sync certificates.
-        sync_certificates(db, &github, configs.certificates, company),
+        // sync_certificates(db, &github, configs.certificates, company),
         // refresh_anniversary_events(db, company),
-    );
+    // );
 
     // if let Err(e) = links {
     //     warn!("error syncing links: {}", e);
