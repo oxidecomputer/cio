@@ -30,7 +30,7 @@ pub async fn run_job_cmd(cmd: crate::core::SubCommand, context: Context) -> Resu
                 ..
             } = context;
             let config = app_config.read().unwrap().clone();
-            cio_api::configs::refresh_db_configs_and_airtable(&db, &company, &config).await?;
+            // cio_api::configs::refresh_db_configs_and_airtable(&db, &company, &config).await?;
         }
         crate::core::SubCommand::SyncFinance(_) => {
             let Context {
