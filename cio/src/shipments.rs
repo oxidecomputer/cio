@@ -31,8 +31,6 @@ use crate::{
 /// The data type for an inbound shipment.
 #[db {
     new_struct_name = "InboundShipment",
-    airtable_base = "shipments",
-    airtable_table = "AIRTABLE_INBOUND_TABLE",
     match_on = {
         "carrier" = "String",
         "tracking_number" = "String",
@@ -71,39 +69,6 @@ pub struct NewInboundShipment {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for an InboundShipment.
-#[async_trait]
-impl UpdateAirtableRecord<InboundShipment> for InboundShipment {
-    async fn update_airtable_record(&mut self, record: InboundShipment) -> Result<()> {
-        if self.carrier.is_empty() {
-            self.carrier = record.carrier;
-        }
-        if self.tracking_number.is_empty() {
-            self.tracking_number = record.tracking_number;
-        }
-        if self.tracking_link.is_empty() {
-            self.tracking_link = record.tracking_link;
-        }
-        if self.tracking_status.is_empty() {
-            self.tracking_status = record.tracking_status;
-        }
-        if self.shipped_time.is_none() {
-            self.shipped_time = record.shipped_time;
-        }
-        if self.delivered_time.is_none() {
-            self.delivered_time = record.delivered_time;
-        }
-        if self.eta.is_none() {
-            self.eta = record.eta;
-        }
-        if self.notes.is_empty() {
-            self.notes = record.notes;
-        }
-
-        Ok(())
-    }
 }
 
 impl NewInboundShipment {
@@ -361,8 +326,6 @@ impl InboundShipment {
 /// The data type for an outbound shipment.
 #[db {
     new_struct_name = "OutboundShipment",
-    airtable_base = "shipments",
-    airtable_table = "AIRTABLE_OUTBOUND_TABLE",
     match_on = {
         "carrier" = "String",
         "tracking_number" = "String",
@@ -706,8 +669,6 @@ impl From<OutboundShipment> for FormattedMessage {
 /// The data type for a shipment pickup.
 #[db {
     new_struct_name = "PackagePickup",
-    airtable_base = "shipments",
-    airtable_table = "AIRTABLE_PACKAGE_PICKUPS_TABLE",
     match_on = {
         "shippo_id" = "String",
     },
@@ -742,14 +703,6 @@ pub struct NewPackagePickup {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for an PackagePickup.
-#[async_trait]
-impl UpdateAirtableRecord<PackagePickup> for PackagePickup {
-    async fn update_airtable_record(&mut self, _record: PackagePickup) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl OutboundShipments {
@@ -900,58 +853,6 @@ pub fn get_next_business_day() -> (DateTime<Utc>, DateTime<Utc>) {
         tz.from_local_datetime(&start_time).unwrap().with_timezone(&Utc),
         tz.from_local_datetime(&end_time).unwrap().with_timezone(&Utc),
     )
-}
-
-/// Implement updating the Airtable record for an OutboundShipment.
-#[async_trait]
-impl UpdateAirtableRecord<OutboundShipment> for OutboundShipment {
-    async fn update_airtable_record(&mut self, record: OutboundShipment) -> Result<()> {
-        self.link_to_package_pickup = record.link_to_package_pickup;
-
-        self.geocode_cache = record.geocode_cache;
-
-        if self.status.is_empty() {
-            self.status = record.status;
-        }
-        if self.carrier.is_empty() {
-            self.carrier = record.carrier;
-        }
-        if self.tracking_number.is_empty() {
-            self.tracking_number = record.tracking_number;
-        }
-        if self.tracking_link.is_empty() {
-            self.tracking_link = record.tracking_link;
-        }
-        if self.tracking_status.is_empty() {
-            self.tracking_status = record.tracking_status;
-        }
-        if self.label_link.is_empty() {
-            self.label_link = record.label_link;
-        }
-        if self.pickup_date.is_none() {
-            self.pickup_date = record.pickup_date;
-        }
-        if self.shipped_time.is_none() {
-            self.shipped_time = record.shipped_time;
-        }
-        if self.delivered_time.is_none() {
-            self.delivered_time = record.delivered_time;
-        }
-        if self.provider_id.is_empty() {
-            self.provider_id = record.provider_id;
-        }
-        if self.eta.is_none() {
-            self.eta = record.eta;
-        }
-        if self.cost == 0.0 {
-            self.cost = record.cost;
-        }
-        if self.notes.is_empty() {
-            self.notes = record.notes;
-        }
-
-        Ok(())
-    }
 }
 
 impl OutboundShipment {
@@ -1644,11 +1545,6 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
     // we do not.
     let shipments = OutboundShipments::get_from_db(db, company.id).await?;
     for mut s in shipments {
-        if let Some(existing) = s.get_existing_airtable_record(db).await {
-            // Take the field from Airtable.
-            s.local_pickup = existing.fields.local_pickup;
-        }
-
         // Update the shipment from shippo, this will only apply if the provider is set as "Shippo".
         s.create_or_get_shippo_shipment(db).await?;
 
@@ -1658,10 +1554,6 @@ pub async fn refresh_outbound_shipments(db: &Database, company: &Company) -> Res
 
     update_manual_shippo_shipments(db, company).await?;
 
-    OutboundShipments::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
     Ok(())
 }
 
@@ -1752,7 +1644,7 @@ async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Res
         }
 
         // Upsert the record in the database.
-        let mut s = ns.upsert_in_db(db).await?;
+        let mut s = ns.upsert(db).await?;
 
         // The shipment is actually new, lets send the notification for the status
         // as queued then.
@@ -1763,42 +1655,6 @@ async fn update_manual_shippo_shipments(db: &Database, company: &Company) -> Res
         // Update airtable and the database again.
         s.update(db).await?;
     }
-
-    Ok(())
-}
-
-// Sync the inbound shipments.
-pub async fn refresh_inbound_shipments(db: &Database, company: &Company) -> Result<()> {
-    if company.airtable_base_id_shipments.is_empty() {
-        // Return early.
-        return Ok(());
-    }
-
-    let is: Vec<airtable_api::Record<InboundShipment>> = company
-        .authenticate_airtable(&company.airtable_base_id_shipments)
-        .list_records(&InboundShipment::airtable_table(), "Grid view", vec![])
-        .await?;
-
-    for record in is {
-        if record.fields.carrier.is_empty() || record.fields.tracking_number.is_empty() {
-            // Ignore it, it's a blank record.
-            continue;
-        }
-
-        let mut new_shipment: NewInboundShipment = record.fields.into();
-        new_shipment.expand().await?;
-        new_shipment.cio_company_id = company.id;
-        let mut shipment = new_shipment.upsert_in_db(db).await?;
-        if shipment.airtable_record_id.is_empty() {
-            shipment.airtable_record_id = record.id;
-        }
-        shipment.update(db).await?;
-    }
-
-    InboundShipments::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
 
     Ok(())
 }

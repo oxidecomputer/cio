@@ -18,8 +18,6 @@ use crate::{
 
 #[db {
     new_struct_name = "PageView",
-    airtable_base = "customer_leads",
-    airtable_table = "AIRTABLE_PAGE_VIEWS_TABLE",
     match_on = {
         "time" = "DateTime<Utc>",
         "user_email" = "String",
@@ -42,29 +40,6 @@ pub struct NewPageView {
     pub cio_company_id: i32,
 }
 
-/// Implement updating the Airtable record for a PageView.
-#[async_trait]
-impl UpdateAirtableRecord<PageView> for PageView {
-    async fn update_airtable_record(&mut self, _record: PageView) -> Result<()> {
-        // Get the current auth users in Airtable so we can link to it.
-        // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new().await;
-        let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await?;
-
-        // Iterate over the auth_users and see if we find a match.
-        for (_id, auth_user_record) in auth_users {
-            if auth_user_record.fields.email == self.user_email {
-                // Set the link_to_auth_user to the right user.
-                self.link_to_auth_user = vec![auth_user_record.id];
-                // Break the loop and return early.
-                break;
-            }
-        }
-
-        Ok(())
-    }
-}
-
 impl NewPageView {
     pub fn set_page_link(&mut self) {
         // Set the link.
@@ -83,13 +58,4 @@ impl NewPageView {
 
         Ok(())
     }
-}
-
-pub async fn refresh_analytics(db: &Database, company: &Company) -> Result<()> {
-    PageViews::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    Ok(())
 }

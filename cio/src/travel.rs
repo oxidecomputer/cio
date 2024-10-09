@@ -12,8 +12,6 @@ use crate::{
 
 #[db {
     new_struct_name = "Booking",
-    airtable_base = "travel",
-    airtable_table = "AIRTABLE_BOOKINGS_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "booking_id" = "String",
@@ -83,14 +81,6 @@ pub struct NewBooking {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a Booking.
-#[async_trait]
-impl UpdateAirtableRecord<Booking> for Booking {
-    async fn update_airtable_record(&mut self, _record: Booking) -> Result<()> {
-        Ok(())
-    }
 }
 
 pub async fn refresh_trip_actions(db: &Database, company: &Company) -> Result<()> {

@@ -114,12 +114,6 @@ pub async fn refresh_db_rfds(context: &Context) -> Result<()> {
 
     info!("Updated shorturls for the all rfds");
 
-    // Update rfds in airtable.
-    RFDs::get_from_db(&context.db, context.company.id)
-        .await?
-        .update_airtable(&context.db)
-        .await?;
-
     Ok(())
 }
 

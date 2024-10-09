@@ -17,8 +17,6 @@ use crate::{
 /// The data type for a MailingListSubscriber.
 #[db {
     new_struct_name = "MailingListSubscriber",
-    airtable_base = "customer_leads",
-    airtable_table = "AIRTABLE_MAILING_LIST_SIGNUPS_TABLE",
     match_on = {
         "email" = "String",
     },
@@ -221,17 +219,6 @@ impl Default for NewMailingListSubscriber {
             link_to_people: Default::default(),
             cio_company_id: Default::default(),
         }
-    }
-}
-
-/// Implement updating the Airtable record for a MailingListSubscriber.
-#[async_trait]
-impl UpdateAirtableRecord<MailingListSubscriber> for MailingListSubscriber {
-    async fn update_airtable_record(&mut self, record: MailingListSubscriber) -> Result<()> {
-        // Set the link_to_people from the original so it stays intact.
-        self.link_to_people = record.link_to_people;
-
-        Ok(())
     }
 }
 

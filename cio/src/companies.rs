@@ -64,8 +64,6 @@ use crate::{
 
 #[db {
     new_struct_name = "Company",
-    airtable_base = "cio",
-    airtable_table = "AIRTABLE_COMPANIES_TABLE",
     match_on = {
         "name" = "String",
     },
@@ -164,14 +162,6 @@ pub struct NewCompany {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a Company.
-#[async_trait]
-impl UpdateAirtableRecord<Company> for Company {
-    async fn update_airtable_record(&mut self, _record: Company) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl Company {
@@ -1152,36 +1142,6 @@ pub struct RFDRepo {
     pub owner: String,
     pub name: String,
     pub default_branch: String,
-}
-
-pub async fn refresh_companies(db: &Database) -> Result<()> {
-    // This should forever only be Oxide.
-    let oxide = Company::get_from_db(db, "Oxide".to_string()).await.unwrap();
-
-    let is: Vec<airtable_api::Record<Company>> = oxide
-        .authenticate_airtable(&oxide.airtable_base_id_cio)
-        .list_records(&Company::airtable_table(), AIRTABLE_GRID_VIEW, vec![])
-        .await?;
-
-    for record in is {
-        if record.fields.name.is_empty() || record.fields.website.is_empty() {
-            // Ignore it, it's a blank record.
-            continue;
-        }
-
-        let new_company: NewCompany = record.fields.into();
-
-        let mut company = new_company.upsert_in_db(db).await?;
-        if company.airtable_record_id.is_empty() {
-            company.airtable_record_id = record.id;
-        }
-        company.cio_company_id = oxide.id;
-        company.update(db).await?;
-    }
-    // Companies are only stored with Oxide.
-    Companys::get_from_db(db, 1).await?.update_airtable(db).await?;
-
-    Ok(())
 }
 
 pub fn get_google_scopes() -> Vec<String> {

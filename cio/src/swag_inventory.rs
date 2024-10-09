@@ -37,8 +37,6 @@ const DPI: f64 = 300.0;
 
 #[db {
     new_struct_name = "SwagItem",
-    airtable_base = "swag",
-    airtable_table = "AIRTABLE_SWAG_ITEMS_TABLE",
     match_on = {
         "name" = "String",
     },
@@ -75,54 +73,8 @@ pub struct NewSwagItem {
     pub cio_company_id: i32,
 }
 
-/// Implement updating the Airtable record for a SwagItem.
-#[async_trait]
-impl UpdateAirtableRecord<SwagItem> for SwagItem {
-    async fn update_airtable_record(&mut self, record: SwagItem) -> Result<()> {
-        if !record.link_to_inventory.is_empty() {
-            self.link_to_inventory = record.link_to_inventory;
-        }
-        if !record.link_to_barcode_scans.is_empty() {
-            self.link_to_barcode_scans = record.link_to_barcode_scans;
-        }
-
-        Ok(())
-    }
-}
-
-/// Sync swag items from Airtable.
-pub async fn refresh_swag_items(db: &Database, company: &Company) -> Result<()> {
-    if company.airtable_base_id_swag.is_empty() {
-        // Return early.
-        return Ok(());
-    }
-
-    // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SwagItem>> = company
-        .authenticate_airtable(&company.airtable_base_id_swag)
-        .list_records(&SwagItem::airtable_table(), "Grid view", vec![])
-        .await?;
-    for item_record in results {
-        let mut item: NewSwagItem = item_record.fields.into();
-        item.cio_company_id = company.id;
-
-        let mut db_item = item.upsert_in_db(db).await?;
-        db_item.airtable_record_id = item_record.id.to_string();
-        db_item.update(db).await?;
-    }
-
-    SwagItems::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    Ok(())
-}
-
 #[db {
     new_struct_name = "SwagInventoryItem",
-    airtable_base = "swag",
-    airtable_table = "AIRTABLE_SWAG_INVENTORY_ITEMS_TABLE",
     match_on = {
         "item" = "String",
         "size" = "String",
@@ -177,24 +129,6 @@ pub struct NewSwagInventoryItem {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a SwagInventoryItem.
-#[async_trait]
-impl UpdateAirtableRecord<SwagInventoryItem> for SwagInventoryItem {
-    async fn update_airtable_record(&mut self, record: SwagInventoryItem) -> Result<()> {
-        if !record.link_to_item.is_empty() {
-            self.link_to_item = record.link_to_item;
-        }
-
-        // This is a funtion in Airtable so we can't update it.
-        self.name = "".to_string();
-
-        // This is set in airtable so we need to keep it.
-        self.print_barcode_label_quantity = record.print_barcode_label_quantity;
-
-        Ok(())
-    }
 }
 
 impl NewSwagInventoryItem {
@@ -611,53 +545,8 @@ impl SwagInventoryItem {
     }
 }
 
-/// Sync swag inventory items from Airtable.
-pub async fn refresh_swag_inventory_items(db: &Database, company: &Company) -> Result<()> {
-    if company.airtable_base_id_swag.is_empty() {
-        // Return early.
-        return Ok(());
-    }
-
-    // Initialize the Google Drive client.
-    let drive_client = company.authenticate_google_drive(db).await?;
-
-    // Figure out where our directory is.
-    // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
-    let drive_id = shared_drive.id.to_string();
-
-    // Get the directory by the name.
-    let parent_id = drive_client.files().create_folder(&drive_id, "", "swag").await?.body.id;
-
-    // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<SwagInventoryItem>> = company
-        .authenticate_airtable(&company.airtable_base_id_swag)
-        .list_records(&SwagInventoryItem::airtable_table(), "Grid view", vec![])
-        .await?;
-    for inventory_item_record in results {
-        let mut inventory_item: NewSwagInventoryItem = inventory_item_record.fields.into();
-        inventory_item.expand(&drive_client, &drive_id, &parent_id).await?;
-        inventory_item.cio_company_id = company.id;
-
-        // TODO: send a slack notification for a new item (?)
-
-        let mut db_inventory_item = inventory_item.upsert_in_db(db).await?;
-        db_inventory_item.airtable_record_id = inventory_item_record.id.to_string();
-        db_inventory_item.update(db).await?;
-    }
-
-    SwagInventoryItems::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    Ok(())
-}
-
 #[db {
     new_struct_name = "BarcodeScan",
-    airtable_base = "swag",
-    airtable_table = "AIRTABLE_BARCODE_SCANS_TABLE",
     match_on = {
         "item" = "String",
         "size" = "String",
@@ -687,14 +576,6 @@ pub struct NewBarcodeScan {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a BarcodeScan.
-#[async_trait]
-impl UpdateAirtableRecord<BarcodeScan> for BarcodeScan {
-    async fn update_airtable_record(&mut self, _record: BarcodeScan) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl BarcodeScan {
@@ -746,18 +627,4 @@ impl BarcodeScan {
 
         Ok(())
     }
-}
-
-pub async fn refresh_barcode_scans(db: &Database, company: &Company) -> Result<()> {
-    if company.airtable_base_id_swag.is_empty() {
-        // Return early.
-        return Ok(());
-    }
-
-    BarcodeScans::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    Ok(())
 }

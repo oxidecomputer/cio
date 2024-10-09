@@ -18,8 +18,6 @@ use crate::{
 /// The data type for an NewAuthUser.
 #[db {
     new_struct_name = "AuthUser",
-    airtable_base = "customer_leads",
-    airtable_table = "AIRTABLE_AUTH_USERS_TABLE",
     custom_partial_eq = true,
     match_on = {
         "user_id" = "String",
@@ -79,19 +77,6 @@ pub struct NewAuthUser {
     pub cio_company_id: i32,
 }
 
-/// Implement updating the Airtable record for a AuthUser.
-#[async_trait]
-impl UpdateAirtableRecord<AuthUser> for AuthUser {
-    async fn update_airtable_record(&mut self, record: AuthUser) -> Result<()> {
-        // Set the link_to_people and link_to_auth_user_logins from the original so it stays intact.
-        self.link_to_people = record.link_to_people.clone();
-        self.link_to_auth_user_logins = record.link_to_auth_user_logins;
-        self.link_to_page_views = record.link_to_page_views;
-
-        Ok(())
-    }
-}
-
 impl PartialEq for AuthUser {
     // We implement our own here because Airtable has a different data type for the picture.
     fn eq(&self, other: &Self) -> bool {
@@ -106,8 +91,6 @@ impl PartialEq for AuthUser {
 /// The data type for a NewAuthUserLogin.
 #[db {
     new_struct_name = "AuthUserLogin",
-    airtable_base = "customer_leads",
-    airtable_table = "AIRTABLE_AUTH_USER_LOGINS_TABLE",
     match_on = {
         "user_id" = "String",
         "date" = "DateTime<Utc>",
@@ -159,27 +142,4 @@ pub struct NewAuthUserLogin {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a AuthUserLogin.
-#[async_trait]
-impl UpdateAirtableRecord<AuthUserLogin> for AuthUserLogin {
-    async fn update_airtable_record(&mut self, _record: AuthUserLogin) -> Result<()> {
-        // Get the current auth users in Airtable so we can link to it.
-        // TODO: make this more dry so we do not call it every single damn time.
-        let db = Database::new().await;
-        let auth_users = AuthUsers::get_from_airtable(&db, self.cio_company_id).await?;
-
-        // Iterate over the auth_users and see if we find a match.
-        for (_id, auth_user_record) in auth_users {
-            if auth_user_record.fields.user_id == self.user_id {
-                // Set the link_to_auth_user to the right user.
-                self.link_to_auth_user = vec![auth_user_record.id];
-                // Break the loop and return early.
-                break;
-            }
-        }
-
-        Ok(())
-    }
 }

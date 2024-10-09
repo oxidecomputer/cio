@@ -66,8 +66,6 @@ pub struct GitHubUser {
 /// The data type for a GitHub repository.
 #[db {
     new_struct_name = "GithubRepo",
-    airtable_base = "misc",
-    airtable_table = "AIRTABLE_GITHUB_REPOS_TABLE",
     match_on = {
         "github_id" = "String",
     },
@@ -209,14 +207,6 @@ pub struct NewRepo {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a GithubRepo.
-#[async_trait]
-impl UpdateAirtableRecord<GithubRepo> for GithubRepo {
-    async fn update_airtable_record(&mut self, _record: GithubRepo) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl NewRepo {
@@ -580,11 +570,6 @@ pub async fn refresh_db_github_repos(db: &Database, company: &Company) -> Result
     for (_, repo) in repo_map {
         repo.delete(db).await?;
     }
-
-    GithubRepos::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
 
     Ok(())
 }

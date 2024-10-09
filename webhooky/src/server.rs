@@ -74,29 +74,6 @@ fn create_api() -> ApiDescription<ServerContext> {
      */
     api.register(ping).unwrap();
     api.register(github_rate_limit).unwrap();
-    api.register(listen_airtable_applicants_request_background_check_webhooks)
-        .unwrap();
-    api.register(listen_airtable_applicants_update_webhooks).unwrap();
-    api.register(listen_airtable_applicants_recreate_piia_webhooks).unwrap();
-    api.register(listen_airtable_assets_items_print_barcode_label_webhooks)
-        .unwrap();
-    api.register(listen_airtable_employees_print_home_address_label_webhooks)
-        .unwrap();
-    api.register(listen_airtable_certificates_renew_webhooks).unwrap();
-    api.register(listen_airtable_shipments_inbound_create_webhooks).unwrap();
-    api.register(listen_airtable_shipments_outbound_create_webhooks)
-        .unwrap();
-    api.register(listen_airtable_shipments_outbound_reprint_label_webhooks)
-        .unwrap();
-    api.register(listen_airtable_shipments_outbound_reprint_receipt_webhooks)
-        .unwrap();
-    api.register(listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks)
-        .unwrap();
-    api.register(listen_airtable_shipments_outbound_schedule_pickup_webhooks)
-        .unwrap();
-    api.register(listen_airtable_swag_inventory_items_print_barcode_labels_webhooks)
-        .unwrap();
-    api.register(listen_analytics_page_view_webhooks).unwrap();
 
     api.register(listen_application_submit_requests).unwrap();
     api.register(listen_test_application_submit_requests).unwrap();
@@ -234,39 +211,39 @@ pub async fn server(
         // scheduler
         //     .every(1.day())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-analytics")});
-        scheduler
-            .every(23.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-api-tokens")});
+        // scheduler
+        //     .every(23.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-api-tokens")});
         scheduler
             .every(7.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-applications")});
         // scheduler
         //     .every(2.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-asset-inventory")});
-        scheduler
-            .every(12.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-companies")});
-        scheduler
-            .every(1.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-configs")});
+        // scheduler
+        //     .every(12.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-companies")});
+        // scheduler
+        //     .every(1.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-configs")});
         // scheduler
         //     .every(6.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-finance")});
         // scheduler
         //     .every(12.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-functions")});
-        scheduler
-            .every(1.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-huddles")});
+        // scheduler
+        //     .every(1.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-huddles")});
         scheduler
             .every(4.hours())
             .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-interviews")});
         // scheduler
         //     .every(12.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-journal-clubs")});
-        scheduler
-            .every(3.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-mailing-lists")});
+        // scheduler
+        //     .every(3.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-mailing-lists")});
         // scheduler
         //     .every(18.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-other")});
@@ -279,15 +256,15 @@ pub async fn server(
         // scheduler
         //     .every(14.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-rfds")});
-        scheduler
-            .every(30.minutes())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-salesforce")});
+        // scheduler
+        //     .every(30.minutes())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-salesforce")});
         // scheduler
         //     .every(2.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shipments")});
-        scheduler
-            .every(3.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shorturls")});
+        // scheduler
+        //     .every(3.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-shorturls")});
         // scheduler
         //     .every(9.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-swag-inventory")});
@@ -449,237 +426,6 @@ pub struct GitHubRateLimit {
     pub remaining: u32,
     #[serde(default)]
     pub reset: String,
-}
-
-/**
- * Listen for a button pressed to print a home address label for employees.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/employees/print_home_address_label",
-}]
-async fn listen_airtable_employees_print_home_address_label_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_employees_print_home_address_label(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for a button pressed to renew a certificate.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/certificates/renew",
-}]
-async fn listen_airtable_certificates_renew_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_certificates_renew(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for a button pressed to print a barcode label for an asset item.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/assets/items/print_barcode_label",
-}]
-async fn listen_airtable_assets_items_print_barcode_label_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_assets_items_print_barcode_label(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for a button pressed to print barcode labels for a swag inventory item.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/swag/inventory/items/print_barcode_labels",
-}]
-async fn listen_airtable_swag_inventory_items_print_barcode_labels_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_swag_inventory_items_print_barcode_labels(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for a button pressed to request a background check for an applicant.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/applicants/request_background_check",
-}]
-async fn listen_airtable_applicants_request_background_check_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_applicants_request_background_check(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for rows updated in our Airtable workspace.
- * These are set up with an Airtable script on the workspaces themselves.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/applicants/update",
-}]
-async fn listen_airtable_applicants_update_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_applicants_update(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for requests to recreate and resend PIIA documents for a given applicant
- * These are set up with an Airtable script on the workspaces themselves.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/applicants/recreate_piia",
-}]
-async fn listen_airtable_applicants_recreate_piia_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::listen_airtable_applicants_recreate_piia_webhooks(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for rows created in our Airtable workspace.
- * These are set up with an Airtable script on the workspaces themselves.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/shipments/outbound/create",
-}]
-async fn listen_airtable_shipments_outbound_create_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_shipments_outbound_create(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/// An Airtable row event.
-#[derive(Debug, Clone, Default, JsonSchema, Deserialize, Serialize)]
-pub struct AirtableRowEvent {
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub record_id: String,
-    #[serde(default)]
-    pub cio_company_id: i32,
-}
-
-/**
- * Listen for a button pressed to reprint a label for an outbound shipment.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/shipments/outbound/reprint_label",
-}]
-async fn listen_airtable_shipments_outbound_reprint_label_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_shipments_outbound_reprint_label(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for a button pressed to reprint a receipt for an outbound shipment.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/shipments/outbound/reprint_receipt",
-}]
-async fn listen_airtable_shipments_outbound_reprint_receipt_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_shipments_outbound_reprint_receipt(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for a button pressed to resend a shipment status email to the recipient for an outbound shipment.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/shipments/outbound/resend_shipment_status_email_to_recipient",
-}]
-async fn listen_airtable_shipments_outbound_resend_shipment_status_email_to_recipient_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_shipments_outbound_resend_shipment_status_email_to_recipient(
-        &rqctx,
-        body_param.into_inner(),
-    )
-    .await
-    .map(accepted)
-    .map_err(handle_anyhow_err_as_http_err)
-}
-
-/**
- * Listen for a button pressed to schedule a pickup for an outbound shipment.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/shipments/outbound/schedule_pickup",
-}]
-async fn listen_airtable_shipments_outbound_schedule_pickup_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_shipments_outbound_schedule_pickup(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /// A SendGrid incoming email event.
@@ -1020,25 +766,6 @@ async fn listen_application_files_upload_requests(
         log::info!("Applicant upload request is missing a bearer token");
         Err(HttpError::for_status(None, http::StatusCode::UNAUTHORIZED))
     }
-}
-
-/**
- * Listen for rows created in our Airtable workspace.
- * These are set up with an Airtable script on the workspaces themselves.
- */
-#[endpoint {
-    method = POST,
-    path = "/airtable/shipments/inbound/create",
-}]
-async fn listen_airtable_shipments_inbound_create_webhooks(
-    rqctx: RequestContext<ServerContext>,
-    _auth: Bearer<AirtableToken>,
-    body_param: TypedBody<AirtableRowEvent>,
-) -> Result<HttpResponseAccepted<String>, HttpError> {
-    crate::handlers::handle_airtable_shipments_inbound_create(&rqctx, body_param.into_inner())
-        .await
-        .map(accepted)
-        .map_err(handle_anyhow_err_as_http_err)
 }
 
 /**
@@ -1915,11 +1642,6 @@ async fn trigger_cleanup_create(
         .await
         .map(HttpResponseAccepted)
         .map_err(handle_anyhow_err_as_http_err)
-}
-
-#[derive(Deserialize, Debug, JsonSchema)]
-pub struct FunctionPathParams {
-    pub uuid: String,
 }
 
 async fn do_cleanup(ctx: &ServerContext) -> Result<()> {

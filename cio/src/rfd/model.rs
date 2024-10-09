@@ -25,8 +25,6 @@ use crate::{
 #[db {
     target_struct = "NewRFD",
     new_struct_name = "RFD",
-    airtable_base = "roadmap",
-    airtable_table = "AIRTABLE_RFD_TABLE",
     match_on = {
         "number" = "i32",
     }
@@ -333,20 +331,5 @@ impl RFD {
         };
 
         Ok(update)
-    }
-}
-
-/// Implement updating the Airtable record for an RFD.
-#[async_trait]
-impl UpdateAirtableRecord<RFD> for RFD {
-    async fn update_airtable_record(&mut self, record: RFD) -> Result<()> {
-        // Set the Link to People from the original so it stays intact.
-        self.milestones = record.milestones.clone();
-        self.relevant_components = record.relevant_components;
-
-        self.content = truncate(&self.content, 100000);
-        self.html = "".to_string();
-
-        Ok(())
     }
 }

@@ -34,8 +34,6 @@ use crate::{
 
 #[db {
     new_struct_name = "ApplicantInterview",
-    airtable_base = "hiring",
-    airtable_table = "AIRTABLE_INTERVIEWS_TABLE",
     match_on = {
         "google_event_id" = "String",
     },
@@ -66,14 +64,6 @@ pub struct NewApplicantInterview {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a ApplicantInterview.
-#[async_trait]
-impl UpdateAirtableRecord<ApplicantInterview> for ApplicantInterview {
-    async fn update_airtable_record(&mut self, _record: ApplicantInterview) -> Result<()> {
-        Ok(())
-    }
 }
 
 /// Sync interviews.
@@ -318,11 +308,6 @@ pub async fn refresh_interviews(db: &Database, company: &Company) -> Result<()> 
             interview.upsert(db).await?;
         }
     }
-
-    ApplicantInterviews::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
 
     Ok(())
 }

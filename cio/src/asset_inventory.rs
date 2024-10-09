@@ -22,8 +22,6 @@ use crate::{
 
 #[db {
     new_struct_name = "AssetItem",
-    airtable_base = "assets",
-    airtable_table = "AIRTABLE_ASSET_ITEMS_TABLE",
     match_on = {
         "cio_company_id" = "i32",
         "name" = "String",
@@ -95,14 +93,6 @@ pub struct NewAssetItem {
     /// The CIO company ID.
     #[serde(default)]
     pub cio_company_id: i32,
-}
-
-/// Implement updating the Airtable record for a AssetItem.
-#[async_trait]
-impl UpdateAirtableRecord<AssetItem> for AssetItem {
-    async fn update_airtable_record(&mut self, _record: AssetItem) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl NewAssetItem {
@@ -282,71 +272,4 @@ impl AssetItem {
 
         Ok(())
     }
-}
-
-/// Sync asset items from Airtable.
-pub async fn refresh_asset_items(db: &Database, company: &Company) -> Result<()> {
-    if company.airtable_base_id_assets.is_empty() {
-        // Return early.
-        return Ok(());
-    }
-
-    // Initialize the Google Drive client.
-    let mut drive_client = company.authenticate_google_drive(db).await?;
-
-    // Figure out where our directory is.
-    // It should be in the shared drive : "Automated Documents"/"rfds"
-    let shared_drive = drive_client.drives().get_by_name("Automated Documents").await?.body;
-    let drive_id = shared_drive.id.to_string();
-
-    // Get the directory by the name.
-    let parent_id = drive_client
-        .files()
-        .create_folder(&drive_id, "", "assets")
-        .await?
-        .body
-        .id;
-
-    // Get all the records from Airtable.
-    let results: Vec<airtable_api::Record<AssetItem>> = company
-        .authenticate_airtable(&company.airtable_base_id_assets)
-        .list_records(&AssetItem::airtable_table(), "Grid view", vec![])
-        .await?;
-
-    for item_record in results {
-        let mut item: NewAssetItem = item_record.fields.into();
-        if item.name.is_empty() {
-            // A new generator is created for each use as the Generator is not Send
-            item.name = names::Generator::default().next().unwrap();
-        }
-
-        // Iterating through and processing all of the asset items can take over an hour. This
-        // exceeds the time limit that Google Drive allots for a single token. Therefore we may
-        // need to refresh the access token mid processing if an item expansion fails
-        match item.expand(&drive_client, &drive_id, &parent_id).await {
-            Ok(_) => (),
-            Err(err) => {
-                log::info!("Handling drive error. This is likely to be an authentication error. Further work is needed to differentiate. {:?}", err);
-                log::info!("Reauthenticating with Google Drive");
-                drive_client = company.authenticate_google_drive(db).await?;
-
-                // Now using a client with fresh credentials, we can retry the expansion. If this
-                // again, it is unlikely due to an authentication error
-                item.expand(&drive_client, &drive_id, &parent_id).await?;
-            }
-        }
-
-        item.cio_company_id = company.id;
-
-        let mut db_item = item.upsert_in_db(db).await?;
-        db_item.airtable_record_id = item_record.id.to_string();
-        db_item.update(db).await?;
-    }
-
-    AssetItems::get_from_db(db, company.id)
-        .await?
-        .update_airtable(db)
-        .await?;
-
-    Ok(())
 }
