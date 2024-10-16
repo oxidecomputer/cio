@@ -214,9 +214,9 @@ pub async fn server(
         // scheduler
         //     .every(23.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-api-tokens")});
-        scheduler
-            .every(7.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-applications")});
+        // scheduler
+        //     .every(7.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-applications")});
         // scheduler
         //     .every(2.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-asset-inventory")});
