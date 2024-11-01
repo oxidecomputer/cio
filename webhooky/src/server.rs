@@ -235,9 +235,9 @@ pub async fn server(
         // scheduler
         //     .every(1.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-huddles")});
-        scheduler
-            .every(4.hours())
-            .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-interviews")});
+        // scheduler
+        //     .every(4.hours())
+        //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-interviews")});
         // scheduler
         //     .every(12.hours())
         //     .run(enclose! { (server_context) move || create_do_job_fn(server_context.clone(), "sync-journal-clubs")});
