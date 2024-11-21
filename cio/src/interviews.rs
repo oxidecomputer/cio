@@ -335,36 +335,23 @@ pub async fn compile_packets(db: &Database, company: &Company) -> Result<()> {
         .body
         .id;
 
-    // Iterate over each user we have in gsuite and download their materials
-    // locally.
+    // Iterate over each user we have in gsuite and download their materials locally.
+    // TODO: This function currently creates local copies of every employees materials prior to
+    // compiling interview packets. While this is efficient in terms of only requesting each
+    // materials document once, it is wasteful in that it downloads materials it does not need.
     let employees = Users::get_from_db(db, company.id).await?;
     for employee in employees {
         if employee.is_system_account() {
             continue;
         }
 
-        // Get their application materials.
-        let mut materials_url = "".to_string();
-        if let Ok(a) = applicants::dsl::applicants
-            .filter(applicants::dsl::email.eq(employee.recovery_email.to_string()))
-            .first_async::<Applicant>(db.pool())
-            .await
-        {
-            materials_url = a.materials;
-        }
-
-        if materials_url.is_empty() {
-            if employee.username == "ben.leonard" {
-                // Add Ben's materials.
-                materials_url = "https://drive.google.com/open?id=1bOHalcpSyXwaxr4E-_2LeT06HGXQCW0n".to_string();
-            } else {
-                info!("could not find materials for email {}", employee.recovery_email);
-                continue;
-            }
+        if employee.materials.is_empty() {
+            info!("could not find materials for employee {}", employee.id);
+            continue;
         }
 
         // Let's download the contents of their materials locally.
-        if let Err(err) = download_materials_as_pdf(&drive_client, &materials_url, &employee.username).await {
+        if let Err(err) = download_materials_as_pdf(&drive_client, &employee.materials, &employee.username).await {
             log::warn!(
                 "Failed to download materials for employee {} when constructing interview packets. err: {:?}",
                 employee.id,
